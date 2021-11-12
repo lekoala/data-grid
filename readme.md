@@ -112,6 +112,10 @@ These attributes can be used to configure the component.
 - Actions
 - Inline editing
 
+## Demo
+
+This way -> https://codepen.io/lekoalabe/pen/NWvLByP
+
 ## Browser Support
 
 Only modern browsers (anything that supports js modules)
