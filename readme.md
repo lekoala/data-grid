@@ -114,6 +114,18 @@ These attributes can be used to configure the component.
 
 ## Demo
 
+<!--
+```
+<custom-element-demo>
+  <template>
+    <script type="module" src="https://cdn.jsdelivr.net/gh/lekoala/data-grid/data-grid.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lekoala/data-grid/data-grid.min.css" />
+    <data-grid url="https://cdn.jsdelivr.net/gh/lekoala/data-grid/demo.json" sticky expand></data-grid>
+  </template>
+</custom-element-demo>
+```
+-->
+
 This way -> https://codepen.io/lekoalabe/pen/NWvLByP
 
 ## Browser Support
