@@ -15,12 +15,6 @@ Autonomous open source grid component with RTL support built on Custom Elements 
 $ npm install data-grid-component
 ```
 
-- Install with **bower**
-
-```
-$ bower install data-grid-component
-```
-
 ### Initialization
 
 - HTML way
