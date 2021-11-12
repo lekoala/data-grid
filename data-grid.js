@@ -1,6 +1,7 @@
 /**
  * Data Grid Web component
  *
+ * Credits for inspiration
  * @link https://github.com/riverside/zino-grid
  */
 "use strict";
