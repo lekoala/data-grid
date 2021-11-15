@@ -10,7 +10,7 @@
         "field": "first_name",
         "title": "First Name",
         "width": 200,
-        "class": "expand-cell"
+        "class": "wrap-cell"
       },
       {
         "field": "last_name",

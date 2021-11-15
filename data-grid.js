@@ -24,8 +24,8 @@ const template = document.createElement("template");
 template.innerHTML = `
 <table role="grid" >
     <thead role="rowgroup">
-        <tr role="row" aria-rowindex="1"></tr>
-        <tr role="row" aria-rowindex="2"></tr>
+        <tr role="row" aria-rowindex="1" class="dg-head-columns"></tr>
+        <tr role="row" aria-rowindex="2" class="dg-head-filters"></tr>
     </thead>
     <tbody role="rowgroup"></tbody>
     <tfoot role="rowgroup" hidden>
@@ -427,7 +427,7 @@ class DataGrid extends HTMLElement {
     }
   }
   toggleFilter() {
-    const row = this.root.querySelector("thead tr[aria-rowindex='2']");
+    const row = this.root.querySelector("thead tr.dg-head-filters");
     if (this.state.filter) {
       row.removeAttribute("hidden");
     } else {
@@ -435,7 +435,7 @@ class DataGrid extends HTMLElement {
     }
   }
   toggleReorder() {
-    this.root.querySelectorAll("thead tr[aria-rowindex='1'] th").forEach((th) => {
+    this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
       if (this.state.reorder) {
         th.draggable = true;
       } else {
@@ -445,7 +445,7 @@ class DataGrid extends HTMLElement {
   }
   toggleSort() {
     this.log("toggle sort");
-    this.root.querySelectorAll("thead tr[aria-rowindex='1'] th").forEach((th) => {
+    this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
       if (this.state.sort) {
         th.setAttribute("aria-sort", "none");
       } else {
@@ -540,7 +540,7 @@ class DataGrid extends HTMLElement {
     this.state.pages = Math.ceil(this.data.length / this.state.perPage);
     this.page = 1;
 
-    let col = this.root.querySelector("thead tr[aria-rowindex='1'] th[aria-sort$='scending']");
+    let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
     if (this.state.sort && col) {
       // sortData automatically renders the body
       this.sortData(col);
@@ -633,6 +633,7 @@ class DataGrid extends HTMLElement {
     tr = document.createElement("tr");
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", 1);
+    tr.setAttribute("class", "dg-head-columns");
     this.state.columns.forEach((column, i) => {
       if (column.attr) {
         return;
@@ -648,6 +649,11 @@ class DataGrid extends HTMLElement {
       DataGrid.applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
+
+      // Set fixed width if needed based on first col
+      if (this.hasAttribute("scrollable") && !th.getAttribute("width")) {
+        th.setAttribute("width", th.offsetWidth);
+      }
 
       // Reorder columns with drag/drop
       if (this.state.reorder) {
@@ -704,9 +710,9 @@ class DataGrid extends HTMLElement {
       tr.appendChild(th);
     });
 
-    thead.replaceChild(tr, thead.querySelector("tr[aria-rowindex='1']"));
+    thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
     if (this.state.defaultSort) {
-      sortedColumn = this.root.querySelector("thead tr[aria-rowindex='1'] th[field='" + this.state.defaultSort + "']");
+      sortedColumn = this.root.querySelector("thead tr.dg-head-columns th[field='" + this.state.defaultSort + "']");
     }
 
     tr.querySelectorAll("[aria-sort]").forEach((sortableRow) => {
@@ -718,7 +724,8 @@ class DataGrid extends HTMLElement {
     // Create Filters
     tr = document.createElement("tr");
     tr.setAttribute("role", "row");
-    tr.setAttribute("aria-rowindex", "2");
+    tr.setAttribute("aria-rowindex", 2);
+    tr.setAttribute("class", "dg-head-filters");
     if (!this.state.filter) {
       tr.setAttribute("hidden", "hidden");
     }
@@ -726,7 +733,7 @@ class DataGrid extends HTMLElement {
       if (column.attr) {
         return;
       }
-      let relatedTh = thead.querySelector("tr[aria-rowindex='1'] th[aria-colindex='" + (i + 1) + "']");
+      let relatedTh = thead.querySelector("tr.dg-head-columns th[aria-colindex='" + (i + 1) + "']");
       let th = document.createElement("th");
       th.setAttribute("aria-colindex", i + 1);
 
@@ -749,7 +756,7 @@ class DataGrid extends HTMLElement {
       tr.appendChild(th);
     });
 
-    thead.replaceChild(tr, thead.querySelector("tr[aria-rowindex='2']"));
+    thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
 
     tr.querySelectorAll("input").forEach((input) => {
       input.addEventListener("keypress", (e) => {
@@ -770,12 +777,70 @@ class DataGrid extends HTMLElement {
     }
 
     this.root.querySelector("tfoot").style.display = "";
+    if (this.hasAttribute("resizable")) {
+      this.renderResizer();
+    }
+  }
+  renderResizer() {
+    const cols = this.root.querySelectorAll("thead tr.dg-head-columns th");
+    let i = 0;
+
+    cols.forEach((col) => {
+      i++;
+
+      // Create a resizer element
+      const resizer = document.createElement("div");
+      resizer.classList.add("dg-resizer");
+      resizer.dataset.col = i;
+
+      // Set the height
+      resizer.style.height = `${col.offsetHeight}px`;
+
+      // Add a resizer element to the column
+      col.appendChild(resizer);
+
+      // Handle resizing
+      let startX = 0;
+      let startW = 0;
+      let remainingSpace = (cols.length - i) * 50;
+      let max = DataGrid.elementOffset(this).left + this.offsetWidth - remainingSpace;
+
+      const mouseMoveHandler = (e) => {
+        if (e.clientX > max) {
+          return;
+        }
+        const dx = e.clientX - startX;
+        col.width = startW + dx;
+      };
+
+      // When user releases the mouse, remove the existing event listeners
+      const mouseUpHandler = () => {
+        document.removeEventListener("mousemove", mouseMoveHandler);
+        document.removeEventListener("mouseup", mouseUpHandler);
+      };
+
+      resizer.addEventListener("mousedown", (e) => {
+        // Remove width from next columns
+        for (let j = 0; j < cols.length; j++) {
+          if (j > e.target.dataset.col) {
+            cols[j].removeAttribute("width");
+          }
+        }
+
+        // Register initial data
+        startX = e.clientX;
+        startW = col.offsetWidth;
+
+        // Attach handlers
+        document.addEventListener("mousemove", mouseMoveHandler);
+        document.addEventListener("mouseup", mouseUpHandler);
+      });
+    });
   }
   renderBody() {
     this.log("render body");
     let tr;
     let td;
-
     let tbody = document.createElement("tbody");
 
     this.data.forEach((item, i) => {
@@ -832,6 +897,7 @@ class DataGrid extends HTMLElement {
       }
     });
 
+    // Enable/disable buttons
     if (this.btnFirst) {
       this.btnFirst.disabled = this.state.page <= 1;
       this.btnPrev.disabled = this.state.page <= 1;

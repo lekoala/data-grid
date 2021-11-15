@@ -50,20 +50,23 @@ data-grid {
     white-space: normal;
   }
 
-  &[scrollable] table {
-    display: inline-block;
-    max-width: 100%;
+  &[scrollable] {
     overflow-x: auto;
-    white-space: nowrap;
+
+    table {
+      width: auto;
+    }
   }
 
   // Expand truncated cells on hover
-  &[expand] table tbody td:hover {
-    overflow: visible;
-    z-index: 1;
-    white-space: nowrap;
-    background-color: var(--highlight-color);
-    position: absolute;
+  &[expand] {
+    table tbody td:hover {
+      overflow: visible;
+      z-index: 1;
+      white-space: nowrap;
+      background-color: var(--highlight-color);
+      position: absolute;
+    }
   }
 
   &[responsive] {
@@ -203,9 +206,10 @@ data-grid {
     padding: calc(var(--padding) * var(--header-scale)) var(--padding);
   }
 
-  // Prevent overflow on headers and cells with width
+  // Prevent overflow on headers and cells
   th,
   td {
+    position: relative;
     overflow: hidden;
     text-align: left;
     text-overflow: ellipsis;
@@ -382,6 +386,16 @@ data-grid {
     tfoot .dg-meta {
       text-align: left;
     }
+  }
+
+  // Resizer
+  .dg-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0.5rem;
+    cursor: col-resize;
+    user-select: none;
   }
 
   @media only screen and (max-width: 768px) {

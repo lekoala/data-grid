@@ -28,8 +28,9 @@
       text-align: center;
     }
 
-    .expand-cell {
+    .wrap-cell {
       white-space: normal;
+      word-break: break-all;
     }
 
     .highlight-col {
@@ -72,8 +73,10 @@
 
     <ul>
       <li><code>sticky</code> to enable stick headers and footers</li>
+      <li><code>expand</code> to keep cell data on one line (hover to show full cell)</li>
+      <li><code>resizable</code> to make resizable columns</li>
     </ul>
-    <data-grid url="demo.json" sticky expand></data-grid>
+    <data-grid url="demo.json" sticky expand resizable></data-grid>
 
     <h2>Scrollable</h2>
 
