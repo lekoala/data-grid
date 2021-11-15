@@ -99,6 +99,19 @@ These attributes can be used to configure the component.
 | **dir**          |    No    | String  | **ltr**     | Text direction. Accepted values are **ltr** (left-to-right) and **rtl** (right-to-left). |
 | **default-sort** |    No    | String  | **id**      | Default sort field if sorting is enabled.                                                |
 
+## Translations
+
+Provide a global variable with the required translations.
+
+```html
+<script type="module">
+  window['DataGridLabels'] = {
+    page: "Go to page",
+    gotoPage: "Go to page",
+  };
+</script>
+```
+
 ## Todo
 
 - Server side pagination/filtering

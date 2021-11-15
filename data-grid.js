@@ -6,6 +6,16 @@
  */
 "use strict";
 
+const labels = window["DataGridLabels"] ?? {
+  page: "Page",
+  gotoPage: "Go to page",
+  gotoFirstPage: "Go to first page",
+  gotoPrevPage: "Go to previous page",
+  gotoNextPage: "Go to next page",
+  gotoLastPage: "Go to last page",
+  of: "of",
+  items: "items",
+};
 const template = document.createElement("template");
 
 template.innerHTML = `
@@ -20,25 +30,25 @@ template.innerHTML = `
             <td role="gridcell">
             <div class="dg-footer">
                 <div class="dg-page-nav">
-                  Page <input type="number" class="dg-goto-page" min="1" step="1" value="1" aria-label="Go to page">
+                  ${labels.page} <input type="number" class="dg-goto-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
                 </div>
                 <div class="dg-pagination">
-                  <button type="button" class="dg-btn-first dg-rotate" title="Go to first page" aria-label="Go to first page" disabled>
+                  <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-prev dg-rotate" title="Go to prev page" aria-label="Go to prev page" disabled>
+                  <button type="button" class="dg-btn-prev dg-rotate" title="${labels.gotoPrevPage}" aria-label="${labels.gotoPrevPage}" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-next" title="Go to next page" aria-label="Go to next page" disabled>
+                  <button type="button" class="dg-btn-next" title="${labels.gotoNextPage}" aria-label="${labels.gotoNextPage}" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-last" title="Go to last page" aria-label="Go to last page" disabled>
+                  <button type="button" class="dg-btn-last" title="${labels.gotoLastPage}" aria-label="${labels.gotoLastPage}" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
                   <select class="dg-per-page"></select>
                 </div>
                 <div class="dg-meta">
-                  <span class="dg-low"></span> - <span class="dg-high"></span> of <span class="dg-total"></span> items
+                  <span class="dg-low"></span> - <span class="dg-high"></span> ${labels.of} <span class="dg-total"></span> ${labels.items}
                 </div>
             </div>
             </td>
@@ -72,7 +82,7 @@ class DataGrid extends HTMLElement {
     // We store the data in this
     this.originalData = [];
 
-    // Don't use shadow dom
+    // Don't use shadow dom as it makes theming super hard
     this.appendChild(template.content.cloneNode(true));
     this.root = this;
     this.initialized = false;
@@ -186,7 +196,7 @@ class DataGrid extends HTMLElement {
     return cols;
   }
 
-  // attrs
+  // reflected attrs, see https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
 
   static get observedAttributes() {
     return ["url", "page", "per-page", "debug", "filter", "sort", "default-sort", "dir", "reorder"];
@@ -497,8 +507,8 @@ class DataGrid extends HTMLElement {
   }
   gotoPage(event) {
     if (event.type === "keypress") {
-      const key = event.which || event.keyCode;
-      if (key === 13) {
+      const key = event.keyCode || event.key;
+      if (key === 13 || key === "Enter") {
         event.preventDefault();
       } else {
         return;
@@ -738,7 +748,8 @@ class DataGrid extends HTMLElement {
 
     tr.querySelectorAll("input").forEach((input) => {
       input.addEventListener("keypress", (e) => {
-        if (e.key.includes("Enter")) {
+        const key = e.keyCode || e.key;
+        if (key === 13 || key === "Enter") {
           this.filterData.call(this);
         }
       });

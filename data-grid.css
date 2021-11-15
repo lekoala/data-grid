@@ -279,6 +279,7 @@ data-grid tfoot .dg-pagination button {
   width: 2rem;
 }
 data-grid tfoot .dg-meta {
+  min-width: 160px;
   text-align: right;
 }
 data-grid [aria-sort] {

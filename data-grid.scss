@@ -325,6 +325,8 @@ data-grid {
       }
     }
     .dg-meta {
+      // Prevent layout from jumping around
+      min-width: 160px;
       text-align: right;
     }
   }

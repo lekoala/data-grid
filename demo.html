@@ -7,6 +7,12 @@
 
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@1/last-icon.js">
   <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@1/last-icon.js"></script>
+  <script type="module">
+    window['DataGridLabels'] = {
+      page: "Go to page",
+      gotoPage: "Go to page",
+    };
+  </script>
   <script type="module" src="data-grid.min.js"></script>
 
   <link rel="icon" type="image/svg+xml"
@@ -38,6 +44,12 @@
       background-color: azure;
     }
   </style>
+  <script type="module">
+    document.getElementById("toggle").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo2-grid");
+      grid.filter = !grid.filter;
+    });
+  </script>
 </head>
 
 <body>
@@ -67,7 +79,7 @@
     <ul>
       <li><code>responsive</code> to enable responsive table.</li>
     </ul>
-    <data-grid url="demo.json" responsive></data-grid>
+    <data-grid id="demo-grid" url="demo.json" responsive></data-grid>
 
     <h2>More options</h2>
     <ul>
@@ -76,7 +88,12 @@
       <li><code>default-sort=field</code> to set a default sort order</li>
       <li><code>reorder=true</code> to drag columns</li>
     </ul>
-    <data-grid url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky></data-grid>
+
+    <button id="toggle">Toggle filter on/off</button>
+    <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky></data-grid>
+
+    <h2>Empty grid</h2>
+
 
     <h2>Good to know</h2>
 
