@@ -6,16 +6,19 @@
  */
 "use strict";
 
-const labels = window["DataGridLabels"] ?? {
-  page: "Page",
-  gotoPage: "Go to page",
-  gotoFirstPage: "Go to first page",
-  gotoPrevPage: "Go to previous page",
-  gotoNextPage: "Go to next page",
-  gotoLastPage: "Go to last page",
-  of: "of",
-  items: "items",
-};
+const labels = Object.assign(
+  {
+    itemsPerPage: "Items per page",
+    gotoPage: "Go to page",
+    gotoFirstPage: "Go to first page",
+    gotoPrevPage: "Go to previous page",
+    gotoNextPage: "Go to next page",
+    gotoLastPage: "Go to last page",
+    of: "of",
+    items: "items",
+  },
+  window.DataGridLabels || {}
+);
 const template = document.createElement("template");
 
 template.innerHTML = `
@@ -30,7 +33,7 @@ template.innerHTML = `
             <td role="gridcell">
             <div class="dg-footer">
                 <div class="dg-page-nav">
-                  ${labels.page} <input type="number" class="dg-goto-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
+                  <select class="dg-per-page" aria-label="${labels.itemsPerPage}"></select>
                 </div>
                 <div class="dg-pagination">
                   <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
@@ -45,7 +48,7 @@ template.innerHTML = `
                   <button type="button" class="dg-btn-last" title="${labels.gotoLastPage}" aria-label="${labels.gotoLastPage}" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
-                  <select class="dg-per-page"></select>
+                  <input type="number" class="dg-goto-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
                 </div>
                 <div class="dg-meta">
                   <span class="dg-low"></span> - <span class="dg-high"></span> ${labels.of} <span class="dg-total"></span> ${labels.items}

@@ -74,9 +74,6 @@ data-grid[responsive] tr:not([hidden]) {
     top: -9999px;
     left: -9999px;
   }
-  data-grid[responsive] tfoot .dg-meta {
-    display: none;
-  }
   data-grid[responsive] tbody tr {
     padding: 0;
     border: 1px solid var(--header-background);
@@ -262,7 +259,6 @@ data-grid tfoot .dg-page-nav {
 }
 data-grid tfoot .dg-goto-page {
   width: 4rem;
-  margin: 0 0.5rem;
 }
 data-grid tfoot .dg-footer {
   display: flex;
@@ -336,6 +332,11 @@ data-grid[dir=rtl] [aria-sort=descending]:after {
 }
 data-grid[dir=rtl] tfoot .dg-meta {
   text-align: left;
+}
+@media only screen and (max-width: 768px) {
+  data-grid tfoot .dg-meta {
+    display: none;
+  }
 }
 
 /*# sourceMappingURL=data-grid.css.map */
