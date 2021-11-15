@@ -89,6 +89,7 @@ class DataGrid extends HTMLElement {
     this.appendChild(template.content.cloneNode(true));
     this.root = this;
     this.initialized = false;
+    this.touch = null;
 
     // Init page values
     this.perPageValues = this.state.perPageValues;
@@ -308,11 +309,38 @@ class DataGrid extends HTMLElement {
     });
     this.inputPage.addEventListener("input", this.gotoPage);
 
+    // Touch support
+    // TODO: figure out screen drag ?
+    this.touchstart = this.touchstart.bind(this);
+    this.touchmove = this.touchmove.bind(this);
+    document.addEventListener("touchstart", this.touchstart);
+    document.addEventListener("touchmove", this.touchmove);
+
     this.loadData();
     this.toggleSort();
     this.root.classList.add("dg-initialized");
     this.initialized = true;
   }
+  touchstart(e) {
+    this.touch = e.touches[0];
+  }
+  touchmove(e) {
+    if (!this.touch) {
+      return;
+    }
+    const xDiff = this.touch.clientX - e.touches[0].clientX;
+    const yDiff = this.touch.clientY - e.touches[0].clientY;
+
+    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+      if (xDiff > 0) {
+        this.getNext();
+      } else {
+        this.getPrev();
+      }
+    }
+    this.touch = null;
+  }
+
   disconnectedCallback() {
     this.log("disconnectedCallback");
 
@@ -325,6 +353,9 @@ class DataGrid extends HTMLElement {
       passive: true,
     });
     this.inputPage.removeEventListener("input", this.gotoPage);
+
+    document.removeEventListener("touchstart", this.touchstart);
+    document.removeEventListener("touchmove", this.touchmove);
   }
   attributeChangedCallback(attributeName, oldValue, newValue) {
     this.log("attributeChangedCallback: " + attributeName);
