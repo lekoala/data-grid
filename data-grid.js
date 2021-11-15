@@ -822,7 +822,7 @@ class DataGrid extends HTMLElement {
       resizer.addEventListener("mousedown", (e) => {
         // Remove width from next columns
         for (let j = 0; j < cols.length; j++) {
-          if (j > e.target.dataset.col) {
+          if (j >= e.target.dataset.col) {
             cols[j].removeAttribute("width");
           }
         }
