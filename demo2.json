@@ -4,9 +4,7 @@
     "columns": [
       {
         "field": "id",
-        "title": "Id Number",
-        "width": 50,
-        "class": "text-center"
+        "attr": "data-id"
       },
       {
         "field": "first_name",
@@ -20,11 +18,12 @@
       },
       {
         "field": "email",
-        "title": "Email"
+        "title": "Email",
+        "width": 200
       },
       {
         "field": "status",
-        "asClass": true
+        "attr": "class"
       },
       {
         "field": "company",

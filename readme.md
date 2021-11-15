@@ -76,10 +76,12 @@ When using the response data or the JS api, you have the opportunity to pass col
 regular attributes to avoid cluttering the node with a very large attribute.
 
 The columns must be an array with the following fields:
+
 - field: the key in the data
 - title: the title to display in the header (defaults to "field" if not set)
 - width: the width of the column (auto otherwise)
 - class: class to set on the column (target body or header with th.class or td.class)
+- attr: don't render the column and set a matching attribute on the row with the value of the field
 
 Note : you can also pass a plain list of comma separated string, or a js object with the field => title mapping.
 
@@ -91,7 +93,7 @@ These attributes can be used to configure the component.
 | ---------------- | :------: | ------- | ----------- | ---------------------------------------------------------------------------------------- |
 | **url**          |   Yes    | String  | **(empty)** | An URL with data to display in JSON format.                                              |
 | **page**         |    No    | Number  | **1**       | Currently displayed page.                                                                |
-| **perPage**      |    No    | Number  | **5**       | Number of records displayed per page.                                                    |
+| **per-page**     |    No    | Number  | **10**      | Number of records displayed per page.                                                    |
 | **debug**        |    No    | Boolean | **false**   | Log actions in DevTools console.                                                         |
 | **filter**       |    No    | Boolean | **false**   | Allows a filtering functionallity.                                                       |
 | **sort**         |    No    | Boolean | **false**   | Allows a sort by column functionallity.                                                  |
@@ -105,7 +107,7 @@ Provide a global variable with the required translations.
 
 ```html
 <script type="module">
-  window['DataGridLabels'] = {
+  window["DataGridLabels"] = {
     page: "Go to page",
     gotoPage: "Go to page",
   };

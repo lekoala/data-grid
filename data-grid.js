@@ -28,7 +28,7 @@ template.innerHTML = `
         <tr role="row" aria-rowindex="2"></tr>
     </thead>
     <tbody role="rowgroup"></tbody>
-    <tfoot role="rowgroup">
+    <tfoot role="rowgroup" hidden>
         <tr role="row" aria-rowindex="1">
             <td role="gridcell">
             <div class="dg-footer">
@@ -51,7 +51,7 @@ template.innerHTML = `
                   <input type="number" class="dg-goto-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
                 </div>
                 <div class="dg-meta">
-                  <span class="dg-low"></span> - <span class="dg-high"></span> ${labels.of} <span class="dg-total"></span> ${labels.items}
+                  <span class="dg-low">0</span> - <span class="dg-high">0</span> ${labels.of} <span class="dg-total">0</span> ${labels.items}
                 </div>
             </div>
             </td>
@@ -310,6 +310,7 @@ class DataGrid extends HTMLElement {
 
     this.loadData();
     this.toggleSort();
+    this.root.classList.add("dg-initialized");
     this.initialized = true;
   }
   disconnectedCallback() {
@@ -401,7 +402,7 @@ class DataGrid extends HTMLElement {
   columnsLength() {
     let len = 0;
     this.state.columns.forEach((col) => {
-      if (!col.asClass) {
+      if (!col.attr) {
         len++;
       }
     });
@@ -487,6 +488,7 @@ class DataGrid extends HTMLElement {
       this.originalData = this.data.slice();
       this.fixPage();
       this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
+      this.root.querySelector("tfoot").removeAttribute("hidden");
       this.renderHeader();
     });
   }
@@ -632,7 +634,7 @@ class DataGrid extends HTMLElement {
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", 1);
     this.state.columns.forEach((column, i) => {
-      if (column.asClass) {
+      if (column.attr) {
         return;
       }
       let th = document.createElement("th");
@@ -721,7 +723,7 @@ class DataGrid extends HTMLElement {
       tr.setAttribute("hidden", "hidden");
     }
     this.state.columns.forEach((column, i) => {
-      if (column.asClass) {
+      if (column.attr) {
         return;
       }
       let relatedTh = thead.querySelector("tr[aria-rowindex='1'] th[aria-colindex='" + (i + 1) + "']");
@@ -783,9 +785,9 @@ class DataGrid extends HTMLElement {
       tr.setAttribute("aria-rowindex", i + 1);
       tr.tabIndex = 0;
       this.state.columns.forEach((column, j) => {
-        // It should be applied as a class of the row
-        if (column.asClass) {
-          tr.classList.add(item[column.field]);
+        // It should be applied as an attr of the row
+        if (column.attr) {
+          tr.setAttribute(column.attr, item[column.field]);
           return;
         }
         td = document.createElement("td");

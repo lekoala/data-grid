@@ -49,6 +49,14 @@
       let grid = document.getElementById("demo2-grid");
       grid.filter = !grid.filter;
     });
+    document.getElementById("load").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo3-grid");
+      grid.url = "demo2.json";
+    });
+    document.getElementById("reload").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo3-grid");
+      grid.loadData(); // you can call methods directly
+    });
   </script>
 </head>
 
@@ -94,6 +102,9 @@
 
     <h2>Empty grid</h2>
 
+    <button id="load">Load grid data</button> <button id="reload">Reload data</button>
+    <data-grid id="demo3-grid" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky>
+    </data-grid>
 
     <h2>Good to know</h2>
 
