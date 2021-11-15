@@ -46,11 +46,27 @@ data-grid table {
   width: 100%;
   white-space: normal;
 }
-data-grid[scrollable] {
-  overflow-x: auto;
+data-grid th,
+data-grid td {
+  empty-cells: show;
+  padding: var(--padding);
+  text-align: left;
 }
-data-grid[scrollable] table {
-  width: auto;
+data-grid th[tabindex],
+data-grid td[tabindex] {
+  outline: none;
+  word-break: normal;
+}
+data-grid th {
+  font-weight: bold;
+  padding: calc(var(--padding) * var(--header-scale)) var(--padding);
+}
+data-grid th,
+data-grid td {
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 data-grid[expand] table tbody td:hover {
   overflow: visible;
@@ -156,28 +172,6 @@ data-grid .dg-skip-icon::after {
 }
 data-grid .dg-rotate {
   transform: rotate(-180deg);
-}
-data-grid th,
-data-grid td {
-  empty-cells: show;
-  padding: var(--padding);
-  text-align: left;
-}
-data-grid th[tabindex],
-data-grid td[tabindex] {
-  outline: none;
-  word-break: normal;
-}
-data-grid th {
-  font-weight: bold;
-  padding: calc(var(--padding) * var(--header-scale)) var(--padding);
-}
-data-grid th,
-data-grid td {
-  overflow: hidden;
-  text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 data-grid button {
   background-color: var(--white);

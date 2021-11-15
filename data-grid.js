@@ -650,11 +650,6 @@ class DataGrid extends HTMLElement {
       th.tabIndex = 0;
       th.textContent = column.title;
 
-      // Set fixed width if needed based on first col
-      if (this.hasAttribute("scrollable") && !th.getAttribute("width")) {
-        th.setAttribute("width", th.offsetWidth);
-      }
-
       // Reorder columns with drag/drop
       if (this.state.reorder) {
         th.draggable = true;

@@ -50,12 +50,31 @@ data-grid {
     white-space: normal;
   }
 
-  &[scrollable] {
-    overflow-x: auto;
+  th,
+  td {
+    empty-cells: show;
+    padding: var(--padding);
+    text-align: left;
 
-    table {
-      width: auto;
+    &[tabindex] {
+      outline: none;
+      word-break: normal;
+      // Without this content could flow outside of cell
+      // word-wrap: break-word;
     }
+  }
+  th {
+    font-weight: bold;
+    padding: calc(var(--padding) * var(--header-scale)) var(--padding);
+  }
+
+  // Prevent overflow on headers and cells
+  th,
+  td {
+    overflow: hidden;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   // Expand truncated cells on hover
@@ -186,33 +205,6 @@ data-grid {
   }
   .dg-rotate {
     transform: rotate(-180deg);
-  }
-
-  th,
-  td {
-    empty-cells: show;
-    padding: var(--padding);
-    text-align: left;
-
-    &[tabindex] {
-      outline: none;
-      word-break: normal;
-      // Without this content could flow outside of cell
-      // word-wrap: break-word;
-    }
-  }
-  th {
-    font-weight: bold;
-    padding: calc(var(--padding) * var(--header-scale)) var(--padding);
-  }
-
-  // Prevent overflow on headers and cells
-  th,
-  td {
-    overflow: hidden;
-    text-align: left;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   button {
