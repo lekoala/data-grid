@@ -174,7 +174,6 @@ data-grid th {
 }
 data-grid th,
 data-grid td {
-  position: relative;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
@@ -339,6 +338,7 @@ data-grid .dg-resizer {
   top: 0;
   right: 0;
   width: 0.5rem;
+  z-index: 2;
   cursor: col-resize;
   -webkit-user-select: none;
      -moz-user-select: none;

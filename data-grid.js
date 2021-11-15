@@ -16,6 +16,7 @@ const labels = Object.assign(
     gotoLastPage: "Go to last page",
     of: "of",
     items: "items",
+    resizeColumn: "Resize column",
   },
   window.DataGridLabels || {}
 );
@@ -65,7 +66,6 @@ class DataGrid extends HTMLElement {
     super();
 
     this.state = {
-      id: null,
       pages: 0,
       page: 1,
       perPage: 10,
@@ -94,8 +94,8 @@ class DataGrid extends HTMLElement {
     this.perPageValues = this.state.perPageValues;
 
     // Set id
-    if (!this.state.id) {
-      this.state.id = DataGrid.randstr("dg-");
+    if (!this.hasAttribute("id")) {
+      this.setAttribute("id", DataGrid.randstr("dg-"));
     }
 
     this.log("constructor");
@@ -792,6 +792,7 @@ class DataGrid extends HTMLElement {
       const resizer = document.createElement("div");
       resizer.classList.add("dg-resizer");
       resizer.dataset.col = i;
+      resizer.ariaLabel = labels.resizeColumn;
 
       // Set the height
       resizer.style.height = `${col.offsetHeight}px`;
@@ -815,11 +816,19 @@ class DataGrid extends HTMLElement {
 
       // When user releases the mouse, remove the existing event listeners
       const mouseUpHandler = () => {
+        this.log("resized column");
+
         document.removeEventListener("mousemove", mouseMoveHandler);
         document.removeEventListener("mouseup", mouseUpHandler);
       };
 
+      resizer.addEventListener("click", (e) => {
+        // Otherwise it could sort the col
+        e.stopPropagation();
+      });
       resizer.addEventListener("mousedown", (e) => {
+        this.log("resize column");
+
         // Remove width from next columns
         for (let j = 0; j < cols.length; j++) {
           if (j >= e.target.dataset.col) {
@@ -911,7 +920,7 @@ class DataGrid extends HTMLElement {
   }
   log(message) {
     if (this.debug) {
-      console.log("[" + this.state.id + "] " + message);
+      console.log("[" + this.getAttribute("id") + "] " + message);
     }
   }
 }

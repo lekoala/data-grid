@@ -209,7 +209,6 @@ data-grid {
   // Prevent overflow on headers and cells
   th,
   td {
-    position: relative;
     overflow: hidden;
     text-align: left;
     text-overflow: ellipsis;
@@ -318,6 +317,7 @@ data-grid {
       text-align: center;
 
       button {
+        // Fix icon inside button
         position: relative;
         width: 2rem;
       }
@@ -394,6 +394,7 @@ data-grid {
     top: 0;
     right: 0;
     width: 0.5rem;
+    z-index: 2;
     cursor: col-resize;
     user-select: none;
   }
