@@ -681,6 +681,10 @@ class DataGrid extends HTMLElement {
       th.tabIndex = 0;
       th.textContent = column.title;
 
+      // Autosize ?
+      if (!th.getAttribute("width")) {
+      }
+
       // Reorder columns with drag/drop
       if (this.state.reorder) {
         th.draggable = true;
@@ -814,14 +818,13 @@ class DataGrid extends HTMLElement {
     cols.forEach((col) => {
       i++;
 
+      const colMinSize = 50;
+
       // Create a resizer element
       const resizer = document.createElement("div");
       resizer.classList.add("dg-resizer");
       resizer.dataset.col = i;
       resizer.ariaLabel = labels.resizeColumn;
-
-      // Set the height
-      resizer.style.height = `${col.offsetHeight}px`;
 
       // Add a resizer element to the column
       col.appendChild(resizer);
@@ -829,20 +832,24 @@ class DataGrid extends HTMLElement {
       // Handle resizing
       let startX = 0;
       let startW = 0;
-      let remainingSpace = (cols.length - i) * 50;
+      let remainingSpace = (cols.length - i) * colMinSize;
       let max = DataGrid.elementOffset(this).left + this.offsetWidth - remainingSpace;
 
       const mouseMoveHandler = (e) => {
         if (e.clientX > max) {
           return;
         }
-        const dx = e.clientX - startX;
-        col.width = startW + dx;
+        const newWidth = startW + (e.clientX - startX);
+        if (newWidth > colMinSize) {
+          col.width = newWidth;
+        }
       };
 
       // When user releases the mouse, remove the existing event listeners
       const mouseUpHandler = () => {
         this.log("resized column");
+
+        resizer.classList.remove("dg-resizer-active");
 
         document.removeEventListener("mousemove", mouseMoveHandler);
         document.removeEventListener("mouseup", mouseUpHandler);
@@ -854,6 +861,8 @@ class DataGrid extends HTMLElement {
       });
       resizer.addEventListener("mousedown", (e) => {
         this.log("resize column");
+
+        resizer.classList.add("dg-resizer-active");
 
         // Remove width from next columns
         for (let j = 0; j < cols.length; j++) {

@@ -383,12 +383,19 @@ data-grid {
   // Resizer
   .dg-resizer {
     position: absolute;
-    top: 0;
+    top: 0.75rem;
+    bottom: 0.75rem;
     right: 0;
-    width: 0.5rem;
+    width: 2px;
+    background: var(--gray-400);
+    height: auto;
     z-index: 2;
     cursor: col-resize;
     user-select: none;
+
+    &.dg-resizer-active {
+      background: var(--color);
+    }
   }
 
   @media only screen and (max-width: 768px) {

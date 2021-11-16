@@ -329,14 +329,20 @@ data-grid[dir=rtl] tfoot .dg-meta {
 }
 data-grid .dg-resizer {
   position: absolute;
-  top: 0;
+  top: 0.75rem;
+  bottom: 0.75rem;
   right: 0;
-  width: 0.5rem;
+  width: 2px;
+  background: var(--gray-400);
+  height: auto;
   z-index: 2;
   cursor: col-resize;
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
+}
+data-grid .dg-resizer.dg-resizer-active {
+  background: var(--color);
 }
 @media only screen and (max-width: 768px) {
   data-grid tfoot .dg-meta {
