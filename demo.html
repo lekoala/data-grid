@@ -75,9 +75,10 @@
       <li><code>sticky</code> to enable stick headers and footers</li>
       <li><code>expand</code> to keep cell data on one line (hover to show full cell)</li>
       <li><code>resizable</code> to make resizable columns</li>
+      <li><code>autosize</code> to make resizable columns</li>
       <li><code>sort=true</code> to make sortable columns</li>
     </ul>
-    <data-grid url="demo.json" sticky expand resizable sort="true" debug="true"></data-grid>
+    <data-grid url="demo.json" sticky expand autosize sort="true" debug="true"></data-grid>
 
     <h2>Responsive</h2>
 
@@ -95,7 +96,7 @@
     </ul>
 
     <button id="toggle">Toggle filter on/off</button>
-    <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky></data-grid>
+    <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" resizable sticky></data-grid>
 
     <h2>Empty grid</h2>
 

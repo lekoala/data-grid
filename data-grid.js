@@ -90,6 +90,7 @@ class DataGrid extends HTMLElement {
     this.root = this;
     this.initialized = false;
     this.touch = null;
+    this.isResizing = false;
 
     // Init page values
     this.perPageValues = this.state.perPageValues;
@@ -103,6 +104,46 @@ class DataGrid extends HTMLElement {
   }
 
   // utils
+
+  /**
+   * Uses canvas.measureText to compute and return the width of the given text of given font in pixels.
+   * @see https://stackoverflow.com/questions/118241/calculate-text-width-with-javascript/21015393#21015393
+   * @param {String} text The text to be rendered.
+   * @param {String} font The css font descriptor that text is to be rendered with (e.g. "bold 14px verdana").
+   * @return {Number}
+   */
+  static getTextWidth(text, font = null) {
+    if (!font) {
+      font = DataGrid.getCanvasFontSize();
+    }
+    // re-use canvas object for better performance
+    const canvas = DataGrid.getTextWidth.canvas || (DataGrid.getTextWidth.canvas = document.createElement("canvas"));
+    const context = canvas.getContext("2d");
+    context.font = font;
+    const metrics = context.measureText(text);
+    return parseInt(metrics.width);
+  }
+
+  /**
+   * @param {HTMLElement} element
+   * @param {String} prop
+   * @returns {String}
+   */
+  static getCssStyle(element, prop) {
+    return window.getComputedStyle(element, null).getPropertyValue(prop);
+  }
+
+  /**
+   * @param {HTMLElement} el
+   * @returns {String}
+   */
+  static getCanvasFontSize(el = document.body) {
+    const fontWeight = DataGrid.getCssStyle(el, "font-weight") || "normal";
+    const fontSize = DataGrid.getCssStyle(el, "font-size") || "1rem";
+    const fontFamily = DataGrid.getCssStyle(el, "font-family") || "Arial";
+
+    return `${fontWeight} ${fontSize} ${fontFamily}`;
+  }
 
   /**
    * @param {HTMLElement} el
@@ -682,17 +723,28 @@ class DataGrid extends HTMLElement {
       th.textContent = column.title;
 
       // Autosize ?
-      if (!th.getAttribute("width")) {
+      if (this.root.hasAttribute("autosize") && !th.getAttribute("width")) {
+        let v = this.data[0][column.field];
+        if (v.length) {
+          th.setAttribute("width", DataGrid.getTextWidth(v));
+        }
       }
 
       // Reorder columns with drag/drop
       if (this.state.reorder) {
         th.draggable = true;
         th.addEventListener("dragstart", (e) => {
+          if (this.isResizing) {
+            return false;
+          }
+          this.log("reorder col");
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
         });
         th.addEventListener("dragover", (e) => {
+          if (this.isResizing) {
+            return false;
+          }
           if (e.preventDefault) {
             e.preventDefault();
           }
@@ -700,6 +752,10 @@ class DataGrid extends HTMLElement {
           return false;
         });
         th.addEventListener("drop", (e) => {
+          if (this.isResizing) {
+            return false;
+          }
+          this.log("reordered col");
           if (e.stopPropagation) {
             e.stopPropagation();
           }
@@ -848,6 +904,7 @@ class DataGrid extends HTMLElement {
       // When user releases the mouse, remove the existing event listeners
       const mouseUpHandler = () => {
         this.log("resized column");
+        this.isResizing = false;
 
         resizer.classList.remove("dg-resizer-active");
 
@@ -855,12 +912,15 @@ class DataGrid extends HTMLElement {
         document.removeEventListener("mouseup", mouseUpHandler);
       };
 
+      // Otherwise it could sort the col
       resizer.addEventListener("click", (e) => {
-        // Otherwise it could sort the col
         e.stopPropagation();
       });
+      //TODO: not compatible with reorder
+
       resizer.addEventListener("mousedown", (e) => {
         this.log("resize column");
+        this.isResizing = true;
 
         resizer.classList.add("dg-resizer-active");
 
