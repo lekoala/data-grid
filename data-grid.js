@@ -88,12 +88,14 @@ class DataGrid extends HTMLElement {
     // Don't use shadow dom as it makes theming super hard
     this.appendChild(template.content.cloneNode(true));
     this.root = this;
+
+    // Track init state
     this.initialized = false;
+
+    // Init values
+    this.perPageValues = this.state.perPageValues;
     this.touch = null;
     this.isResizing = false;
-
-    // Init page values
-    this.perPageValues = this.state.perPageValues;
 
     // Set id
     if (!this.hasAttribute("id")) {
@@ -351,7 +353,6 @@ class DataGrid extends HTMLElement {
     this.inputPage.addEventListener("input", this.gotoPage);
 
     // Touch support
-    // TODO: figure out screen drag ?
     this.touchstart = this.touchstart.bind(this);
     this.touchmove = this.touchmove.bind(this);
     document.addEventListener("touchstart", this.touchstart);
@@ -735,16 +736,14 @@ class DataGrid extends HTMLElement {
         th.draggable = true;
         th.addEventListener("dragstart", (e) => {
           if (this.isResizing) {
-            return false;
+            e.preventDefault();
+            return;
           }
           this.log("reorder col");
           e.dataTransfer.effectAllowed = "move";
           e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
         });
         th.addEventListener("dragover", (e) => {
-          if (this.isResizing) {
-            return false;
-          }
           if (e.preventDefault) {
             e.preventDefault();
           }
@@ -752,19 +751,21 @@ class DataGrid extends HTMLElement {
           return false;
         });
         th.addEventListener("drop", (e) => {
-          if (this.isResizing) {
-            return false;
-          }
-          this.log("reordered col");
           if (e.stopPropagation) {
             e.stopPropagation();
           }
+          let target = e.target;
+          while (target.nodeName != "TH") {
+            target = target.parentNode;
+          }
           const index = e.dataTransfer.getData("text/plain");
-          const targetIndex = e.target.getAttribute("aria-colindex");
+          const targetIndex = target.getAttribute("aria-colindex");
 
           if (index === targetIndex) {
+            this.log("reordered col stayed the same");
             return;
           }
+          this.log("reordered col from " + index + " to " + targetIndex);
 
           const tmp = this.state.columns[index - 1];
           this.state.columns[index - 1] = this.columns[targetIndex - 1];
@@ -868,18 +869,18 @@ class DataGrid extends HTMLElement {
     }
   }
   renderResizer() {
+    const table = this.root.querySelector("table");
     const cols = this.root.querySelectorAll("thead tr.dg-head-columns th");
     let i = 0;
 
     cols.forEach((col) => {
       i++;
 
-      const colMinSize = 50;
+      const colMinSize = DataGrid.getTextWidth(col.textContent) + 30;
 
       // Create a resizer element
       const resizer = document.createElement("div");
       resizer.classList.add("dg-resizer");
-      resizer.dataset.col = i;
       resizer.ariaLabel = labels.resizeColumn;
 
       // Add a resizer element to the column
@@ -904,9 +905,13 @@ class DataGrid extends HTMLElement {
       // When user releases the mouse, remove the existing event listeners
       const mouseUpHandler = () => {
         this.log("resized column");
-        this.isResizing = false;
 
+        this.isResizing = false;
         resizer.classList.remove("dg-resizer-active");
+        if (this.state.reorder) {
+          col.draggable = true;
+        }
+        col.style.overflow = "hidden";
 
         document.removeEventListener("mousemove", mouseMoveHandler);
         document.removeEventListener("mouseup", mouseUpHandler);
@@ -916,24 +921,40 @@ class DataGrid extends HTMLElement {
       resizer.addEventListener("click", (e) => {
         e.stopPropagation();
       });
-      //TODO: not compatible with reorder
 
       resizer.addEventListener("mousedown", (e) => {
-        this.log("resize column");
+        e.stopPropagation();
         this.isResizing = true;
+
+        const columns = Array.from(this.root.querySelectorAll(".dg-head-columns th"));
+        const columnIndex = columns.findIndex((column) => column == e.target.parentNode);
+
+        this.log("resize column");
 
         resizer.classList.add("dg-resizer-active");
 
-        // Remove width from next columns
-        for (let j = 0; j < cols.length; j++) {
-          if (j >= e.target.dataset.col) {
-            cols[j].removeAttribute("width");
-          }
+        // Make sure we don't drag it
+        if (col.hasAttribute("draggable")) {
+          col.removeAttribute("draggable");
         }
+
+        // Allow overflow when resizing
+        col.style.overflow = "visible";
+
+        // Show full column height
+        resizer.style.height = table.offsetHeight + "px";
 
         // Register initial data
         startX = e.clientX;
         startW = col.offsetWidth;
+
+        // Remove width from next columns to allow auto layout
+        col.setAttribute("width", startW + (e.clientX - startX));
+        for (let j = 0; j < cols.length; j++) {
+          if (j > columnIndex) {
+            cols[j].removeAttribute("width");
+          }
+        }
 
         // Attach handlers
         document.addEventListener("mousemove", mouseMoveHandler);
@@ -954,6 +975,9 @@ class DataGrid extends HTMLElement {
       tr.setAttribute("aria-rowindex", i + 1);
       tr.tabIndex = 0;
       this.state.columns.forEach((column, j) => {
+        if (!column) {
+          console.log(this.state.columns);
+        }
         // It should be applied as an attr of the row
         if (column.attr) {
           tr.setAttribute(column.attr, item[column.field]);

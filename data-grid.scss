@@ -1,7 +1,7 @@
 data-grid {
   --padding: 0.5rem;
   --padding-half: calc(var(--padding) / 2);
-  --header-scale: 1.5;
+  --header-scale: 2;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
   --highlight-color: #fffcee;
@@ -320,6 +320,8 @@ data-grid {
       text-align: right;
     }
   }
+
+  // Pagination
   [aria-sort] {
     cursor: pointer;
     position: relative;
@@ -383,21 +385,35 @@ data-grid {
   // Resizer
   .dg-resizer {
     position: absolute;
-    top: 0.75rem;
-    bottom: 0.75rem;
+    top: 0;
     right: 0;
-    width: 2px;
-    background: var(--gray-400);
-    height: auto;
+    width: 6px; // clickable zone
     z-index: 2;
     cursor: col-resize;
     user-select: none;
 
+    &:before {
+      content: "";
+      display: block;
+      position: absolute;
+      top: calc(var(--padding) * var(--header-scale));
+      height: 1.5rem;
+      right: 0;
+      width: 2px;
+      background: var(--gray-400);
+    }
+
     &.dg-resizer-active {
-      background: var(--color);
+      border-right: 1px dashed var(--color);
+
+      &:before {
+        background: var(--color);
+        border-right: 1px dashed var(--color);
+      }
     }
   }
 
+  // Small screen tweaks
   @media only screen and (max-width: 768px) {
     tfoot {
       .dg-meta {

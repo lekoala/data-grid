@@ -1,7 +1,7 @@
 data-grid {
   --padding: 0.5rem;
   --padding-half: calc(var(--padding) / 2);
-  --header-scale: 1.5;
+  --header-scale: 2;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
   --highlight-color: #fffcee;
@@ -329,20 +329,31 @@ data-grid[dir=rtl] tfoot .dg-meta {
 }
 data-grid .dg-resizer {
   position: absolute;
-  top: 0.75rem;
-  bottom: 0.75rem;
+  top: 0;
   right: 0;
-  width: 2px;
-  background: var(--gray-400);
-  height: auto;
+  width: 6px;
   z-index: 2;
   cursor: col-resize;
   -webkit-user-select: none;
      -moz-user-select: none;
           user-select: none;
 }
+data-grid .dg-resizer:before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: calc(var(--padding) * var(--header-scale));
+  height: 1.5rem;
+  right: 0;
+  width: 2px;
+  background: var(--gray-400);
+}
 data-grid .dg-resizer.dg-resizer-active {
+  border-right: 1px dashed var(--color);
+}
+data-grid .dg-resizer.dg-resizer-active:before {
   background: var(--color);
+  border-right: 1px dashed var(--color);
 }
 @media only screen and (max-width: 768px) {
   data-grid tfoot .dg-meta {
