@@ -17,6 +17,7 @@ const labels = Object.assign(
     of: "of",
     items: "items",
     resizeColumn: "Resize column",
+    noData: "No data",
   },
   window.DataGridLabels || {}
 );
@@ -28,7 +29,7 @@ template.innerHTML = `
         <tr role="row" aria-rowindex="1" class="dg-head-columns"></tr>
         <tr role="row" aria-rowindex="2" class="dg-head-filters"></tr>
     </thead>
-    <tbody role="rowgroup"></tbody>
+    <tbody role="rowgroup" data-empty="${labels.noData}"></tbody>
     <tfoot role="rowgroup" hidden>
         <tr role="row" aria-rowindex="1">
             <td role="gridcell">
@@ -58,6 +59,7 @@ template.innerHTML = `
             </td>
         </tr>
     </tfoot>
+    <ul class="dg-menu" hidden></ul>
 </table>
 `;
 
@@ -96,6 +98,7 @@ class DataGrid extends HTMLElement {
     this.perPageValues = this.state.perPageValues;
     this.touch = null;
     this.isResizing = false;
+    this.defaultHeight = 0;
 
     // Set id
     if (!this.hasAttribute("id")) {
@@ -106,6 +109,36 @@ class DataGrid extends HTMLElement {
   }
 
   // utils
+
+  static normalizeData(val) {
+    if (val === "true") {
+      return true;
+    }
+    if (val === "false") {
+      return false;
+    }
+    if (val === Number(val).toString()) {
+      return Number(val);
+    }
+    if (val === "" || val === "null") {
+      return null;
+    }
+    return val;
+  }
+
+  /**
+   * @param {HTMLElement} el
+   * @param {String} type
+   * @param {String} prop
+   * @returns {HTMLElement}
+   */
+  static getParentNode(el, type, prop = "nodeName") {
+    let parent = el;
+    while (parent[prop] != type) {
+      parent = parent.parentNode;
+    }
+    return parent;
+  }
 
   /**
    * Uses canvas.measureText to compute and return the width of the given text of given font in pixels.
@@ -409,7 +442,9 @@ class DataGrid extends HTMLElement {
 
         // Only load if connected, otherwise other attributes might not be read yet
         if (this.initialized) {
-          this.loadData();
+          if (newValue) {
+            this.loadData();
+          }
         }
         break;
       case "page":
@@ -428,7 +463,9 @@ class DataGrid extends HTMLElement {
           this.fixPage();
           this.updateGoto();
           this.paginate();
-          window.scroll({ top: DataGrid.elementOffset(element).top });
+
+          // Scroll and keep a sizable amount of data displayed
+          window.scroll({ top: DataGrid.elementOffset(element).top - this.defaultHeight });
         }
         break;
       case "debug":
@@ -472,14 +509,41 @@ class DataGrid extends HTMLElement {
       }
     }
   }
-  columnsLength() {
+  getColProp(field, prop) {
+    this.state.columns.forEach((col) => {
+      if (col.field == field) {
+        return col[prop];
+      }
+    });
+  }
+  setColProp(field, prop, val) {
+    this.state.columns.forEach((col) => {
+      if (col.field == field) {
+        col[prop] = val;
+      }
+    });
+  }
+  columnsLength(visibleOnly = false) {
     let len = 0;
     this.state.columns.forEach((col) => {
+      if (visibleOnly && col.hidden) {
+        return;
+      }
       if (!col.attr) {
         len++;
       }
     });
     return len;
+  }
+  computeDefaultHeight() {
+    this.defaultHeight = this.root.querySelector("table").offsetHeight;
+    if (this.style.height) {
+      this.style.height = this.defaultHeight + "px";
+      this.style.overflowY = "auto";
+    }
+    if (this.style.minHeight && parseInt(this.style.minHeight) > this.defaultHeight) {
+      this.style.minHeight = this.defaultHeight + "px";
+    }
   }
   fixPage() {
     this.state.pages = Math.ceil(this.data.length / this.state.perPage);
@@ -504,7 +568,7 @@ class DataGrid extends HTMLElement {
     if (this.state.filter) {
       row.removeAttribute("hidden");
     } else {
-      row.setAttribute("hidden", "hidden");
+      row.setAttribute("hidden", true);
     }
   }
   toggleReorder() {
@@ -536,6 +600,23 @@ class DataGrid extends HTMLElement {
     element.value = this.state.page;
     element.disabled = this.state.pages === 1;
   }
+  addRow(row) {
+    this.originalData.push(row);
+    this.data = this.originalData;
+    this.fixPage();
+    this.renderBody();
+  }
+  clearData() {
+    // Clear the state but keep attribute so we can reload
+    this.state.url = null;
+    if (this.data.length === 0) {
+      return;
+    }
+    this.data = this.originalData = [];
+    this.fixPage();
+    this.renderHeader();
+    this.computeDefaultHeight();
+  }
   loadData() {
     this.log("loadData");
     if (!this.url) {
@@ -560,6 +641,13 @@ class DataGrid extends HTMLElement {
       }
       this.originalData = this.data.slice();
       this.fixPage();
+
+      // Make sure we have a proper set of columns
+      if (this.state.columns.length === 0 && this.originalData.length) {
+        this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
+      }
+
+      this.createMenu();
       this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
       this.root.querySelector("tfoot").removeAttribute("hidden");
       this.renderHeader();
@@ -643,6 +731,8 @@ class DataGrid extends HTMLElement {
     const sort = col.getAttribute("aria-sort");
     if (sort === "none") {
       let stack = [];
+
+      // Restore order while keeping filters
       this.originalData.some((itemA) => {
         this.data.some((itemB) => {
           if (JSON.stringify(itemA) === JSON.stringify(itemB)) {
@@ -661,19 +751,17 @@ class DataGrid extends HTMLElement {
         if (!isNaN(a[field]) && !isNaN(b[field])) {
           return sort === "ascending" ? a[field] - b[field] : b[field] - a[field];
         }
+        const valA = sort === "ascending" ? a[field].toUpperCase() : b[field].toUpperCase();
+        const valB = sort === "ascending" ? b[field].toUpperCase() : a[field].toUpperCase();
 
-        const valueA = sort === "ascending" ? a[field].toUpperCase() : b[field].toUpperCase();
-        const valueB = sort === "ascending" ? b[field].toUpperCase() : a[field].toUpperCase();
-
-        if (valueA > valueB) {
-          return 1;
+        switch (true) {
+          case valA > valB:
+            return 1;
+          case valA < valB:
+            return -1;
+          case valA === valB:
+            return 0;
         }
-
-        if (valueA < valueB) {
-          return -1;
-        }
-
-        return 0;
       });
     }
 
@@ -697,10 +785,8 @@ class DataGrid extends HTMLElement {
     let sortedColumn;
     let thead = this.root.querySelector("thead");
 
-    // Init columns with first row keys if not set
-    if (this.state.columns.length === 0 && this.originalData.length) {
-      this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
-    }
+    const colMinWidth = 50;
+    const colMaxWidth = parseInt((thead.offsetWidth / this.columnsLength(true)) * 2);
 
     // Create columns
     tr = document.createElement("tr");
@@ -719,81 +805,35 @@ class DataGrid extends HTMLElement {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
+      th.dataset.minWidth = DataGrid.getTextWidth(column.title) + 30;
       DataGrid.applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
 
-      // Autosize ?
+      if (column.hidden) {
+        th.setAttribute("hidden", true);
+      }
+
+      // Autosize small based on first/last row ?
       if (this.root.hasAttribute("autosize") && !th.getAttribute("width")) {
-        let v = this.data[0][column.field];
-        if (v.length) {
+        let v = this.data[0][column.field].toString();
+        let v2 = this.data[this.data.length - 1][column.field].toString();
+        if (v2.length > v.length) {
+          v = v2;
+        }
+        if (v.length <= 6) {
+          th.setAttribute("width", colMinWidth);
+        } else if (v.length > 50) {
+          th.setAttribute("width", colMaxWidth);
+        } else {
           th.setAttribute("width", DataGrid.getTextWidth(v));
         }
       }
 
       // Reorder columns with drag/drop
       if (this.state.reorder) {
-        th.draggable = true;
-        th.addEventListener("dragstart", (e) => {
-          if (this.isResizing) {
-            e.preventDefault();
-            return;
-          }
-          this.log("reorder col");
-          e.dataTransfer.effectAllowed = "move";
-          e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
-        });
-        th.addEventListener("dragover", (e) => {
-          if (e.preventDefault) {
-            e.preventDefault();
-          }
-          e.dataTransfer.dropEffect = "move";
-          return false;
-        });
-        th.addEventListener("drop", (e) => {
-          if (e.stopPropagation) {
-            e.stopPropagation();
-          }
-          let target = e.target;
-          while (target.nodeName != "TH") {
-            target = target.parentNode;
-          }
-          const index = e.dataTransfer.getData("text/plain");
-          const targetIndex = target.getAttribute("aria-colindex");
-
-          if (index === targetIndex) {
-            this.log("reordered col stayed the same");
-            return;
-          }
-          this.log("reordered col from " + index + " to " + targetIndex);
-
-          const tmp = this.state.columns[index - 1];
-          this.state.columns[index - 1] = this.columns[targetIndex - 1];
-          this.state.columns[targetIndex - 1] = tmp;
-
-          const swapNodes = (selector, el1) => {
-            const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
-            const el2 = this.root.querySelector(selector + " tr[aria-rowindex='" + rowIndex + "'] [aria-colindex='" + targetIndex + "']");
-            el1.setAttribute("aria-colindex", targetIndex);
-            el2.setAttribute("aria-colindex", index);
-            const newNode = document.createElement("th");
-            el1.parentNode.insertBefore(newNode, el1);
-            el2.parentNode.replaceChild(el1, el2);
-            newNode.parentNode.replaceChild(el2, newNode);
-          };
-
-          // Swap all rows in header and body
-          this.root.querySelectorAll("thead th[aria-colindex='" + index + "']").forEach((el1) => {
-            swapNodes("thead", el1);
-          });
-          this.root.querySelectorAll('tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
-            swapNodes("tbody", el1);
-          });
-
-          return false;
-        });
+        this.makeHeaderDraggable(th);
       }
-
       tr.appendChild(th);
     });
 
@@ -802,6 +842,31 @@ class DataGrid extends HTMLElement {
       sortedColumn = this.root.querySelector("thead tr.dg-head-columns th[field='" + this.state.defaultSort + "']");
     }
 
+    // Show menu on right click
+    tr.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+
+      const target = DataGrid.getParentNode(e.target, "THEAD");
+      const menu = this.root.querySelector(".dg-menu");
+      const rect = target.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      menu.style.top = `${y}px`;
+      menu.style.left = `${x}px`;
+
+      menu.removeAttribute("hidden");
+
+      const documentClickHandler = (e) => {
+        if (!menu.contains(e.target)) {
+          menu.setAttribute("hidden", true);
+          document.removeEventListener("click", documentClickHandler);
+        }
+      };
+      document.addEventListener("click", documentClickHandler);
+    });
+
+    // Sort col on click
     tr.querySelectorAll("[aria-sort]").forEach((sortableRow) => {
       sortableRow.addEventListener("click", () => {
         this.sortData(sortableRow);
@@ -814,7 +879,7 @@ class DataGrid extends HTMLElement {
     tr.setAttribute("aria-rowindex", 2);
     tr.setAttribute("class", "dg-head-filters");
     if (!this.state.filter) {
-      tr.setAttribute("hidden", "hidden");
+      tr.setAttribute("hidden", true);
     }
     this.state.columns.forEach((column, i) => {
       if (column.attr) {
@@ -839,6 +904,10 @@ class DataGrid extends HTMLElement {
         input.tabIndex = 0;
       }
 
+      if (column.hidden) {
+        th.setAttribute("hidden", true);
+      }
+
       th.appendChild(input);
       tr.appendChild(th);
     });
@@ -854,8 +923,9 @@ class DataGrid extends HTMLElement {
       });
     });
 
-    this.root.querySelector("table").setAttribute("aria-colcount", this.columnsLength().toString());
-    this.root.querySelector("tfoot").querySelector("td").setAttribute("colspan", this.columnsLength().toString());
+    // Configure table
+    this.root.querySelector("table").setAttribute("aria-colcount", this.columnsLength(true).toString());
+    this.root.querySelector("tfoot").querySelector("td").setAttribute("colspan", this.columnsLength(true).toString());
 
     if (sortedColumn) {
       this.sortData(sortedColumn);
@@ -868,16 +938,115 @@ class DataGrid extends HTMLElement {
       this.renderResizer();
     }
   }
+  createMenu() {
+    const menu = this.root.querySelector(".dg-menu");
+    this.state.columns.forEach((col) => {
+      const field = col.field;
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.setAttribute("type", "checkbox");
+      if (!col.hidden) {
+        checkbox.checked = true;
+      }
+      checkbox.addEventListener("change", (e) => {
+        e.target.checked ? this.showColumn(field, e.target) : this.hideColumn(field, e.target);
+      });
+
+      const text = document.createTextNode(col.title);
+
+      label.appendChild(checkbox);
+      label.appendChild(text);
+
+      li.appendChild(label);
+      menu.appendChild(li);
+    });
+  }
+  showColumn(field, checkbox = null) {
+    if (checkbox) {
+      checkbox.checked = true;
+    }
+    this.setColProp(field, "hidden", false);
+    this.renderHeader();
+  }
+  hideColumn(field, checkbox = null) {
+    const numHiddenCols = this.state.columns.filter((th) => {
+      return th.hidden === true;
+    }).length;
+
+    if (numHiddenCols === this.columnsLength() - 1) {
+      // Restore checkbox value
+      if (checkbox) {
+        checkbox.checked = true;
+      }
+      return;
+    }
+    this.setColProp(field, "hidden", true);
+    this.renderHeader();
+  }
+  makeHeaderDraggable(th) {
+    th.draggable = true;
+    th.addEventListener("dragstart", (e) => {
+      if (this.isResizing && e.preventDefault) {
+        e.preventDefault();
+        return;
+      }
+      this.log("reorder col");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
+    });
+    th.addEventListener("dragover", (e) => {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      e.dataTransfer.dropEffect = "move";
+      return false;
+    });
+    th.addEventListener("drop", (e) => {
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+      const target = DataGrid.getParentNode(e.target, "TH");
+      const index = e.dataTransfer.getData("text/plain");
+      const targetIndex = target.getAttribute("aria-colindex");
+
+      if (index === targetIndex) {
+        this.log("reordered col stayed the same");
+        return;
+      }
+      this.log("reordered col from " + index + " to " + targetIndex);
+
+      const tmp = this.state.columns[index - 1];
+      this.state.columns[index - 1] = this.columns[targetIndex - 1];
+      this.state.columns[targetIndex - 1] = tmp;
+
+      const swapNodes = (selector, el1) => {
+        const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
+        const el2 = this.root.querySelector(selector + " tr[aria-rowindex='" + rowIndex + "'] [aria-colindex='" + targetIndex + "']");
+        el1.setAttribute("aria-colindex", targetIndex);
+        el2.setAttribute("aria-colindex", index);
+        const newNode = document.createElement("th");
+        el1.parentNode.insertBefore(newNode, el1);
+        el2.parentNode.replaceChild(el1, el2);
+        newNode.parentNode.replaceChild(el2, newNode);
+      };
+
+      // Swap all rows in header and body
+      this.root.querySelectorAll("thead th[aria-colindex='" + index + "']").forEach((el1) => {
+        swapNodes("thead", el1);
+      });
+      this.root.querySelectorAll('tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
+        swapNodes("tbody", el1);
+      });
+
+      return false;
+    });
+  }
   renderResizer() {
     const table = this.root.querySelector("table");
     const cols = this.root.querySelectorAll("thead tr.dg-head-columns th");
-    let i = 0;
 
     cols.forEach((col) => {
-      i++;
-
-      const colMinSize = DataGrid.getTextWidth(col.textContent) + 30;
-
       // Create a resizer element
       const resizer = document.createElement("div");
       resizer.classList.add("dg-resizer");
@@ -889,15 +1058,15 @@ class DataGrid extends HTMLElement {
       // Handle resizing
       let startX = 0;
       let startW = 0;
-      let remainingSpace = (cols.length - i) * colMinSize;
-      let max = DataGrid.elementOffset(this).left + this.offsetWidth - remainingSpace;
+      let remainingSpace = 0;
+      let max = 0;
 
       const mouseMoveHandler = (e) => {
         if (e.clientX > max) {
           return;
         }
         const newWidth = startW + (e.clientX - startX);
-        if (newWidth > colMinSize) {
+        if (col.dataset.minWidth && newWidth > col.dataset.minWidth) {
           col.width = newWidth;
         }
       };
@@ -926,9 +1095,12 @@ class DataGrid extends HTMLElement {
         e.stopPropagation();
         this.isResizing = true;
 
-        const columns = Array.from(this.root.querySelectorAll(".dg-head-columns th"));
+        const currentCols = this.root.querySelectorAll(".dg-head-columns th");
+        const visibleCols = Array.from(currentCols).filter((col) => {
+          return !col.hasAttribute("hidden");
+        });
+        const columns = Array.from(visibleCols);
         const columnIndex = columns.findIndex((column) => column == e.target.parentNode);
-
         this.log("resize column");
 
         resizer.classList.add("dg-resizer-active");
@@ -941,16 +1113,19 @@ class DataGrid extends HTMLElement {
         // Allow overflow when resizing
         col.style.overflow = "visible";
 
-        // Show full column height
-        resizer.style.height = table.offsetHeight + "px";
+        // Show full column height (-1 to avoid scrollbar)
+        resizer.style.height = table.offsetHeight - 1 + "px";
 
         // Register initial data
         startX = e.clientX;
         startW = col.offsetWidth;
 
+        remainingSpace = (visibleCols.length - columnIndex) * 30;
+        max = DataGrid.elementOffset(this).left + this.offsetWidth - remainingSpace;
+
         // Remove width from next columns to allow auto layout
-        col.setAttribute("width", startW + (e.clientX - startX));
-        for (let j = 0; j < cols.length; j++) {
+        col.setAttribute("width", startW);
+        for (let j = 0; j < visibleCols.length; j++) {
           if (j > columnIndex) {
             cols[j].removeAttribute("width");
           }
@@ -971,7 +1146,7 @@ class DataGrid extends HTMLElement {
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
       tr.setAttribute("role", "row");
-      tr.setAttribute("hidden", "hidden");
+      tr.setAttribute("hidden", true);
       tr.setAttribute("aria-rowindex", i + 1);
       tr.tabIndex = 0;
       this.state.columns.forEach((column, j) => {
@@ -990,6 +1165,9 @@ class DataGrid extends HTMLElement {
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
         td.textContent = item[column.field];
+        if (column.hidden) {
+          td.setAttribute("hidden", true);
+        }
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -998,7 +1176,6 @@ class DataGrid extends HTMLElement {
     tbody.setAttribute("role", "rowgroup");
 
     this.root.querySelector("table").replaceChild(tbody, this.root.querySelector("tbody"));
-
     this.paginate();
   }
   paginate() {
@@ -1019,11 +1196,16 @@ class DataGrid extends HTMLElement {
     tbody.querySelectorAll("tr").forEach((tr) => {
       index = Number(tr.getAttribute("aria-rowindex"));
       if (index > high || index < low) {
-        tr.setAttribute("hidden", "hidden");
+        tr.setAttribute("hidden", true);
       } else {
         tr.removeAttribute("hidden");
       }
     });
+
+    // Store default height and update styles if needed
+    if (this.defaultHeight == 0) {
+      this.computeDefaultHeight();
+    }
 
     // Enable/disable buttons
     if (this.btnFirst) {

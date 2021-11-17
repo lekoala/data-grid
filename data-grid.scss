@@ -1,7 +1,7 @@
 data-grid {
   --padding: 0.5rem;
   --padding-half: calc(var(--padding) / 2);
-  --header-scale: 2;
+  --header-scale: 1.5;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
   --highlight-color: #fffcee;
@@ -31,6 +31,8 @@ data-grid {
 
   display: block;
   contain: content;
+  background: var(--header-background);
+  min-height: 6rem;
 
   img {
     border: none;
@@ -45,6 +47,8 @@ data-grid {
   table {
     display: table;
     border-collapse: collapse;
+    // Table and column widths are set by the widths of table and col elements
+    // or by the width of the first row of cells. Cells in subsequent rows do not affect column widths.
     table-layout: fixed;
     width: 100%;
     white-space: normal;
@@ -79,12 +83,17 @@ data-grid {
 
   // Expand truncated cells on hover
   &[expand] {
-    table tbody td:hover {
-      overflow: visible;
-      z-index: 1;
-      white-space: nowrap;
-      background-color: var(--highlight-color);
-      position: absolute;
+    table tbody td {
+      &:hover {
+        overflow: visible;
+        z-index: 1;
+        white-space: nowrap;
+        background-color: var(--highlight-color);
+        position: absolute;
+      }
+      &:last-child:hover {
+        right: 0;
+      }
     }
   }
 
@@ -139,16 +148,22 @@ data-grid {
   }
 
   // https://css-tricks.com/making-tables-with-sticky-header-and-footers-got-a-bit-easier/
-  &[sticky] table {
-    thead,
-    tfoot {
-      position: sticky;
-    }
-    thead {
-      inset-block-start: 0;
-    }
-    tfoot {
-      inset-block-end: 0;
+  &[sticky] {
+    table {
+      thead,
+      tfoot {
+        z-index: 2;
+        position: sticky;
+        margin: 0;
+        border: 0;
+      }
+      // Use silly value to prevent sub pixel alignment issue
+      thead {
+        inset-block-start: -1px;
+      }
+      tfoot {
+        inset-block-end: -1px;
+      }
     }
   }
 
@@ -266,6 +281,20 @@ data-grid {
       }
     }
   }
+
+  // Empty plate (don't use :empty as it would create fouc on load)
+  &:not([url]) tbody {
+    &:before {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      content: attr(data-empty);
+      transform: translate(-50%, -50%);
+      opacity: 0.5;
+      font-size: 2rem;
+    }
+  }
+
   tbody {
     tr:nth-child(odd) {
       background-color: var(--bs-white, #ffffff);
@@ -382,6 +411,25 @@ data-grid {
     }
   }
 
+  // Menu
+  .dg-menu {
+    position: absolute;
+    z-index: 3;
+    background: var(--header-background);
+    list-style: none;
+    margin: 0;
+    padding: var(--padding);
+
+    li {
+      margin: 0;
+      padding: 0;
+    }
+    label {
+      display: flex;
+      align-items: center;
+    }
+  }
+
   // Resizer
   .dg-resizer {
     position: absolute;
@@ -402,13 +450,15 @@ data-grid {
       width: 2px;
       background: var(--gray-400);
     }
+    &:hover:before {
+      background: var(--color);
+    }
 
     &.dg-resizer-active {
       border-right: 1px dashed var(--color);
 
       &:before {
         background: var(--color);
-        border-right: 1px dashed var(--color);
       }
     }
   }

@@ -58,6 +58,25 @@
       let grid = document.getElementById("demo3-grid");
       grid.loadData(); // you can call methods directly
     });
+    document.getElementById("clear").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo3-grid");
+      grid.clearData(); // you can call methods directly
+    });
+    document.getElementById("add-row").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo4-grid");
+      fetch('https://randomuser.me/api/')
+        .then(response => response.json())
+        .then(data => {
+          const item = data.results[0];
+          const row = {
+            "id": parseInt(Math.random() * 100),
+            "first_name": item.name.first,
+            "last_name": item.name.last,
+          };
+          console.log(row);
+          grid.addRow(row);
+        });
+    });
   </script>
 </head>
 
@@ -72,13 +91,13 @@
     <p>Url should point to a json file that return a plain array or a json response with a <code>data</code> key that contains an array</p>
 
     <ul>
-      <li><code>sticky</code> to enable stick headers and footers</li>
+      <li><code>sticky</code> to enable stick headers and footers (usable with fixed height)</li>
       <li><code>expand</code> to keep cell data on one line (hover to show full cell)</li>
       <li><code>resizable</code> to make resizable columns</li>
       <li><code>autosize</code> to make resizable columns</li>
       <li><code>sort=true</code> to make sortable columns</li>
     </ul>
-    <data-grid id="basic-demo" url="demo.json" sticky expand autosize resizable reorder="true" sort="true" debug="true"></data-grid>
+    <data-grid id="basic-demo" style="height:600px" url="demo.json" sticky expand autosize resizable reorder="true" sort="true" debug="true"></data-grid>
 
     <h2>Responsive</h2>
 
@@ -100,9 +119,15 @@
 
     <h2>Empty grid</h2>
 
-    <button id="load">Load grid data</button> <button id="reload">Reload data</button>
+    <button id="load">Load grid data</button> <button id="reload">Reload data</button> <button id="clear">Clear data</button>
     <data-grid id="demo3-grid" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky>
     </data-grid>
+
+    <h2>Grid manipulation</h2>
+
+    <button id="add-row">Add row</button>
+
+    <data-grid id="demo4-grid" url="demo3.json" sticky expand autosize resizable reorder="true" sort="true" debug="true"></data-grid>
 
     <h2>Good to know</h2>
 

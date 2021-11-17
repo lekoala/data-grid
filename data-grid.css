@@ -1,7 +1,7 @@
 data-grid {
   --padding: 0.5rem;
   --padding-half: calc(var(--padding) / 2);
-  --header-scale: 2;
+  --header-scale: 1.5;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
   --highlight-color: #fffcee;
@@ -29,6 +29,8 @@ data-grid {
   --gray-900: var(--bs-gray-900, #212529);
   display: block;
   contain: content;
+  background: var(--header-background);
+  min-height: 6rem;
 }
 data-grid img {
   border: none;
@@ -75,6 +77,9 @@ data-grid[expand] table tbody td:hover {
   background-color: var(--highlight-color);
   position: absolute;
 }
+data-grid[expand] table tbody td:last-child:hover {
+  right: 0;
+}
 @media only screen and (max-width: 768px) {
   data-grid[responsive] table,
 data-grid[responsive] thead,
@@ -118,13 +123,16 @@ data-grid[responsive] tr:not([hidden]) {
 }
 data-grid[sticky] table thead,
 data-grid[sticky] table tfoot {
+  z-index: 2;
   position: sticky;
+  margin: 0;
+  border: 0;
 }
 data-grid[sticky] table thead {
-  inset-block-start: 0;
+  inset-block-start: -1px;
 }
 data-grid[sticky] table tfoot {
-  inset-block-end: 0;
+  inset-block-end: -1px;
 }
 data-grid .dg-nav-icon,
 data-grid .dg-skip-icon {
@@ -224,6 +232,15 @@ data-grid thead tr:nth-child(2) th input {
   width: 100%;
   border-radius: 0;
   margin: 0;
+}
+data-grid:not([url]) tbody:before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  content: attr(data-empty);
+  transform: translate(-50%, -50%);
+  opacity: 0.5;
+  font-size: 2rem;
 }
 data-grid tbody tr:nth-child(odd) {
   background-color: var(--bs-white, #ffffff);
@@ -327,6 +344,22 @@ data-grid[dir=rtl] [aria-sort=descending]:after {
 data-grid[dir=rtl] tfoot .dg-meta {
   text-align: left;
 }
+data-grid .dg-menu {
+  position: absolute;
+  z-index: 3;
+  background: var(--header-background);
+  list-style: none;
+  margin: 0;
+  padding: var(--padding);
+}
+data-grid .dg-menu li {
+  margin: 0;
+  padding: 0;
+}
+data-grid .dg-menu label {
+  display: flex;
+  align-items: center;
+}
 data-grid .dg-resizer {
   position: absolute;
   top: 0;
@@ -348,12 +381,14 @@ data-grid .dg-resizer:before {
   width: 2px;
   background: var(--gray-400);
 }
+data-grid .dg-resizer:hover:before {
+  background: var(--color);
+}
 data-grid .dg-resizer.dg-resizer-active {
   border-right: 1px dashed var(--color);
 }
 data-grid .dg-resizer.dg-resizer-active:before {
   background: var(--color);
-  border-right: 1px dashed var(--color);
 }
 @media only screen and (max-width: 768px) {
   data-grid tfoot .dg-meta {

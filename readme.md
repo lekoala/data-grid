@@ -82,6 +82,7 @@ The columns must be an array with the following fields:
 - width: the width of the column (auto otherwise)
 - class: class to set on the column (target body or header with th.class or td.class)
 - attr: don't render the column and set a matching attribute on the row with the value of the field
+- hidden: hide the column
 
 Note : you can also pass a plain list of comma separated string, or a js object with the field => title mapping.
 
