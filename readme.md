@@ -24,7 +24,7 @@ $ npm install data-grid-component
 <script type="module" src="./data-grid.js"></script>
 ```
 
-Grid customizations are possible via `data-*` attributes.
+Grid customizations are possible via attributes.
 
 - using the DOM API
 

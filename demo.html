@@ -64,6 +64,7 @@
     });
     document.getElementById("add-row").addEventListener("click", (ev) => {
       let grid = document.getElementById("demo4-grid");
+      ev.target.disabled = true;
       fetch('https://randomuser.me/api/')
         .then(response => response.json())
         .then(data => {
@@ -75,7 +76,12 @@
           };
           console.log(row);
           grid.addRow(row);
+          ev.target.disabled = false;
         });
+    });
+    document.getElementById("remove-row").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo4-grid");
+      grid.removeRow();
     });
   </script>
 </head>
@@ -94,10 +100,10 @@
       <li><code>sticky</code> to enable stick headers and footers (usable with fixed height)</li>
       <li><code>expand</code> to keep cell data on one line (hover to show full cell)</li>
       <li><code>resizable</code> to make resizable columns</li>
-      <li><code>autosize</code> to make resizable columns</li>
+      <li><code>autosize=true</code> to compute column sizes automatically</li>
       <li><code>sort=true</code> to make sortable columns</li>
     </ul>
-    <data-grid id="basic-demo" style="height:600px" url="demo.json" sticky expand autosize resizable reorder="true" sort="true" debug="true"></data-grid>
+    <data-grid id="basic-demo" style="height:600px" url="demo.json" sticky expand resizable autosize="true" reorder="true" sort="true" debug="true"></data-grid>
 
     <h2>Responsive</h2>
 
@@ -126,6 +132,7 @@
     <h2>Grid manipulation</h2>
 
     <button id="add-row">Add row</button>
+    <button id="remove-row">Remove row</button>
 
     <data-grid id="demo4-grid" url="demo3.json" sticky expand autosize resizable reorder="true" sort="true" debug="true"></data-grid>
 

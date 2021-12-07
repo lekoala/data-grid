@@ -22,7 +22,6 @@ const labels = Object.assign(
   window.DataGridLabels || {}
 );
 const template = document.createElement("template");
-
 template.innerHTML = `
 <table role="grid" >
     <thead role="rowgroup">
@@ -77,6 +76,7 @@ class DataGrid extends HTMLElement {
       sort: false,
       defaultSort: "",
       reorder: false,
+      autosize: false,
       dir: "ltr",
       columns: [],
     };
@@ -91,10 +91,8 @@ class DataGrid extends HTMLElement {
     this.appendChild(template.content.cloneNode(true));
     this.root = this;
 
-    // Track init state
-    this.initialized = false;
-
     // Init values
+    this.isInitialized = false;
     this.perPageValues = this.state.perPageValues;
     this.touch = null;
     this.isResizing = false;
@@ -109,22 +107,6 @@ class DataGrid extends HTMLElement {
   }
 
   // utils
-
-  static normalizeData(val) {
-    if (val === "true") {
-      return true;
-    }
-    if (val === "false") {
-      return false;
-    }
-    if (val === Number(val).toString()) {
-      return Number(val);
-    }
-    if (val === "" || val === "null") {
-      return null;
-    }
-    return val;
-  }
 
   /**
    * @param {HTMLElement} el
@@ -144,40 +126,21 @@ class DataGrid extends HTMLElement {
    * Uses canvas.measureText to compute and return the width of the given text of given font in pixels.
    * @see https://stackoverflow.com/questions/118241/calculate-text-width-with-javascript/21015393#21015393
    * @param {String} text The text to be rendered.
-   * @param {String} font The css font descriptor that text is to be rendered with (e.g. "bold 14px verdana").
+   * @param {HTMLElement} el Target element (defaults to body)
    * @return {Number}
    */
-  static getTextWidth(text, font = null) {
-    if (!font) {
-      font = DataGrid.getCanvasFontSize();
-    }
+  static getTextWidth(text, el = document.body) {
+    const styles = window.getComputedStyle(el, null);
+    const fontWeight = styles.getPropertyValue("font-weight") || "normal";
+    const fontSize = styles.getPropertyValue("font-size") || "1rem";
+    const fontFamily = styles.getPropertyValue("font-family") || "Arial";
+
     // re-use canvas object for better performance
     const canvas = DataGrid.getTextWidth.canvas || (DataGrid.getTextWidth.canvas = document.createElement("canvas"));
     const context = canvas.getContext("2d");
-    context.font = font;
+    context.font = `${fontWeight} ${fontSize} ${fontFamily}`;
     const metrics = context.measureText(text);
     return parseInt(metrics.width);
-  }
-
-  /**
-   * @param {HTMLElement} element
-   * @param {String} prop
-   * @returns {String}
-   */
-  static getCssStyle(element, prop) {
-    return window.getComputedStyle(element, null).getPropertyValue(prop);
-  }
-
-  /**
-   * @param {HTMLElement} el
-   * @returns {String}
-   */
-  static getCanvasFontSize(el = document.body) {
-    const fontWeight = DataGrid.getCssStyle(el, "font-weight") || "normal";
-    const fontSize = DataGrid.getCssStyle(el, "font-size") || "1rem";
-    const fontFamily = DataGrid.getCssStyle(el, "font-family") || "Arial";
-
-    return `${fontWeight} ${fontSize} ${fontFamily}`;
   }
 
   /**
@@ -279,7 +242,72 @@ class DataGrid extends HTMLElement {
   // reflected attrs, see https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
 
   static get observedAttributes() {
-    return ["url", "page", "per-page", "debug", "filter", "sort", "default-sort", "dir", "reorder"];
+    return ["url", "page", "per-page", "debug", "filter", "sort", "default-sort", "dir", "reorder", "autosize"];
+  }
+  attributeChangedCallback(attributeName, oldValue, newValue) {
+    this.log("attributeChangedCallback: " + attributeName);
+
+    // Update state but only trigger events if initialized
+    switch (attributeName) {
+      case "url":
+        this.state.url = newValue;
+        if (this.isInitialized && newValue) {
+          this.loadData();
+        }
+        break;
+      case "page":
+        this.state.page = Number(newValue);
+        if (this.isInitialized) {
+          this.fixPage();
+          this.paginate();
+        }
+        break;
+      case "per-page":
+        this.state.perPage = Number(newValue);
+        if (this.isInitialized) {
+          this.selectPerPage.value = newValue;
+          this.fixPage();
+          this.paginate();
+
+          // Scroll and keep a sizable amount of data displayed
+          window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
+        }
+        break;
+      case "debug":
+        this.state.debug = newValue === "true";
+        break;
+      case "autosize":
+        this.state.autosize = newValue === "true";
+        break;
+      case "dir":
+        this.state.dir = newValue;
+        this.root.querySelector(".dg-wrapper").dir = this.state.dir;
+        break;
+      case "filter":
+        this.state.filter = newValue === "true";
+        if (this.isInitialized) {
+          this.toggleFilter();
+        }
+        break;
+      case "reorder":
+        this.state.reorder = newValue === "true";
+        if (this.isInitialized) {
+          this.toggleReorder();
+        }
+        break;
+      case "sort":
+        this.state.sort = newValue === "true";
+        if (this.isInitialized) {
+          this.toggleSort();
+        }
+        break;
+      case "default-sort":
+        this.state.defaultSort = newValue;
+        if (this.isInitialized) {
+          this.toggleSort();
+        }
+        break;
+    }
   }
   get page() {
     return this.getAttribute("page");
@@ -299,29 +327,17 @@ class DataGrid extends HTMLElement {
   set debug(val) {
     this.setAttribute("debug", val);
   }
+  get autosize() {
+    return this.getAttribute("autosize") === "true";
+  }
+  set autosize(val) {
+    this.setAttribute("autosize", val);
+  }
   get dir() {
     return this.getAttribute("dir");
   }
   set dir(val) {
-    val = val.toString().toLowerCase();
-    if (["ltr", "rtl"].includes(val)) {
-      this.setAttribute("dir", val);
-    }
-  }
-  get perPageValues() {
-    return this.state.perPageValues;
-  }
-  set perPageValues(val) {
-    if (Array.isArray(val)) {
-      this.state.perPageValues = val;
-      let select = this.querySelector(".dg-per-page");
-      while (select.lastChild) {
-        select.removeChild(select.lastChild);
-      }
-      this.state.perPageValues.forEach((v) => {
-        DataGrid.addSelectOption(select, v, v);
-      });
-    }
+    this.setAttribute("dir", val);
   }
   get filter() {
     return this.getAttribute("filter") === "true";
@@ -352,6 +368,24 @@ class DataGrid extends HTMLElement {
   }
   set url(val) {
     this.setAttribute("url", val);
+  }
+
+  // Not reflected
+
+  get perPageValues() {
+    return this.state.perPageValues;
+  }
+  set perPageValues(val) {
+    if (Array.isArray(val)) {
+      this.state.perPageValues = val;
+      let select = this.querySelector(".dg-per-page");
+      while (select.lastChild) {
+        select.removeChild(select.lastChild);
+      }
+      this.state.perPageValues.forEach((v) => {
+        DataGrid.addSelectOption(select, v, v);
+      });
+    }
   }
   get columns() {
     return this.state.columns;
@@ -392,9 +426,12 @@ class DataGrid extends HTMLElement {
     document.addEventListener("touchmove", this.touchmove);
 
     this.loadData();
-    this.toggleSort();
     this.root.classList.add("dg-initialized");
-    this.initialized = true;
+    this.isInitialized = true;
+
+    this.toggleSort();
+    this.toggleFilter();
+    this.toggleReorder();
   }
   touchstart(e) {
     this.touch = e.touches[0];
@@ -432,80 +469,15 @@ class DataGrid extends HTMLElement {
     document.removeEventListener("touchstart", this.touchstart);
     document.removeEventListener("touchmove", this.touchmove);
   }
-  attributeChangedCallback(attributeName, oldValue, newValue) {
-    this.log("attributeChangedCallback: " + attributeName);
 
-    let element;
-    switch (attributeName) {
-      case "url":
-        this.state.url = newValue;
-
-        // Only load if connected, otherwise other attributes might not be read yet
-        if (this.initialized) {
-          if (newValue) {
-            this.loadData();
-          }
-        }
-        break;
-      case "page":
-        this.state.page = Number(newValue);
-        this.fixPage();
-        this.updateGoto();
-        if (this.initialized) {
-          this.paginate();
-        }
-        break;
-      case "per-page":
-        this.state.perPage = Number(newValue);
-        if (this.initialized) {
-          element = this.selectPerPage;
-          element.value = newValue;
-          this.fixPage();
-          this.updateGoto();
-          this.paginate();
-
-          // Scroll and keep a sizable amount of data displayed
-          window.scroll({ top: DataGrid.elementOffset(element).top - this.defaultHeight });
-        }
-        break;
-      case "debug":
-        this.state.debug = newValue === "true";
-        break;
-      case "dir":
-        this.state.dir = newValue;
-        this.root.querySelector(".dg-wrapper").dir = this.state.dir;
-        break;
-      case "filter":
-        this.state.filter = newValue === "true";
-        this.toggleFilter();
-        break;
-      case "reorder":
-        this.state.reorder = newValue === "true";
-        this.toggleReorder();
-        break;
-      case "sort":
-        this.state.sort = newValue === "true";
-        if (this.initialized) {
-          this.toggleSort();
-        }
-        break;
-      case "default-sort":
-        this.state.defaultSort = newValue;
-        if (this.initialized) {
-          this.toggleSort();
-        }
-        break;
-    }
-  }
   /**
    * @param {Object} options
    */
   setOptions(options) {
     for (const [key, value] of Object.entries(options)) {
-      // State is updated if necessary through setters
       if (key in this) {
         this[key] = value;
-        // this.state[key] = value;
+        this.state[key] = value;
       }
     }
   }
@@ -545,6 +517,9 @@ class DataGrid extends HTMLElement {
       this.style.minHeight = this.defaultHeight + "px";
     }
   }
+  /**
+   * This needs to be called each time the data changes or the perPage value changes
+   */
   fixPage() {
     this.state.pages = Math.ceil(this.data.length / this.state.perPage);
 
@@ -556,12 +531,10 @@ class DataGrid extends HTMLElement {
       this.state.page = 1;
     }
 
-    // Updata input
-    if (this.inputPage) {
-      this.inputPage.setAttribute("max", this.state.pages);
-    } else {
-      this.root.querySelector(".dg-goto-page").setAttribute("max", this.state.pages);
-    }
+    // Show current page in input
+    this.inputPage.setAttribute("max", this.state.pages);
+    this.inputPage.value = this.state.page;
+    this.inputPage.disabled = this.state.pages === 1;
   }
   toggleFilter() {
     const row = this.root.querySelector("thead tr.dg-head-filters");
@@ -590,21 +563,28 @@ class DataGrid extends HTMLElement {
       }
     });
   }
-  updateGoto() {
-    let element;
-    if (this.inputPage) {
-      element = this.inputPage;
-    } else {
-      element = this.root.querySelector(".dg-goto-page");
-    }
-    element.value = this.state.page;
-    element.disabled = this.state.pages === 1;
-  }
   addRow(row) {
     this.originalData.push(row);
-    this.data = this.originalData;
+    this.data = this.originalData.slice();
     this.fixPage();
-    this.renderBody();
+    this.sortData();
+  }
+  removeRow(value = null, key = null) {
+    if (key === null) {
+      key = this.columns[0]["field"];
+    }
+    if (value === null) {
+      value = this.originalData[this.originalData.length - 1][key];
+    }
+    for (let i = 0; i < this.originalData.length; i++) {
+      if (this.originalData[i][key] === value) {
+        this.originalData.splice(i, 1);
+        break;
+      }
+    }
+    this.data = this.originalData.slice();
+    this.fixPage();
+    this.sortData();
   }
   clearData() {
     // Clear the state but keep attribute so we can reload
@@ -698,8 +678,7 @@ class DataGrid extends HTMLElement {
       }
     });
 
-    this.state.pages = Math.ceil(this.data.length / this.state.perPage);
-    this.page = 1;
+    this.fixPage();
 
     let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
     if (this.state.sort && col) {
@@ -709,26 +688,32 @@ class DataGrid extends HTMLElement {
       this.renderBody();
     }
   }
-  sortData(col) {
+  sortData(col = null) {
     this.log("sort data");
 
-    // Remove active sort if any
-    this.root.querySelectorAll("thead tr:first-child th").forEach((th) => {
-      if (th !== col) {
-        th.setAttribute("aria-sort", "none");
-      }
-    });
+    // We clicked on a column, update sort state
+    if (col !== null) {
+      // Remove active sort if any
+      this.root.querySelectorAll("thead tr:first-child th").forEach((th) => {
+        if (th !== col) {
+          th.setAttribute("aria-sort", "none");
+        }
+      });
 
-    // Set three-state col
-    if (!col.hasAttribute("aria-sort") || col.getAttribute("aria-sort") === "none") {
-      col.setAttribute("aria-sort", "ascending");
-    } else if (col.getAttribute("aria-sort") === "ascending") {
-      col.setAttribute("aria-sort", "descending");
-    } else if (col.getAttribute("aria-sort") === "descending") {
-      col.setAttribute("aria-sort", "none");
+      // Set three-state col
+      if (!col.hasAttribute("aria-sort") || col.getAttribute("aria-sort") === "none") {
+        col.setAttribute("aria-sort", "ascending");
+      } else if (col.getAttribute("aria-sort") === "ascending") {
+        col.setAttribute("aria-sort", "descending");
+      } else if (col.getAttribute("aria-sort") === "descending") {
+        col.setAttribute("aria-sort", "none");
+      }
+    } else {
+      // Or fetch current sort
+      col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
     }
 
-    const sort = col.getAttribute("aria-sort");
+    const sort = col ? col.getAttribute("aria-sort") : "none";
     if (sort === "none") {
       let stack = [];
 
@@ -805,7 +790,7 @@ class DataGrid extends HTMLElement {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      th.dataset.minWidth = DataGrid.getTextWidth(column.title) + 30;
+      th.dataset.minWidth = DataGrid.getTextWidth(column.title, th) + 30;
       DataGrid.applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
@@ -815,7 +800,7 @@ class DataGrid extends HTMLElement {
       }
 
       // Autosize small based on first/last row ?
-      if (this.root.hasAttribute("autosize") && !th.getAttribute("width")) {
+      if (this.state.autosize && !th.getAttribute("width")) {
         let v = this.data[0][column.field].toString();
         let v2 = this.data[this.data.length - 1][column.field].toString();
         if (v2.length > v.length) {
@@ -826,7 +811,7 @@ class DataGrid extends HTMLElement {
         } else if (v.length > 50) {
           th.setAttribute("width", colMaxWidth);
         } else {
-          th.setAttribute("width", DataGrid.getTextWidth(v));
+          th.setAttribute("width", DataGrid.getTextWidth(v, th));
         }
       }
 
@@ -839,6 +824,7 @@ class DataGrid extends HTMLElement {
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
     if (this.state.defaultSort) {
+      // We can have a default sort even with sort disabled
       sortedColumn = this.root.querySelector("thead tr.dg-head-columns th[field='" + this.state.defaultSort + "']");
     }
 

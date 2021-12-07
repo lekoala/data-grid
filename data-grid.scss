@@ -68,6 +68,7 @@ data-grid {
     }
   }
   th {
+    position: relative;
     font-weight: bold;
     padding: calc(var(--padding) * var(--header-scale)) var(--padding);
   }
@@ -353,7 +354,6 @@ data-grid {
   // Pagination
   [aria-sort] {
     cursor: pointer;
-    position: relative;
     padding-right: 1.5rem;
   }
   [aria-sort="none"]:after,
@@ -415,10 +415,12 @@ data-grid {
   .dg-menu {
     position: absolute;
     z-index: 3;
-    background: var(--header-background);
+    background: var(--white);
     list-style: none;
     margin: 0;
     padding: var(--padding);
+    box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
+    border-radius: var(--border-radius);
 
     li {
       margin: 0;
@@ -427,6 +429,10 @@ data-grid {
     label {
       display: flex;
       align-items: center;
+    }
+    input {
+      margin-right: 0.5em;
+      box-shadow: none;
     }
   }
 
