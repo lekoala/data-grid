@@ -46,6 +46,8 @@
     }
   </style>
   <script type="module">
+    import DataGrid from './data-grid.min.js';
+
     document.getElementById("toggle").addEventListener("click", (ev) => {
       let grid = document.getElementById("demo2-grid");
       grid.filter = !grid.filter;
@@ -83,6 +85,25 @@
       let grid = document.getElementById("demo4-grid");
       grid.removeRow();
     });
+    document.getElementById("create-grid").addEventListener("click", (ev) => {
+      let grid = new DataGrid({
+        url: "demo.json",
+        sticky: true,
+        expand: true,
+        perPageValues: [10, 100, 1000],
+        columns: [
+          {
+            field: "id",
+            title: "Id",
+          },
+          {
+            field: "first_name",
+            title: "First Name"
+          }
+        ]
+      });
+      ev.target.after(grid);
+    });
   </script>
 </head>
 
@@ -103,7 +124,7 @@
       <li><code>autosize=true</code> to compute column sizes automatically</li>
       <li><code>sort=true</code> to make sortable columns</li>
     </ul>
-    <data-grid id="basic-demo" style="height:600px" url="demo.json" sticky expand resizable autosize="true" reorder="true" sort="true" debug="true"></data-grid>
+    <data-grid id="basic-demo" style="height:600px" url="demo.json" expand resizable sticky autosize="true" reorder="true" sort="true" debug="true"></data-grid>
 
     <h2>Responsive</h2>
 
@@ -121,7 +142,7 @@
     </ul>
 
     <button id="toggle">Toggle filter on/off</button>
-    <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" resizable sticky></data-grid>
+    <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky></data-grid>
 
     <h2>Empty grid</h2>
 
@@ -135,6 +156,10 @@
     <button id="remove-row">Remove row</button>
 
     <data-grid id="demo4-grid" url="demo3.json" sticky expand autosize resizable reorder="true" sort="true" debug="true"></data-grid>
+
+    <h2>Dom api</h2>
+
+    <button id="create-grid">Create grid</button>
 
     <h2>Good to know</h2>
 

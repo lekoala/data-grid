@@ -5,7 +5,7 @@
   "main": "data-grid",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "esbuild --bundle --minify --loader:.css=text --loader:.html=text --sourcemap data-grid.js --outfile=data-grid.min.js",
+    "build": "esbuild --bundle --minify --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=data-grid.min.js",
     "start": "npm run build -- --servedir=.",
     "watch": "npm run build -- --watch"
   },

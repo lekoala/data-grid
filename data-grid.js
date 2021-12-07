@@ -66,18 +66,25 @@ class DataGrid extends HTMLElement {
   constructor(options = {}) {
     super();
 
+    // Don't use shadow dom as it makes theming super hard
+    this.appendChild(template.content.cloneNode(true));
+    this.root = this;
+
+    // Init state
     this.state = {
-      pages: 0,
+      // reflected and observed
+      url: null,
       page: 1,
       perPage: 10,
-      perPageValues: [10, 25, 50, 100, 250],
       debug: false,
       filter: false,
       sort: false,
       defaultSort: "",
       reorder: false,
-      autosize: false,
       dir: "ltr",
+      // not reflected
+      pages: 0,
+      perPageValues: [10, 25, 50, 100, 250],
       columns: [],
     };
     this.setOptions(options);
@@ -87,13 +94,8 @@ class DataGrid extends HTMLElement {
     // We store the data in this
     this.originalData = [];
 
-    // Don't use shadow dom as it makes theming super hard
-    this.appendChild(template.content.cloneNode(true));
-    this.root = this;
-
     // Init values
     this.isInitialized = false;
-    this.perPageValues = this.state.perPageValues;
     this.touch = null;
     this.isResizing = false;
     this.defaultHeight = 0;
@@ -242,7 +244,7 @@ class DataGrid extends HTMLElement {
   // reflected attrs, see https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
 
   static get observedAttributes() {
-    return ["url", "page", "per-page", "debug", "filter", "sort", "default-sort", "dir", "reorder", "autosize"];
+    return ["url", "page", "per-page", "debug", "filter", "sort", "default-sort", "dir", "reorder"];
   }
   attributeChangedCallback(attributeName, oldValue, newValue) {
     this.log("attributeChangedCallback: " + attributeName);
@@ -270,14 +272,13 @@ class DataGrid extends HTMLElement {
           this.paginate();
 
           // Scroll and keep a sizable amount of data displayed
-          window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
+          if (this.sticky) {
+            window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
+          }
         }
         break;
       case "debug":
         this.state.debug = newValue === "true";
-        break;
-      case "autosize":
-        this.state.autosize = newValue === "true";
         break;
       case "dir":
         this.state.dir = newValue;
@@ -327,12 +328,6 @@ class DataGrid extends HTMLElement {
   set debug(val) {
     this.setAttribute("debug", val);
   }
-  get autosize() {
-    return this.getAttribute("autosize") === "true";
-  }
-  set autosize(val) {
-    this.setAttribute("autosize", val);
-  }
   get dir() {
     return this.getAttribute("dir");
   }
@@ -368,6 +363,39 @@ class DataGrid extends HTMLElement {
   }
   set url(val) {
     this.setAttribute("url", val);
+  }
+
+  // Boolean
+
+  get autosize() {
+    return this.hasAttribute("autosize");
+  }
+  set autosize(val) {
+    val ? this.setAttribute("autosize", "") : this.removeAttribute("autosize");
+  }
+  get resizable() {
+    return this.hasAttribute("resizable");
+  }
+  set resizable(val) {
+    val ? this.setAttribute("resizable", "") : this.removeAttribute("resizable");
+  }
+  get sticky() {
+    return this.hasAttribute("sticky");
+  }
+  set sticky(val) {
+    val ? this.setAttribute("sticky", "") : this.removeAttribute("sticky");
+  }
+  get responsive() {
+    return this.hasAttribute("responsive");
+  }
+  set responsive(val) {
+    val ? this.setAttribute("responsive", "") : this.removeAttribute("responsive");
+  }
+  get expand() {
+    return this.hasAttribute("expand");
+  }
+  set expand(val) {
+    val ? this.setAttribute("expand", "") : this.removeAttribute("expand");
   }
 
   // Not reflected
@@ -433,6 +461,23 @@ class DataGrid extends HTMLElement {
     this.toggleFilter();
     this.toggleReorder();
   }
+  disconnectedCallback() {
+    this.log("disconnectedCallback");
+
+    this.btnFirst.removeEventListener("click", this.getFirst);
+    this.btnPrev.removeEventListener("click", this.getPrev);
+    this.btnNext.removeEventListener("click", this.getNext);
+    this.btnLast.removeEventListener("click", this.getLast);
+    this.btnRefresh.removeEventListener("click", this.refresh);
+    this.selectPerPage.removeEventListener("change", this.changePerPage, {
+      passive: true,
+    });
+    this.inputPage.removeEventListener("input", this.gotoPage);
+
+    document.removeEventListener("touchstart", this.touchstart);
+    document.removeEventListener("touchmove", this.touchmove);
+  }
+
   touchstart(e) {
     this.touch = e.touches[0];
   }
@@ -451,23 +496,6 @@ class DataGrid extends HTMLElement {
       }
     }
     this.touch = null;
-  }
-
-  disconnectedCallback() {
-    this.log("disconnectedCallback");
-
-    this.btnFirst.removeEventListener("click", this.getFirst);
-    this.btnPrev.removeEventListener("click", this.getPrev);
-    this.btnNext.removeEventListener("click", this.getNext);
-    this.btnLast.removeEventListener("click", this.getLast);
-    this.btnRefresh.removeEventListener("click", this.refresh);
-    this.selectPerPage.removeEventListener("change", this.changePerPage, {
-      passive: true,
-    });
-    this.inputPage.removeEventListener("input", this.gotoPage);
-
-    document.removeEventListener("touchstart", this.touchstart);
-    document.removeEventListener("touchmove", this.touchmove);
   }
 
   /**
@@ -597,41 +625,41 @@ class DataGrid extends HTMLElement {
     this.renderHeader();
     this.computeDefaultHeight();
   }
-  loadData() {
+  async loadData() {
     this.log("loadData");
     if (!this.url) {
       this.log("No url set yet");
       return;
     }
-    this.fetchData().then((response) => {
-      if (Array.isArray(response)) {
-        this.data = response;
-      } else {
-        if (!response.data) {
-          console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
-          return;
-        }
+    let response = await this.fetchData();
 
-        // We may have a config object
-        if (response.options) {
-          this.setOptions(response.options);
-        }
-
-        this.data = response.data;
-      }
-      this.originalData = this.data.slice();
-      this.fixPage();
-
-      // Make sure we have a proper set of columns
-      if (this.state.columns.length === 0 && this.originalData.length) {
-        this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
+    if (Array.isArray(response)) {
+      this.data = response;
+    } else {
+      if (!response.data) {
+        console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
+        return;
       }
 
-      this.createMenu();
-      this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
-      this.root.querySelector("tfoot").removeAttribute("hidden");
-      this.renderHeader();
-    });
+      // We may have a config object
+      if (response.options) {
+        this.setOptions(response.options);
+      }
+
+      this.data = response.data;
+    }
+    this.originalData = this.data.slice();
+    this.fixPage();
+
+    // Make sure we have a proper set of columns
+    if (this.state.columns.length === 0 && this.originalData.length) {
+      this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
+    }
+
+    this.createMenu();
+    this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
+    this.root.querySelector("tfoot").removeAttribute("hidden");
+    this.renderHeader();
   }
   getFirst() {
     this.page = 1;
@@ -800,7 +828,7 @@ class DataGrid extends HTMLElement {
       }
 
       // Autosize small based on first/last row ?
-      if (this.state.autosize && !th.getAttribute("width")) {
+      if (this.autosize && !th.getAttribute("width")) {
         let v = this.data[0][column.field].toString();
         let v2 = this.data[this.data.length - 1][column.field].toString();
         if (v2.length > v.length) {
@@ -920,7 +948,7 @@ class DataGrid extends HTMLElement {
     }
 
     this.root.querySelector("tfoot").style.display = "";
-    if (this.hasAttribute("resizable")) {
+    if (this.resizable) {
       this.renderResizer();
     }
   }
