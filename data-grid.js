@@ -94,6 +94,9 @@ class DataGrid extends HTMLElement {
     // We store the data in this
     this.originalData = [];
 
+    // Trigger setter
+    this.perPageValues = this.state.perPageValues;
+
     // Init values
     this.isInitialized = false;
     this.touch = null;
