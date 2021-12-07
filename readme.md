@@ -101,6 +101,12 @@ These attributes can be used to configure the component.
 | **reorder**      |    No    | Boolean | **false**   | Allows a column reordering functionallity.                                               |
 | **dir**          |    No    | String  | **ltr**     | Text direction. Accepted values are **ltr** (left-to-right) and **rtl** (right-to-left). |
 | **default-sort** |    No    | String  | **id**      | Default sort field if sorting is enabled.                                                |
+| **expand**       |    No    | Boolean | **false**   | Expand cells on hover if truncated                                                       |
+| **sticky**       |    No    | Boolean | **false**   | Sticky headers                                                                           |
+| **resizable**    |    No    | Boolean | **false**   | Resizable columns                                                                        |
+| **autosize**     |    No    | Boolean | **false**   | Compute column sizes based on given data.                                                |
+| **responsive**   |    No    | Boolean | **false**   | Change display mode on small screens.                                                    |
+| **selectable**   |    No    | Boolean | **false**   | Allow selecting rows with a checkbox.                                                    |
 
 ## Translations
 
@@ -114,6 +120,20 @@ Provide a global variable with the required translations.
   };
 </script>
 ```
+
+## Api
+
+- getFirst: go to first page
+- getLast: go to last page
+- getPrev: go to previous page
+- getNext: go to next page
+- getSelection: get selected data
+- clearData: clear loaded data
+- refresh: refresh data from url
+- clearFilter: clear current filters
+- addRow: add a new row
+- removeRow: remove a row
+- getData: get data
 
 ## Todo
 

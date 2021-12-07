@@ -400,6 +400,12 @@ class DataGrid extends HTMLElement {
   set expand(val) {
     val ? this.setAttribute("expand", "") : this.removeAttribute("expand");
   }
+  get selectable() {
+    return this.hasAttribute("selectable");
+  }
+  set selectable(val) {
+    val ? this.setAttribute("selectable", "") : this.removeAttribute("selectable");
+  }
 
   // Not reflected
 
@@ -479,6 +485,8 @@ class DataGrid extends HTMLElement {
 
     document.removeEventListener("touchstart", this.touchstart);
     document.removeEventListener("touchmove", this.touchmove);
+
+    // TODO: should we remove also other event listeners?
   }
 
   touchstart(e) {
@@ -526,6 +534,9 @@ class DataGrid extends HTMLElement {
       }
     });
   }
+  startIndex() {
+    return this.selectable ? 2 : 1;
+  }
   columnsLength(visibleOnly = false) {
     let len = 0;
     this.state.columns.forEach((col) => {
@@ -536,6 +547,9 @@ class DataGrid extends HTMLElement {
         len++;
       }
     });
+    if (this.selectable) {
+      len++;
+    }
     return len;
   }
   computeDefaultHeight() {
@@ -577,6 +591,9 @@ class DataGrid extends HTMLElement {
   }
   toggleReorder() {
     this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
+      if (th.classList.contains("dg-selectable")) {
+        return;
+      }
       if (this.state.reorder) {
         th.draggable = true;
       } else {
@@ -587,6 +604,9 @@ class DataGrid extends HTMLElement {
   toggleSort() {
     this.log("toggle sort");
     this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
+      if (th.classList.contains("dg-selectable")) {
+        return;
+      }
       if (this.state.sort) {
         th.setAttribute("aria-sort", "none");
       } else {
@@ -616,6 +636,24 @@ class DataGrid extends HTMLElement {
     this.data = this.originalData.slice();
     this.fixPage();
     this.sortData();
+  }
+  getSelection(key = null) {
+    let selectedData = [];
+    this.data.forEach((item, i) => {
+      const row = this.root.querySelector("tbody tr[aria-rowindex='" + (i + 1) + "']");
+      const checkbox = row.querySelector(".dg-selectable input");
+      if (checkbox.checked) {
+        if (key) {
+          selectedData.push(item[key]);
+        } else {
+          selectedData.push(item);
+        }
+      }
+    });
+    return selectedData;
+  }
+  getData() {
+    return this.originalData;
   }
   clearData() {
     // Clear the state but keep attribute so we can reload
@@ -693,6 +731,12 @@ class DataGrid extends HTMLElement {
     }
     this.page = this.inputPage.value;
   }
+  clearFilter() {
+    this.root.querySelectorAll("thead input").forEach((input) => {
+      input.value = "";
+    });
+    this.filterData();
+  }
   filterData() {
     this.log("filter data");
 
@@ -713,12 +757,15 @@ class DataGrid extends HTMLElement {
 
     let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
     if (this.state.sort && col) {
-      // sortData automatically renders the body
       this.sortData(col);
     } else {
       this.renderBody();
     }
   }
+  /**
+   * Data will be sorted then rendered using renderBody
+   * @param {string} col The clicked that was clicked or null to use current sort
+   */
   sortData(col = null) {
     this.log("sort data");
 
@@ -726,6 +773,9 @@ class DataGrid extends HTMLElement {
     if (col !== null) {
       // Remove active sort if any
       this.root.querySelectorAll("thead tr:first-child th").forEach((th) => {
+        if (th.classList.contains("dg-selectable")) {
+          return;
+        }
         if (th !== col) {
           th.setAttribute("aria-sort", "none");
         }
@@ -799,6 +849,7 @@ class DataGrid extends HTMLElement {
     this.log("render header");
     let tr;
     let sortedColumn;
+    let selectableTh;
     let thead = this.root.querySelector("thead");
 
     const colMinWidth = 50;
@@ -809,13 +860,36 @@ class DataGrid extends HTMLElement {
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", 1);
     tr.setAttribute("class", "dg-head-columns");
+
+    // Selectable
+    if (this.selectable) {
+      selectableTh = document.createElement("th");
+      selectableTh.setAttribute("role", "columnheader button");
+      selectableTh.setAttribute("aria-colindex", 1);
+      selectableTh.classList.add("dg-selectable");
+      selectableTh.tabIndex = 0;
+
+      let selectAll = document.createElement("input");
+      selectAll.type = "checkbox";
+      selectAll.addEventListener("change", (ev) => {
+        this.root.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
+          cb.checked = selectAll.checked;
+        });
+      });
+      let label = document.createElement("label");
+      label.appendChild(selectAll);
+      selectableTh.appendChild(label);
+      selectableTh.setAttribute("width", 40);
+      tr.appendChild(selectableTh);
+    }
+
     this.state.columns.forEach((column, i) => {
       if (column.attr) {
         return;
       }
       let th = document.createElement("th");
       th.setAttribute("role", "columnheader button");
-      th.setAttribute("aria-colindex", i + 1);
+      th.setAttribute("aria-colindex", i + this.startIndex());
       th.setAttribute("id", DataGrid.randstr("dg-col-"));
       if (this.state.sort) {
         th.setAttribute("aria-sort", "none");
@@ -898,13 +972,24 @@ class DataGrid extends HTMLElement {
     if (!this.state.filter) {
       tr.setAttribute("hidden", true);
     }
+
+    // Selectable
+    if (this.selectable) {
+      let th = document.createElement("th");
+      th.setAttribute("role", "columnheader button");
+      th.setAttribute("aria-colindex", 1);
+      th.classList.add("dg-selectable");
+      th.tabIndex = 0;
+      tr.appendChild(th);
+    }
+
     this.state.columns.forEach((column, i) => {
       if (column.attr) {
         return;
       }
-      let relatedTh = thead.querySelector("tr.dg-head-columns th[aria-colindex='" + (i + 1) + "']");
+      let relatedTh = thead.querySelector("tr.dg-head-columns th[aria-colindex='" + (i + this.startIndex()) + "']");
       let th = document.createElement("th");
-      th.setAttribute("aria-colindex", i + 1);
+      th.setAttribute("aria-colindex", i + this.startIndex());
 
       let input = document.createElement("input");
       input.type = "text";
@@ -931,6 +1016,7 @@ class DataGrid extends HTMLElement {
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
 
+    // From this point on, elements have been inserted in the dom
     tr.querySelectorAll("input").forEach((input) => {
       input.addEventListener("keypress", (e) => {
         const key = e.keyCode || e.key;
@@ -1064,6 +1150,9 @@ class DataGrid extends HTMLElement {
     const cols = this.root.querySelectorAll("thead tr.dg-head-columns th");
 
     cols.forEach((col) => {
+      if (col.classList.contains("dg-selectable")) {
+        return;
+      }
       // Create a resizer element
       const resizer = document.createElement("div");
       resizer.classList.add("dg-resizer");
@@ -1159,13 +1248,29 @@ class DataGrid extends HTMLElement {
     let tr;
     let td;
     let tbody = document.createElement("tbody");
-
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
       tr.setAttribute("role", "row");
       tr.setAttribute("hidden", true);
       tr.setAttribute("aria-rowindex", i + 1);
       tr.tabIndex = 0;
+
+      // Selectable
+      if (this.selectable) {
+        td = document.createElement("td");
+        td.setAttribute("role", "gridcell button");
+        td.setAttribute("aria-colindex", 1);
+        td.classList.add("dg-selectable");
+
+        let selectOne = document.createElement("input");
+        selectOne.type = "checkbox";
+        let label = document.createElement("label");
+        label.appendChild(selectOne);
+        td.appendChild(label);
+
+        tr.appendChild(td);
+      }
+
       this.state.columns.forEach((column, j) => {
         if (!column) {
           console.log(this.state.columns);
@@ -1177,7 +1282,7 @@ class DataGrid extends HTMLElement {
         }
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
-        td.setAttribute("aria-colindex", j + 1);
+        td.setAttribute("aria-colindex", j + this.startIndex());
         DataGrid.applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;

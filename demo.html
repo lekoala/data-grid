@@ -64,6 +64,14 @@
       let grid = document.getElementById("demo3-grid");
       grid.clearData(); // you can call methods directly
     });
+    document.getElementById("clear-filter").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo2-grid");
+      grid.clearFilter(); // you can call methods directly
+    });
+    document.getElementById("get-selection").addEventListener("click", (ev) => {
+      let grid = document.getElementById("basic-demo");
+      alert(JSON.stringify(grid.getSelection("id")));
+    });
     document.getElementById("add-row").addEventListener("click", (ev) => {
       let grid = document.getElementById("demo4-grid");
       ev.target.disabled = true;
@@ -91,6 +99,7 @@
         sticky: true,
         expand: true,
         perPageValues: [10, 100, 1000],
+        selectable: true,
         columns: [
           {
             field: "id",
@@ -123,8 +132,11 @@
       <li><code>resizable</code> to make resizable columns</li>
       <li><code>autosize=true</code> to compute column sizes automatically</li>
       <li><code>sort=true</code> to make sortable columns</li>
+      <li><code>selectable=true</code> to allow row selection</li>
     </ul>
-    <data-grid id="basic-demo" style="height:600px" url="demo.json" expand resizable sticky autosize="true" reorder="true" sort="true" debug="true"></data-grid>
+
+    <button id="get-selection">Get selection</button>
+    <data-grid id="basic-demo" style="height:600px" url="demo.json" expand resizable sticky selectable autosize="true" reorder="true" sort="true" debug="true"></data-grid>
 
     <h2>Responsive</h2>
 
@@ -142,6 +154,7 @@
     </ul>
 
     <button id="toggle">Toggle filter on/off</button>
+    <button id="clear-filter">Clear filter</button>
     <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky></data-grid>
 
     <h2>Empty grid</h2>

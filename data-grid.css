@@ -71,7 +71,7 @@ data-grid td {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-data-grid[expand] table tbody td:hover {
+data-grid[expand] table tbody td:not(.dg-selectable):hover {
   overflow: visible;
   z-index: 1;
   white-space: nowrap;
@@ -197,7 +197,10 @@ data-grid button {
 data-grid button:not(:disabled):hover {
   background-color: #f9f9f9;
 }
-data-grid input,
+data-grid input[type=checkbox] {
+  margin: 0;
+}
+data-grid input:not([type=checkbox]),
 data-grid select {
   background-color: #fff;
   box-sizing: border-box;
@@ -207,13 +210,13 @@ data-grid select {
   margin: 0 0.2rem;
   padding: 0 var(--padding);
 }
-data-grid input:focus,
+data-grid input:not([type=checkbox]):focus,
 data-grid select:focus,
 data-grid button:focus {
   box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
   outline: 0;
 }
-data-grid input[disabled], data-grid input:disabled,
+data-grid input:not([type=checkbox])[disabled], data-grid input:not([type=checkbox]):disabled,
 data-grid select[disabled],
 data-grid select:disabled,
 data-grid button[disabled],
@@ -361,10 +364,25 @@ data-grid .dg-menu li {
 data-grid .dg-menu label {
   display: flex;
   align-items: center;
+  margin-bottom: 0.25em;
 }
 data-grid .dg-menu input {
   margin-right: 0.5em;
-  box-shadow: none;
+}
+data-grid .dg-selectable {
+  position: relative;
+}
+data-grid .dg-selectable label {
+  margin: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 data-grid .dg-resizer {
   position: absolute;
