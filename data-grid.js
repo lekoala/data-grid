@@ -1399,7 +1399,7 @@ class DataGrid extends HTMLElement {
           input.spellcheck = false;
           input.tabIndex = 0;
           input.classList.add("dg-editable");
-          input.name = column.field + "[" + i + "]";
+          input.name = this.getAttribute("id").replace("-", "_") + "[" + (i + 1) + "]" + "[" + column.field + "]";
           input.value = item[column.field];
           input.dataset.field = column.field;
 
