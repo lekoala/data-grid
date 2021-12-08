@@ -138,7 +138,6 @@ Provide a global variable with the required translations.
 ## Todo
 
 - Server side pagination/filtering
-- Row selection
 - Actions
 - Inline editing
 

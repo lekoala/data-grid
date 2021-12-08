@@ -4,6 +4,7 @@ data-grid {
   --header-scale: 1.5;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
+
   --highlight-color: #fffcee;
   --header-background: var(--bs-gray-200, #e9ecef);
   --header-color: var(--bs-dark, #212529);
@@ -225,7 +226,7 @@ data-grid {
 
   button {
     background-color: var(--white);
-    border: solid 1px #f0f0f0;
+    border: solid 1px var(--gray-100);
     border-radius: var(--border-radius);
     color: var(--color);
     height: 2rem;
@@ -234,9 +235,13 @@ data-grid {
     pointer-events: all;
     text-align: center;
     cursor: pointer;
-
-    &:not(:disabled):hover {
-      background-color: #f9f9f9;
+    &:hover {
+      background-color: var(--gray-200);
+      border-color: var(--gray-300);
+    }
+    &:disabled:hover {
+      background-color: inherit;
+      border-color: inherit;
     }
   }
   input[type="checkbox"] {
@@ -278,6 +283,7 @@ data-grid {
     // Filters
     tr:nth-child(2) th {
       padding: 0;
+      background-color: var(--white);
       input {
         width: 100%;
         border-radius: 0;
@@ -328,7 +334,7 @@ data-grid {
       display: flex;
       align-items: center;
     }
-    .dg-goto-page {
+    .dg-input-page {
       width: 4rem;
     }
     .dg-footer {
@@ -455,7 +461,10 @@ data-grid {
     }
   }
 
-  // Resizer
+  .dg-actions {
+    text-align: center;
+  }
+
   .dg-resizer {
     position: absolute;
     top: 0;

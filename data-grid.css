@@ -184,7 +184,7 @@ data-grid .dg-rotate {
 }
 data-grid button {
   background-color: var(--white);
-  border: solid 1px #f0f0f0;
+  border: solid 1px var(--gray-100);
   border-radius: var(--border-radius);
   color: var(--color);
   height: 2rem;
@@ -194,8 +194,13 @@ data-grid button {
   text-align: center;
   cursor: pointer;
 }
-data-grid button:not(:disabled):hover {
-  background-color: #f9f9f9;
+data-grid button:hover {
+  background-color: var(--gray-200);
+  border-color: var(--gray-300);
+}
+data-grid button:disabled:hover {
+  background-color: inherit;
+  border-color: inherit;
 }
 data-grid input[type=checkbox] {
   margin: 0;
@@ -231,6 +236,7 @@ data-grid tfoot tr {
 }
 data-grid thead tr:nth-child(2) th {
   padding: 0;
+  background-color: var(--white);
 }
 data-grid thead tr:nth-child(2) th input {
   width: 100%;
@@ -272,7 +278,7 @@ data-grid tfoot .dg-page-nav {
   display: flex;
   align-items: center;
 }
-data-grid tfoot .dg-goto-page {
+data-grid tfoot .dg-input-page {
   width: 4rem;
 }
 data-grid tfoot .dg-footer {
@@ -383,6 +389,9 @@ data-grid .dg-selectable label {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+data-grid .dg-actions {
+  text-align: center;
 }
 data-grid .dg-resizer {
   position: absolute;

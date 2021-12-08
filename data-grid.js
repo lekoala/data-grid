@@ -6,6 +6,23 @@
  */
 "use strict";
 
+/**
+ * @typedef Column
+ * @property {string} field - the key in the data
+ * @property {string} title - the title to display in the header (defaults to "field" if not set)
+ * @property {number} width - the width of the column (auto otherwise)
+ * @property {string} class - class to set on the column (target body or header with th.class or td.class)
+ * @property {string} attr - don't render the column and set a matching attribute on the row with the value of the field
+ * @property {string} hidden - hide the column
+ */
+
+/**
+ * @typedef Action
+ * @property {string} title - the title of the button
+ * @property {string} url - link for the action
+ * @property {string} html - custom button data
+ */
+
 const labels = Object.assign(
   {
     itemsPerPage: "Items per page",
@@ -34,7 +51,7 @@ template.innerHTML = `
             <td role="gridcell">
             <div class="dg-footer">
                 <div class="dg-page-nav">
-                  <select class="dg-per-page" aria-label="${labels.itemsPerPage}"></select>
+                  <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
                 </div>
                 <div class="dg-pagination">
                   <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
@@ -43,13 +60,13 @@ template.innerHTML = `
                   <button type="button" class="dg-btn-prev dg-rotate" title="${labels.gotoPrevPage}" aria-label="${labels.gotoPrevPage}" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
+                  <input type="number" class="dg-input-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
                   <button type="button" class="dg-btn-next" title="${labels.gotoNextPage}" aria-label="${labels.gotoNextPage}" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
                   <button type="button" class="dg-btn-last" title="${labels.gotoLastPage}" aria-label="${labels.gotoLastPage}" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
-                  <input type="number" class="dg-goto-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
                 </div>
                 <div class="dg-meta">
                   <span class="dg-low">0</span> - <span class="dg-high">0</span> ${labels.of} <span class="dg-total">0</span> ${labels.items}
@@ -62,6 +79,10 @@ template.innerHTML = `
 </table>
 `;
 
+/**
+ * @property {Column[]} state.columns
+ * @property {Action[]} state.actions
+ */
 class DataGrid extends HTMLElement {
   constructor(options = {}) {
     super();
@@ -70,7 +91,6 @@ class DataGrid extends HTMLElement {
     this.appendChild(template.content.cloneNode(true));
     this.root = this;
 
-    // Init state
     this.state = {
       // reflected and observed
       url: null,
@@ -86,6 +106,7 @@ class DataGrid extends HTMLElement {
       pages: 0,
       perPageValues: [10, 25, 50, 100, 250],
       columns: [],
+      actions: [],
     };
     this.setOptions(options);
 
@@ -93,9 +114,6 @@ class DataGrid extends HTMLElement {
     this.data = [];
     // We store the data in this
     this.originalData = [];
-
-    // Trigger setter
-    this.perPageValues = this.state.perPageValues;
 
     // Init values
     this.isInitialized = false;
@@ -114,9 +132,20 @@ class DataGrid extends HTMLElement {
   // utils
 
   /**
+   * @param {string} str
+   * @param {Object} data
+   * @returns {string}
+   */
+  static interpolate(str, data) {
+    return str.replace(/\{([^\}]+)?\}/g, function ($1, $2) {
+      return data[$2];
+    });
+  }
+
+  /**
    * @param {HTMLElement} el
-   * @param {String} type
-   * @param {String} prop
+   * @param {string} type
+   * @param {string} prop
    * @returns {HTMLElement}
    */
   static getParentNode(el, type, prop = "nodeName") {
@@ -130,9 +159,9 @@ class DataGrid extends HTMLElement {
   /**
    * Uses canvas.measureText to compute and return the width of the given text of given font in pixels.
    * @see https://stackoverflow.com/questions/118241/calculate-text-width-with-javascript/21015393#21015393
-   * @param {String} text The text to be rendered.
+   * @param {string} text The text to be rendered.
    * @param {HTMLElement} el Target element (defaults to body)
-   * @return {Number}
+   * @return {number}
    */
   static getTextWidth(text, el = document.body) {
     const styles = window.getComputedStyle(el, null);
@@ -150,9 +179,9 @@ class DataGrid extends HTMLElement {
 
   /**
    * @param {HTMLElement} el
-   * @param {String} value
-   * @param {String} label
-   * @param {Boolean} checked
+   * @param {string} value
+   * @param {string} label
+   * @param {boolean} checked
    */
   static addSelectOption(el, value, label, checked = false) {
     let opt = document.createElement("option");
@@ -164,8 +193,8 @@ class DataGrid extends HTMLElement {
     el.appendChild(opt);
   }
   /**
-   * @param {String} prefix
-   * @returns {String}
+   * @param {string} prefix
+   * @returns {string}
    */
   static randstr(prefix) {
     return Math.random()
@@ -173,7 +202,7 @@ class DataGrid extends HTMLElement {
       .replace("0.", prefix || "");
   }
   /**
-   * @param {String|Array} v
+   * @param {string|Array} v
    * @returns
    */
   static convertArray(v) {
@@ -415,13 +444,14 @@ class DataGrid extends HTMLElement {
   set perPageValues(val) {
     if (Array.isArray(val)) {
       this.state.perPageValues = val;
-      let select = this.querySelector(".dg-per-page");
-      while (select.lastChild) {
-        select.removeChild(select.lastChild);
+      if (this.selectPerPage) {
+        while (this.selectPerPage.lastChild) {
+          this.selectPerPage.removeChild(this.selectPerPage.lastChild);
+        }
+        this.state.perPageValues.forEach((v) => {
+          DataGrid.addSelectOption(this.selectPerPage, v, v);
+        });
       }
-      this.state.perPageValues.forEach((v) => {
-        DataGrid.addSelectOption(select, v, v);
-      });
     }
   }
   get columns() {
@@ -430,6 +460,12 @@ class DataGrid extends HTMLElement {
   set columns(val) {
     this.state.columns = DataGrid.convertColumns(DataGrid.convertArray(val));
   }
+  get actions() {
+    return this.state.actions;
+  }
+  set actions(val) {
+    this.state.actions = DataGrid.convertArray(val);
+  }
   connectedCallback() {
     this.log("connectedCallback");
 
@@ -437,8 +473,8 @@ class DataGrid extends HTMLElement {
     this.btnPrev = this.root.querySelector(".dg-btn-prev");
     this.btnNext = this.root.querySelector(".dg-btn-next");
     this.btnLast = this.root.querySelector(".dg-btn-last");
-    this.selectPerPage = this.root.querySelector(".dg-per-page");
-    this.inputPage = this.root.querySelector(".dg-goto-page");
+    this.selectPerPage = this.root.querySelector(".dg-select-per-page");
+    this.inputPage = this.root.querySelector(".dg-input-page");
 
     this.getFirst = this.getFirst.bind(this);
     this.getPrev = this.getPrev.bind(this);
@@ -462,6 +498,9 @@ class DataGrid extends HTMLElement {
     document.addEventListener("touchstart", this.touchstart);
     document.addEventListener("touchmove", this.touchmove);
 
+    // Populate
+    this.perPageValues = this.state.perPageValues;
+
     this.loadData();
     this.root.classList.add("dg-initialized");
     this.isInitialized = true;
@@ -477,18 +516,32 @@ class DataGrid extends HTMLElement {
     this.btnPrev.removeEventListener("click", this.getPrev);
     this.btnNext.removeEventListener("click", this.getNext);
     this.btnLast.removeEventListener("click", this.getLast);
-    this.btnRefresh.removeEventListener("click", this.refresh);
     this.selectPerPage.removeEventListener("change", this.changePerPage, {
       passive: true,
     });
     this.inputPage.removeEventListener("input", this.gotoPage);
 
+    // Touch support
     document.removeEventListener("touchstart", this.touchstart);
     document.removeEventListener("touchmove", this.touchmove);
 
-    // TODO: should we remove also other event listeners?
-  }
+    // Selectable
+    if (this.selectAll) {
+      this.selectAll.removeEventListener("change", this.toggleSelectAll);
+    }
 
+    // Context menu
+    if (this.headerRow) {
+      this.headerRow.removeEventListener("contextmenu", this.showContextMenu);
+    }
+
+    // TODO: what about the others listeners?
+  }
+  toggleSelectAll() {
+    this.root.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
+      cb.checked = this.selectAll.checked;
+    });
+  }
   touchstart(e) {
     this.touch = e.touches[0];
   }
@@ -548,6 +601,9 @@ class DataGrid extends HTMLElement {
       }
     });
     if (this.selectable) {
+      len++;
+    }
+    if (this.state.actions.length) {
       len++;
     }
     return len;
@@ -849,47 +905,78 @@ class DataGrid extends HTMLElement {
     this.log("render header");
     let tr;
     let sortedColumn;
-    let selectableTh;
     let thead = this.root.querySelector("thead");
 
+    this.createColumnHeaders(thead);
+    if (this.state.defaultSort) {
+      // We can have a default sort even with sort disabled
+      sortedColumn = this.root.querySelector("thead tr.dg-head-columns th[field='" + this.state.defaultSort + "']");
+    }
+
+    // Create column filters
+    this.createColumnFilters(thead);
+
+    // Configure table
+    this.root.querySelector("table").setAttribute("aria-colcount", this.columnsLength(true).toString());
+    this.root.querySelector("tfoot").querySelector("td").setAttribute("colspan", this.columnsLength(true).toString());
+
+    if (sortedColumn) {
+      this.sortData(sortedColumn);
+    } else {
+      this.renderBody();
+    }
+
+    this.root.querySelector("tfoot").style.display = "";
+    if (this.resizable) {
+      this.renderResizer();
+    }
+  }
+  createColumnHeaders(thead) {
     const colMinWidth = 50;
     const colMaxWidth = parseInt((thead.offsetWidth / this.columnsLength(true)) * 2);
 
-    // Create columns
+    let idx = 0;
+    let tr;
+
+    // Create row
     tr = document.createElement("tr");
+    this.headerRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", 1);
     tr.setAttribute("class", "dg-head-columns");
 
     // Selectable
     if (this.selectable) {
-      selectableTh = document.createElement("th");
+      let selectableTh = document.createElement("th");
       selectableTh.setAttribute("role", "columnheader button");
       selectableTh.setAttribute("aria-colindex", 1);
       selectableTh.classList.add("dg-selectable");
       selectableTh.tabIndex = 0;
 
-      let selectAll = document.createElement("input");
-      selectAll.type = "checkbox";
-      selectAll.addEventListener("change", (ev) => {
-        this.root.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
-          cb.checked = selectAll.checked;
-        });
-      });
+      this.selectAll = document.createElement("input");
+      this.selectAll.type = "checkbox";
+      this.selectAll.classList.add("dg-select-all");
+
+      this.toggleSelectAll = this.toggleSelectAll.bind(this);
+      this.selectAll.addEventListener("change", this.toggleSelectAll);
+
       let label = document.createElement("label");
-      label.appendChild(selectAll);
+      label.appendChild(this.selectAll);
+
       selectableTh.appendChild(label);
       selectableTh.setAttribute("width", 40);
       tr.appendChild(selectableTh);
     }
 
+    // Create columns
+    idx = 0;
     this.state.columns.forEach((column, i) => {
       if (column.attr) {
         return;
       }
       let th = document.createElement("th");
       th.setAttribute("role", "columnheader button");
-      th.setAttribute("aria-colindex", i + this.startIndex());
+      th.setAttribute("aria-colindex", idx + this.startIndex());
       th.setAttribute("id", DataGrid.randstr("dg-col-"));
       if (this.state.sort) {
         th.setAttribute("aria-sort", "none");
@@ -906,18 +993,7 @@ class DataGrid extends HTMLElement {
 
       // Autosize small based on first/last row ?
       if (this.autosize && !th.getAttribute("width")) {
-        let v = this.data[0][column.field].toString();
-        let v2 = this.data[this.data.length - 1][column.field].toString();
-        if (v2.length > v.length) {
-          v = v2;
-        }
-        if (v.length <= 6) {
-          th.setAttribute("width", colMinWidth);
-        } else if (v.length > 50) {
-          th.setAttribute("width", colMaxWidth);
-        } else {
-          th.setAttribute("width", DataGrid.getTextWidth(v, th));
-        }
+        this.autosizeColumn(th, column, colMinWidth, colMaxWidth);
       }
 
       // Reorder columns with drag/drop
@@ -925,47 +1001,37 @@ class DataGrid extends HTMLElement {
         this.makeHeaderDraggable(th);
       }
       tr.appendChild(th);
+      idx++;
     });
 
-    thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
-    if (this.state.defaultSort) {
-      // We can have a default sort even with sort disabled
-      sortedColumn = this.root.querySelector("thead tr.dg-head-columns th[field='" + this.state.defaultSort + "']");
+    // Actions
+    if (this.state.actions.length) {
+      let actionsTh = document.createElement("th");
+      actionsTh.setAttribute("role", "columnheader button");
+      actionsTh.setAttribute("aria-colindex", this.columnsLength(true));
+      actionsTh.classList.add("dg-actions");
+      actionsTh.tabIndex = 0;
+      tr.appendChild(actionsTh);
     }
 
-    // Show menu on right click
-    tr.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
+    thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
 
-      const target = DataGrid.getParentNode(e.target, "THEAD");
-      const menu = this.root.querySelector(".dg-menu");
-      const rect = target.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      menu.style.top = `${y}px`;
-      menu.style.left = `${x}px`;
-
-      menu.removeAttribute("hidden");
-
-      const documentClickHandler = (e) => {
-        if (!menu.contains(e.target)) {
-          menu.setAttribute("hidden", true);
-          document.removeEventListener("click", documentClickHandler);
-        }
-      };
-      document.addEventListener("click", documentClickHandler);
-    });
+    // Context menu
+    this.showContextMenu = this.showContextMenu.bind(this);
+    tr.addEventListener("contextmenu", this.showContextMenu);
 
     // Sort col on click
     tr.querySelectorAll("[aria-sort]").forEach((sortableRow) => {
-      sortableRow.addEventListener("click", () => {
-        this.sortData(sortableRow);
-      });
+      sortableRow.addEventListener("click", () => this.sortData(sortableRow));
     });
+  }
+  createColumnFilters(thead) {
+    let idx = 0;
+    let tr;
 
-    // Create Filters
+    // Create row for filters
     tr = document.createElement("tr");
+    this.filterRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", 2);
     tr.setAttribute("class", "dg-head-filters");
@@ -987,9 +1053,9 @@ class DataGrid extends HTMLElement {
       if (column.attr) {
         return;
       }
-      let relatedTh = thead.querySelector("tr.dg-head-columns th[aria-colindex='" + (i + this.startIndex()) + "']");
+      let relatedTh = thead.querySelector("tr.dg-head-columns th[aria-colindex='" + (idx + this.startIndex()) + "']");
       let th = document.createElement("th");
-      th.setAttribute("aria-colindex", i + this.startIndex());
+      th.setAttribute("aria-colindex", idx + this.startIndex());
 
       let input = document.createElement("input");
       input.type = "text";
@@ -1012,11 +1078,22 @@ class DataGrid extends HTMLElement {
 
       th.appendChild(input);
       tr.appendChild(th);
+      idx++;
     });
+
+    // Actions
+    if (this.state.actions.length) {
+      let actionsTh = document.createElement("th");
+      actionsTh.setAttribute("role", "columnheader button");
+      actionsTh.setAttribute("aria-colindex", this.columnsLength(true));
+      actionsTh.classList.add("dg-actions");
+      actionsTh.tabIndex = 0;
+      tr.appendChild(actionsTh);
+    }
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
 
-    // From this point on, elements have been inserted in the dom
+    // Filter content on enter
     tr.querySelectorAll("input").forEach((input) => {
       input.addEventListener("keypress", (e) => {
         const key = e.keyCode || e.key;
@@ -1025,25 +1102,49 @@ class DataGrid extends HTMLElement {
         }
       });
     });
-
-    // Configure table
-    this.root.querySelector("table").setAttribute("aria-colcount", this.columnsLength(true).toString());
-    this.root.querySelector("tfoot").querySelector("td").setAttribute("colspan", this.columnsLength(true).toString());
-
-    if (sortedColumn) {
-      this.sortData(sortedColumn);
+  }
+  autosizeColumn(th, column, min, max) {
+    let v = this.data[0][column.field].toString();
+    let v2 = this.data[this.data.length - 1][column.field].toString();
+    if (v2.length > v.length) {
+      v = v2;
+    }
+    if (v.length <= 6) {
+      th.setAttribute("width", min);
+    } else if (v.length > 50) {
+      th.setAttribute("width", max);
     } else {
-      this.renderBody();
+      th.setAttribute("width", DataGrid.getTextWidth(v, th));
     }
+  }
+  showContextMenu(e) {
+    e.preventDefault();
 
-    this.root.querySelector("tfoot").style.display = "";
-    if (this.resizable) {
-      this.renderResizer();
-    }
+    const target = DataGrid.getParentNode(e.target, "THEAD");
+    const menu = this.root.querySelector(".dg-menu");
+    const rect = target.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    menu.style.top = `${y}px`;
+    menu.style.left = `${x}px`;
+
+    menu.removeAttribute("hidden");
+
+    const documentClickHandler = (e) => {
+      if (!menu.contains(e.target)) {
+        menu.setAttribute("hidden", true);
+        document.removeEventListener("click", documentClickHandler);
+      }
+    };
+    document.addEventListener("click", documentClickHandler);
   }
   createMenu() {
     const menu = this.root.querySelector(".dg-menu");
     this.state.columns.forEach((col) => {
+      if (col.attr) {
+        return;
+      }
       const field = col.field;
       const li = document.createElement("li");
       const label = document.createElement("label");
@@ -1247,6 +1348,7 @@ class DataGrid extends HTMLElement {
     this.log("render body");
     let tr;
     let td;
+    let idx;
     let tbody = document.createElement("tbody");
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
@@ -1271,6 +1373,7 @@ class DataGrid extends HTMLElement {
         tr.appendChild(td);
       }
 
+      idx = 0;
       this.state.columns.forEach((column, j) => {
         if (!column) {
           console.log(this.state.columns);
@@ -1282,7 +1385,7 @@ class DataGrid extends HTMLElement {
         }
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
-        td.setAttribute("aria-colindex", j + this.startIndex());
+        td.setAttribute("aria-colindex", idx + this.startIndex());
         DataGrid.applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
@@ -1291,7 +1394,47 @@ class DataGrid extends HTMLElement {
           td.setAttribute("hidden", true);
         }
         tr.appendChild(td);
+        idx++;
       });
+
+      // Actions
+      if (this.state.actions.length) {
+        td = document.createElement("td");
+        td.setAttribute("role", "gridcell");
+        td.setAttribute("aria-colindex", this.columnsLength(true));
+        td.classList.add("dg-actions");
+        td.tabIndex = 0;
+
+        this.state.actions.forEach((action) => {
+          let button = document.createElement("button");
+          if (action.html) {
+            button.innerHTML = action.html;
+          } else {
+            button.innerText = action.title ?? action.name;
+          }
+          if (action.url) {
+            button.type = "submit";
+            button.formAction = DataGrid.interpolate(action.url, item);
+          }
+          if (action.class) {
+            button.classList.add(action.class);
+          }
+          button.addEventListener("click", (ev) => {
+            const event = new CustomEvent("action", {
+              bubbles: true,
+              detail: {
+                data: item,
+                action: action.name,
+              },
+            });
+            this.dispatchEvent(event);
+          });
+          td.appendChild(button);
+        });
+
+        tr.appendChild(td);
+      }
+
       tbody.appendChild(tr);
     });
 
