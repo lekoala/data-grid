@@ -121,6 +121,40 @@ Provide a global variable with the required translations.
 </script>
 ```
 
+## Actions
+
+Define your actions as part of the options
+
+```js
+...
+    "actions": [
+      {
+        "name": "edit"
+      },
+      {
+        "name": "delete",
+        "class": "is-danger",
+        "url": "/delete/{id}"
+      }
+    ],
+...
+```
+
+Then simply listen to them
+
+```js
+  document.getElementById("demo2-grid").addEventListener("action", (ev) => {
+    // It contains data and action
+    console.log(ev.detail);
+  });
+```
+
+You can add:
+- class: custom class
+- url: a formaction will be set (data between {} is interpolated)
+- title: a custom title
+- html: custom html for the button (in order to provide icons, etc)
+
 ## Api
 
 - getFirst: go to first page
