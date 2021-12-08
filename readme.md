@@ -143,17 +143,41 @@ Define your actions as part of the options
 Then simply listen to them
 
 ```js
-  document.getElementById("demo2-grid").addEventListener("action", (ev) => {
-    // It contains data and action
-    console.log(ev.detail);
-  });
+document.getElementById("demo2-grid").addEventListener("action", (ev) => {
+  // It contains data and action
+  console.log(ev.detail);
+});
 ```
 
 You can add:
+
 - class: custom class
 - url: a formaction will be set (data between {} is interpolated)
 - title: a custom title
 - html: custom html for the button (in order to provide icons, etc)
+
+## Inline editing
+
+Set your column as editable
+
+```js
+...
+  {
+      "field": "email",
+      "title": "Email",
+      "width": 200,
+      "editable": true
+  },
+```
+
+Then simply listen to changes
+
+```js
+document.getElementById("demo2-grid").addEventListener("edit", (ev) => {
+  // It contains data and value
+  console.log(ev.detail);
+});
+```
 
 ## Api
 
@@ -172,8 +196,7 @@ You can add:
 ## Todo
 
 - Server side pagination/filtering
-- Actions
-- Inline editing
+- Cell renderer
 
 ## Demo
 

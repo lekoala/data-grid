@@ -133,6 +133,15 @@
     });
 
     document.getElementById("demo2-grid").addEventListener("action", (ev) => {
+      let grid = document.getElementById("demo2-grid");
+      let z = document.getElementById("debug-zone");
+      z.innerText = JSON.stringify(ev.detail);
+      if (ev.detail.action === "delete") {
+        grid.removeRow(ev.detail.data.id, "id");
+      }
+    });
+    document.getElementById("demo2-grid").addEventListener("edit", (ev) => {
+      let grid = document.getElementById("demo2-grid");
       let z = document.getElementById("debug-zone");
       z.innerText = JSON.stringify(ev.detail);
     });
@@ -180,7 +189,7 @@
     <button id="clear-filter">Clear filter</button>
     <data-grid id="demo2-grid" url="demo2.json" filter="true" sort="true" reorder="true" default-sort="id" debug="true" sticky></data-grid>
 
-    <textarea name="" id="debug-zone" cols="30" rows="10"></textarea>
+    <textarea name="" id="debug-zone" cols="30" rows="10" style="width:100%;"></textarea>
 
     <h2>Empty grid</h2>
 

@@ -13,7 +13,8 @@
  * @property {number} width - the width of the column (auto otherwise)
  * @property {string} class - class to set on the column (target body or header with th.class or td.class)
  * @property {string} attr - don't render the column and set a matching attribute on the row with the value of the field
- * @property {string} hidden - hide the column
+ * @property {boolean} hidden - hide the column
+ * @property {boolean} editable - replace with input
  */
 
 /**
@@ -671,6 +672,7 @@ class DataGrid extends HTMLElement {
     });
   }
   addRow(row) {
+    this.log("Add row");
     this.originalData.push(row);
     this.data = this.originalData.slice();
     this.fixPage();
@@ -683,6 +685,7 @@ class DataGrid extends HTMLElement {
     if (value === null) {
       value = this.originalData[this.originalData.length - 1][key];
     }
+    this.log("Removing " + key + ":" + value);
     for (let i = 0; i < this.originalData.length; i++) {
       if (this.originalData[i][key] === value) {
         this.originalData.splice(i, 1);
@@ -1389,7 +1392,46 @@ class DataGrid extends HTMLElement {
         DataGrid.applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
-        td.textContent = item[column.field];
+        if (column.editable) {
+          let input = document.createElement("input");
+          input.type = "text";
+          input.autocomplete = "off";
+          input.spellcheck = false;
+          input.tabIndex = 0;
+          input.classList.add("dg-editable");
+          input.name = column.field + "[" + i + "]";
+          input.value = item[column.field];
+          input.dataset.field = column.field;
+
+          input.addEventListener("keypress", (ev) => {
+            if (ev.type === "keypress") {
+              const key = ev.keyCode || ev.key;
+              if (key === 13 || key === "Enter") {
+                input.blur();
+              }
+            }
+          });
+          input.addEventListener("blur", (ev) => {
+            // Only fire on update
+            if (input.value == item[input.dataset.field]) {
+              return;
+            }
+            // Update underlying data
+            item[input.dataset.field] = input.value;
+            // Notify
+            const event = new CustomEvent("edit", {
+              bubbles: true,
+              detail: {
+                data: item,
+                value: input.value,
+              },
+            });
+            this.dispatchEvent(event);
+          });
+          td.appendChild(input);
+        } else {
+          td.textContent = item[column.field];
+        }
         if (column.hidden) {
           td.setAttribute("hidden", true);
         }

@@ -29,7 +29,8 @@
       {
         "field": "email",
         "title": "Email",
-        "width": 200
+        "width": 200,
+        "editable": true
       },
       {
         "field": "status",

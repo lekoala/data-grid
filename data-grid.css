@@ -243,6 +243,16 @@ data-grid thead tr:nth-child(2) th input {
   border-radius: 0;
   margin: 0;
 }
+data-grid tbody td input.dg-editable {
+  width: 100%;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  margin: 0;
+}
+data-grid tbody td input.dg-editable:hover {
+  box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
+}
 data-grid:not([url]) tbody:before {
   position: absolute;
   top: 50%;
