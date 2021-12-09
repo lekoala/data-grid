@@ -502,13 +502,14 @@ class DataGrid extends HTMLElement {
     // Populate
     this.perPageValues = this.state.perPageValues;
 
-    this.loadData();
-    this.root.classList.add("dg-initialized");
-    this.isInitialized = true;
+    this.loadData().finally(() => {
+      this.toggleSort();
+      this.toggleFilter();
+      this.toggleReorder();
 
-    this.toggleSort();
-    this.toggleFilter();
-    this.toggleReorder();
+      this.root.classList.add("dg-initialized");
+      this.isInitialized = true;
+    });
   }
   disconnectedCallback() {
     this.log("disconnectedCallback");
@@ -725,41 +726,42 @@ class DataGrid extends HTMLElement {
     this.renderHeader();
     this.computeDefaultHeight();
   }
-  async loadData() {
+  /**
+   * @returns {Promise}
+   */
+  loadData() {
     this.log("loadData");
-    if (!this.url) {
-      this.log("No url set yet");
-      return;
-    }
-    let response = await this.fetchData();
+    return this.fetchData()
+      .then((response) => {
+        if (Array.isArray(response)) {
+          this.data = response;
+        } else {
+          if (!response.data) {
+            console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
+            return;
+          }
 
-    if (Array.isArray(response)) {
-      this.data = response;
-    } else {
-      if (!response.data) {
-        console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
-        return;
-      }
+          // We may have a config object
+          if (response.options) {
+            this.setOptions(response.options);
+          }
 
-      // We may have a config object
-      if (response.options) {
-        this.setOptions(response.options);
-      }
+          this.data = response.data;
+        }
+        this.originalData = this.data.slice();
+        this.fixPage();
 
-      this.data = response.data;
-    }
-    this.originalData = this.data.slice();
-    this.fixPage();
+        // Make sure we have a proper set of columns
+        if (this.state.columns.length === 0 && this.originalData.length) {
+          this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
+        }
 
-    // Make sure we have a proper set of columns
-    if (this.state.columns.length === 0 && this.originalData.length) {
-      this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
-    }
-
-    this.createMenu();
-    this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
-    this.root.querySelector("tfoot").removeAttribute("hidden");
-    this.renderHeader();
+        this.createMenu();
+        this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
+        this.root.querySelector("tfoot").removeAttribute("hidden");
+        this.renderHeader();
+      })
+      .catch((err) => this.log(err));
   }
   getFirst() {
     this.page = 1;
@@ -773,8 +775,11 @@ class DataGrid extends HTMLElement {
   getNext() {
     this.page = this.state.page + 1;
   }
+  /**
+   * @returns {Promise}
+   */
   refresh() {
-    this.loadData();
+    return this.loadData();
   }
   changePerPage() {
     this.perPage = this.selectPerPage.options[this.selectPerPage.selectedIndex].value;
@@ -893,6 +898,9 @@ class DataGrid extends HTMLElement {
     this.renderBody();
   }
   fetchData() {
+    if (!this.url) {
+      return new Promise((resolve, reject) => reject("No url set"));
+    }
     let url = new URL(this.url, window.location.href);
     const params = {
       r: Math.ceil(Math.random() * 9999999),

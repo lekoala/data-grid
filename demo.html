@@ -68,7 +68,12 @@
     });
     document.getElementById("reload").addEventListener("click", (ev) => {
       let grid = document.getElementById("demo3-grid");
-      grid.loadData(); // you can call methods directly
+      ev.target.disabled = true;
+      grid.loadData().then(() => {
+        ev.target.disabled = false;
+      }).catch(() => {
+        ev.target.disabled = false;
+      });
     });
     document.getElementById("clear").addEventListener("click", (ev) => {
       let grid = document.getElementById("demo3-grid");
