@@ -22,6 +22,8 @@
  * @property {string} title - the title of the button
  * @property {string} url - link for the action
  * @property {string} html - custom button data
+ * @property {boolean} confirm - needs confirmation
+ * @property {boolean} default - is the default row action
  */
 
 const labels = Object.assign(
@@ -36,6 +38,7 @@ const labels = Object.assign(
     items: "items",
     resizeColumn: "Resize column",
     noData: "No data",
+    areYouSure: "Are you sure?",
   },
   window.DataGridLabels || {}
 );
@@ -1403,6 +1406,8 @@ class DataGrid extends HTMLElement {
         DataGrid.applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
+
+        // Inline editing
         if (column.editable) {
           let input = document.createElement("input");
           input.type = "text";
@@ -1414,6 +1419,7 @@ class DataGrid extends HTMLElement {
           input.value = item[column.field];
           input.dataset.field = column.field;
 
+          input.addEventListener("click", (ev) => ev.stopPropagation());
           input.addEventListener("keypress", (ev) => {
             if (ev.type === "keypress") {
               const key = ev.keyCode || ev.key;
@@ -1472,7 +1478,15 @@ class DataGrid extends HTMLElement {
           if (action.class) {
             button.classList.add(action.class);
           }
-          const eventHandler = (ev) => {
+          const actionHandler = (ev) => {
+            ev.stopPropagation();
+            if (action.confirm) {
+              let c = confirm(labels.areYouSure);
+              if (!c) {
+                ev.preventDefault();
+                return;
+              }
+            }
             const event = new CustomEvent("action", {
               bubbles: true,
               detail: {
@@ -1481,14 +1495,14 @@ class DataGrid extends HTMLElement {
               },
             });
             this.dispatchEvent(event);
-          }
-          button.addEventListener("click", eventHandler);
+          };
+          button.addEventListener("click", actionHandler);
           td.appendChild(button);
 
           // Row action
-          if(action.default) {
+          if (action.default) {
             tr.classList.add("dg-actionable");
-            tr.addEventListener("click", eventHandler);
+            tr.addEventListener("click", actionHandler);
           }
         });
 

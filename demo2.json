@@ -9,6 +9,7 @@
       {
         "name": "delete",
         "class": "is-danger",
+        "confirm": true,
         "url": "/delete/{id}"
       }
     ],
