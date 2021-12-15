@@ -396,6 +396,12 @@ data-grid .dg-selectable label {
 data-grid .dg-actions {
   text-align: center;
 }
+data-grid tr.dg-actionable {
+  cursor: pointer;
+}
+data-grid tr.dg-actionable:hover td {
+  background-color: var(--highlight-color);
+}
 data-grid .dg-resizer {
   position: absolute;
   top: 0;

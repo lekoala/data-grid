@@ -1472,7 +1472,7 @@ class DataGrid extends HTMLElement {
           if (action.class) {
             button.classList.add(action.class);
           }
-          button.addEventListener("click", (ev) => {
+          const eventHandler = (ev) => {
             const event = new CustomEvent("action", {
               bubbles: true,
               detail: {
@@ -1481,8 +1481,15 @@ class DataGrid extends HTMLElement {
               },
             });
             this.dispatchEvent(event);
-          });
+          }
+          button.addEventListener("click", eventHandler);
           td.appendChild(button);
+
+          // Row action
+          if(action.default) {
+            tr.classList.add("dg-actionable");
+            tr.addEventListener("click", eventHandler);
+          }
         });
 
         tr.appendChild(td);

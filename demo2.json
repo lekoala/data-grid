@@ -3,7 +3,8 @@
     "perPageValues": [10, 100, 1000],
     "actions": [
       {
-        "name": "edit"
+        "name": "edit",
+        "default": true
       },
       {
         "name": "delete",

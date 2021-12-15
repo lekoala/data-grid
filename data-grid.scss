@@ -471,6 +471,12 @@ data-grid {
   .dg-actions {
     text-align: center;
   }
+  tr.dg-actionable {
+    cursor: pointer;
+    &:hover td {
+      background-color: var(--highlight-color);
+    }
+  }
 
   .dg-resizer {
     position: absolute;
