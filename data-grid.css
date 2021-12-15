@@ -60,26 +60,19 @@ data-grid td[tabindex] {
   word-break: normal;
 }
 data-grid th {
-  position: relative;
   font-weight: bold;
   padding: calc(var(--padding) * var(--header-scale)) var(--padding);
 }
 data-grid th,
 data-grid td {
+  position: relative;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-data-grid[expand] table tbody td:not(.dg-selectable):hover {
-  overflow: visible;
-  z-index: 1;
-  white-space: nowrap;
-  background-color: var(--highlight-color);
-  position: absolute;
-}
-data-grid[expand] table tbody td:last-child:hover {
-  right: 0;
+data-grid[expand] table tbody tr td {
+  white-space: normal;
 }
 @media only screen and (max-width: 768px) {
   data-grid[responsive] table,
@@ -438,5 +431,4 @@ data-grid .dg-resizer.dg-resizer-active:before {
     display: none;
   }
 }
-
 /*# sourceMappingURL=data-grid.css.map */

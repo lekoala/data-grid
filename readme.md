@@ -101,7 +101,7 @@ These attributes can be used to configure the component.
 | **reorder**      |    No    | Boolean | **false**   | Allows a column reordering functionallity.                                               |
 | **dir**          |    No    | String  | **ltr**     | Text direction. Accepted values are **ltr** (left-to-right) and **rtl** (right-to-left). |
 | **default-sort** |    No    | String  | **id**      | Default sort field if sorting is enabled.                                                |
-| **expand**       |    No    | Boolean | **false**   | Expand cells on hover if truncated                                                       |
+| **expand**       |    No    | Boolean | **false**   | Allow cell content to spawn over multiple lines                                          |
 | **sticky**       |    No    | Boolean | **false**   | Sticky headers                                                                           |
 | **resizable**    |    No    | Boolean | **false**   | Resizable columns                                                                        |
 | **autosize**     |    No    | Boolean | **false**   | Compute column sizes based on given data.                                                |

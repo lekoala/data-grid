@@ -69,7 +69,6 @@ data-grid {
     }
   }
   th {
-    position: relative;
     font-weight: bold;
     padding: calc(var(--padding) * var(--header-scale)) var(--padding);
   }
@@ -77,24 +76,19 @@ data-grid {
   // Prevent overflow on headers and cells
   th,
   td {
+    position: relative;
     overflow: hidden;
     text-align: left;
+    // These two properties keep content on one line
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
-  // Expand truncated cells on hover
+  // Expand on multiple lines
   &[expand] {
-    table tbody td {
-      &:not(.dg-selectable):hover {
-        overflow: visible;
-        z-index: 1;
-        white-space: nowrap;
-        background-color: var(--highlight-color);
-        position: absolute;
-      }
-      &:last-child:hover {
-        right: 0;
+    table tbody tr {
+      td {
+        white-space: normal;
       }
     }
   }
