@@ -103,6 +103,7 @@ class DataGrid extends HTMLElement {
       debug: false,
       filter: false,
       sort: false,
+      server: false,
       defaultSort: "",
       reorder: false,
       dir: "ltr",
@@ -124,6 +125,7 @@ class DataGrid extends HTMLElement {
     this.touch = null;
     this.isResizing = false;
     this.defaultHeight = 0;
+    this.meta = {};
 
     // Set id
     if (!this.hasAttribute("id")) {
@@ -290,27 +292,39 @@ class DataGrid extends HTMLElement {
       case "url":
         this.state.url = newValue;
         if (this.isInitialized && newValue) {
-          this.loadData();
+          this.loadData().then(() => {
+            this.configureUi();
+          });
         }
         break;
       case "page":
         this.state.page = Number(newValue);
         if (this.isInitialized) {
-          this.fixPage();
-          this.paginate();
+          this.loadData().finally(() => {
+            if (this.server) {
+              this.renderBody();
+            }
+            this.fixPage();
+            this.paginate();
+          });
         }
         break;
       case "per-page":
         this.state.perPage = Number(newValue);
         if (this.isInitialized) {
           this.selectPerPage.value = newValue;
-          this.fixPage();
-          this.paginate();
+          this.loadData().finally(() => {
+            if (this.server) {
+              this.renderBody();
+            }
+            this.fixPage();
+            this.paginate();
 
-          // Scroll and keep a sizable amount of data displayed
-          if (this.sticky) {
-            window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
-          }
+            // Scroll and keep a sizable amount of data displayed
+            if (this.sticky) {
+              window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
+            }
+          });
         }
         break;
       case "debug":
@@ -403,6 +417,12 @@ class DataGrid extends HTMLElement {
 
   // Boolean
 
+  get server() {
+    return this.hasAttribute("server");
+  }
+  set server(val) {
+    val ? this.setAttribute("server", "") : this.removeAttribute("server");
+  }
   get autosize() {
     return this.hasAttribute("autosize");
   }
@@ -506,6 +526,8 @@ class DataGrid extends HTMLElement {
     this.perPageValues = this.state.perPageValues;
 
     this.loadData().finally(() => {
+      this.configureUi();
+
       this.toggleSort();
       this.toggleFilter();
       this.toggleReorder();
@@ -623,11 +645,17 @@ class DataGrid extends HTMLElement {
       this.style.minHeight = this.defaultHeight + "px";
     }
   }
+  configureUi() {
+    this.createMenu();
+    this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
+    this.root.querySelector("tfoot").removeAttribute("hidden");
+    this.renderHeader();
+  }
   /**
    * This needs to be called each time the data changes or the perPage value changes
    */
   fixPage() {
-    this.state.pages = Math.ceil(this.data.length / this.state.perPage);
+    this.state.pages = this.totalPages();
 
     // Constrain values
     if (this.state.pages < this.state.page) {
@@ -733,6 +761,12 @@ class DataGrid extends HTMLElement {
    * @returns {Promise}
    */
   loadData() {
+    if (!this.server && this.originalData.length) {
+      this.log("skip loadData");
+      return new Promise((resolve, reject) => {
+        resolve();
+      });
+    }
     this.log("loadData");
     return this.fetchData()
       .then((response) => {
@@ -748,6 +782,9 @@ class DataGrid extends HTMLElement {
           if (response.options) {
             this.setOptions(response.options);
           }
+          if (response.meta) {
+            this.meta = response.meta;
+          }
 
           this.data = response.data;
         }
@@ -758,11 +795,6 @@ class DataGrid extends HTMLElement {
         if (this.state.columns.length === 0 && this.originalData.length) {
           this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
         }
-
-        this.createMenu();
-        this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
-        this.root.querySelector("tfoot").removeAttribute("hidden");
-        this.renderHeader();
       })
       .catch((err) => {
         this.url = null;
@@ -785,6 +817,7 @@ class DataGrid extends HTMLElement {
    * @returns {Promise}
    */
   refresh() {
+    this.data = this.originalData = [];
     return this.loadData();
   }
   changePerPage() {
@@ -801,7 +834,28 @@ class DataGrid extends HTMLElement {
     }
     this.page = this.inputPage.value;
   }
-  clearFilter() {
+  getSort() {
+    let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
+    if (col) {
+      return col.getAttribute("field");
+    }
+    return this.defaultSort;
+  }
+  getSortDir() {
+    let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
+    if (col) {
+      return col.getAttribute("aria-sort") || "";
+    }
+    return "";
+  }
+  getFilters() {
+    let filters = [];
+    this.root.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
+      filters[input.dataset.name] = input.value;
+    });
+    return filters;
+  }
+  clearFilters() {
     this.root.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
       input.value = "";
     });
@@ -810,26 +864,32 @@ class DataGrid extends HTMLElement {
   filterData() {
     this.log("filter data");
 
-    this.data = this.originalData.slice();
-
-    this.root.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-      let value = input.value;
-      if (value) {
-        let name = input.dataset.name;
-        this.data = this.data.filter((item) => {
-          let str = item[name] + "";
-          return str.toLowerCase().indexOf(value.toLowerCase()) !== -1;
-        });
-      }
-    });
-
-    this.fixPage();
-
-    let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
-    if (this.state.sort && col) {
-      this.sortData(col);
+    if (this.server) {
+      this.loadData().finally(() => {
+        this.fixPage();
+        this.renderBody();
+      });
     } else {
-      this.renderBody();
+      this.data = this.originalData.slice();
+
+      this.root.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
+        let value = input.value;
+        if (value) {
+          let name = input.dataset.name;
+          this.data = this.data.filter((item) => {
+            let str = item[name] + "";
+            return str.toLowerCase().indexOf(value.toLowerCase()) !== -1;
+          });
+        }
+      });
+
+      this.fixPage();
+      let col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
+      if (this.state.sort && col) {
+        this.sortData(col);
+      } else {
+        this.renderBody();
+      }
     }
   }
   /**
@@ -864,55 +924,75 @@ class DataGrid extends HTMLElement {
       col = this.root.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
     }
 
-    const sort = col ? col.getAttribute("aria-sort") : "none";
-    if (sort === "none") {
-      let stack = [];
-
-      // Restore order while keeping filters
-      this.originalData.some((itemA) => {
-        this.data.some((itemB) => {
-          if (JSON.stringify(itemA) === JSON.stringify(itemB)) {
-            stack.push(itemB);
-            return true;
-          }
-          return false;
-        });
-        return stack.length === this.data.length;
+    if (this.server) {
+      // Reload data with updated sort
+      this.loadData().finally(() => {
+        this.renderBody();
       });
-
-      this.data = stack;
     } else {
-      const field = col.getAttribute("field");
-      this.data.sort((a, b) => {
-        if (!isNaN(a[field]) && !isNaN(b[field])) {
-          return sort === "ascending" ? a[field] - b[field] : b[field] - a[field];
-        }
-        const valA = sort === "ascending" ? a[field].toUpperCase() : b[field].toUpperCase();
-        const valB = sort === "ascending" ? b[field].toUpperCase() : a[field].toUpperCase();
+      const sort = col ? col.getAttribute("aria-sort") : "none";
+      if (sort === "none") {
+        let stack = [];
 
-        switch (true) {
-          case valA > valB:
-            return 1;
-          case valA < valB:
-            return -1;
-          case valA === valB:
-            return 0;
-        }
-      });
+        // Restore order while keeping filters
+        this.originalData.some((itemA) => {
+          this.data.some((itemB) => {
+            if (JSON.stringify(itemA) === JSON.stringify(itemB)) {
+              stack.push(itemB);
+              return true;
+            }
+            return false;
+          });
+          return stack.length === this.data.length;
+        });
+
+        this.data = stack;
+      } else {
+        const field = col.getAttribute("field");
+        this.data.sort((a, b) => {
+          if (!isNaN(a[field]) && !isNaN(b[field])) {
+            return sort === "ascending" ? a[field] - b[field] : b[field] - a[field];
+          }
+          const valA = sort === "ascending" ? a[field].toUpperCase() : b[field].toUpperCase();
+          const valB = sort === "ascending" ? b[field].toUpperCase() : a[field].toUpperCase();
+
+          switch (true) {
+            case valA > valB:
+              return 1;
+            case valA < valB:
+              return -1;
+            case valA === valB:
+              return 0;
+          }
+        });
+        this.renderBody();
+      }
     }
-
-    this.renderBody();
   }
   fetchData() {
     if (!this.url) {
       return new Promise((resolve, reject) => reject("No url set"));
     }
     let url = new URL(this.url, window.location.href);
-    const params = {
+    let params = {
       r: Math.ceil(Math.random() * 9999999),
     };
+    if (this.server) {
+      // 0 based
+      params["start"] = this.state.page - 1;
+      params["length"] = this.state.perPage;
+      params["search"] = this.getFilters();
+      params["sort"] = this.getSort();
+      params["sortDir"] = this.getSortDir();
+    }
 
-    Object.keys(params).forEach((key) => url.searchParams.append(key, params[key]));
+    Object.keys(params).forEach((key) => {
+      if (Array.isArray(params[key])) {
+        Object.keys(params[key]).forEach((k) => url.searchParams.append(key + "[" + k + "]", params[key][k]));
+      } else {
+        url.searchParams.append(key, params[key]);
+      }
+    });
 
     return fetch(url).then((response) => {
       return response.json();
@@ -1020,9 +1100,13 @@ class DataGrid extends HTMLElement {
       tr.appendChild(th);
       idx++;
     });
+
+    // There is too much width, and we want to avoid fixed layout to split remaining amount
     if (totalWidth < thead.offsetWidth) {
       let lastTh = tr.lastChild;
-      lastTh.removeAttribute("width");
+      if (lastTh) {
+        lastTh.removeAttribute("width");
+      }
     }
 
     // Actions
@@ -1545,15 +1629,21 @@ class DataGrid extends HTMLElement {
     let low = high - this.state.perPage + 1;
     let tbody = this.root.querySelector("tbody");
     let tfoot = this.root.querySelector("tfoot");
+    const total = this.totalRecords();
+    const pages = this.totalPages();
 
-    if (high > this.data.length) {
-      high = this.data.length;
+    if (high > total) {
+      high = total;
     }
-    if (!this.data.length) {
+    if (!total) {
       low = 0;
     }
 
     tbody.querySelectorAll("tr").forEach((tr) => {
+      if (this.server) {
+        tr.removeAttribute("hidden");
+        return;
+      }
       index = Number(tr.getAttribute("aria-rowindex"));
       if (index > high || index < low) {
         tr.setAttribute("hidden", true);
@@ -1574,10 +1664,18 @@ class DataGrid extends HTMLElement {
       this.btnNext.disabled = this.state.page >= this.state.pages;
       this.btnLast.disabled = this.state.page >= this.state.pages;
     }
-
     tfoot.querySelector(".dg-low").textContent = low.toString();
     tfoot.querySelector(".dg-high").textContent = high.toString();
-    tfoot.querySelector(".dg-total").textContent = this.data.length.toString();
+    tfoot.querySelector(".dg-total").textContent = this.totalRecords();
+  }
+  totalPages() {
+    return Math.ceil(this.totalRecords() / this.state.perPage);
+  }
+  totalRecords() {
+    if (this.server) {
+      return this.meta.filtered;
+    }
+    return this.data.length.toString();
   }
   /**
    * @param {string|Error} message

@@ -2,12 +2,13 @@
 
 // Filters as key => value
 $q = [];
-if (isset($_GET["search"])) {
+if (isset($_GET["search"]) && is_array($_GET["search"])) {
     $q = filter_var_array($_GET["search"]);
 }
-$start = $_GET["start"] ?? 0;
-$length = $_GET["length"] ?? 10;
-
+$start = intval($_GET["start"] ?? 0);
+$length = intval($_GET["length"] ?? 10);
+$sort = $_GET["sort"] ?? null;
+$sortDir = $_GET["sortDir"] ?? null;
 $data = [];
 $companies = [
     "Acme",
@@ -24,6 +25,18 @@ foreach (range(1, 1000) as $i) {
     ];
 }
 
+if ($sort && $sortDir) {
+    switch ($sortDir) {
+        case "ascending":
+            $dir = SORT_ASC;
+            break;
+        case "descending":
+            $dir = SORT_DESC;
+            break;
+    }
+    array_multisort(array_column($data, $sort), $dir, $data);
+}
+
 // Filter
 // In practice, you would make a db query with a where clause
 $filteredData = [];
@@ -33,10 +46,10 @@ foreach ($data as $row) {
         if (!$val) {
             continue;
         }
-        if (!isset($data[$col])) {
+        if (!isset($row[$col])) {
             continue;
         }
-        if (strpos($data[$col], $val) === false) {
+        if (stripos($row[$col], $val) === false) {
             $found = false;
         }
     }
@@ -44,7 +57,6 @@ foreach ($data as $row) {
         $filteredData[] = $row;
     }
 }
-
 // a query with limit clause
 $chunk = array_slice($filteredData, $start * $length, $length);
 
