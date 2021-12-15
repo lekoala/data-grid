@@ -108,6 +108,14 @@
       let grid = document.getElementById("demo4-grid");
       grid.removeRow();
     });
+    document.getElementById("invalid-create-grid").addEventListener("click", (ev) => {
+      let grid = new DataGrid({
+        url: "demo-not-found.json",
+        id: "not-found-grid",
+      });
+      ev.target.after(grid);
+      document.getElementById("destroy-grid").removeAttribute("disabled");
+    });
     document.getElementById("create-grid").addEventListener("click", (ev) => {
       let grid = new DataGrid({
         url: "demo.json",
@@ -133,8 +141,13 @@
     });
     document.getElementById("destroy-grid").addEventListener("click", (ev) => {
       let grid = document.getElementById("test-grid");
-      grid.remove();
-      document.getElementById("destroy-grid").setAttribute("disabled", "");
+      if (grid) {
+        grid.remove();
+      }
+      let grid2 = document.getElementById("not-found-grid");
+      if (grid2) {
+        grid.remove();
+      }
     });
 
     document.getElementById("demo2-grid").addEventListener("action", (ev) => {
@@ -211,6 +224,7 @@
 
     <h2>Dom api</h2>
 
+    <button id="invalid-create-grid">Invalid Create grid</button>
     <button id="create-grid">Create grid</button>
     <button id="destroy-grid" disabled>Destroy grid</button>
 

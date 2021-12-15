@@ -395,7 +395,7 @@ class DataGrid extends HTMLElement {
     return this.getAttribute("url");
   }
   set url(val) {
-    this.setAttribute("url", val);
+    val ? this.setAttribute("url", val) : this.removeAttribute("url");
   }
 
   // Boolean
@@ -761,7 +761,10 @@ class DataGrid extends HTMLElement {
         this.root.querySelector("tfoot").removeAttribute("hidden");
         this.renderHeader();
       })
-      .catch((err) => this.log(err));
+      .catch((err) => {
+        this.url = null;
+        this.log(err);
+      });
   }
   getFirst() {
     this.page = 1;
