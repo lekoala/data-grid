@@ -802,7 +802,7 @@ class DataGrid extends HTMLElement {
     this.page = this.inputPage.value;
   }
   clearFilter() {
-    this.root.querySelectorAll("thead input").forEach((input) => {
+    this.root.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
       input.value = "";
     });
     this.filterData();
@@ -812,7 +812,7 @@ class DataGrid extends HTMLElement {
 
     this.data = this.originalData.slice();
 
-    this.root.querySelectorAll("thead input").forEach((input) => {
+    this.root.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
       let value = input.value;
       if (value) {
         let name = input.dataset.name;
@@ -949,7 +949,6 @@ class DataGrid extends HTMLElement {
     }
   }
   createColumnHeaders(thead) {
-    const colMinWidth = 50;
     const colMaxWidth = parseInt((thead.offsetWidth / this.columnsLength(true)) * 2);
 
     let idx = 0;
@@ -987,6 +986,7 @@ class DataGrid extends HTMLElement {
 
     // Create columns
     idx = 0;
+    let totalWidth = 0;
     this.state.columns.forEach((column, i) => {
       if (column.attr) {
         return;
@@ -999,7 +999,7 @@ class DataGrid extends HTMLElement {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      th.dataset.minWidth = DataGrid.getTextWidth(column.title, th) + 30;
+      th.dataset.minWidth = DataGrid.getTextWidth(column.title, th) + 40;
       DataGrid.applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
@@ -1010,7 +1010,7 @@ class DataGrid extends HTMLElement {
 
       // Autosize small based on first/last row ?
       if (this.autosize && !th.getAttribute("width")) {
-        this.autosizeColumn(th, column, colMinWidth, colMaxWidth);
+        totalWidth += this.autosizeColumn(th, column, th.dataset.minWidth, colMaxWidth);
       }
 
       // Reorder columns with drag/drop
@@ -1020,6 +1020,10 @@ class DataGrid extends HTMLElement {
       tr.appendChild(th);
       idx++;
     });
+    if (totalWidth < thead.offsetWidth) {
+      let lastTh = tr.lastChild;
+      lastTh.removeAttribute("width");
+    }
 
     // Actions
     if (this.state.actions.length) {
@@ -1126,13 +1130,19 @@ class DataGrid extends HTMLElement {
     if (v2.length > v.length) {
       v = v2;
     }
+    let width = 0;
     if (v.length <= 6) {
-      th.setAttribute("width", min);
+      width = min;
     } else if (v.length > 50) {
-      th.setAttribute("width", max);
+      width = max;
     } else {
-      th.setAttribute("width", DataGrid.getTextWidth(v, th));
+      width = DataGrid.getTextWidth(v, th);
     }
+    if (width < min) {
+      width = min;
+    }
+    th.setAttribute("width", width);
+    return parseInt(width);
   }
   showContextMenu(e) {
     e.preventDefault();
