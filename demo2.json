@@ -46,7 +46,8 @@
       {
         "field": "job_title",
         "title": "Job Title",
-        "class": "highlight-col"
+        "class": "highlight-col",
+        "hidden": true
       }
     ]
   },

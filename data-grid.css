@@ -71,7 +71,10 @@ data-grid td {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-data-grid[expand] table tbody tr td {
+data-grid table tbody tr {
+  cursor: pointer;
+}
+data-grid table tbody tr.dg-expanded td {
   white-space: normal;
 }
 @media only screen and (max-width: 768px) {
@@ -361,6 +364,7 @@ data-grid .dg-menu {
   z-index: 3;
   background: var(--white);
   list-style: none;
+  max-width: 150px;
   margin: 0;
   padding: var(--padding);
   box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);

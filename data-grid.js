@@ -652,7 +652,7 @@ class DataGrid extends HTMLElement {
   }
   toggleReorder() {
     this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
-      if (th.classList.contains("dg-selectable")) {
+      if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
         return;
       }
       if (this.state.reorder) {
@@ -665,7 +665,7 @@ class DataGrid extends HTMLElement {
   toggleSort() {
     this.log("toggle sort");
     this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
-      if (th.classList.contains("dg-selectable")) {
+      if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
         return;
       }
       if (this.state.sort) {
@@ -843,7 +843,7 @@ class DataGrid extends HTMLElement {
     if (col !== null) {
       // Remove active sort if any
       this.root.querySelectorAll("thead tr:first-child th").forEach((th) => {
-        if (th.classList.contains("dg-selectable")) {
+        if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
           return;
         }
         if (th !== col) {
@@ -1140,13 +1140,17 @@ class DataGrid extends HTMLElement {
     const target = DataGrid.getParentNode(e.target, "THEAD");
     const menu = this.root.querySelector(".dg-menu");
     const rect = target.getBoundingClientRect();
-    const x = e.clientX - rect.left;
+    let x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     menu.style.top = `${y}px`;
     menu.style.left = `${x}px`;
 
     menu.removeAttribute("hidden");
+    if (x + 150 > rect.width) {
+      x -= menu.offsetWidth;
+      menu.style.left = `${x}px`;
+    }
 
     const documentClickHandler = (e) => {
       if (!menu.contains(e.target)) {
@@ -1268,7 +1272,7 @@ class DataGrid extends HTMLElement {
     const cols = this.root.querySelectorAll("thead tr.dg-head-columns th");
 
     cols.forEach((col) => {
-      if (col.classList.contains("dg-selectable")) {
+      if (col.classList.contains("dg-selectable") || col.classList.contains("dg-actions")) {
         return;
       }
       // Create a resizer element
@@ -1388,6 +1392,13 @@ class DataGrid extends HTMLElement {
         td.appendChild(label);
 
         tr.appendChild(td);
+      }
+
+      // Expandable
+      if (this.expand) {
+        tr.addEventListener("click", function (ev) {
+          this.classList.toggle("dg-expanded");
+        });
       }
 
       idx = 0;
@@ -1558,6 +1569,9 @@ class DataGrid extends HTMLElement {
     tfoot.querySelector(".dg-high").textContent = high.toString();
     tfoot.querySelector(".dg-total").textContent = this.data.length.toString();
   }
+  /**
+   * @param {string|Error} message
+   */
   log(message) {
     if (this.debug) {
       console.log("[" + this.getAttribute("id") + "] " + message);
