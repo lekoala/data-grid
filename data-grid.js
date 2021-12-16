@@ -15,6 +15,7 @@
  * @property {string} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {boolean} hidden - hide the column
  * @property {boolean} editable - replace with input
+ * @property {boolean} noSort - allow disabling sort for a given column
  */
 
 /**
@@ -301,11 +302,8 @@ class DataGrid extends HTMLElement {
         this.state.page = Number(newValue);
         if (this.isInitialized) {
           this.loadData().finally(() => {
-            if (this.server) {
-              this.renderBody();
-            }
             this.fixPage();
-            this.paginate();
+            this.server ? this.renderBody() : this.paginate();
           });
         }
         break;
@@ -314,11 +312,8 @@ class DataGrid extends HTMLElement {
         if (this.isInitialized) {
           this.selectPerPage.value = newValue;
           this.loadData().finally(() => {
-            if (this.server) {
-              this.renderBody();
-            }
             this.fixPage();
-            this.paginate();
+            this.server ? this.renderBody() : this.paginate();
 
             // Scroll and keep a sizable amount of data displayed
             if (this.sticky) {
@@ -601,11 +596,14 @@ class DataGrid extends HTMLElement {
     }
   }
   getColProp(field, prop) {
+    let v = null;
     this.state.columns.forEach((col) => {
       if (col.field == field) {
-        return col[prop];
+        v = col[prop];
+        return;
       }
     });
+    return v;
   }
   setColProp(field, prop, val) {
     this.state.columns.forEach((col) => {
@@ -706,7 +704,7 @@ class DataGrid extends HTMLElement {
       if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
         return;
       }
-      if (this.state.sort) {
+      if (this.state.sort && !this.getColProp(th.getAttribute("field"), "noSort")) {
         th.setAttribute("aria-sort", "none");
       } else {
         th.removeAttribute("aria-sort");
@@ -1469,13 +1467,16 @@ class DataGrid extends HTMLElement {
       });
     });
   }
+  /**
+   * Render the data as rows in tbody
+   * It will call paginate() at the end
+   */
   renderBody() {
     this.log("render body");
     let tr;
     let td;
     let idx;
     let tbody = document.createElement("tbody");
-    let rowHeight;
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
       tr.setAttribute("role", "row");

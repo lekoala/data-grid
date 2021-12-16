@@ -76,6 +76,27 @@ $arr = [
         "filtered" => count($filteredData),
         "start" => $start,
     ],
+    "options" => [
+        "columns" => [
+            [
+                "field" => "id",
+                "title" => "#",
+            ],
+            [
+                "field" => "first_name",
+                "title" => "First Name",
+            ],
+            [
+                "field" => "last_name",
+                "title" => "Last Name",
+            ],
+            [
+                "field" => "company",
+                "title" => "Company",
+                "noSort" => true,
+            ],
+        ],
+    ],
     "data" => $chunk,
 ];
 
