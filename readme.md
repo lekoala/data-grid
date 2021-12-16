@@ -3,7 +3,14 @@
 [![NPM](https://nodei.co/npm/data-grid-component.png?mini=true)](https://nodei.co/npm/data-grid-component/)
 [![Downloads](https://img.shields.io/npm/dt/data-grid-component.svg)](https://www.npmjs.com/package/data-grid-component)
 
-Autonomous open source grid component with RTL support built on Custom Elements and Shadow DOM specifications.
+Autonomous open source grid component with RTL support.
+
+Key features:
+- Server side support
+- Inline editing
+- Sorting/filtering
+- i18n friendly
+- Easily themable
 
 ## How to use
 
