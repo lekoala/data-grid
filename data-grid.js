@@ -902,10 +902,15 @@ class DataGrid extends HTMLElement {
   }
   /**
    * Data will be sorted then rendered using renderBody
-   * @param {string} col The clicked that was clicked or null to use current sort
+   * @param {HTMLElement} col The column that was clicked or null to use current sort
    */
   sortData(col = null) {
     this.log("sort data");
+
+    // Early exit
+    if(col && this.getColProp(col.getAttribute("field"), "noSort")) {
+      return;
+    }
 
     // We clicked on a column, update sort state
     if (col !== null) {
