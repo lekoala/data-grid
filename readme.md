@@ -179,6 +179,8 @@ document.getElementById("demo2-grid").addEventListener("edit", (ev) => {
 });
 ```
 
+You can check `demo-server.html` to get a sample usage with saving functionnality
+
 ## Api
 
 - getFirst: go to first page
@@ -193,10 +195,19 @@ document.getElementById("demo2-grid").addEventListener("edit", (ev) => {
 - removeRow: remove a row
 - getData: get data
 
-## Todo
+## Server
 
-- Server side pagination/filtering
-- Cell renderer
+For large data set, you may need to use the pagination or filtering on the server.
+
+It works just the same way except the response should return a a `meta` key with
+
+- total: the total (unfiltered) number of rows.
+- filtered: the total value of rows matching the current filter.
+
+Server parameters are sent as query string and are `start`, `length` and `search`.
+To enable server mode, use `server=true`
+
+You can check `demo-server.html` and `demo-server.php` for an example.
 
 ## Demo
 

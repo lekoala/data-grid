@@ -634,19 +634,20 @@ class DataGrid extends HTMLElement {
     return len;
   }
   computeDefaultHeight() {
-    this.defaultHeight = this.root.querySelector("table").offsetHeight;
+    // Wait until height is fully computed
+    requestAnimationFrame(() => {
+      this.defaultHeight = this.root.querySelector("table").offsetHeight;
 
-    // If we have a fixed height, make sure we have overflowY set
-    if (this.style.height) {
-      this.style.height = this.defaultHeight + "px";
-      this.style.overflowY = "auto";
-      // Otherwise incomplete row would not look good
-      this.root.querySelector("table").style.height = "100%";
-    }
-    // If our min height is too small, make sure we adjust the value
-    if (this.style.minHeight && parseInt(this.style.minHeight) > this.defaultHeight) {
-      this.style.minHeight = this.defaultHeight + "px";
-    }
+      // If we have a fixed height, make sure we have overflowY set
+      if (this.style.height) {
+        this.style.height = this.defaultHeight + "px";
+        this.style.overflowY = "auto";
+      }
+      // If our min height is too small, make sure we adjust the value
+      if (this.style.minHeight && parseInt(this.style.minHeight) > this.defaultHeight) {
+        this.style.minHeight = this.defaultHeight + "px";
+      }
+    });
   }
   configureUi() {
     this.createMenu();
@@ -908,7 +909,7 @@ class DataGrid extends HTMLElement {
     this.log("sort data");
 
     // Early exit
-    if(col && this.getColProp(col.getAttribute("field"), "noSort")) {
+    if (col && this.getColProp(col.getAttribute("field"), "noSort")) {
       return;
     }
 

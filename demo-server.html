@@ -22,8 +22,35 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
   <link rel="stylesheet" href="data-grid.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" type="module"></script>
   <script type="module">
     import DataGrid from './data-grid.min.js';
+
+    var toastLiveExample = document.getElementById('liveToast')
+    var toast = new bootstrap.Toast(toastLiveExample)
+
+    function postJson(url, data) {
+      // request options
+      const options = {
+        method: 'POST',
+        body: JSON.stringify(data),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+
+      // send POST request
+      fetch(url, options)
+        .then(res => res.json())
+        .then(res => console.log(res));
+    }
+    document.getElementById("server-demo").addEventListener("edit", (ev) => {
+      let grid = document.getElementById("server-demo");
+
+      postJson(grid.url + "?action=edit", ev.detail);
+      toastLiveExample.querySelector(".toast-body").innerHTML = "Row was updated";
+      toast.show();
+    });
   </script>
 </head>
 
@@ -44,12 +71,25 @@
     <p>Server parameters are sent as query string and are <code>start</code>, <code>length</code> and <code>search</code>.</p>
     <p>To enable server mode, use <code>server=true</code></p>
 
-    <data-grid id="server-demo" style="height:600px" url="demo-server.php" expand resizable sticky selectable autosize="true" filter="true" sort="true" debug="true" server="true" sticky="true"></data-grid>
+    <data-grid id="server-demo" style="height:600px" url="demo-server.php" expand resizable sticky selectable autosize="true" filter="true" sort="true" debug="true" server="true"
+      sticky="true"></data-grid>
 
-  <footer>
-    <hr />
-    Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
-  </footer>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+      <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+          <strong class="me-auto">Data Grid</strong>
+          <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body">
+          Hello, world! This is a toast message.
+        </div>
+      </div>
+    </div>
 </body>
 
 </html>

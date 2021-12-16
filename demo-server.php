@@ -9,6 +9,24 @@ $start = intval($_GET["start"] ?? 0); // 0 based
 $length = intval($_GET["length"] ?? 10);
 $sort = $_GET["sort"] ?? null;
 $sortDir = $_GET["sortDir"] ?? null;
+$action = $_GET["action"] ?? null;
+
+session_start();
+if (empty($_SESSION["data"])) {
+    $_SESSION["data"] = [];
+}
+if ($action) {
+    switch ($action) {
+        case "edit":
+            $content = trim(file_get_contents("php://input"));
+            $decoded = json_decode($content, true);
+            $data = $decoded["data"];
+            $_SESSION["data"][$data["id"]] = $data;
+            echo json_encode(["success" => 1]);
+            break;
+    }
+    die();
+}
 
 // Mock some data instead of querying a db
 $data = [];
@@ -18,12 +36,16 @@ $companies = [
     "Facebook",
 ];
 foreach (range(1, 998) as $i) {
-    $data[] = [
-        "id" => $i,
-        "first_name" => "First name " . $i,
-        "last_name" => "Last name " . $i,
-        "company" => $companies[$i % 3]
-    ];
+    if (isset($_SESSION["data"][$i])) {
+        $data[] = $_SESSION["data"][$i];
+    } else {
+        $data[] = [
+            "id" => $i,
+            "first_name" => "First name " . $i,
+            "last_name" => "Last name " . $i,
+            "company" => $companies[$i % 3]
+        ];
+    }
 }
 
 // That would be an order by clause
@@ -94,6 +116,7 @@ $arr = [
                 "field" => "company",
                 "title" => "Company",
                 "noSort" => true,
+                "editable" => true,
             ],
         ],
     ],
