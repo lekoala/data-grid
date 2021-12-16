@@ -5,18 +5,19 @@ $q = [];
 if (isset($_GET["search"]) && is_array($_GET["search"])) {
     $q = filter_var_array($_GET["search"]);
 }
-$start = intval($_GET["start"] ?? 0);
+$start = intval($_GET["start"] ?? 0); // 0 based
 $length = intval($_GET["length"] ?? 10);
 $sort = $_GET["sort"] ?? null;
 $sortDir = $_GET["sortDir"] ?? null;
+
+// Mock some data instead of querying a db
 $data = [];
 $companies = [
     "Acme",
     "Google",
     "Facebook",
 ];
-// Mock some data
-foreach (range(1, 1000) as $i) {
+foreach (range(1, 998) as $i) {
     $data[] = [
         "id" => $i,
         "first_name" => "First name " . $i,
@@ -25,6 +26,7 @@ foreach (range(1, 1000) as $i) {
     ];
 }
 
+// That would be an order by clause
 if ($sort && $sortDir) {
     switch ($sortDir) {
         case "ascending":
@@ -58,6 +60,13 @@ foreach ($data as $row) {
     }
 }
 // a query with limit clause
+// cap to max amount, 0 based
+if ($start * $length > count($filteredData)) {
+    $start = floor(count($filteredData) / $length);
+}
+if ($start < 0) {
+    $start = 0;
+}
 $chunk = array_slice($filteredData, $start * $length, $length);
 
 $arr = [
@@ -65,6 +74,7 @@ $arr = [
         // probably some count query on the db
         "total" => count($data),
         "filtered" => count($filteredData),
+        "start" => $start,
     ],
     "data" => $chunk,
 ];

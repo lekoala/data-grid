@@ -52,6 +52,7 @@ data-grid {
     // or by the width of the first row of cells. Cells in subsequent rows do not affect column widths.
     table-layout: fixed;
     width: 100%;
+    max-width: 100%;
     white-space: normal;
   }
 

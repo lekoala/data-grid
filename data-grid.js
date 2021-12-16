@@ -637,10 +637,15 @@ class DataGrid extends HTMLElement {
   }
   computeDefaultHeight() {
     this.defaultHeight = this.root.querySelector("table").offsetHeight;
+
+    // If we have a fixed height, make sure we have overflowY set
     if (this.style.height) {
       this.style.height = this.defaultHeight + "px";
       this.style.overflowY = "auto";
+      // Otherwise incomplete row would not look good
+      this.root.querySelector("table").style.height = "100%";
     }
+    // If our min height is too small, make sure we adjust the value
     if (this.style.minHeight && parseInt(this.style.minHeight) > this.defaultHeight) {
       this.style.minHeight = this.defaultHeight + "px";
     }
@@ -650,6 +655,11 @@ class DataGrid extends HTMLElement {
     this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
     this.root.querySelector("tfoot").removeAttribute("hidden");
     this.renderHeader();
+
+    // Store row height for later usage
+    if (!this.rowHeight) {
+      this.rowHeight = this.root.querySelector("tbody tr").offsetHeight;
+    }
   }
   /**
    * This needs to be called each time the data changes or the perPage value changes
@@ -982,7 +992,7 @@ class DataGrid extends HTMLElement {
       params["start"] = this.state.page - 1;
       params["length"] = this.state.perPage;
       params["search"] = this.getFilters();
-      params["sort"] = this.getSort();
+      params["sort"] = this.getSort() || "";
       params["sortDir"] = this.getSortDir();
     }
 
@@ -1465,6 +1475,7 @@ class DataGrid extends HTMLElement {
     let td;
     let idx;
     let tbody = document.createElement("tbody");
+    let rowHeight;
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
       tr.setAttribute("role", "row");
@@ -1620,17 +1631,28 @@ class DataGrid extends HTMLElement {
     tbody.setAttribute("role", "rowgroup");
 
     this.root.querySelector("table").replaceChild(tbody, this.root.querySelector("tbody"));
+
+    // Let's add a fake row to adjust any missing height, simply multiply by rowHeight the number of missing lines
+    tr = document.createElement("tr");
+    tr.setAttribute("role", "row");
+    tr.setAttribute("hidden", true);
+    tr.classList.add("dg-fake-row");
+    tr.tabIndex = 0;
+    tbody.appendChild(tr);
+
     this.paginate();
   }
   paginate() {
     this.log("paginate");
+
+    const total = this.totalRecords();
+    const pages = this.totalPages();
+
     let index;
     let high = this.state.page * this.state.perPage;
     let low = high - this.state.perPage + 1;
     let tbody = this.root.querySelector("tbody");
     let tfoot = this.root.querySelector("tfoot");
-    const total = this.totalRecords();
-    const pages = this.totalPages();
 
     if (high > total) {
       high = total;
@@ -1655,6 +1677,22 @@ class DataGrid extends HTMLElement {
     // Store default height and update styles if needed
     if (this.defaultHeight == 0) {
       this.computeDefaultHeight();
+    }
+
+    // On last page, adjust height if using fixed height
+    let fakeRow = this.querySelector(".dg-fake-row");
+    if (this.style.height) {
+      if (this.state.page == pages) {
+        // Check if we are below set height
+        if (parseInt(this.style.height) > this.querySelector("tbody").offsetHeight) {
+          const missing = this.state.perPage - (total - (pages - 1) * this.state.perPage);
+          fakeRow.setAttribute("height", missing * this.rowHeight);
+        } else {
+          fakeRow.removeAttribute("height");
+        }
+      } else {
+        fakeRow.removeAttribute("height");
+      }
     }
 
     // Enable/disable buttons

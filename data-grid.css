@@ -46,6 +46,7 @@ data-grid table {
   border-collapse: collapse;
   table-layout: fixed;
   width: 100%;
+  max-width: 100%;
   white-space: normal;
 }
 data-grid th,
