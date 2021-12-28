@@ -123,5 +123,7 @@ $arr = [
     "data" => $chunk,
 ];
 
+sleep(rand(0, 2));
+
 header("Content-Type: application/json");
 echo json_encode($arr);

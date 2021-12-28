@@ -130,7 +130,7 @@ class DataGrid extends HTMLElement {
 
     // Set id
     if (!this.hasAttribute("id")) {
-      this.setAttribute("id", DataGrid.randstr("dg-"));
+      this.setAttribute("id", this.randstr("dg-"));
     }
 
     this.log("constructor");
@@ -177,7 +177,7 @@ class DataGrid extends HTMLElement {
     const fontFamily = styles.getPropertyValue("font-family") || "Arial";
 
     // re-use canvas object for better performance
-    const canvas = DataGrid.getTextWidth.canvas || (DataGrid.getTextWidth.canvas = document.createElement("canvas"));
+    const canvas = this.getTextWidth.canvas || (this.getTextWidth.canvas = document.createElement("canvas"));
     const context = canvas.getContext("2d");
     context.font = `${fontWeight} ${fontSize} ${fontFamily}`;
     const metrics = context.measureText(text);
@@ -317,7 +317,7 @@ class DataGrid extends HTMLElement {
 
             // Scroll and keep a sizable amount of data displayed
             if (this.sticky) {
-              window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
+              window.scroll({ top: this.elementOffset(this.selectPerPage).top - this.defaultHeight });
             }
           });
         }
@@ -468,7 +468,7 @@ class DataGrid extends HTMLElement {
           this.selectPerPage.removeChild(this.selectPerPage.lastChild);
         }
         this.state.perPageValues.forEach((v) => {
-          DataGrid.addSelectOption(this.selectPerPage, v, v);
+          this.addSelectOption(this.selectPerPage, v, v);
         });
       }
     }
@@ -477,13 +477,13 @@ class DataGrid extends HTMLElement {
     return this.state.columns;
   }
   set columns(val) {
-    this.state.columns = DataGrid.convertColumns(DataGrid.convertArray(val));
+    this.state.columns = this.convertColumns(this.convertArray(val));
   }
   get actions() {
     return this.state.actions;
   }
   set actions(val) {
-    this.state.actions = DataGrid.convertArray(val);
+    this.state.actions = this.convertArray(val);
   }
   connectedCallback() {
     this.log("connectedCallback");
@@ -802,7 +802,7 @@ class DataGrid extends HTMLElement {
 
         // Make sure we have a proper set of columns
         if (this.state.columns.length === 0 && this.originalData.length) {
-          this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
+          this.state.columns = this.convertColumns(Object.keys(this.originalData[0]));
         }
       })
       .catch((err) => {
@@ -1088,13 +1088,13 @@ class DataGrid extends HTMLElement {
       let th = document.createElement("th");
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", idx + this.startIndex());
-      th.setAttribute("id", DataGrid.randstr("dg-col-"));
+      th.setAttribute("id", this.randstr("dg-col-"));
       if (this.state.sort) {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      th.dataset.minWidth = DataGrid.getTextWidth(column.title, th) + 40;
-      DataGrid.applyColumnDefinition(th, column);
+      th.dataset.minWidth = this.getTextWidth(column.title, th) + 40;
+      this.applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
 
@@ -1182,7 +1182,7 @@ class DataGrid extends HTMLElement {
       input.spellcheck = false;
       // Allows binding filter to this column
       input.dataset.name = column.field;
-      input.id = DataGrid.randstr("dg-filter-");
+      input.id = this.randstr("dg-filter-");
       // Don't use aria-label as it triggers autocomplete
       input.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
       if (!this.state.filter) {
@@ -1234,7 +1234,7 @@ class DataGrid extends HTMLElement {
     } else if (v.length > 50) {
       width = max;
     } else {
-      width = DataGrid.getTextWidth(v, th);
+      width = this.getTextWidth(v, th);
     }
     if (width < min) {
       width = min;
@@ -1245,7 +1245,7 @@ class DataGrid extends HTMLElement {
   showContextMenu(e) {
     e.preventDefault();
 
-    const target = DataGrid.getParentNode(e.target, "THEAD");
+    const target = this.getParentNode(e.target, "THEAD");
     const menu = this.root.querySelector(".dg-menu");
     const rect = target.getBoundingClientRect();
     let x = e.clientX - rect.left;
@@ -1339,7 +1339,7 @@ class DataGrid extends HTMLElement {
       if (e.stopPropagation) {
         e.stopPropagation();
       }
-      const target = DataGrid.getParentNode(e.target, "TH");
+      const target = this.getParentNode(e.target, "TH");
       const index = e.dataTransfer.getData("text/plain");
       const targetIndex = target.getAttribute("aria-colindex");
 
@@ -1457,7 +1457,7 @@ class DataGrid extends HTMLElement {
         startW = col.offsetWidth;
 
         remainingSpace = (visibleCols.length - columnIndex) * 30;
-        max = DataGrid.elementOffset(this).left + this.offsetWidth - remainingSpace;
+        max = this.elementOffset(this).left + this.offsetWidth - remainingSpace;
 
         // Remove width from next columns to allow auto layout
         col.setAttribute("width", startW);
@@ -1526,7 +1526,7 @@ class DataGrid extends HTMLElement {
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startIndex());
-        DataGrid.applyColumnDefinition(td, column);
+        this.applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
 
@@ -1596,7 +1596,7 @@ class DataGrid extends HTMLElement {
           }
           if (action.url) {
             button.type = "submit";
-            button.formAction = DataGrid.interpolate(action.url, item);
+            button.formAction = this.interpolate(action.url, item);
           }
           if (action.class) {
             button.classList.add(action.class);
