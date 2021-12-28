@@ -103,6 +103,7 @@ $arr = [
             [
                 "field" => "id",
                 "title" => "#",
+                "width" => 50,
             ],
             [
                 "field" => "first_name",
@@ -123,6 +124,7 @@ $arr = [
     "data" => $chunk,
 ];
 
+// simulate laggy server
 sleep(rand(0, 2));
 
 header("Content-Type: application/json");

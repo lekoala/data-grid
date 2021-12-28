@@ -130,7 +130,7 @@ class DataGrid extends HTMLElement {
 
     // Set id
     if (!this.hasAttribute("id")) {
-      this.setAttribute("id", this.randstr("dg-"));
+      this.setAttribute("id", DataGrid.randstr("dg-"));
     }
 
     this.log("constructor");
@@ -221,6 +221,7 @@ class DataGrid extends HTMLElement {
     }
     if (!Array.isArray(v)) {
       console.error("Invalid array", v);
+      return {};
     }
     return v;
   }
@@ -317,7 +318,7 @@ class DataGrid extends HTMLElement {
 
             // Scroll and keep a sizable amount of data displayed
             if (this.sticky) {
-              window.scroll({ top: this.elementOffset(this.selectPerPage).top - this.defaultHeight });
+              window.scroll({ top: DataGrid.elementOffset(this.selectPerPage).top - this.defaultHeight });
             }
           });
         }
@@ -468,7 +469,7 @@ class DataGrid extends HTMLElement {
           this.selectPerPage.removeChild(this.selectPerPage.lastChild);
         }
         this.state.perPageValues.forEach((v) => {
-          this.addSelectOption(this.selectPerPage, v, v);
+          DataGrid.addSelectOption(this.selectPerPage, v, v);
         });
       }
     }
@@ -477,13 +478,13 @@ class DataGrid extends HTMLElement {
     return this.state.columns;
   }
   set columns(val) {
-    this.state.columns = this.convertColumns(this.convertArray(val));
+    this.state.columns = DataGrid.convertColumns(DataGrid.convertArray(val));
   }
   get actions() {
     return this.state.actions;
   }
   set actions(val) {
-    this.state.actions = this.convertArray(val);
+    this.state.actions = DataGrid.convertArray(val);
   }
   connectedCallback() {
     this.log("connectedCallback");
@@ -553,8 +554,8 @@ class DataGrid extends HTMLElement {
     }
 
     // Context menu
-    if (this.headerRow) {
-      this.headerRow.removeEventListener("contextmenu", this.showContextMenu);
+    if (this.headerRow && typeof DataGridContextMenu != "undefined") {
+      this.headerRow.oncontextmenu = null;
     }
 
     // TODO: what about the others listeners?
@@ -650,7 +651,9 @@ class DataGrid extends HTMLElement {
     });
   }
   configureUi() {
-    this.createMenu();
+    if (typeof DataGridContextMenu != "undefined") {
+      DataGridContextMenu.createMenu(this);
+    }
     this.root.querySelector("table").setAttribute("aria-rowcount", this.data.length);
     this.root.querySelector("tfoot").removeAttribute("hidden");
     this.renderHeader();
@@ -777,6 +780,8 @@ class DataGrid extends HTMLElement {
       });
     }
     this.log("loadData");
+    this.loading = true;
+    this.root.classList.add("dg-loading");
     return this.fetchData()
       .then((response) => {
         if (Array.isArray(response)) {
@@ -802,8 +807,11 @@ class DataGrid extends HTMLElement {
 
         // Make sure we have a proper set of columns
         if (this.state.columns.length === 0 && this.originalData.length) {
-          this.state.columns = this.convertColumns(Object.keys(this.originalData[0]));
+          this.state.columns = DataGrid.convertColumns(Object.keys(this.originalData[0]));
         }
+
+        this.root.classList.remove("dg-loading");
+        this.loading = false;
       })
       .catch((err) => {
         this.url = null;
@@ -811,15 +819,27 @@ class DataGrid extends HTMLElement {
       });
   }
   getFirst() {
+    if (this.loading) {
+      return;
+    }
     this.page = 1;
   }
   getLast() {
+    if (this.loading) {
+      return;
+    }
     this.page = this.state.pages;
   }
   getPrev() {
+    if (this.loading) {
+      return;
+    }
     this.page = this.state.page - 1;
   }
   getNext() {
+    if (this.loading) {
+      return;
+    }
     this.page = this.state.page + 1;
   }
   /**
@@ -910,6 +930,9 @@ class DataGrid extends HTMLElement {
 
     // Early exit
     if (col && this.getColProp(col.getAttribute("field"), "noSort")) {
+      return;
+    }
+    if (this.loading) {
       return;
     }
 
@@ -1038,8 +1061,8 @@ class DataGrid extends HTMLElement {
     }
 
     this.root.querySelector("tfoot").style.display = "";
-    if (this.resizable) {
-      this.renderResizer();
+    if (this.resizable && typeof DataGridColumnResizer != "undefined") {
+      this.renderResizer(this);
     }
   }
   createColumnHeaders(thead) {
@@ -1088,13 +1111,13 @@ class DataGrid extends HTMLElement {
       let th = document.createElement("th");
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", idx + this.startIndex());
-      th.setAttribute("id", this.randstr("dg-col-"));
+      th.setAttribute("id", DataGrid.randstr("dg-col-"));
       if (this.state.sort) {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      th.dataset.minWidth = this.getTextWidth(column.title, th) + 40;
-      this.applyColumnDefinition(th, column);
+      th.dataset.minWidth = DataGrid.getTextWidth(column.title, th) + 40;
+      DataGrid.applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
 
@@ -1109,7 +1132,11 @@ class DataGrid extends HTMLElement {
 
       // Reorder columns with drag/drop
       if (this.state.reorder) {
-        this.makeHeaderDraggable(th);
+        if (typeof DataGridDraggableHeaders != "undefined") {
+          DataGridDraggableHeaders.makeHeaderDraggable(th, this);
+        } else {
+          console.error("Plugin not loaded");
+        }
       }
       tr.appendChild(th);
       idx++;
@@ -1136,8 +1163,11 @@ class DataGrid extends HTMLElement {
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
 
     // Context menu
-    this.showContextMenu = this.showContextMenu.bind(this);
-    tr.addEventListener("contextmenu", this.showContextMenu);
+    if (typeof DataGridContextMenu != "undefined") {
+      tr.addEventListener("contextmenu", (ev) => {
+        DataGridContextMenu.showContextMenu(ev, this);
+      });
+    }
 
     // Sort col on click
     tr.querySelectorAll("[aria-sort]").forEach((sortableRow) => {
@@ -1182,7 +1212,7 @@ class DataGrid extends HTMLElement {
       input.spellcheck = false;
       // Allows binding filter to this column
       input.dataset.name = column.field;
-      input.id = this.randstr("dg-filter-");
+      input.id = DataGrid.randstr("dg-filter-");
       // Don't use aria-label as it triggers autocomplete
       input.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
       if (!this.state.filter) {
@@ -1234,244 +1264,13 @@ class DataGrid extends HTMLElement {
     } else if (v.length > 50) {
       width = max;
     } else {
-      width = this.getTextWidth(v, th);
+      width = DataGrid.getTextWidth(v, th);
     }
     if (width < min) {
       width = min;
     }
     th.setAttribute("width", width);
     return parseInt(width);
-  }
-  showContextMenu(e) {
-    e.preventDefault();
-
-    const target = this.getParentNode(e.target, "THEAD");
-    const menu = this.root.querySelector(".dg-menu");
-    const rect = target.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    menu.style.top = `${y}px`;
-    menu.style.left = `${x}px`;
-
-    menu.removeAttribute("hidden");
-    if (x + 150 > rect.width) {
-      x -= menu.offsetWidth;
-      menu.style.left = `${x}px`;
-    }
-
-    const documentClickHandler = (e) => {
-      if (!menu.contains(e.target)) {
-        menu.setAttribute("hidden", true);
-        document.removeEventListener("click", documentClickHandler);
-      }
-    };
-    document.addEventListener("click", documentClickHandler);
-  }
-  createMenu() {
-    const menu = this.root.querySelector(".dg-menu");
-    this.state.columns.forEach((col) => {
-      if (col.attr) {
-        return;
-      }
-      const field = col.field;
-      const li = document.createElement("li");
-      const label = document.createElement("label");
-      const checkbox = document.createElement("input");
-      checkbox.setAttribute("type", "checkbox");
-      if (!col.hidden) {
-        checkbox.checked = true;
-      }
-      checkbox.addEventListener("change", (e) => {
-        e.target.checked ? this.showColumn(field, e.target) : this.hideColumn(field, e.target);
-      });
-
-      const text = document.createTextNode(col.title);
-
-      label.appendChild(checkbox);
-      label.appendChild(text);
-
-      li.appendChild(label);
-      menu.appendChild(li);
-    });
-  }
-  showColumn(field, checkbox = null) {
-    if (checkbox) {
-      checkbox.checked = true;
-    }
-    this.setColProp(field, "hidden", false);
-    this.renderHeader();
-  }
-  hideColumn(field, checkbox = null) {
-    const numHiddenCols = this.state.columns.filter((th) => {
-      return th.hidden === true;
-    }).length;
-
-    if (numHiddenCols === this.columnsLength() - 1) {
-      // Restore checkbox value
-      if (checkbox) {
-        checkbox.checked = true;
-      }
-      return;
-    }
-    this.setColProp(field, "hidden", true);
-    this.renderHeader();
-  }
-  makeHeaderDraggable(th) {
-    th.draggable = true;
-    th.addEventListener("dragstart", (e) => {
-      if (this.isResizing && e.preventDefault) {
-        e.preventDefault();
-        return;
-      }
-      this.log("reorder col");
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
-    });
-    th.addEventListener("dragover", (e) => {
-      if (e.preventDefault) {
-        e.preventDefault();
-      }
-      e.dataTransfer.dropEffect = "move";
-      return false;
-    });
-    th.addEventListener("drop", (e) => {
-      if (e.stopPropagation) {
-        e.stopPropagation();
-      }
-      const target = this.getParentNode(e.target, "TH");
-      const index = e.dataTransfer.getData("text/plain");
-      const targetIndex = target.getAttribute("aria-colindex");
-
-      if (index === targetIndex) {
-        this.log("reordered col stayed the same");
-        return;
-      }
-      this.log("reordered col from " + index + " to " + targetIndex);
-
-      const tmp = this.state.columns[index - 1];
-      this.state.columns[index - 1] = this.columns[targetIndex - 1];
-      this.state.columns[targetIndex - 1] = tmp;
-
-      const swapNodes = (selector, el1) => {
-        const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
-        const el2 = this.root.querySelector(selector + " tr[aria-rowindex='" + rowIndex + "'] [aria-colindex='" + targetIndex + "']");
-        el1.setAttribute("aria-colindex", targetIndex);
-        el2.setAttribute("aria-colindex", index);
-        const newNode = document.createElement("th");
-        el1.parentNode.insertBefore(newNode, el1);
-        el2.parentNode.replaceChild(el1, el2);
-        newNode.parentNode.replaceChild(el2, newNode);
-      };
-
-      // Swap all rows in header and body
-      this.root.querySelectorAll("thead th[aria-colindex='" + index + "']").forEach((el1) => {
-        swapNodes("thead", el1);
-      });
-      this.root.querySelectorAll('tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
-        swapNodes("tbody", el1);
-      });
-
-      return false;
-    });
-  }
-  renderResizer() {
-    const table = this.root.querySelector("table");
-    const cols = this.root.querySelectorAll("thead tr.dg-head-columns th");
-
-    cols.forEach((col) => {
-      if (col.classList.contains("dg-selectable") || col.classList.contains("dg-actions")) {
-        return;
-      }
-      // Create a resizer element
-      const resizer = document.createElement("div");
-      resizer.classList.add("dg-resizer");
-      resizer.ariaLabel = labels.resizeColumn;
-
-      // Add a resizer element to the column
-      col.appendChild(resizer);
-
-      // Handle resizing
-      let startX = 0;
-      let startW = 0;
-      let remainingSpace = 0;
-      let max = 0;
-
-      const mouseMoveHandler = (e) => {
-        if (e.clientX > max) {
-          return;
-        }
-        const newWidth = startW + (e.clientX - startX);
-        if (col.dataset.minWidth && newWidth > col.dataset.minWidth) {
-          col.width = newWidth;
-        }
-      };
-
-      // When user releases the mouse, remove the existing event listeners
-      const mouseUpHandler = () => {
-        this.log("resized column");
-
-        this.isResizing = false;
-        resizer.classList.remove("dg-resizer-active");
-        if (this.state.reorder) {
-          col.draggable = true;
-        }
-        col.style.overflow = "hidden";
-
-        document.removeEventListener("mousemove", mouseMoveHandler);
-        document.removeEventListener("mouseup", mouseUpHandler);
-      };
-
-      // Otherwise it could sort the col
-      resizer.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
-
-      resizer.addEventListener("mousedown", (e) => {
-        e.stopPropagation();
-        this.isResizing = true;
-
-        const currentCols = this.root.querySelectorAll(".dg-head-columns th");
-        const visibleCols = Array.from(currentCols).filter((col) => {
-          return !col.hasAttribute("hidden");
-        });
-        const columns = Array.from(visibleCols);
-        const columnIndex = columns.findIndex((column) => column == e.target.parentNode);
-        this.log("resize column");
-
-        resizer.classList.add("dg-resizer-active");
-
-        // Make sure we don't drag it
-        if (col.hasAttribute("draggable")) {
-          col.removeAttribute("draggable");
-        }
-
-        // Allow overflow when resizing
-        col.style.overflow = "visible";
-
-        // Show full column height (-1 to avoid scrollbar)
-        resizer.style.height = table.offsetHeight - 1 + "px";
-
-        // Register initial data
-        startX = e.clientX;
-        startW = col.offsetWidth;
-
-        remainingSpace = (visibleCols.length - columnIndex) * 30;
-        max = this.elementOffset(this).left + this.offsetWidth - remainingSpace;
-
-        // Remove width from next columns to allow auto layout
-        col.setAttribute("width", startW);
-        for (let j = 0; j < visibleCols.length; j++) {
-          if (j > columnIndex) {
-            cols[j].removeAttribute("width");
-          }
-        }
-
-        // Attach handlers
-        document.addEventListener("mousemove", mouseMoveHandler);
-        document.addEventListener("mouseup", mouseUpHandler);
-      });
-    });
   }
   /**
    * Render the data as rows in tbody
@@ -1526,7 +1325,7 @@ class DataGrid extends HTMLElement {
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startIndex());
-        this.applyColumnDefinition(td, column);
+        DataGrid.applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
 
@@ -1596,7 +1395,7 @@ class DataGrid extends HTMLElement {
           }
           if (action.url) {
             button.type = "submit";
-            button.formAction = this.interpolate(action.url, item);
+            button.formAction = DataGrid.interpolate(action.url, item);
           }
           if (action.class) {
             button.classList.add(action.class);

@@ -231,6 +231,10 @@ data-grid tfoot tr {
   background-color: var(--header-background);
   color: var(--header-color);
 }
+data-grid.dg-loading tbody {
+  opacity: 0.5;
+  transition: opacity 0.2s ease-in;
+}
 data-grid thead tr:nth-child(2) th {
   padding: 0;
   background-color: var(--white);

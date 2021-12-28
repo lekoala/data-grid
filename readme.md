@@ -216,6 +216,15 @@ To enable server mode, use `server=true`
 
 You can check `demo-server.html` and `demo-server.php` for an example.
 
+## Plugins
+
+Some features have been extracted as plugins to make base class lighter. You can
+find them in the `plugins` directory.
+
+- Column resizer
+- Context menu to show/hide columns
+- Draggable headers
+
 ## Demo
 
 <!--

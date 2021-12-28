@@ -275,6 +275,11 @@ data-grid {
     }
   }
 
+  &.dg-loading tbody {
+    opacity: 0.5;
+    transition: opacity 0.2s ease-in;
+  }
+
   thead {
     // Filters
     tr:nth-child(2) th {
