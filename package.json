@@ -13,7 +13,7 @@
     "prefix-css": "postcss data-grid.min.css --replace --use autoprefixer",
     "build-css": "npm run compile-css && npm run prefix-css",
     "build-all": "npm run build && npm run build-css && git add -A && git commit -m \"build files\"",
-    "bump": "npm run build-min && npm version patch"
+    "bump": "npm run build-all && npm version patch"
   },
   "repository": {
     "type": "git",
