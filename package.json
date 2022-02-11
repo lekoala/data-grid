@@ -8,7 +8,11 @@
     "build": "esbuild --bundle --minify --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=data-grid.min.js",
     "start": "npm run build -- --servedir=.",
     "watch": "npm run build -- --watch",
-    "build-min": "npm run build && git add -A && git commit -m \"build min file\"",
+    "compile-css": "sass data-grid.scss:data-grid.min.css --style compressed",
+    "watch-css": "npm run compile-css -- --watch --poll",
+    "prefix-css": "postcss data-grid.min.css --replace --use autoprefixer",
+    "build-css": "npm run compile-css && npm run prefix-css",
+    "build-all": "npm run build && npm run build-css && git add -A && git commit -m \"build files\"",
     "bump": "npm run build-min && npm version patch"
   },
   "repository": {
