@@ -496,13 +496,12 @@ data-grid {
     text-align: right;
     button {
       margin: 0;
-      display: none;
     }
     button + button {
       margin-left: 0.5rem;
     }
-
     .dg-actions-toggle {
+      display: none;
       width: calc(100px - var(--padding-x) * 2);
     }
     &.dg-actions-1 {
@@ -515,6 +514,9 @@ data-grid {
       }
     }
     &.dg-actions-more {
+      button {
+        display: none;
+      }
       button.dg-actions-toggle {
         display: inline-block;
       }
