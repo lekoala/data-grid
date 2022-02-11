@@ -1,7 +1,7 @@
 "use strict";
 
 class DataGridColumnResizer {
-  renderResizer(grid) {
+  static renderResizer(grid, resizeLabel) {
     const table = grid.root.querySelector("table");
     const cols = grid.root.querySelectorAll("thead tr.dg-head-columns th");
 
@@ -12,7 +12,7 @@ class DataGridColumnResizer {
       // Create a resizer element
       const resizer = document.createElement("div");
       resizer.classList.add("dg-resizer");
-      resizer.ariaLabel = labels.resizeColumn;
+      resizer.ariaLabel = resizeLabel;
 
       // Add a resizer element to the column
       col.appendChild(resizer);

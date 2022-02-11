@@ -1,7 +1,9 @@
 data-grid {
   --padding: 0.5rem;
+  --padding-x: 0.75rem;
+  --padding-y: 0.5rem;
+  --padding-y-header: 0.75rem;
   --padding-half: calc(var(--padding) / 2);
-  --header-scale: 1.5;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
   --highlight-color: #fffcee;
@@ -52,7 +54,7 @@ data-grid table {
 data-grid th,
 data-grid td {
   empty-cells: show;
-  padding: var(--padding);
+  padding: var(--padding-y) var(--padding-x);
   text-align: left;
 }
 data-grid th[tabindex],
@@ -62,7 +64,7 @@ data-grid td[tabindex] {
 }
 data-grid th {
   font-weight: bold;
-  padding: calc(var(--padding) * var(--header-scale)) var(--padding);
+  padding: var(--padding-y-header) var(--padding-x);
 }
 data-grid th,
 data-grid td {
@@ -73,10 +75,20 @@ data-grid td {
   white-space: nowrap;
 }
 data-grid table tbody tr {
+  position: relative;
   cursor: pointer;
 }
 data-grid table tbody tr.dg-expanded td {
   white-space: normal;
+}
+data-grid .dg-expand {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
 }
 @media only screen and (max-width: 768px) {
   data-grid[responsive] table,
@@ -111,7 +123,7 @@ data-grid[responsive] tr:not([hidden]) {
     top: 0;
     left: 0;
     padding: var(--padding);
-    width: calc(100% - var(--responsive-width) - (var(--padding) * 4));
+    width: calc(100% - var(--responsive-width) - var(--padding) * 4);
     white-space: nowrap;
     content: attr(data-name);
     display: block;
@@ -122,6 +134,7 @@ data-grid[responsive] tr:not([hidden]) {
 data-grid[sticky] table thead,
 data-grid[sticky] table tfoot {
   z-index: 2;
+  position: -webkit-sticky;
   position: sticky;
   margin: 0;
   border: 0;
@@ -283,7 +296,7 @@ data-grid tbody tr:focus {
   outline: none;
 }
 data-grid tfoot td {
-  padding: calc(var(--padding) * var(--header-scale)) var(--padding);
+  padding: var(--padding-y-header) var(--padding-x);
 }
 data-grid tfoot .dg-page-nav {
   display: flex;
@@ -403,7 +416,34 @@ data-grid .dg-selectable label {
   justify-content: center;
 }
 data-grid .dg-actions {
-  text-align: center;
+  text-overflow: initial;
+  width: 100px;
+  text-align: right;
+}
+data-grid .dg-actions button {
+  margin: 0;
+  display: none;
+}
+data-grid .dg-actions button + button {
+  margin-left: 0.5rem;
+}
+data-grid .dg-actions .dg-actions-toggle {
+  width: calc(100px - var(--padding-x) * 2);
+}
+data-grid .dg-actions.dg-actions-1 {
+  width: 100%;
+}
+data-grid .dg-actions.dg-actions-2 button {
+  width: calc(50% - 0.25rem);
+}
+data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
+  display: inline-block;
+}
+data-grid .dg-actions.dg-expand.dg-actions-more {
+  width: 100%;
+}
+data-grid .dg-actions.dg-expand.dg-actions-more button {
+  display: inline-block;
 }
 data-grid tr.dg-actionable {
   cursor: pointer;
@@ -420,13 +460,14 @@ data-grid .dg-resizer {
   cursor: col-resize;
   -webkit-user-select: none;
      -moz-user-select: none;
+      -ms-user-select: none;
           user-select: none;
 }
 data-grid .dg-resizer:before {
   content: "";
   display: block;
   position: absolute;
-  top: calc(var(--padding) * var(--header-scale));
+  top: var(--padding-y-header);
   height: 1.5rem;
   right: 0;
   width: 2px;

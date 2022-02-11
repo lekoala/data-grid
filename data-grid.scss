@@ -1,7 +1,9 @@
 data-grid {
   --padding: 0.5rem;
+  --padding-x: 0.75rem;
+  --padding-y: 0.5rem;
+  --padding-y-header: 0.75rem;
   --padding-half: calc(var(--padding) / 2);
-  --header-scale: 1.5;
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
 
@@ -41,6 +43,7 @@ data-grid {
     max-width: 100%;
     vertical-align: middle;
   }
+
   [hidden] {
     display: none;
   }
@@ -59,7 +62,7 @@ data-grid {
   th,
   td {
     empty-cells: show;
-    padding: var(--padding);
+    padding: var(--padding-y) var(--padding-x);
     text-align: left;
 
     &[tabindex] {
@@ -71,7 +74,7 @@ data-grid {
   }
   th {
     font-weight: bold;
-    padding: calc(var(--padding) * var(--header-scale)) var(--padding);
+    padding: var(--padding-y-header) var(--padding-x);
   }
 
   // Prevent overflow on headers and cells
@@ -87,12 +90,23 @@ data-grid {
 
   // Expand on multiple lines on row click
   table tbody tr {
+    position: relative;
     cursor: pointer;
     &.dg-expanded {
       td {
         white-space: normal;
       }
     }
+  }
+
+  .dg-expand {
+    position: absolute;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    width: 100%;
+    height: 100%;
   }
 
   &[responsive] {
@@ -342,7 +356,7 @@ data-grid {
   }
   tfoot {
     td {
-      padding: calc(var(--padding) * var(--header-scale)) var(--padding);
+      padding: var(--padding-y-header) var(--padding-x);
     }
     .dg-page-nav {
       display: flex;
@@ -477,7 +491,40 @@ data-grid {
   }
 
   .dg-actions {
-    text-align: center;
+    text-overflow: initial;
+    width: 100px;
+    text-align: right;
+    button {
+      margin: 0;
+      display: none;
+    }
+    button + button {
+      margin-left: 0.5rem;
+    }
+
+    .dg-actions-toggle {
+      width: calc(100px - var(--padding-x) * 2);
+    }
+    &.dg-actions-1 {
+      width: 100%;
+    }
+    // This needs icons to work
+    &.dg-actions-2 {
+      button {
+        width: calc(50% - 0.25rem);
+      }
+    }
+    &.dg-actions-more {
+      button.dg-actions-toggle {
+        display: inline-block;
+      }
+    }
+    &.dg-expand.dg-actions-more {
+      width: 100%;
+      button {
+        display: inline-block;
+      }
+    }
   }
   tr.dg-actionable {
     cursor: pointer;
@@ -499,7 +546,7 @@ data-grid {
       content: "";
       display: block;
       position: absolute;
-      top: calc(var(--padding) * var(--header-scale));
+      top: var(--padding-y-header);
       height: 1.5rem;
       right: 0;
       width: 2px;

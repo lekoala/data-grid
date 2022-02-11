@@ -113,6 +113,7 @@ class DataGrid extends HTMLElement {
       perPageValues: [10, 25, 50, 100, 250],
       columns: [],
       actions: [],
+      collapseActions: false,
     };
     this.setOptions(options);
 
@@ -616,6 +617,15 @@ class DataGrid extends HTMLElement {
   startIndex() {
     return this.selectable ? 2 : 1;
   }
+  hasActions() {
+    return this.state.actions.length > 0;
+  }
+  get actionClass() {
+    if (this.state.actions.length < 3 && !this.state.collapseActions) {
+      return "dg-actions-" + this.state.actions.length;
+    }
+    return "dg-actions-more";
+  }
   columnsLength(visibleOnly = false) {
     let len = 0;
     this.state.columns.forEach((col) => {
@@ -930,9 +940,11 @@ class DataGrid extends HTMLElement {
 
     // Early exit
     if (col && this.getColProp(col.getAttribute("field"), "noSort")) {
+      this.log("sorting prevented because column is not sortable");
       return;
     }
     if (this.loading) {
+      this.log("sorting prevented because loading");
       return;
     }
 
@@ -1002,8 +1014,8 @@ class DataGrid extends HTMLElement {
               return 0;
           }
         });
-        this.renderBody();
       }
+      this.renderBody();
     }
   }
   fetchData() {
@@ -1037,7 +1049,6 @@ class DataGrid extends HTMLElement {
   }
   renderHeader() {
     this.log("render header");
-    let tr;
     let sortedColumn;
     let thead = this.root.querySelector("thead");
 
@@ -1062,7 +1073,7 @@ class DataGrid extends HTMLElement {
 
     this.root.querySelector("tfoot").style.display = "";
     if (this.resizable && typeof DataGridColumnResizer != "undefined") {
-      this.renderResizer(this);
+      DataGridColumnResizer.renderResizer(this, labels.resizeColumn);
     }
   }
   createColumnHeaders(thead) {
@@ -1155,7 +1166,7 @@ class DataGrid extends HTMLElement {
       let actionsTh = document.createElement("th");
       actionsTh.setAttribute("role", "columnheader button");
       actionsTh.setAttribute("aria-colindex", this.columnsLength(true));
-      actionsTh.classList.add("dg-actions");
+      actionsTh.classList.add(...["dg-actions", this.actionClass]);
       actionsTh.tabIndex = 0;
       tr.appendChild(actionsTh);
     }
@@ -1235,7 +1246,7 @@ class DataGrid extends HTMLElement {
       let actionsTh = document.createElement("th");
       actionsTh.setAttribute("role", "columnheader button");
       actionsTh.setAttribute("aria-colindex", this.columnsLength(true));
-      actionsTh.classList.add("dg-actions");
+      actionsTh.classList.add(...["dg-actions", this.actionClass]);
       actionsTh.tabIndex = 0;
       tr.appendChild(actionsTh);
     }
@@ -1383,8 +1394,17 @@ class DataGrid extends HTMLElement {
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", this.columnsLength(true));
-        td.classList.add("dg-actions");
+        td.classList.add(...["dg-actions", this.actionClass]);
         td.tabIndex = 0;
+
+        // Add menu toggle
+        let actionsToggle = document.createElement("button");
+        actionsToggle.classList.add("dg-actions-toggle");
+        actionsToggle.innerHTML = "☰";
+        td.appendChild(actionsToggle);
+        actionsToggle.addEventListener("click", (ev) => {
+          ev.target.parentNode.classList.toggle("dg-expand");
+        });
 
         this.state.actions.forEach((action) => {
           let button = document.createElement("button");
