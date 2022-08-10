@@ -670,7 +670,8 @@ class DataGrid extends HTMLElement {
 
     // Store row height for later usage
     if (!this.rowHeight) {
-      this.rowHeight = this.root.querySelector("tbody tr").offsetHeight;
+      const tr = this.root.querySelector("tbody tr") || this.root.querySelector("table tr");
+      this.rowHeight = tr.offsetHeight;
     }
   }
   /**
@@ -715,10 +716,11 @@ class DataGrid extends HTMLElement {
   toggleSort() {
     this.log("toggle sort");
     this.root.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
-      if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
+      const fieldName = th.getAttribute("field");
+      if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions") || (!this.isInitialized && fieldName == this.defaultSort)) {
         return;
       }
-      if (this.state.sort && !this.getColProp(th.getAttribute("field"), "noSort")) {
+      if (this.state.sort && !this.getColProp(fieldName, "noSort")) {
         th.setAttribute("aria-sort", "none");
       } else {
         th.removeAttribute("aria-sort");
@@ -783,7 +785,7 @@ class DataGrid extends HTMLElement {
    * @returns {Promise}
    */
   loadData() {
-    if (!this.server && this.originalData.length) {
+    if ((!this.server && this.originalData.length) || (this.server && !this.isInitialized && this.originalData.length)) {
       this.log("skip loadData");
       return new Promise((resolve, reject) => {
         resolve();

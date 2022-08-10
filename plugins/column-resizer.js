@@ -1,5 +1,5 @@
 "use strict";
-
+import DataGrid from '../data-grid.js';
 class DataGridColumnResizer {
   static renderResizer(grid, resizeLabel) {
     const table = grid.root.querySelector("table");
@@ -83,8 +83,8 @@ class DataGridColumnResizer {
         startW = col.offsetWidth;
 
         remainingSpace = (visibleCols.length - columnIndex) * 30;
-        max = DataGrid.elementOffset(this).left + grid.offsetWidth - remainingSpace;
-
+        max = DataGrid.elementOffset(e.target).left + grid.offsetWidth - remainingSpace;
+				
         // Remove width from next columns to allow auto layout
         col.setAttribute("width", startW);
         for (let j = 0; j < visibleCols.length; j++) {
