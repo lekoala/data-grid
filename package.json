@@ -2,9 +2,10 @@
   "name": "data-grid-component",
   "version": "1.4.3",
   "description": "Standalone data grid web component",
+  "type": "module",
   "main": "data-grid",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "ava",
     "build": "esbuild --bundle --minify --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=data-grid.min.js",
     "start": "npm run build -- --servedir=.",
     "watch": "npm run build -- --watch",
@@ -13,7 +14,8 @@
     "prefix-css": "postcss data-grid.min.css --replace --use autoprefixer",
     "build-css": "npm run compile-css && npm run prefix-css",
     "build-all": "npm run build && npm run build-css && git add -A && git commit -m \"build files\"",
-    "bump": "npm run build-all && npm version patch"
+    "bump": "npm run build-all && npm version patch",
+    "update-deps": "npx npm-check-updates -u"
   },
   "repository": {
     "type": "git",
@@ -25,6 +27,16 @@
     "grid",
     "es6"
   ],
+  "ava": {
+    "require": [
+      "./test/_setup-browser-env.js"
+    ]
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "^6.0.4",
+    "ava": "^4.3.1",
+    "esbuild": "^0.14.50"
+  },
   "author": "LeKoala",
   "license": "MIT"
 }
