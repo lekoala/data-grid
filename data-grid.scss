@@ -35,7 +35,8 @@ data-grid {
   display: block;
   background: var(--header-background);
   min-height: 6rem;
-
+  position: relative;
+  
   img {
     border: none;
     height: auto;

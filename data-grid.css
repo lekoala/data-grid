@@ -463,7 +463,6 @@ data-grid .dg-resizer {
   cursor: col-resize;
   -webkit-user-select: none;
      -moz-user-select: none;
-      -ms-user-select: none;
           user-select: none;
 }
 data-grid .dg-resizer:before {
