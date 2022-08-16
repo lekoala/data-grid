@@ -100,11 +100,6 @@ data-grid .dg-expand {
   data-grid[responsive] tr:not([hidden]) {
     display: block;
   }
-  data-grid[responsive] thead tr {
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
   data-grid[responsive] tbody tr {
     padding: 0;
     border: 1px solid var(--header-background);
@@ -113,7 +108,7 @@ data-grid .dg-expand {
     border: none;
     border-bottom: 1px solid var(--row-border-color);
     position: relative;
-    padding-left: calc(100% - var(--responsive-width));
+    padding-left: calc(100% - var(--responsive-width) - var(--padding) * 2);
   }
   data-grid[responsive] tbody td:last-child {
     border: 0;
@@ -129,6 +124,49 @@ data-grid .dg-expand {
     display: block;
     font-weight: bold;
     background-color: var(--header-background);
+  }
+  data-grid[responsive] th[role="columnheader button"]:not(.dg-selectable) {
+    width: fit-content;
+  }
+  data-grid[responsive] .dg-selectable {
+    height: 28px;
+    width: auto;
+    margin: 2px 1px 2px;
+  }
+  data-grid[responsive] td.dg-selectable::before, data-grid[responsive] td.dg-actions::before {
+    padding: 0;
+  }
+  data-grid[responsive] td.dg-selectable label {
+    padding: 5px;
+  }
+  data-grid[responsive] td[role=gridcell] {
+    min-height: 35px;
+  }
+  data-grid[responsive] td.dg-actions {
+    padding-left: inherit;
+    width: inherit;
+  }
+  data-grid[responsive] .dg-actions button {
+    width: inherit !important;
+  }
+  data-grid[responsive] .dg-resizer {
+    display: none;
+  }
+  data-grid[responsive] thead[role=rowgroup] > tr {
+    display: inline-block;
+  }
+  data-grid[responsive] tr.dg-head-columns {
+    width: calc(100% - var(--responsive-width) - var(--padding) * 4.6);
+  }
+  data-grid[responsive] tr.dg-head-columns th[role="columnheader button"] {
+    padding: 0.36em 1.3em 0.36em 0.75em;
+  }
+  data-grid[responsive] tr.dg-head-filters {
+    vertical-align: top;
+    width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 3.9));
+  }
+  data-grid[responsive] .dg-head-filters th input:not([type=checkbox],[type=radio]) {
+    height: 2.25em;
   }
 }
 data-grid[sticky] table thead,
@@ -239,8 +277,8 @@ data-grid button:disabled {
   opacity: 0.35;
   pointer-events: none;
 }
-data-grid thead tr,
-data-grid tfoot tr {
+data-grid thead,
+data-grid tfoot {
   background-color: var(--header-background);
   color: var(--header-color);
 }

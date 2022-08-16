@@ -1224,6 +1224,12 @@ class DataGrid extends HTMLElement {
       th.setAttribute("aria-colindex", 1);
       th.classList.add("dg-selectable");
       th.tabIndex = 0;
+      
+      let lbl = document.createElement("label");
+      lbl.classList.add("d-md-none");
+      lbl.innerHTML = "Column Filters";
+      th.appendChild(lbl);
+            
       tr.appendChild(th);
     }
 
