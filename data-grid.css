@@ -90,14 +90,14 @@ data-grid .dg-expand {
   width: 100%;
   height: 100%;
 }
-@media only screen and (max-width: 768px) {
+@media only screen and (max-width: 767px) {
   data-grid[responsive] table,
-data-grid[responsive] thead,
-data-grid[responsive] tbody,
-data-grid[responsive] tfoot,
-data-grid[responsive] th,
-data-grid[responsive] td,
-data-grid[responsive] tr:not([hidden]) {
+  data-grid[responsive] thead,
+  data-grid[responsive] tbody,
+  data-grid[responsive] tfoot,
+  data-grid[responsive] th,
+  data-grid[responsive] td,
+  data-grid[responsive] tr:not([hidden]) {
     display: block;
   }
   data-grid[responsive] thead tr {
@@ -484,7 +484,7 @@ data-grid .dg-resizer.dg-resizer-active {
 data-grid .dg-resizer.dg-resizer-active:before {
   background: var(--color);
 }
-@media only screen and (max-width: 768px) {
+@media only screen and (max-width: 767px) {
   data-grid tfoot .dg-meta {
     display: none;
   }
