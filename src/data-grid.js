@@ -1317,6 +1317,16 @@ class DataGrid extends HTMLElement {
     let td;
     let idx;
     let tbody = document.createElement("tbody");
+
+    // Handles the selectAll checkbox when any other .dg-selectable checkbox is checked.
+    this.selectAll && tbody.addEventListener("change", e => {
+      if (e.target.type != "checkbox" || !e.target.closest(".dg-selectable"))
+        return;
+      const totalCheckboxes = this.root.querySelectorAll("tbody .dg-selectable input[type=checkbox]");
+      const totalChecked = Array.from(totalCheckboxes).filter(n => n.checked);
+      this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
+    });
+
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
       tr.setAttribute("role", "row");
