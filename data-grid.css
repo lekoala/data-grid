@@ -149,7 +149,8 @@ data-grid .dg-expand {
   data-grid[responsive] .dg-actions button {
     width: inherit !important;
   }
-  data-grid[responsive] .dg-resizer {
+  data-grid[responsive] .dg-resizer,
+  data-grid tfoot .dg-meta {
     display: none;
   }
   data-grid[responsive] thead[role=rowgroup] > tr {
@@ -167,7 +168,15 @@ data-grid .dg-expand {
   }
   data-grid[responsive] .dg-head-filters th input:not([type=checkbox],[type=radio]) {
     height: 2.25em;
-  }
+  }  
+}
+@media only screen and (min-width: 768px) {
+  data-grid[responsive] tr.dg-head-filters th.dg-selectable label {
+  	display: none;
+  }	
+}
+data-grid[responsive] tr.dg-head-filters th.dg-selectable label::before {
+  content: "Column Filters";	
 }
 data-grid[sticky] table thead,
 data-grid[sticky] table tfoot {

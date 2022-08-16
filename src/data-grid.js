@@ -87,7 +87,7 @@ template.innerHTML = `
                     <i class="dg-skip-icon"></i>
                   </button>
                 </div>
-                <div class="dg-meta d-none d-md-block">
+                <div class="dg-meta">
                   <span class="dg-low">0</span> - <span class="dg-high">0</span> ${labels.of} <span class="dg-total">0</span> ${labels.items}
                 </div>
             </div>
@@ -1226,10 +1226,8 @@ class DataGrid extends HTMLElement {
       th.tabIndex = 0;
       
       let lbl = document.createElement("label");
-      lbl.classList.add("d-md-none");
-      lbl.innerHTML = "Column Filters";
       th.appendChild(lbl);
-            
+      
       tr.appendChild(th);
     }
 
