@@ -87,7 +87,7 @@ template.innerHTML = `
                     <i class="dg-skip-icon"></i>
                   </button>
                 </div>
-                <div class="dg-meta">
+                <div class="dg-meta d-none d-md-block">
                   <span class="dg-low">0</span> - <span class="dg-high">0</span> ${labels.of} <span class="dg-total">0</span> ${labels.items}
                 </div>
             </div>
