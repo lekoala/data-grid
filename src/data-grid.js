@@ -1107,14 +1107,14 @@ class DataGrid extends HTMLElement {
     tr.setAttribute("aria-rowindex", 1);
     tr.setAttribute("class", "dg-head-columns");
 
+    let selectableTh = document.createElement("th");
+    selectableTh.setAttribute("role", "columnheader button");
+    selectableTh.setAttribute("aria-colindex", 1);
+    selectableTh.classList.add("dg-selectable");
+    selectableTh.tabIndex = 0;
+
     // Selectable
     if (this.selectable) {
-      let selectableTh = document.createElement("th");
-      selectableTh.setAttribute("role", "columnheader button");
-      selectableTh.setAttribute("aria-colindex", 1);
-      selectableTh.classList.add("dg-selectable");
-      selectableTh.tabIndex = 0;
-
       this.selectAll = document.createElement("input");
       this.selectAll.type = "checkbox";
       this.selectAll.classList.add("dg-select-all");
@@ -1126,9 +1126,9 @@ class DataGrid extends HTMLElement {
       label.appendChild(this.selectAll);
 
       selectableTh.appendChild(label);
-      selectableTh.setAttribute("width", 40);
-      tr.appendChild(selectableTh);
     }
+    selectableTh.setAttribute("width", 40);
+    tr.appendChild(selectableTh);
 
     // Create columns
     idx = 0;
@@ -1218,18 +1218,18 @@ class DataGrid extends HTMLElement {
     }
 
     // Selectable
-    if (this.selectable) {
+    //if (this.selectable) {
       let th = document.createElement("th");
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", 1);
       th.classList.add("dg-selectable");
       th.tabIndex = 0;
       
-      let lbl = document.createElement("label");
-      th.appendChild(lbl);
+      let label = document.createElement("label");
+      th.appendChild(label);
       
       tr.appendChild(th);
-    }
+    //}
 
     this.state.columns.forEach((column) => {
       if (column.attr) {

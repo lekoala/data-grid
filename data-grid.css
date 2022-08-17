@@ -92,7 +92,6 @@ data-grid .dg-expand {
 }
 @media only screen and (max-width: 767px) {
   data-grid[responsive] table,
-  data-grid[responsive] thead,
   data-grid[responsive] tbody,
   data-grid[responsive] tfoot,
   data-grid[responsive] th,
@@ -100,6 +99,15 @@ data-grid .dg-expand {
   data-grid[responsive] tr:not([hidden]) {
     display: block;
   }
+  data-grid[responsive] thead {
+    display: flex;
+  }
+  data-grid[responsive] thead > tr {
+  	flex-grow: 1;
+  }
+  data-grid[responsive] thead th {
+    width: auto;
+  }  
   data-grid[responsive] tbody tr {
     padding: 0;
     border: 1px solid var(--header-background);
@@ -125,12 +133,8 @@ data-grid .dg-expand {
     font-weight: bold;
     background-color: var(--header-background);
   }
-  data-grid[responsive] th[role="columnheader button"]:not(.dg-selectable) {
-    width: fit-content;
-  }
   data-grid[responsive] .dg-selectable {
     height: 28px;
-    width: auto;
     margin: 2px 1px 2px;
   }
   data-grid[responsive] td.dg-selectable::before, data-grid[responsive] td.dg-actions::before {
@@ -141,7 +145,11 @@ data-grid .dg-expand {
   }
   data-grid[responsive] td[role=gridcell] {
     min-height: 35px;
+    width: auto;
   }
+  data-grid[responsive] td[data-name]::before {
+    height: 100%;
+  }  
   data-grid[responsive] td.dg-actions {
     padding-left: inherit;
     width: inherit;
@@ -149,12 +157,17 @@ data-grid .dg-expand {
   data-grid[responsive] .dg-actions button {
     width: inherit !important;
   }
+  data-grid:not([responsive]):not([selectable]) th.dg-selectable,
+  data-grid:not([responsive]):not([filter=true]) th.dg-selectable,  
+  data-grid[responsive]:not([selectable]):not([filter=true]):not([sort=true]) thead,
+  data-grid[responsive]:not([selectable]):not([filter=true]) tr.dg-head-columns th.dg-selectable,
+  data-grid[responsive]:not([selectable]):not([filter=true]) tr.dg-head-filters th.dg-selectable,
   data-grid[responsive] .dg-resizer,
   data-grid tfoot .dg-meta {
     display: none;
   }
-  data-grid[responsive] thead[role=rowgroup] > tr {
-    display: inline-block;
+  data-grid[selectable]:not([responsive]) th.dg-selectable {
+  	display: revert;
   }
   data-grid[responsive] tr.dg-head-columns {
     width: calc(100% - var(--responsive-width) - var(--padding) * 4.6);
@@ -168,12 +181,13 @@ data-grid .dg-expand {
   }
   data-grid[responsive] .dg-head-filters th input:not([type=checkbox],[type=radio]) {
     height: 2.25em;
-  }  
+  }
 }
 @media only screen and (min-width: 768px) {
+  data-grid:not([selectable]) th.dg-selectable,
   data-grid[responsive] tr.dg-head-filters th.dg-selectable label {
-  	display: none;
-  }	
+	display: none;
+  }
 }
 data-grid[responsive] tr.dg-head-filters th.dg-selectable label::before {
   content: "Column Filters";	
