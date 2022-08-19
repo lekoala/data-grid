@@ -90,51 +90,12 @@ data-grid .dg-expand {
   width: 100%;
   height: 100%;
 }
-@media only screen and (max-width: 768px) {
-  data-grid[responsive] table,
-data-grid[responsive] thead,
-data-grid[responsive] tbody,
-data-grid[responsive] tfoot,
-data-grid[responsive] th,
-data-grid[responsive] td,
-data-grid[responsive] tr:not([hidden]) {
-    display: block;
-  }
-  data-grid[responsive] thead tr {
-    position: absolute;
-    top: -9999px;
-    left: -9999px;
-  }
-  data-grid[responsive] tbody tr {
-    padding: 0;
-    border: 1px solid var(--header-background);
-  }
-  data-grid[responsive] tbody td {
-    border: none;
-    border-bottom: 1px solid var(--row-border-color);
-    position: relative;
-    padding-left: calc(100% - var(--responsive-width));
-  }
-  data-grid[responsive] tbody td:last-child {
-    border: 0;
-  }
-  data-grid[responsive] tbody td:before {
-    position: absolute;
-    top: 0;
-    left: 0;
-    padding: var(--padding);
-    width: calc(100% - var(--responsive-width) - var(--padding) * 4);
-    white-space: nowrap;
-    content: attr(data-name);
-    display: block;
-    font-weight: bold;
-    background-color: var(--header-background);
-  }
+data-grid[responsive] tr.dg-head-filters th.dg-selectable label::before {
+  content: "Column Filters";
 }
 data-grid[sticky] table thead,
 data-grid[sticky] table tfoot {
   z-index: 2;
-  position: -webkit-sticky;
   position: sticky;
   margin: 0;
   border: 0;
@@ -239,8 +200,8 @@ data-grid button:disabled {
   opacity: 0.35;
   pointer-events: none;
 }
-data-grid thead tr,
-data-grid tfoot tr {
+data-grid thead,
+data-grid tfoot {
   background-color: var(--header-background);
   color: var(--header-color);
 }
@@ -276,6 +237,9 @@ data-grid:not([url]) tbody:before {
   opacity: 0.5;
   font-size: 2rem;
 }
+data-grid tbody tr {
+  border-bottom: solid 1px var(--row-border-color);
+}
 data-grid tbody tr:nth-child(odd) {
   background-color: var(--bs-white, #ffffff);
   color: var(--bs-dark, #212529);
@@ -283,9 +247,6 @@ data-grid tbody tr:nth-child(odd) {
 data-grid tbody tr:nth-child(even) {
   background-color: var(--bs-light, #f8f9fa);
   color: var(--bs-dark, #212529);
-}
-data-grid tbody tr {
-  border-bottom: solid 1px var(--row-border-color);
 }
 data-grid tbody tr:hover {
   background-color: var(--highlight-color);
@@ -461,9 +422,7 @@ data-grid .dg-resizer {
   width: 6px;
   z-index: 2;
   cursor: col-resize;
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  user-select: none;
 }
 data-grid .dg-resizer:before {
   content: "";
@@ -484,9 +443,99 @@ data-grid .dg-resizer.dg-resizer-active {
 data-grid .dg-resizer.dg-resizer-active:before {
   background: var(--color);
 }
-@media only screen and (max-width: 768px) {
-  data-grid tfoot .dg-meta {
+
+@media only screen and (max-width: 767px) {
+  data-grid[responsive] table,
+data-grid[responsive] tbody,
+data-grid[responsive] tfoot,
+data-grid[responsive] th,
+data-grid[responsive] td,
+data-grid[responsive] tr:not([hidden]) {
+    display: block;
+  }
+  data-grid[responsive] thead {
+    display: flex;
+  }
+  data-grid[responsive] thead > tr {
+    flex-grow: 1;
+  }
+  data-grid[responsive] thead th {
+    width: auto;
+  }
+  data-grid[responsive] tbody tr {
+    padding: 0;
+    border: 1px solid var(--header-background);
+  }
+  data-grid[responsive] tbody td {
+    border: none;
+    border-bottom: 1px solid var(--row-border-color);
+    position: relative;
+    padding-left: calc(100% - var(--responsive-width) - var(--padding) * 2);
+  }
+  data-grid[responsive] tbody td:last-child {
+    border: 0;
+  }
+  data-grid[responsive] tbody td:before {
+    position: absolute;
+    top: 0;
+    left: 0;
+    padding: var(--padding);
+    width: calc(100% - var(--responsive-width) - var(--padding) * 4);
+    white-space: nowrap;
+    content: attr(data-name);
+    display: block;
+    font-weight: bold;
+    background-color: var(--header-background);
+  }
+  data-grid[responsive] .dg-selectable {
+    height: 28px;
+    margin: 2px 1px 2px;
+  }
+  data-grid[responsive] td.dg-selectable::before, data-grid[responsive] td.dg-actions::before {
+    padding: 0;
+  }
+  data-grid[responsive] td.dg-selectable label {
+    padding: 5px;
+  }
+  data-grid[responsive] td[role=gridcell] {
+    min-height: 35px;
+    width: auto;
+  }
+  data-grid[responsive] td[data-name]::before {
+    height: 100%;
+  }
+  data-grid[responsive] td.dg-actions {
+    padding-left: inherit;
+    width: inherit;
+  }
+  data-grid[responsive] .dg-actions button {
+    width: inherit !important;
+  }
+  data-grid[responsive] tr.dg-head-columns {
+    width: calc(100% - var(--responsive-width) - var(--padding) * 4.6);
+  }
+  data-grid[responsive] tr.dg-head-columns th[role="columnheader button"] {
+    padding: 0.36em 1.3em 0.36em 0.75em;
+  }
+  data-grid[responsive] tr.dg-head-filters {
+    vertical-align: top;
+    width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 3.9));
+  }
+  data-grid[responsive] .dg-head-filters th input:not([type=checkbox], [type=radio]) {
+    height: 2.25em;
+  }
+  data-grid[selectable]:not([responsive]) th.dg-selectable {
+    display: revert;
+  }
+  data-grid:not([responsive]):not([selectable]) th.dg-selectable, data-grid:not([responsive]):not([filter=true]) th.dg-selectable, data-grid[responsive]:not([selectable]):not([filter=true]):not([sort=true]) thead, data-grid[responsive]:not([selectable]):not([filter=true]) tr.dg-head-columns th.dg-selectable, data-grid[responsive]:not([selectable]):not([filter=true]) tr.dg-head-filters th.dg-selectable, data-grid[responsive] .dg-resizer,
+data-grid tfoot .dg-meta {
     display: none;
   }
 }
+@media only screen and (min-width: 768px) {
+  data-grid:not([selectable]) th.dg-selectable, data-grid[responsive] tr.dg-head-filters th.dg-selectable label {
+    display: none;
+  }
+}
+
 /*# sourceMappingURL=data-grid.css.map */

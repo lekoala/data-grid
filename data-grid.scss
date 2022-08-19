@@ -36,7 +36,7 @@ data-grid {
   background: var(--header-background);
   min-height: 6rem;
   position: relative;
-  
+
   img {
     border: none;
     height: auto;
@@ -92,10 +92,9 @@ data-grid {
   table tbody tr {
     position: relative;
     cursor: pointer;
-    &.dg-expanded {
-      td {
-        white-space: normal;
-      }
+
+    &.dg-expanded td {
+      white-space: normal;
     }
   }
 
@@ -109,78 +108,28 @@ data-grid {
     height: 100%;
   }
 
-  &[responsive] {
-    @media only screen and (max-width: 768px) {
-      table,
-      thead,
-      tbody,
-      tfoot,
-      th,
-      td,
-      tr:not([hidden]) {
-        display: block;
-      }
-      thead tr {
-        position: absolute;
-        top: -9999px;
-        left: -9999px;
-      }
-      tbody {
-        tr {
-          padding: 0;
-          border: 1px solid var(--header-background);
-        }
-
-        td {
-          border: none;
-          border-bottom: 1px solid var(--row-border-color);
-          position: relative;
-          padding-left: calc(100% - var(--responsive-width));
-
-          &:last-child {
-            border: 0;
-          }
-
-          // Label before
-          &:before {
-            position: absolute;
-            top: 0;
-            left: 0;
-            padding: var(--padding);
-            width: calc(100% - var(--responsive-width) - (var(--padding) * 4));
-            white-space: nowrap;
-            content: attr(data-name);
-            display: block;
-            font-weight: bold;
-            background-color: var(--header-background);
-          }
-        }
-      }
-    }
+  &[responsive] tr.dg-head-filters th.dg-selectable label::before {
+    content: "Column Filters";
   }
 
   // https://css-tricks.com/making-tables-with-sticky-header-and-footers-got-a-bit-easier/
-  &[sticky] {
-    table {
-      thead,
-      tfoot {
-        z-index: 2;
-        position: sticky;
-        margin: 0;
-        border: 0;
-      }
-      // Use silly value to prevent sub pixel alignment issue
-      thead {
-        inset-block-start: -1px;
-      }
-      tfoot {
-        inset-block-end: -1px;
-      }
+  &[sticky] table {
+    thead,
+    tfoot {
+      z-index: 2;
+      position: sticky;
+      margin: 0;
+      border: 0;
+    }
+    // Use silly value to prevent sub pixel alignment issue
+    thead {
+      inset-block-start: -1px;
+    }
+    tfoot {
+      inset-block-end: -1px;
     }
   }
-
   // Icons
-
   .dg-nav-icon,
   .dg-skip-icon {
     width: 22px;
@@ -201,17 +150,16 @@ data-grid {
     }
   }
 
-  .dg-nav-icon {
-    &::before {
-      width: 0;
-      height: 10px;
-      border-top: 5px solid transparent;
-      border-bottom: 5px solid transparent;
-      border-left: 6px solid;
-      top: 6px;
-      left: 9px;
-    }
+  .dg-nav-icon::before {
+    width: 0;
+    height: 10px;
+    border-top: 5px solid transparent;
+    border-bottom: 5px solid transparent;
+    border-left: 6px solid;
+    top: 6px;
+    left: 9px;
   }
+
   .dg-skip-icon {
     &::before {
       width: 3px;
@@ -230,6 +178,7 @@ data-grid {
       left: 7px;
     }
   }
+
   .dg-rotate {
     transform: rotate(-180deg);
   }
@@ -245,6 +194,7 @@ data-grid {
     pointer-events: all;
     text-align: center;
     cursor: pointer;
+
     &:hover {
       background-color: var(--gray-200);
       border-color: var(--gray-300);
@@ -254,9 +204,11 @@ data-grid {
       border-color: inherit;
     }
   }
-  input[type="checkbox"] {
+
+  input[type=checkbox] {
     margin: 0;
   }
+
   input:not([type="checkbox"]),
   select {
     background-color: #fff;
@@ -267,6 +219,7 @@ data-grid {
     margin: 0 0.2rem;
     padding: 0 var(--padding);
   }
+
   input:not([type="checkbox"]),
   select,
   button {
@@ -274,6 +227,7 @@ data-grid {
       box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
       outline: 0;
     }
+
     &[disabled],
     &:disabled {
       opacity: 0.35;
@@ -283,77 +237,70 @@ data-grid {
 
   thead,
   tfoot {
-    tr {
-      background-color: var(--header-background);
-      color: var(--header-color);
-    }
+    background-color: var(--header-background);
+    color: var(--header-color);
   }
 
   &.dg-loading tbody {
     opacity: 0.5;
     transition: opacity 0.2s ease-in;
   }
+  // Filters
+  thead tr:nth-child(2) th {
+    padding: 0;
+    background-color: var(--white);
 
-  thead {
-    // Filters
-    tr:nth-child(2) th {
-      padding: 0;
-      background-color: var(--white);
-      input {
-        width: 100%;
-        border-radius: 0;
-        margin: 0;
-      }
-    }
-  }
-  tbody td {
-    input.dg-editable {
+    input {
       width: 100%;
-      background: transparent;
-      border: 0;
       border-radius: 0;
       margin: 0;
-
-      &:hover {
-        box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
-      }
     }
   }
 
+  tbody td input.dg-editable {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+
+    &:hover {
+      box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
+    }
+  }
   // Empty plate (don't use :empty as it would create fouc on load)
-  &:not([url]) tbody {
-    &:before {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      content: attr(data-empty);
-      transform: translate(-50%, -50%);
-      opacity: 0.5;
-      font-size: 2rem;
-    }
+  &:not([url]) tbody:before {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    content: attr(data-empty);
+    transform: translate(-50%, -50%);
+    opacity: 0.5;
+    font-size: 2rem;
   }
 
-  tbody {
-    tr:nth-child(odd) {
+  tbody tr {
+    &:nth-child(odd) {
       background-color: var(--bs-white, #ffffff);
       color: var(--bs-dark, #212529);
     }
-    tr:nth-child(even) {
+    &:nth-child(even) {
       background-color: var(--bs-light, #f8f9fa);
       color: var(--bs-dark, #212529);
     }
-    tr {
-      border-bottom: solid 1px var(--row-border-color);
-    }
-    tr:hover {
+
+    border-bottom: solid 1px var(--row-border-color);
+
+    &:hover {
       background-color: var(--highlight-color);
     }
-    tr:focus {
+    &:focus {
       background-color: var(--highlight-color);
       border-bottom-color: var(--highlight-color);
       outline: none;
     }
   }
+
   tfoot {
     td {
       padding: var(--padding-y-header) var(--padding-x);
@@ -387,12 +334,12 @@ data-grid {
       text-align: right;
     }
   }
-
   // Pagination
   [aria-sort] {
     cursor: pointer;
     padding-right: 1.5rem;
   }
+
   [aria-sort="none"]:after,
   [aria-sort="none"]:before,
   [aria-sort="ascending"]:before,
@@ -408,26 +355,31 @@ data-grid {
     border-width: 0.25rem;
     margin-left: -0.25rem;
   }
-  [aria-sort="none"]:before {
-    border-bottom-color: var(--bs-gray-400, #ced4da);
-    top: calc(50% - 0.6rem);
+
+  [aria-sort=none] {
+    &:before {
+      border-bottom-color: var(--bs-gray-400, #ced4da);
+      top: calc(50% - 0.6rem);
+    }
+
+    &:after {
+      border-top-color: var(--bs-gray-400, #ced4da);
+      bottom: calc(50% - 0.5rem);
+      top: auto;
+    }
   }
-  [aria-sort="none"]:after {
-    border-top-color: var(--bs-gray-400, #ced4da);
-    bottom: calc(50% - 0.5rem);
-    top: auto;
-  }
-  [aria-sort="ascending"]:before {
+
+  [aria-sort=ascending]:before {
     border-bottom-color: var(--bs-dark, #212529);
   }
-  [aria-sort="descending"]:after {
+
+  [aria-sort=descending]:after {
     border-top-color: var(--bs-dark, #212529);
     bottom: calc(50% - 0.5rem);
     top: auto;
   }
-
   // Rtl support
-  &[dir="rtl"] {
+  &[dir=rtl] {
     th,
     td {
       text-align: right;
@@ -447,7 +399,6 @@ data-grid {
       text-align: left;
     }
   }
-
   // Menu
   .dg-menu {
     position: absolute;
@@ -476,6 +427,7 @@ data-grid {
 
   .dg-selectable {
     position: relative;
+
     label {
       margin: 0;
       position: absolute;
@@ -494,11 +446,13 @@ data-grid {
     text-overflow: initial;
     width: 100px;
     text-align: right;
+
     button {
       margin: 0;
-    }
-    button + button {
-      margin-left: 0.5rem;
+
+      + button {
+        margin-left: 0.5rem;
+      }
     }
     .dg-actions-toggle {
       display: none;
@@ -508,28 +462,28 @@ data-grid {
       width: 100%;
     }
     // This needs icons to work
-    &.dg-actions-2 {
-      button {
-        width: calc(50% - 0.25rem);
-      }
+    &.dg-actions-2 button {
+      width: calc(50% - 0.25rem);
     }
-    &.dg-actions-more {
-      button {
-        display: none;
-      }
-      button.dg-actions-toggle {
+    &.dg-actions-more button {
+      display: none;
+
+      &.dg-actions-toggle {
         display: inline-block;
       }
     }
     &.dg-expand.dg-actions-more {
       width: 100%;
+
       button {
         display: inline-block;
       }
     }
   }
+
   tr.dg-actionable {
     cursor: pointer;
+
     &:hover td {
       background-color: var(--highlight-color);
     }
@@ -557,7 +511,6 @@ data-grid {
     &:hover:before {
       background: var(--color);
     }
-
     &.dg-resizer-active {
       border-right: 1px dashed var(--color);
 
@@ -566,13 +519,121 @@ data-grid {
       }
     }
   }
+}
 
-  // Small screen tweaks
-  @media only screen and (max-width: 768px) {
-    tfoot {
-      .dg-meta {
-        display: none;
+@media only screen and (max-width: 767px) {
+  data-grid {
+    &[responsive] {
+      table,
+      tbody,
+      tfoot,
+      th,
+      td,
+      tr:not([hidden]) {
+        display: block;
       }
+      thead {
+        display: flex;
+
+        > tr {
+          flex-grow: 1;
+        }
+        th {
+          width: auto;
+        }
+      }
+      tbody {
+        tr {
+          padding: 0;
+          border: 1px solid var(--header-background);
+        }
+        td {
+          border: none;
+          border-bottom: 1px solid var(--row-border-color);
+          position: relative;
+          padding-left: calc(100% - var(--responsive-width) - var(--padding) * 2);
+
+          &:last-child {
+            border: 0;
+          }
+          &:before {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: var(--padding);
+            width: calc(100% - var(--responsive-width) - var(--padding) * 4);
+            white-space: nowrap;
+            content: attr(data-name);
+            display: block;
+            font-weight: bold;
+            background-color: var(--header-background);
+          }
+        }
+      }
+      .dg-selectable {
+        height: 28px;
+        margin: 2px 1px 2px;
+      }
+      td {
+        &.dg-selectable::before,
+        &.dg-actions::before {
+          padding: 0;
+        }
+        &.dg-selectable label {
+          padding: 5px;
+        }
+        &[role=gridcell] {
+          min-height: 35px;
+          width: auto;
+        }
+        &[data-name]::before {
+          height: 100%;
+        }
+        &.dg-actions {
+          padding-left: inherit;
+          width: inherit;
+        }
+      }
+      .dg-actions button {
+        width: inherit !important;
+      }
+      tr {
+        &.dg-head-columns {
+          width: calc(100% - var(--responsive-width) - var(--padding) * 4.6);
+
+          th[role="columnheader button"] {
+            padding: 0.36em 1.3em 0.36em 0.75em;
+          }
+        }
+        &.dg-head-filters {
+          vertical-align: top;
+          width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 3.9));
+        }
+      }
+      .dg-head-filters th input:not([type=checkbox],[type=radio]) {
+        height: 2.25em;
+      }
+    }
+    &[selectable]:not([responsive]) th.dg-selectable {
+      display: revert;
+    }
+    &:not([responsive]):not([selectable]) th.dg-selectable,
+    &:not([responsive]):not([filter=true]) th.dg-selectable,
+    &[responsive]:not([selectable]):not([filter=true]):not([sort=true]) thead,
+    &[responsive]:not([selectable]):not([filter=true]) tr.dg-head-columns th.dg-selectable,
+    &[responsive]:not([selectable]):not([filter=true]) tr.dg-head-filters th.dg-selectable,
+    &[responsive] .dg-resizer,
+    tfoot .dg-meta {
+      display: none;
+    }
+  }
+}
+
+@media only screen and (min-width: 768px) {
+  data-grid {
+    &:not([selectable]) th.dg-selectable,
+    &[responsive] tr.dg-head-filters th.dg-selectable label {
+      display: none;
     }
   }
 }

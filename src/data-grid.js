@@ -1107,14 +1107,14 @@ class DataGrid extends HTMLElement {
     tr.setAttribute("aria-rowindex", 1);
     tr.setAttribute("class", "dg-head-columns");
 
+    let selectableTh = document.createElement("th");
+    selectableTh.setAttribute("role", "columnheader button");
+    selectableTh.setAttribute("aria-colindex", 1);
+    selectableTh.classList.add("dg-selectable");
+    selectableTh.tabIndex = 0;
+
     // Selectable
     if (this.selectable) {
-      let selectableTh = document.createElement("th");
-      selectableTh.setAttribute("role", "columnheader button");
-      selectableTh.setAttribute("aria-colindex", 1);
-      selectableTh.classList.add("dg-selectable");
-      selectableTh.tabIndex = 0;
-
       this.selectAll = document.createElement("input");
       this.selectAll.type = "checkbox";
       this.selectAll.classList.add("dg-select-all");
@@ -1126,9 +1126,9 @@ class DataGrid extends HTMLElement {
       label.appendChild(this.selectAll);
 
       selectableTh.appendChild(label);
-      selectableTh.setAttribute("width", 40);
-      tr.appendChild(selectableTh);
     }
+    selectableTh.setAttribute("width", 40);
+    tr.appendChild(selectableTh);
 
     // Create columns
     idx = 0;
@@ -1218,14 +1218,18 @@ class DataGrid extends HTMLElement {
     }
 
     // Selectable
-    if (this.selectable) {
+    //if (this.selectable) {
       let th = document.createElement("th");
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", 1);
       th.classList.add("dg-selectable");
       th.tabIndex = 0;
+      
+      let label = document.createElement("label");
+      th.appendChild(label);
+      
       tr.appendChild(th);
-    }
+    //}
 
     this.state.columns.forEach((column) => {
       if (column.attr) {
@@ -1311,6 +1315,16 @@ class DataGrid extends HTMLElement {
     let td;
     let idx;
     let tbody = document.createElement("tbody");
+
+    // Handles the selectAll checkbox when any other .dg-selectable checkbox is checked.
+    this.selectAll && tbody.addEventListener("change", e => {
+      if (e.target.type != "checkbox" || !e.target.closest(".dg-selectable"))
+        return;
+      const totalCheckboxes = this.root.querySelectorAll("tbody .dg-selectable input[type=checkbox]");
+      const totalChecked = Array.from(totalCheckboxes).filter(n => n.checked);
+      this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
+    });
+
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
       tr.setAttribute("role", "row");
