@@ -108,10 +108,6 @@ data-grid {
     height: 100%;
   }
 
-  &[responsive] tr.dg-head-filters th.dg-selectable label::before {
-    content: "Column Filters";
-  }
-
   // https://css-tricks.com/making-tables-with-sticky-header-and-footers-got-a-bit-easier/
   &[sticky] table {
     thead,
@@ -205,7 +201,7 @@ data-grid {
     }
   }
 
-  input[type=checkbox] {
+  input[type="checkbox"] {
     margin: 0;
   }
 
@@ -356,7 +352,7 @@ data-grid {
     margin-left: -0.25rem;
   }
 
-  [aria-sort=none] {
+  [aria-sort="none"] {
     &:before {
       border-bottom-color: var(--bs-gray-400, #ced4da);
       top: calc(50% - 0.6rem);
@@ -369,17 +365,17 @@ data-grid {
     }
   }
 
-  [aria-sort=ascending]:before {
+  [aria-sort="ascending"]:before {
     border-bottom-color: var(--bs-dark, #212529);
   }
 
-  [aria-sort=descending]:after {
+  [aria-sort="descending"]:after {
     border-top-color: var(--bs-dark, #212529);
     bottom: calc(50% - 0.5rem);
     top: auto;
   }
   // Rtl support
-  &[dir=rtl] {
+  &[dir="rtl"] {
     th,
     td {
       text-align: right;
@@ -439,6 +435,16 @@ data-grid {
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+  }
+  &:not([selectable]) {
+    // Hide selectable elements
+    .dg-selectable {
+      display: none;
+    }
+    // Force hiding labels
+    &[responsive] tr.dg-head-filters th.dg-selectable label {
+      display: none;
     }
   }
 
@@ -582,7 +588,7 @@ data-grid {
         &.dg-selectable label {
           padding: 5px;
         }
-        &[role=gridcell] {
+        &[role="gridcell"] {
           min-height: 35px;
           width: auto;
         }
@@ -610,30 +616,26 @@ data-grid {
           width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 3.9));
         }
       }
-      .dg-head-filters th input:not([type=checkbox],[type=radio]) {
+      .dg-head-filters th input:not([type="checkbox"], [type="radio"]) {
         height: 2.25em;
       }
-    }
-    &[selectable]:not([responsive]) th.dg-selectable {
-      display: revert;
-    }
-    &:not([responsive]):not([selectable]) th.dg-selectable,
-    &:not([responsive]):not([filter=true]) th.dg-selectable,
-    &[responsive]:not([selectable]):not([filter=true]):not([sort=true]) thead,
-    &[responsive]:not([selectable]):not([filter=true]) tr.dg-head-columns th.dg-selectable,
-    &[responsive]:not([selectable]):not([filter=true]) tr.dg-head-filters th.dg-selectable,
-    &[responsive] .dg-resizer,
-    tfoot .dg-meta {
-      display: none;
-    }
-  }
-}
+      .dg-head-filters th.dg-selectable label::before {
+        content: "Column Filters";
+      }
 
-@media only screen and (min-width: 768px) {
-  data-grid {
-    &:not([selectable]) th.dg-selectable,
-    &[responsive] tr.dg-head-filters th.dg-selectable label {
-      display: none;
+      // Not useful in responsive mode
+      tr.dg-head-columns,
+      .dg-resizer,
+      tfoot .dg-meta {
+        display: none;
+      }
+
+      // Revert
+      &[filter="true"] .dg-head-columns,
+      &[selectable="true"] .dg-head-columns,
+      &[sort="true"] .dg-head-columns {
+        display: revert;
+      }
     }
   }
 }

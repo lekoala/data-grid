@@ -14,7 +14,7 @@
 ```
 npm install esbuild
 npm install sass
-npm install tailwindcss postcss autoprefixer postcss-cli
+npm install postcss autoprefixer postcss-cli
 ```
 
 

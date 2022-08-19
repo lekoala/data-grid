@@ -90,12 +90,10 @@ data-grid .dg-expand {
   width: 100%;
   height: 100%;
 }
-data-grid[responsive] tr.dg-head-filters th.dg-selectable label::before {
-  content: "Column Filters";
-}
 data-grid[sticky] table thead,
 data-grid[sticky] table tfoot {
   z-index: 2;
+  position: -webkit-sticky;
   position: sticky;
   margin: 0;
   border: 0;
@@ -376,6 +374,12 @@ data-grid .dg-selectable label {
   align-items: center;
   justify-content: center;
 }
+data-grid:not([selectable]) .dg-selectable {
+  display: none;
+}
+data-grid:not([selectable])[responsive] tr.dg-head-filters th.dg-selectable label {
+  display: none;
+}
 data-grid .dg-actions {
   text-overflow: initial;
   width: 100px;
@@ -422,7 +426,9 @@ data-grid .dg-resizer {
   width: 6px;
   z-index: 2;
   cursor: col-resize;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 data-grid .dg-resizer:before {
   content: "";
@@ -524,18 +530,16 @@ data-grid[responsive] tr:not([hidden]) {
   data-grid[responsive] .dg-head-filters th input:not([type=checkbox], [type=radio]) {
     height: 2.25em;
   }
-  data-grid[selectable]:not([responsive]) th.dg-selectable {
+  data-grid[responsive] .dg-head-filters th.dg-selectable label::before {
+    content: "Column Filters";
+  }
+  data-grid[responsive] tr.dg-head-columns,
+data-grid[responsive] .dg-resizer,
+data-grid[responsive] tfoot .dg-meta {
+    display: none;
+  }
+  data-grid[responsive][filter=true] .dg-head-columns, data-grid[responsive][selectable=true] .dg-head-columns, data-grid[responsive][sort=true] .dg-head-columns {
     display: revert;
   }
-  data-grid:not([responsive]):not([selectable]) th.dg-selectable, data-grid:not([responsive]):not([filter=true]) th.dg-selectable, data-grid[responsive]:not([selectable]):not([filter=true]):not([sort=true]) thead, data-grid[responsive]:not([selectable]):not([filter=true]) tr.dg-head-columns th.dg-selectable, data-grid[responsive]:not([selectable]):not([filter=true]) tr.dg-head-filters th.dg-selectable, data-grid[responsive] .dg-resizer,
-data-grid tfoot .dg-meta {
-    display: none;
-  }
 }
-@media only screen and (min-width: 768px) {
-  data-grid:not([selectable]) th.dg-selectable, data-grid[responsive] tr.dg-head-filters th.dg-selectable label {
-    display: none;
-  }
-}
-
 /*# sourceMappingURL=data-grid.css.map */

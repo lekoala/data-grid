@@ -11,7 +11,7 @@
     "watch": "npm run build -- --watch",
     "compile-css": "sass data-grid.scss:data-grid.min.css --style compressed && sass data-grid.scss data-grid.css",
     "watch-css": "npm run compile-css -- --watch --poll",
-    "prefix-css": "postcss data-grid.min.css --replace --use autoprefixer",
+    "prefix-css": "postcss data-grid.min.css --replace --use autoprefixer && postcss data-grid.css --replace --use autoprefixer",
     "build-css": "npm run compile-css && npm run prefix-css",
     "build-all": "npm run build && npm run build-css && git add -A && git commit -m \"build files\"",
     "build-all-locally": "npm run build && npm run build-css",

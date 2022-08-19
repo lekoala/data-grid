@@ -63,6 +63,22 @@
   <script type="module">
     import DataGrid from '../data-grid.min.js';
 
+    document.getElementById("responsive-toggle-sort").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo-grid");
+      grid.sort = !grid.sort;
+    });
+    document.getElementById("responsive-toggle-filter").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo-grid");
+      grid.filter = !grid.filter;
+    });
+    document.getElementById("responsive-toggle-selectable").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo-grid");
+      grid.selectable = !grid.selectable;
+    });
+    document.getElementById("toggle").addEventListener("click", (ev) => {
+      let grid = document.getElementById("demo2-grid");
+      grid.filter = !grid.filter;
+    });
     document.getElementById("toggle").addEventListener("click", (ev) => {
       let grid = document.getElementById("demo2-grid");
       grid.filter = !grid.filter;
@@ -198,7 +214,14 @@
     <ul>
       <li><code>responsive</code> to enable responsive table.</li>
     </ul>
-    <data-grid id="demo-grid" url="demo.json" responsive></data-grid>
+
+    <p>Warning: this may get removed or moved to a separate module in future versions in favor of a more classic "toggle" button</p>
+
+    <button id="responsive-toggle-sort">Toggle sort</button>
+    <button id="responsive-toggle-selectable">Toggle selectable</button>
+    <button id="responsive-toggle-filter">Toggle filter</button>
+
+    <data-grid id="demo-grid" url="demo.json" responsive selectable="true" filter="true" sort="true"></data-grid>
 
     <h2>More options</h2>
     <ul>
