@@ -33,9 +33,10 @@ class DataGridDraggableHeaders {
       }
       grid.log("reordered col from " + index + " to " + targetIndex);
 
-      const tmp = grid.state.columns[index - 1];
-      grid.state.columns[index - 1] = grid.columns[targetIndex - 1];
-      grid.state.columns[targetIndex - 1] = tmp;
+      const offset = grid.startIndex();
+      const tmp = grid.state.columns[index - offset];
+      grid.state.columns[index - offset] = grid.columns[targetIndex - offset];
+      grid.state.columns[targetIndex - offset] = tmp;
 
       const swapNodes = (selector, el1) => {
         const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
@@ -55,6 +56,13 @@ class DataGridDraggableHeaders {
       grid.root.querySelectorAll('tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
         swapNodes("tbody", el1);
       });
+
+      // Updates the columns
+      grid.state.columns = Array.from(
+        grid.root.querySelectorAll("thead tr.dg-head-columns th[field]")
+      ).map((th) =>
+        grid.state.columns.find((c) => c.field == th.getAttribute("field"))
+      );
 
       return false;
     });

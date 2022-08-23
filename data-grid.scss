@@ -437,17 +437,6 @@ data-grid {
       justify-content: center;
     }
   }
-  &:not([selectable]) {
-    // Hide selectable elements
-    .dg-selectable {
-      display: none;
-    }
-    // Force hiding labels
-    &[responsive] tr.dg-head-filters th.dg-selectable label {
-      display: none;
-    }
-  }
-
   .dg-actions {
     text-overflow: initial;
     width: 100px;
@@ -622,20 +611,31 @@ data-grid {
       .dg-head-filters th.dg-selectable label::before {
         content: "Column Filters";
       }
-
-      // Not useful in responsive mode
-      tr.dg-head-columns,
-      .dg-resizer,
-      tfoot .dg-meta {
-        display: none;
-      }
-
-      // Revert
-      &[filter="true"] .dg-head-columns,
-      &[selectable="true"] .dg-head-columns,
-      &[sort="true"] .dg-head-columns {
-        display: revert;
-      }
+    }
+    &:not([responsive]):not([selectable]) .dg-selectable,
+    &:not([responsive]):not([filter="true"]) th.dg-selectable,
+    &[responsive]:not([selectable]):not([filter="true"]):not([sort="true"]) thead,
+    &[responsive]:not([selectable]):not([filter="true"]) .dg-selectable,
+    &[responsive]:not([selectable]) th.dg-selectable label,
+    &[responsive]:not([selectable]) td.dg-selectable,
+    &[responsive] .dg-resizer,
+    tfoot .dg-meta {
+      display: none;
+    }
+    &[selectable]:not([responsive]) th.dg-selectable {
+      display: revert;
+    }
+    &[responsive][filter="true"] .dg-head-filters th.dg-selectable label { // Ensures the "Column Filters" label shows
+      display: flex;
+      cursor: default;
+    }
+  }
+}
+@media only screen and (min-width: 768px) {
+  data-grid {
+    &:not([selectable]) .dg-selectable, // Hides all selectable cells
+    &[responsive] .dg-head-filters th.dg-selectable label { // Hides label in selectable cell on column filter row
+      display: none;
     }
   }
 }

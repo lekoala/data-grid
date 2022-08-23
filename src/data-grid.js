@@ -602,6 +602,7 @@ class DataGrid extends HTMLElement {
    * @param {Object} options
    */
   setOptions(options) {
+    if (this.reorder && this.isInitialized) return;
     for (const [key, value] of Object.entries(options)) {
       if (key in this) {
         this[key] = value;
@@ -1055,7 +1056,9 @@ class DataGrid extends HTMLElement {
 
     Object.keys(params).forEach((key) => {
       if (Array.isArray(params[key])) {
-        Object.keys(params[key]).forEach((k) => url.searchParams.append(key + "[" + k + "]", params[key][k]));
+        Object.keys(params[key]).forEach((k) =>
+          url.searchParams.append(isNaN(k) ? `${key}[${k}]` : key, params[key][k])
+        );
       } else {
         url.searchParams.append(key, params[key]);
       }
