@@ -1518,6 +1518,9 @@ class DataGrid extends BaseElement {
           } else {
             button.innerText = action.title ?? action.name;
           }
+          if (action.title) {
+            button.title = action.title;
+          }
           if (action.url) {
             button.type = "submit";
             button.formAction = interpolate(action.url, item);
