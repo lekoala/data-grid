@@ -1523,7 +1523,7 @@ class DataGrid extends BaseElement {
             button.formAction = interpolate(action.url, item);
           }
           if (action.class) {
-            button.classList.add(action.class);
+            button.classList.add(...action.class.split(' '));
           }
           const actionHandler = (ev) => {
             ev.stopPropagation();
