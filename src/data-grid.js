@@ -1158,6 +1158,8 @@ class DataGrid extends BaseElement {
     if (this.options.resizable && plugins.ColumnResizer) {
       plugins.ColumnResizer.renderResizer(this, labels.resizeColumn);
     }
+
+    this.dispatchEvent(new CustomEvent("headerRendered"));
   }
 
   renderFooter() {
@@ -1574,6 +1576,8 @@ class DataGrid extends BaseElement {
     if (plugins.SelectableRows) {
       plugins.SelectableRows.shouldSelectAll(this, tbody);
     }
+
+    this.dispatchEvent(new CustomEvent("bodyRendered"));
   }
 
   paginate() {
