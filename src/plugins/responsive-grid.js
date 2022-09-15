@@ -1,6 +1,6 @@
-import BasePlugin from "../core/base-plugin";
-import debounce from "../utils/debounce";
-import { addClass, findAll, removeClass } from "../utils/shortcuts";
+import BasePlugin from "../core/base-plugin.js";
+import debounce from "../utils/debounce.js";
+import { addClass, findAll, removeClass } from "../utils/shortcuts.js";
 
 function sortByPriority(list) {
   return Array.from(list).sort(function (a, b) {
