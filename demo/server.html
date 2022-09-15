@@ -7,12 +7,6 @@
 
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@1/last-icon.js">
   <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@1/last-icon.js"></script>
-  <script type="module">
-    window['DataGridLabels'] = {
-      page: "Go to page",
-      gotoPage: "Go to page",
-    };
-  </script>
   <script type="module" src="../data-grid.min.js"></script>
 
   <link rel="icon" type="image/svg+xml"
@@ -22,7 +16,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
   <link rel="stylesheet" href="../data-grid.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" type="module"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2/dist/js/bootstrap.bundle.min.js" type="module"></script>
   <script type="module">
     import DataGrid from '../data-grid.min.js';
 
@@ -44,10 +38,12 @@
         .then(res => res.json())
         .then(res => console.log(res));
     }
+    
     document.getElementById("server-demo").addEventListener("edit", (ev) => {
       let grid = document.getElementById("server-demo");
+      let sid = grid.meta.params.sid; // needed for session due to CORS
 
-      postJson(grid.url + "?action=edit", ev.detail);
+      postJson(grid.dataset.url + "?action=edit&sid=" + sid, ev.detail);
       toastLiveExample.querySelector(".toast-body").innerHTML = "Row was updated";
       toast.show();
     });
@@ -61,6 +57,24 @@
     <p><em>Standalone data grid web component</em></p>
   </header>
   <main>
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+        <a class="nav-link" href="index.html">Default</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="responsive.html">Responsive</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" aria-current="page" href="#">Server</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="actions.html">Actions</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="api.html">API</a>
+      </li>
+    </ul>
+
     <h2>Server usage</h2>
     <p>Url should point to an endpoint that returns a json response with a <code>data</code> key that contains an array</p>
     <p>It should also return a `meta` key with</p>
@@ -68,11 +82,33 @@
       <li><code>total</code> the total (unfiltered) number of rows.</li>
       <li><code>filtered</code> the total value of rows matching the current filter.</li>
     </ul>
-    <p>Server parameters are sent as query string and are <code>start</code>, <code>length</code> and <code>search</code>.</p>
+    <p>Server parameters are sent as query string and are <code>start</code>, <code>length</code> and <code>search</code> (but are configurable if needed through options).</p>
     <p>To enable server mode, use <code>server=true</code></p>
+    <p>To test this locally, use the built-in php server</p>
 
-    <data-grid id="server-demo" style="height:600px" url="demo-server.php" expand resizable sticky selectable filter="true" sort="true" debug="true" server="true"
-      sticky="true" reorder="false"></data-grid>
+    <data-grid 
+      id="server-demo" 
+      sticky
+      data-url="http://localhost:8002/demo-server.php" 
+      data-filter="true"
+      data-sort="true"
+      data-debug="true"
+      data-server="true"
+      >
+    </data-grid>
+
+    <p>Invalid url</p>
+
+    <data-grid 
+      id="invalid-demo" 
+      sticky
+      data-url="http://localhost:8002/invalid-server.php" 
+      data-filter="true"
+      data-sort="true"
+      data-debug="true"
+      data-server="true"
+      >
+    </data-grid>
 
     <footer>
       <hr />

@@ -1,3 +1,12 @@
+@keyframes dataGridShow {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
+
 data-grid {
   --padding: 0.5rem;
   --padding-x: 0.75rem;
@@ -37,6 +46,32 @@ data-grid {
   min-height: 6rem;
   position: relative;
 
+  // When used with fixed height, have a nice scrollbar
+  & {
+    --scroller-color: 0, 0%;
+    --scroller-color-lightness: 80%;
+    --scroller-hover-factor: 0.8;
+    --scroller-thumb: hsl(var(--scroller-color), var(--scroller-color-lightness));
+    /* Replicate hover for webkit */
+    --scroller-thumb-hover: hsl(var(--scroller-color), calc(var(--scroller-color-lightness) * var(--scroller-hover-factor)));
+    --scroller-background: transparent;
+    scrollbar-color: var(--scroller-thumb) var(--scroller-background);
+    scrollbar-width: thin;
+    &::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    &::-webkit-scrollbar-thumb {
+      background: var(--scroller-thumb);
+    }
+    &::-webkit-scrollbar-thumb:hover {
+      background: var(--scroller-thumb-hover);
+    }
+  }
+
   img {
     border: none;
     height: auto;
@@ -50,13 +85,30 @@ data-grid {
 
   table {
     display: table;
-    border-collapse: collapse;
     // Table and column widths are set by the widths of table and col elements
     // or by the width of the first row of cells. Cells in subsequent rows do not affect column widths.
     table-layout: fixed;
     width: 100%;
     max-width: 100%;
     white-space: normal;
+  }
+
+  thead,
+  tfoot {
+    background-color: var(--header-background);
+    color: var(--header-color);
+  }
+
+  &.dg-loading tbody {
+    animation-name: dataGridShow;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+    animation-duration: 0.3s; // only triggers after 300ms
+    pointer-events: none; // disable clicks while loading
+  }
+
+  tr {
+    position: relative;
   }
 
   th,
@@ -89,8 +141,7 @@ data-grid {
   }
 
   // Expand on multiple lines on row click
-  table tbody tr {
-    position: relative;
+  .dg-expandable {
     cursor: pointer;
 
     &.dg-expanded td {
@@ -98,16 +149,7 @@ data-grid {
     }
   }
 
-  .dg-expand {
-    position: absolute;
-    right: 0;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    width: 100%;
-    height: 100%;
-  }
-
+  // Stick headers
   // https://css-tricks.com/making-tables-with-sticky-header-and-footers-got-a-bit-easier/
   &[sticky] table {
     thead,
@@ -125,7 +167,8 @@ data-grid {
       inset-block-end: -1px;
     }
   }
-  // Icons
+
+  // Pagination icons
   .dg-nav-icon,
   .dg-skip-icon {
     width: 22px;
@@ -145,7 +188,6 @@ data-grid {
       position: absolute;
     }
   }
-
   .dg-nav-icon::before {
     width: 0;
     height: 10px;
@@ -155,7 +197,6 @@ data-grid {
     top: 6px;
     left: 9px;
   }
-
   .dg-skip-icon {
     &::before {
       width: 3px;
@@ -174,11 +215,11 @@ data-grid {
       left: 7px;
     }
   }
-
   .dg-rotate {
     transform: rotate(-180deg);
   }
 
+  // Default actions buttons
   button {
     background-color: var(--white);
     border: solid 1px var(--gray-100);
@@ -201,10 +242,10 @@ data-grid {
     }
   }
 
+  // Form elements
   input[type="checkbox"] {
     margin: 0;
   }
-
   input:not([type="checkbox"]),
   select {
     background-color: #fff;
@@ -214,8 +255,8 @@ data-grid {
     height: 2rem;
     margin: 0 0.2rem;
     padding: 0 var(--padding);
+    max-width: none;
   }
-
   input:not([type="checkbox"]),
   select,
   button {
@@ -231,17 +272,7 @@ data-grid {
     }
   }
 
-  thead,
-  tfoot {
-    background-color: var(--header-background);
-    color: var(--header-color);
-  }
-
-  &.dg-loading tbody {
-    opacity: 0.5;
-    transition: opacity 0.2s ease-in;
-  }
-  // Filters
+  // Filters (2nd header row)
   thead tr:nth-child(2) th {
     padding: 0;
     background-color: var(--white);
@@ -253,6 +284,7 @@ data-grid {
     }
   }
 
+  // Editable
   tbody td input.dg-editable {
     width: 100%;
     background: transparent;
@@ -264,17 +296,28 @@ data-grid {
       box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
     }
   }
-  // Empty plate (don't use :empty as it would create fouc on load)
-  &:not([url]) tbody:before {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    content: attr(data-empty);
-    transform: translate(-50%, -50%);
-    opacity: 0.5;
-    font-size: 2rem;
+
+  // Empty table or error message (don't use :empty as it would create fouc on load)
+  &:not([data-url]) tbody {
+    height: 8rem;
+    position: relative;
+    &:before {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      content: attr(data-empty);
+      transform: translate(-50%, -50%);
+      opacity: 0.5;
+      font-size: 2rem;
+      text-align: center;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+      width: 90%;
+    }
   }
 
+  // Zebra rows
   tbody tr {
     &:nth-child(odd) {
       background-color: var(--bs-white, #ffffff);
@@ -297,7 +340,9 @@ data-grid {
     }
   }
 
+  // Meta footer
   tfoot {
+    min-width: 280px;
     td {
       padding: var(--padding-y-header) var(--padding-x);
     }
@@ -329,8 +374,18 @@ data-grid {
       min-width: 160px;
       text-align: right;
     }
+
+    &.dg-footer-compact {
+      .dg-meta {
+        display: none;
+      }
+      .dg-input-page {
+        display: none;
+      }
+    }
   }
-  // Pagination
+
+  // Pagination in header
   [aria-sort] {
     cursor: pointer;
     padding-right: 1.5rem;
@@ -374,6 +429,7 @@ data-grid {
     bottom: calc(50% - 0.5rem);
     top: auto;
   }
+
   // Rtl support
   &[dir="rtl"] {
     th,
@@ -395,6 +451,7 @@ data-grid {
       text-align: left;
     }
   }
+
   // Menu
   .dg-menu {
     position: absolute;
@@ -421,6 +478,7 @@ data-grid {
     }
   }
 
+  // Selectable
   .dg-selectable {
     position: relative;
 
@@ -437,6 +495,8 @@ data-grid {
       justify-content: center;
     }
   }
+
+  // Actions
   .dg-actions {
     text-overflow: initial;
     width: 100px;
@@ -467,7 +527,16 @@ data-grid {
         display: inline-block;
       }
     }
-    &.dg-expand.dg-actions-more {
+    &.dg-actions-expand {
+      position: absolute;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      width: 100%;
+      height: 100%;
+    }
+    &.dg-actions-expand.dg-actions-more {
       width: 100%;
 
       button {
@@ -475,7 +544,6 @@ data-grid {
       }
     }
   }
-
   tr.dg-actionable {
     cursor: pointer;
 
@@ -484,6 +552,7 @@ data-grid {
     }
   }
 
+  // Column resize handle
   .dg-resizer {
     position: absolute;
     top: 0;
@@ -516,126 +585,129 @@ data-grid {
   }
 }
 
+// CSS Only responsive
 @media only screen and (max-width: 767px) {
-  data-grid {
-    &[responsive] {
-      table,
-      tbody,
-      tfoot,
-      th,
-      td,
-      tr:not([hidden]) {
-        display: block;
-      }
-      thead {
-        display: flex;
+  data-grid[responsive] {
+    // Doesn't make any sense to resize
+    .dg-resizer {
+      display: none;
+    }
 
-        > tr {
-          flex-grow: 1;
-        }
-        th {
-          width: auto;
-        }
-      }
-      tbody {
-        tr {
-          padding: 0;
-          border: 1px solid var(--header-background);
-        }
-        td {
-          border: none;
-          border-bottom: 1px solid var(--row-border-color);
-          position: relative;
-          padding-left: calc(100% - var(--responsive-width) - var(--padding) * 2);
+    // more compact footer
+    .dg-meta {
+      display: none;
+    }
+    .dg-input-page {
+      display: none;
+    }
 
-          &:last-child {
-            border: 0;
-          }
-          &:before {
-            position: absolute;
-            top: 0;
-            left: 0;
-            padding: var(--padding);
-            width: calc(100% - var(--responsive-width) - var(--padding) * 4);
-            white-space: nowrap;
-            content: attr(data-name);
-            display: block;
-            font-weight: bold;
-            background-color: var(--header-background);
-          }
-        }
+    // everything as blocks
+    table,
+    tbody,
+    tfoot,
+    th,
+    td,
+    tr:not([hidden]) {
+      display: block;
+    }
+
+    // use flex for thead
+    thead {
+      display: flex;
+
+      > tr {
+        flex-grow: 1;
       }
-      .dg-selectable {
-        height: 28px;
-        margin: 2px 1px 2px;
+      th {
+        width: auto;
+      }
+
+      border-bottom: 2px solid var(--header-background);
+    }
+
+    // use pseudo element to display column name
+    tbody {
+      tr {
+        padding: 0;
+        border: 1px solid var(--header-background);
       }
       td {
-        &.dg-selectable::before,
-        &.dg-actions::before {
-          padding: 0;
-        }
-        &.dg-selectable label {
-          padding: 5px;
-        }
-        &[role="gridcell"] {
-          min-height: 35px;
-          width: auto;
-        }
-        &[data-name]::before {
-          height: 100%;
-        }
-        &.dg-actions {
-          padding-left: inherit;
-          width: inherit;
-        }
-      }
-      .dg-actions button {
-        width: inherit !important;
-      }
-      tr {
-        &.dg-head-columns {
-          width: calc(100% - var(--responsive-width) - var(--padding) * 4.6);
+        border: none;
+        border-bottom: 1px solid var(--row-border-color);
+        position: relative;
+        padding-left: calc(100% - var(--responsive-width) - var(--padding) * 2);
 
-          th[role="columnheader button"] {
-            padding: 0.36em 1.3em 0.36em 0.75em;
-          }
+        &:last-child {
+          border: 0;
         }
-        &.dg-head-filters {
-          vertical-align: top;
-          width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 3.9));
+        &:before {
+          position: absolute;
+          top: 0;
+          left: 0;
+          padding: var(--padding);
+          width: calc(100% - var(--responsive-width) - var(--padding) * 4);
+          white-space: nowrap;
+          content: attr(data-name);
+          display: block;
+          font-weight: bold;
+          background-color: var(--header-background);
         }
       }
-      .dg-head-filters th input:not([type="checkbox"], [type="radio"]) {
-        height: 2.25em;
+    }
+    
+    // give selectable some room
+    .dg-selectable {
+      height: 28px;
+      margin: 2px 1px 2px;
+    }
+
+    td {
+      &.dg-selectable::before,
+      &.dg-actions::before {
+        padding: 0;
       }
-      .dg-head-filters th.dg-selectable label::before {
-        content: "Column Filters";
+      &.dg-selectable label {
+        padding: 5px;
+      }
+      &[role="gridcell"] {
+        min-height: 35px;
+        width: auto;
+      }
+      &[data-name]::before {
+        height: 100%;
+      }
+      &.dg-actions {
+        padding-left: inherit;
+        width: inherit;
       }
     }
-    &:not([responsive]):not([selectable]) .dg-selectable,
-    &:not([responsive]):not([filter="true"]) th.dg-selectable,
-    &[responsive]:not([selectable]):not([filter="true"]):not([sort="true"]) thead,
-    &[responsive]:not([selectable]):not([filter="true"]) .dg-selectable,
-    &[responsive]:not([selectable]) th.dg-selectable label,
-    &[responsive]:not([selectable]) td.dg-selectable,
-    &[responsive] .dg-resizer,
-    tfoot .dg-meta {
-      display: none;
+    .dg-actions button {
+      width: inherit !important;
     }
-    &[selectable]:not([responsive]) th.dg-selectable {
-      display: revert;
+    tr {
+      &.dg-head-columns {
+        padding: 0;
+        width: calc(100% - var(--responsive-width) - var(--padding) * 4);
+
+        th[role="columnheader button"] {
+          padding: 0.36em 1.3em 0.36em 0.75em;
+        }
+      }
+      &.dg-head-filters {
+        background: transparent;
+        vertical-align: top;
+        padding: 0;
+        width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 4));
+      }
     }
-    &[responsive][filter="true"] .dg-head-filters th.dg-selectable label { // Ensures the "Column Filters" label shows
-      display: flex;
-      cursor: default;
+    .dg-head-filters th input:not([type="checkbox"], [type="radio"]) {
+      height: 2.25em;
     }
-  }
-}
-@media only screen and (min-width: 768px) {
-  data-grid {
-    &:not([selectable]) .dg-selectable, // Hides all selectable cells
-    &[responsive] .dg-head-filters th.dg-selectable label { // Hides label in selectable cell on column filter row
-      display: none;
+    .dg-head-filters th.dg-selectable {
+      background: transparent;
+    }
+    .dg-head-filters th.dg-selectable label::before {
+      content: "Column Filters";
     }
   }
 }

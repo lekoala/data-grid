@@ -16,7 +16,8 @@
     "build-all": "npm run build && npm run build-css && git add -A && git commit -m \"build files\"",
     "build-all-locally": "npm run build && npm run build-css",
     "bump": "npm run build-all && npm version patch",
-    "update-deps": "npx npm-check-updates -u"
+    "update-deps": "npx npm-check-updates -u",
+    "local-server": "php -S localhost:8002 -t demo/"
   },
   "repository": {
     "type": "git",
@@ -35,8 +36,8 @@
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "^6.0.4",
-    "ava": "^4.3.1",
-    "esbuild": "^0.15.5"
+    "ava": "^4.3.3",
+    "esbuild": "^0.15.7"
   },
   "author": "LeKoala",
   "license": "MIT",
@@ -44,6 +45,6 @@
     "autoprefixer": "^10.4.8",
     "postcss": "^8.4.16",
     "postcss-cli": "^10.0.0",
-    "sass": "^1.54.4"
+    "sass": "^1.54.9"
   }
 }

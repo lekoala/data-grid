@@ -1,7 +1,71 @@
 {
+  "options": {
+    "perPageValues": [10, 100, 1000],
+    "actionsCollapse": true,
+    "actions": [
+      {
+        "name": "edit",
+        "html": "<l-i name='edit'></l-i>",
+        "default": true
+      },
+      {
+        "name": "some",
+        "html": "<l-i name='star'></l-i>"
+      },
+      {
+        "name": "action",
+        "html": "<l-i name='rocket'></l-i>"
+      },
+      {
+        "name": "delete",
+        "html": "<l-i name='trash'></l-i>",
+        "class": "is-danger",
+        "confirm": true,
+        "url": "/delete/{id}"
+      }
+    ],
+    "columns": [
+      {
+        "field": "id",
+        "attr": "data-id"
+      },
+      {
+        "field": "first_name",
+        "title": "First Name",
+        "width": 200,
+        "class": "wrap-cell"
+      },
+      {
+        "field": "last_name",
+        "title": "Last Name"
+      },
+      {
+        "field": "email",
+        "title": "Email",
+        "width": 200,
+        "editable": true
+      },
+      {
+        "field": "status",
+        "attr": "class"
+      },
+      {
+        "field": "company",
+        "title": "Company",
+        "class": "highlight-col"
+      },
+      {
+        "field": "job_title",
+        "title": "Job Title",
+        "class": "highlight-col",
+        "hidden": true
+      }
+    ]
+  },
   "data": [
     {
       "id": 1,
+      "status": "approved",
       "first_name": "Cherilynn has a very long name that would overflow the cell",
       "last_name": "Quiddington",
       "email": "cquiddington0@a8.net",
@@ -11,6 +75,7 @@
     },
     {
       "id": 2,
+      "status": "approved",
       "first_name": "Tynan",
       "last_name": "Kintish",
       "email": "tkintish1@hao123.com",
@@ -20,6 +85,7 @@
     },
     {
       "id": 3,
+      "status": "approved",
       "first_name": "Barbabas",
       "last_name": "Frean",
       "email": "bfrean2@statcounter.com",
@@ -29,6 +95,7 @@
     },
     {
       "id": 4,
+      "status": "approved",
       "first_name": "Sher",
       "last_name": "Scemp",
       "email": "sscemp3@mac.com",
@@ -38,6 +105,7 @@
     },
     {
       "id": 5,
+      "status": "approved",
       "first_name": "Bell",
       "last_name": "O'Looney",
       "email": "bolooney4@weebly.com",
@@ -47,6 +115,7 @@
     },
     {
       "id": 6,
+      "status": "pending",
       "first_name": "Shaylah",
       "last_name": "MacGeaney",
       "email": "smacgeaney5@nymag.com",
@@ -56,6 +125,7 @@
     },
     {
       "id": 7,
+      "status": "pending",
       "first_name": "Riva",
       "last_name": "Van der Linde",
       "email": "rvanderlinde6@furl.net",
@@ -65,6 +135,7 @@
     },
     {
       "id": 8,
+      "status": "pending",
       "first_name": "Gina",
       "last_name": "Shevels",
       "email": "gshevels7@virginia.edu",
@@ -74,6 +145,7 @@
     },
     {
       "id": 9,
+      "status": "approved",
       "first_name": "Rod",
       "last_name": "Leyshon",
       "email": "rleyshon8@usda.gov",
@@ -83,6 +155,7 @@
     },
     {
       "id": 10,
+      "status": "approved",
       "first_name": "Viviana",
       "last_name": "Dollar",
       "email": "vdollar9@digg.com",
@@ -92,6 +165,7 @@
     },
     {
       "id": 11,
+      "status": "approved",
       "first_name": "Gwendolen",
       "last_name": "Clorley",
       "email": "gclorleya@mediafire.com",
@@ -101,6 +175,7 @@
     },
     {
       "id": 12,
+      "status": "approved",
       "first_name": "Laetitia",
       "last_name": "Cabbell",
       "email": "lcabbellb@zdnet.com",
@@ -110,6 +185,7 @@
     },
     {
       "id": 13,
+      "status": "approved",
       "first_name": "Brynn",
       "last_name": "Sonnenschein",
       "email": "bsonnenscheinc@xrea.com",
@@ -119,6 +195,7 @@
     },
     {
       "id": 14,
+      "status": "approved",
       "first_name": "Henri",
       "last_name": "Nolli",
       "email": "hnollid@cdbaby.com",
@@ -128,6 +205,7 @@
     },
     {
       "id": 15,
+      "status": "approved",
       "first_name": "Josias",
       "last_name": "Scatchar",
       "email": "jscatchare@newyorker.com",

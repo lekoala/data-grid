@@ -1,19 +1,46 @@
-"use strict";
-
+import BasePlugin from "../core/base-plugin.js";
 import elementOffset from "../utils/elementOffset.js";
+import {
+  $$,
+  addClass,
+  asElement,
+  dispatch,
+  getAttribute,
+  hasClass,
+  off,
+  on,
+  removeAttribute,
+  removeClass,
+  setAttribute,
+} from "../utils/shortcuts.js";
 
-class DataGridColumnResizer {
+/**
+ * Allows to resize columns
+ */
+class ColumnResizer extends BasePlugin {
+  static get pluginName() {
+    return "ColumnResizer";
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static connected(grid) {
+    grid.isResizing = false;
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
   static renderResizer(grid, resizeLabel) {
-    const table = grid.root.querySelector("table");
-    const cols = grid.root.querySelectorAll("thead tr.dg-head-columns th");
+    const table = grid.table;
+    const cols = $$("thead tr.dg-head-columns th", grid);
 
     cols.forEach((col) => {
-      if (col.classList.contains("dg-selectable") || col.classList.contains("dg-actions")) {
+      if (hasClass(col, "dg-not-resizable")) {
         return;
       }
       // Create a resizer element
       const resizer = document.createElement("div");
-      resizer.classList.add("dg-resizer");
+      addClass(resizer, "dg-resizer");
       resizer.ariaLabel = resizeLabel;
 
       // Add a resizer element to the column
@@ -30,8 +57,8 @@ class DataGridColumnResizer {
           return;
         }
         const newWidth = startW + (e.clientX - startX);
-        if (col.dataset.minWidth && newWidth > col.dataset.minWidth) {
-          col.width = newWidth;
+        if (col.dataset.minWidth && newWidth > parseInt(col.dataset.minWidth)) {
+          setAttribute(col, "width", newWidth);
         }
       };
 
@@ -40,39 +67,44 @@ class DataGridColumnResizer {
         grid.log("resized column");
 
         grid.isResizing = false;
-        resizer.classList.remove("dg-resizer-active");
-        if (grid.state.reorder) {
+        removeClass(resizer, "dg-resizer-active");
+        if (grid.options.reorder) {
           col.draggable = true;
         }
         col.style.overflow = "hidden";
 
-        document.removeEventListener("mousemove", mouseMoveHandler);
-        document.removeEventListener("mouseup", mouseUpHandler);
+        off(document, "mousemove", mouseMoveHandler);
+        off(document, "mouseup", mouseUpHandler);
+
+        dispatch(grid, "columnResized", {
+          col: getAttribute(col, "field"),
+          width: getAttribute(col, "width"),
+        });
       };
 
       // Otherwise it could sort the col
-      resizer.addEventListener("click", (e) => {
+      on(resizer, "click", (e) => {
         e.stopPropagation();
       });
 
-      resizer.addEventListener("mousedown", (e) => {
+      on(resizer, "mousedown", (e) => {
         e.stopPropagation();
+
         grid.isResizing = true;
 
-        const currentCols = grid.root.querySelectorAll(".dg-head-columns th");
+        const target = asElement(e.target);
+        const currentCols = $$(".dg-head-columns th", grid);
         const visibleCols = Array.from(currentCols).filter((col) => {
           return !col.hasAttribute("hidden");
         });
         const columns = Array.from(visibleCols);
-        const columnIndex = columns.findIndex((column) => column == e.target.parentNode);
+        const columnIndex = columns.findIndex((column) => column == target.parentNode);
         grid.log("resize column");
 
-        resizer.classList.add("dg-resizer-active");
+        addClass(resizer, "dg-resizer-active");
 
         // Make sure we don't drag it
-        if (col.hasAttribute("draggable")) {
-          col.removeAttribute("draggable");
-        }
+        removeAttribute(col, "draggable");
 
         // Allow overflow when resizing
         col.style.overflow = "visible";
@@ -85,22 +117,22 @@ class DataGridColumnResizer {
         startW = col.offsetWidth;
 
         remainingSpace = (visibleCols.length - columnIndex) * 30;
-        max = elementOffset(e.target).left + grid.offsetWidth - remainingSpace;
+        max = elementOffset(target).left + grid.offsetWidth - remainingSpace;
 
         // Remove width from next columns to allow auto layout
-        col.setAttribute("width", startW);
+        setAttribute(col, "width", startW);
         for (let j = 0; j < visibleCols.length; j++) {
           if (j > columnIndex) {
-            cols[j].removeAttribute("width");
+            removeAttribute(cols[j], "width");
           }
         }
 
         // Attach handlers
-        document.addEventListener("mousemove", mouseMoveHandler);
-        document.addEventListener("mouseup", mouseUpHandler);
+        on(document, "mousemove", mouseMoveHandler);
+        on(document, "mouseup", mouseUpHandler);
       });
     });
   }
 }
 
-export default DataGridColumnResizer;
+export default ColumnResizer;

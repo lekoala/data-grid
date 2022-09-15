@@ -1,4 +1,6 @@
 <?php
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Headers: *");
 
 // Filters as key => value
 $q = [];
@@ -10,11 +12,18 @@ $length = intval($_GET["length"] ?? 10);
 $sort = $_GET["sort"] ?? null;
 $sortDir = $_GET["sortDir"] ?? null;
 $action = $_GET["action"] ?? null;
+$sid = $_GET["sid"] ?? null;
 
+if ($sid) {
+    session_id($sid);
+}
 session_start();
+$sid = session_id();
 if (empty($_SESSION["data"])) {
     $_SESSION["data"] = [];
 }
+
+// Basic action routing
 if ($action) {
     switch ($action) {
         case "edit":
@@ -22,7 +31,7 @@ if ($action) {
             $decoded = json_decode($content, true);
             $data = $decoded["data"];
             $_SESSION["data"][$data["id"]] = $data;
-            echo json_encode(["success" => 1]);
+            echo json_encode(["success" => 1, "record" => $data]);
             break;
     }
     die();
@@ -36,6 +45,7 @@ $companies = [
     "Facebook",
 ];
 foreach (range(1, 998) as $i) {
+    // Retrieve data from session if present
     if (isset($_SESSION["data"][$i])) {
         $data[] = $_SESSION["data"][$i];
     } else {
@@ -97,13 +107,17 @@ $arr = [
         "total" => count($data),
         "filtered" => count($filteredData),
         "start" => $start,
+        // these are passed back by the grid
+        "params" => [
+            "sid" => $sid,
+        ]
     ],
     "options" => [
         "columns" => [
             [
                 "field" => "id",
                 "title" => "#",
-                "width" => 50,
+                "width" => 60,
             ],
             [
                 "field" => "first_name",

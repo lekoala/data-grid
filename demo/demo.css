@@ -1,0 +1,34 @@
+.text-center {
+  text-align: center;
+}
+
+.wrap-cell {
+  white-space: normal;
+  word-break: break-all;
+}
+
+.is-danger {
+  background: red;
+  color: #fff;
+}
+
+.is-danger:hover,
+.is-danger:focus {
+  background: darkred;
+}
+
+.highlight-col {
+  background-color: palegoldenrod;
+}
+
+tr.approved td {
+  background-color: paleturquoise;
+}
+
+tr.pending td {
+  background-color: azure;
+}
+
+body {
+  overflow-x: auto;
+}

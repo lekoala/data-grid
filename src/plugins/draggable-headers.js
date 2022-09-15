@@ -1,31 +1,47 @@
-"use strict";
+import BasePlugin from "../core/base-plugin.js";
+import getParentElement from "../utils/getParentElement.js";
+import { asElement, dispatch, findAll, getAttribute, on, setAttribute } from "../utils/shortcuts.js";
 
-class DataGridDraggableHeaders {
-  static makeHeaderDraggable(th, grid) {
+/**
+ * Allows to move headers
+ */
+class DraggableHeaders extends BasePlugin {
+  static get pluginName() {
+    return "DraggableHeaders";
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   * @param {HTMLTableRowElement} th
+   */
+  static makeHeaderDraggable(grid, th) {
     th.draggable = true;
-    th.addEventListener("dragstart", (e) => {
+    on(th, "dragstart", (e) => {
       if (grid.isResizing && e.preventDefault) {
         e.preventDefault();
+        return;
+      }
+      if (!(e.target instanceof HTMLElement)) {
         return;
       }
       grid.log("reorder col");
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
     });
-    th.addEventListener("dragover", (e) => {
+    on(th, "dragover", (e) => {
       if (e.preventDefault) {
         e.preventDefault();
       }
       e.dataTransfer.dropEffect = "move";
       return false;
     });
-    th.addEventListener("drop", (e) => {
+    on(th, "drop", (e) => {
       if (e.stopPropagation) {
         e.stopPropagation();
       }
-      const target = grid.constructor.getParentNode(e.target, "TH");
-      const index = e.dataTransfer.getData("text/plain");
-      const targetIndex = target.getAttribute("aria-colindex");
+      const t = asElement(e.target);
+      const target = getParentElement(t, "TH");
+      const index = parseInt(e.dataTransfer.getData("text/plain"));
+      const targetIndex = parseInt(target.getAttribute("aria-colindex"));
 
       if (index === targetIndex) {
         grid.log("reordered col stayed the same");
@@ -33,16 +49,16 @@ class DataGridDraggableHeaders {
       }
       grid.log("reordered col from " + index + " to " + targetIndex);
 
-      const offset = grid.startIndex();
-      const tmp = grid.state.columns[index - offset];
-      grid.state.columns[index - offset] = grid.columns[targetIndex - offset];
-      grid.state.columns[targetIndex - offset] = tmp;
+      const offset = grid.startColIndex();
+      const tmp = grid.options.columns[index - offset];
+      grid.options.columns[index - offset] = grid.options.columns[targetIndex - offset];
+      grid.options.columns[targetIndex - offset] = tmp;
 
       const swapNodes = (selector, el1) => {
         const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
-        const el2 = grid.root.querySelector(selector + " tr[aria-rowindex='" + rowIndex + "'] [aria-colindex='" + targetIndex + "']");
-        el1.setAttribute("aria-colindex", targetIndex);
-        el2.setAttribute("aria-colindex", index);
+        const el2 = grid.querySelector(selector + " tr[aria-rowindex='" + rowIndex + "'] [aria-colindex='" + targetIndex + "']");
+        setAttribute(el1, "aria-colindex", targetIndex);
+        setAttribute(el2, "aria-colindex", index);
         const newNode = document.createElement("th");
         el1.parentNode.insertBefore(newNode, el1);
         el2.parentNode.replaceChild(el1, el2);
@@ -50,23 +66,26 @@ class DataGridDraggableHeaders {
       };
 
       // Swap all rows in header and body
-      grid.root.querySelectorAll("thead th[aria-colindex='" + index + "']").forEach((el1) => {
+      findAll(grid, "thead th[aria-colindex='" + index + "']").forEach((el1) => {
         swapNodes("thead", el1);
       });
-      grid.root.querySelectorAll('tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
+      findAll(grid, 'tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
         swapNodes("tbody", el1);
       });
 
       // Updates the columns
-      grid.state.columns = Array.from(
-        grid.root.querySelectorAll("thead tr.dg-head-columns th[field]")
-      ).map((th) =>
-        grid.state.columns.find((c) => c.field == th.getAttribute("field"))
+      grid.options.columns = findAll(grid, "thead tr.dg-head-columns th[field]").map((th) =>
+        grid.options.columns.find((c) => c.field == getAttribute(th, "field"))
       );
 
+      dispatch(grid, "columnReordered", {
+        col: tmp.field,
+        from: index,
+        to: targetIndex,
+      });
       return false;
     });
   }
 }
 
-export default DataGridDraggableHeaders;
+export default DraggableHeaders;
