@@ -146,6 +146,10 @@ data-grid {
 
     &.dg-expanded td {
       white-space: normal;
+
+      &.dg-actions.dg-actions-2 {
+        white-space: nowrap;
+      }
     }
   }
 

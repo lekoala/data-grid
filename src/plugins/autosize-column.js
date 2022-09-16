@@ -1,6 +1,6 @@
-import BasePlugin from "../core/base-plugin";
-import getTextWidth from "../utils/getTextWidth";
-import { getAttribute, hasAttribute, setAttribute } from "../utils/shortcuts";
+import BasePlugin from "../core/base-plugin.js";
+import getTextWidth from "../utils/getTextWidth.js";
+import { getAttribute, hasAttribute, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Allows to resize columns

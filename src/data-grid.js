@@ -1158,6 +1158,8 @@ class DataGrid extends BaseElement {
     if (this.options.resizable && plugins.ColumnResizer) {
       plugins.ColumnResizer.renderResizer(this, labels.resizeColumn);
     }
+
+    this.dispatchEvent(new CustomEvent("headerRendered"));
   }
 
   renderFooter() {
@@ -1518,12 +1520,15 @@ class DataGrid extends BaseElement {
           } else {
             button.innerText = action.title ?? action.name;
           }
+          if (action.title) {
+            button.title = action.title;
+          }
           if (action.url) {
             button.type = "submit";
             button.formAction = interpolate(action.url, item);
           }
           if (action.class) {
-            button.classList.add(action.class);
+            button.classList.add(...action.class.split(' '));
           }
           const actionHandler = (ev) => {
             ev.stopPropagation();
@@ -1571,6 +1576,8 @@ class DataGrid extends BaseElement {
     if (plugins.SelectableRows) {
       plugins.SelectableRows.shouldSelectAll(this, tbody);
     }
+
+    this.dispatchEvent(new CustomEvent("bodyRendered"));
   }
 
   paginate() {
