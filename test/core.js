@@ -23,7 +23,7 @@ function makeInst(opts = {}) {
 Event = window.Event;
 
 test("it is registered", (t) => {
-  t.assert(getGrid() instanceof DataGrid);
+  t.assert(makeInst() instanceof DataGrid);
 });
 
 test("options are registed", (t) => {

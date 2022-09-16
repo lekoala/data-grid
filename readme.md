@@ -267,7 +267,8 @@ find them in the `plugins` directory.
 | **TouchSupport**     | touch swipe                                    |
 | **SelectableRows**   | create a column with checkboxes to select rows |
 | **FixedHeight**      | allows having fixed height tables              |
-| **AutosizeColumns**      | allows having fixed height tables              |
+| **AutosizeColumns**  | compute ideal width based on column content    |
+| **ResponsiveGrid**   | hide/show column on the flys                    |
 
 ## Demo
 
