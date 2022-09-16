@@ -92,7 +92,7 @@ The columns must be an array with the following fields:
 | **width**  | the width of the column (auto otherwise)                                                    |
 | **class**  | class to set on the column (target body or header with th.class or td.class)                |
 | **attr**   | don't render the column and set a matching attribute on the row with the value of the field |
-| **hidden** | hide the column                                                                             |
+| **hidden** | hide the column  (defaults to false if not set)                                             |
 
 Note : you can also pass a plain list of comma separated string, or a js object with the field => title mapping.
 
@@ -228,16 +228,18 @@ You can check `demo-server.html` to get a sample usage with saving functionnalit
 
 ## Events
 
-| Name                 | Trigger                      |
-| -------------------- | ---------------------------- |
-| **edit**             | A row is edited              |
-| **action**           | An action is performed       |
-| **connected**        | The grid is connected        |
-| **disconnected**     | The grid is disconnected     |
-| **columnResized**    | A column is resized          |
-| **columnVisibility** | A column is hidden/shown     |
-| **columnReordered**  | A column is dragged          |
-| **rowsSelected**     | Any or all rows are selected |
+| Name                 | Trigger                                  |
+| -------------------- | ---------------------------------------- |
+| **edit**             | A row is edited                          |
+| **action**           | An action is performed                   |
+| **connected**        | The grid is connected                    |
+| **disconnected**     | The grid is disconnected                 |
+| **columnResized**    | A column is resized                      |
+| **columnVisibility** | A column is hidden/shown                 |
+| **columnReordered**  | A column is dragged                      |
+| **rowsSelected**     | Any or all rows are selected             |
+| **headerRendered**   | Column header (thead) render is complete |
+| **bodyRendered**     | Table body (tbody) render is complete    |
 
 ## Server
 
