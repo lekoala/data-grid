@@ -600,7 +600,7 @@ class DataGrid extends BaseElement {
 
   visibleColumns() {
     return this.options.columns.filter((col) => {
-      return col.hidden === false;
+      return !col.hidden;
     });
   }
 
