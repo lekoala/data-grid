@@ -207,6 +207,20 @@ You can use when defined to set your own translations with `setLabels`
 </script>
 ```
 
+| Name          | Type                |
+| ------------- | ------------------- |
+| itemsPerPage  | <code>String</code> |
+| gotoPage      | <code>String</code> |
+| gotoFirstPage | <code>String</code> |
+| gotoPrevPage  | <code>String</code> |
+| gotoNextPage  | <code>String</code> |
+| gotoLastPage  | <code>String</code> |
+| of            | <code>String</code> |
+| items         | <code>String</code> |
+| resizeColumn  | <code>String</code> |
+| noData        | <code>String</code> |
+| areYouSure    | <code>String</code> |
+
 ## Actions
 
 Define your actions as part of the options

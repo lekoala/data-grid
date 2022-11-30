@@ -99,10 +99,28 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, setAttri
  */
 
 /**
+ * @typedef Labels
+ * @property {String} itemsPerPage
+ * @property {String} gotoPage
+ * @property {String} gotoFirstPage
+ * @property {String} gotoPrevPage
+ * @property {String} gotoNextPage
+ * @property {String} gotoLastPage
+ * @property {String} of
+ * @property {String} items
+ * @property {String} resizeColumn
+ * @property {String} noData
+ * @property {String} areYouSure
+ */
+
+/**
  * @type {Plugins}
  */
 let plugins = {};
 
+/**
+ * @type {Labels}
+ */
 let labels = {
   itemsPerPage: "Items per page",
   gotoPage: "Go to page",
@@ -1088,7 +1106,10 @@ class DataGrid extends BaseElement {
     if (!this.options.url) {
       return new Promise((resolve, reject) => reject("No url set"));
     }
-    let url = new URL(this.options.url, window.location.href);
+
+    let base = window.location.href;
+    base += base.endsWith("/") ? "" : "/";
+    let url = new URL(this.options.url, base);
     let params = {
       r: Date.now(),
     };
