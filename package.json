@@ -17,7 +17,8 @@
     "build-all-locally": "npm run build && npm run build-css",
     "bump": "npm run build-all && npm version patch",
     "update-deps": "npx npm-check-updates -u",
-    "local-server": "php -S localhost:8002 -t demo/"
+    "jsdoc": "npx jsdoc2md src/data-grid.js",
+    "local-server": "php -S localhost:8002 -t ."
   },
   "repository": {
     "type": "git",
@@ -35,16 +36,16 @@
     ]
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^6.0.4",
-    "ava": "^4.3.3",
-    "esbuild": "^0.15.7"
+    "@happy-dom/global-registrator": "^7.7.0",
+    "ava": "^5.1.0",
+    "esbuild": "^0.15.16"
   },
   "author": "LeKoala",
   "license": "MIT",
   "dependencies": {
-    "autoprefixer": "^10.4.8",
-    "postcss": "^8.4.16",
-    "postcss-cli": "^10.0.0",
-    "sass": "^1.54.9"
+    "autoprefixer": "^10.4.13",
+    "postcss": "^8.4.19",
+    "postcss-cli": "^10.1.0",
+    "sass": "^1.56.1"
   }
 }

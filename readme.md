@@ -78,49 +78,106 @@ data-grid {
 }
 ```
 
-### Configuring columns
-
-When using the response data or the JS api, you have the opportunity to pass column definitions. This scenario is not supported using
-regular attributes to avoid cluttering the node with a very large attribute.
-
-The columns must be an array with the following fields:
-
-| Field      | Description                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------------- |
-| **field**  | the key in the data                                                                         |
-| **title**  | the title to display in the header (defaults to "field" if not set)                         |
-| **width**  | the width of the column (auto otherwise)                                                    |
-| **class**  | class to set on the column (target body or header with th.class or td.class)                |
-| **attr**   | don't render the column and set a matching attribute on the row with the value of the field |
-| **hidden** | hide the column  (defaults to false if not set)                                             |
-
-Note : you can also pass a plain list of comma separated string, or a js object with the field => title mapping.
-
 ### Options attributes
 
 These are the options accessibles through the components data attributes. Some options only work if the proper plugin is loaded.
 
-| Option                  | Required | Type    | Default     | Description                                                                             |
-| ----------------------- | :------: | ------- | ----------- | --------------------------------------------------------------------------------------- |
-| **url**                 |   Yes    | String  | **(empty)** | An URL with data to display in JSON format                                              |
-| **default-page**        |    No    | Number  | **1**       | Starting page                                                                           |
-| **per-page**            |    No    | Number  | **10**      | Number of records displayed per page                                                    |
-| **debug**               |    No    | Boolean | **false**   | Log actions in DevTools console                                                         |
-| **filter**              |    No    | Boolean | **false**   | Allows a filtering functionallity                                                       |
-| **sort**                |    No    | Boolean | **false**   | Allows a sort by column functionallity                                                  |
-| **dir**                 |    No    | String  | **ltr**     | Text direction. Accepted values are **ltr** (left-to-right) and **rtl** (right-to-left) |
-| **default-sort**        |    No    | String  | **id**      | Default sort field if sorting is enabled                                                |
-| **expand**              |    No    | Boolean | **false**   | Allow cell content to spawn over multiple lines                                         |
-| **resizable**           |    No    | Boolean | **false**   | Resizable columns (ColumnResizer module)                                                |
-| **reorder**             |    No    | Boolean | **false**   | Allows a column reordering functionality (DraggableHeaders module)                      |
-| **menu**                |    No    | Boolean | **false**   | Right click menu on column headers (ContextMenu module)                                 |
-| **autosize**            |    No    | Boolean | **true**    | Compute column sizes based on given data                                                |
-| **responsive**          |    No    | Boolean | **false**   | Change display mode on small screens                                                    |
-| **selectable**          |    No    | Boolean | **false**   | Allow selecting rows with a checkbox                                                    |
-| **select-visible-only** |    No    | Boolean | **true**    | Select all only selects visible rows                                                    |
-| **server**              |    No    | Boolean | **false**   | Is a server side powered grid                                                           |
-| **server-params**       |    No    | Object  |             | Describe keys passed to the server backed                                               |
-| **autoheight**          |    No    | Object  | **true**    | Adjust fixed height so that it matches table size (FixedHeight module)                  |
+| Name              | Type                                         | Description                                                           |
+| ----------------- | -------------------------------------------- | --------------------------------------------------------------------- |
+| id                | <code>String</code>                          | Custom id for the grid                                                |
+| url               | <code>String</code>                          | An URL with data to display in JSON format                            |
+| debug             | <code>Boolean</code>                         | Log actions in DevTools console                                       |
+| filter            | <code>Boolean</code>                         | Allows a filtering functionality                                      |
+| sort              | <code>Boolean</code>                         | Allows a sort by column functionality                                 |
+| defaultSort       | <code>String</code>                          | Default sort field if sorting is enabled                              |
+| server            | <code>Boolean</code>                         | Is a server side powered grid                                         |
+| serverParams      | [<code>ServerParams</code>](#ServerParams)   | Describe keys passed to the server backend                            |
+| dir               | <code>String</code>                          | Dir                                                                   |
+| perPageValues     | <code>Array</code>                           | Available per page options                                            |
+| columns           | [<code>Array.&lt;Column&gt;</code>](#Column) | Available columns                                                     |
+| actions           | [<code>Array.&lt;Action&gt;</code>](#Action) | Row actions                                                           |
+| collapseActions   | <code>Boolean</code>                         | Group actions                                                         |
+| defaultPage       | <code>Number</code>                          | Starting page                                                         |
+| perPage           | <code>Number</code>                          | Number of records displayed per page                                  |
+| expand            | <code>Boolean</code>                         | Allow cell content to spawn over multiple lines                       |
+| resizable         | <code>Boolean</code>                         | Make columns resizable (ColumnResizer module)                         |
+| selectable        | <code>Boolean</code>                         | Allow selecting rows with a checkbox (SelectableRows module)          |
+| selectVisibleOnly | <code>Boolean</code>                         | Select all only selects visible rows (SelectableRows module)          |
+| autosize          | <code>Boolean</code>                         | Compute column sizes based on given data (Autosize module)            |
+| autoheight        | <code>Boolean</code>                         | Adjust fixed height so that it matches table size (Autoheight module) |
+| menu              | <code>Boolean</code>                         | Right click menu on column headers (ContextMenu module)               |
+| reorder           | <code>Boolean</code>                         | Allows a column reordering functionality (DraggableHeaders module)    |
+| responsive        | <code>Boolean</code>                         | Change display mode on small screens (ResponsiveGrid module)          |
+
+<a name="Column"></a>
+
+## Column
+
+When using the response data or the JS api, you have the opportunity to pass column definitions. This scenario is not supported using
+regular attributes to avoid cluttering the node with a very large attribute.
+
+| Name       | Type                 | Description                                                                                 |
+| ---------- | -------------------- | ------------------------------------------------------------------------------------------- |
+| field      | <code>String</code>  | the key in the data                                                                         |
+| title      | <code>String</code>  | the title to display in the header (defaults to "field" if not set)                         |
+| width      | <code>Number</code>  | the width of the column (auto otherwise)                                                    |
+| class      | <code>String</code>  | class to set on the column (target body or header with th.class or td.class)                |
+| attr       | <code>String</code>  | don't render the column and set a matching attribute on the row with the value of the field |
+| hidden     | <code>Boolean</code> | hide the column                                                                             |
+| editable   | <code>Boolean</code> | replace with input                                                                          |
+| noSort     | <code>Boolean</code> | allow disabling sort for a given column                                                     |
+| responsive | <code>Number</code>  | the higher the value, the sooner it will be hidden, disable with 0                          |
+
+<a name="Action"></a>
+
+## Action
+
+| Name    | Type                 | Description               |
+| ------- | -------------------- | ------------------------- |
+| title   | <code>String</code>  | the title of the button   |
+| name    | <code>String</code>  | the name of the action    |
+| class   | <code>String</code>  | the class for the button  |
+| url     | <code>String</code>  | link for the action       |
+| html    | <code>String</code>  | custom button data        |
+| confirm | <code>Boolean</code> | needs confirmation        |
+| default | <code>Boolean</code> | is the default row action |
+
+<a name="Plugins"></a>
+
+## Plugins
+
+Some features have been extracted as plugins to make base class lighter. You can
+find them in the `plugins` directory.
+
+| Name               | Type                                 | Description                                    |
+| ------------------ | ------------------------------------ | ---------------------------------------------- |
+| [ColumnResizer]    | <code>module:ColumnResizer</code>    | resize handlers in the headers                 |
+| [ContextMenu]      | <code>module:ContextMenu</code>      | menu to show/hide columns                      |
+| [DraggableHeaders] | <code>module:DraggableHeaders</code> | draggable headers columns                      |
+| [TouchSupport]     | <code>module:TouchSupport</code>     | touch swipe                                    |
+| [SelectableRows]   | <code>module:SelectableRows</code>   | create a column with checkboxes to select rows |
+| [FixedHeight]      | <code>module:FixedHeight</code>      | allows having fixed height tables              |
+| [AutosizeColumn]   | <code>module:AutosizeColumn</code>   | compute ideal width based on column content    |
+| [ResponsiveGrid]   | <code>module:ResponsiveGrid</code>   | hide/show column on the fly                    |
+
+<a name="ServerParams"></a>
+
+## ServerParams
+
+| Name                         | Type                |
+| ---------------------------- | ------------------- |
+| serverParams.start           | <code>String</code> |
+| serverParams.length          | <code>String</code> |
+| serverParams.search          | <code>String</code> |
+| serverParams.sort            | <code>String</code> |
+| serverParams.sortDir         | <code>String</code> |
+| serverParams.dataKey         | <code>String</code> |
+| serverParams.errorKey        | <code>String</code> |
+| serverParams.metaKey         | <code>String</code> |
+| serverParams.metaTotalKey    | <code>String</code> |
+| serverParams.metaFilteredKey | <code>String</code> |
+| serverParams.optionsKey      | <code>String</code> |
+| serverParams.paramsKey       | <code>String</code> |
 
 ## Other attributes
 
@@ -255,22 +312,6 @@ To enable server mode, use `server=true`. These can be changed to your own serve
 settings with the `serverParams` option object.
 
 You can check `demo/server.html` and `demo-server.php` for an example.
-
-## Plugins
-
-Some features have been extracted as plugins to make base class lighter. You can
-find them in the `plugins` directory.
-
-| Name                 | Description                                    |
-| -------------------- | ---------------------------------------------- |
-| **ColumnResizer**    | resize handlers in the headers                 |
-| **ContextMenu**      | menu to show/hide columns                      |
-| **DraggableHeaders** | draggable headers columns                      |
-| **TouchSupport**     | touch swipe                                    |
-| **SelectableRows**   | create a column with checkboxes to select rows |
-| **FixedHeight**      | allows having fixed height tables              |
-| **AutosizeColumns**  | compute ideal width based on column content    |
-| **ResponsiveGrid**   | hide/show column on the flys                    |
 
 ## Demo
 

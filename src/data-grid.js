@@ -42,29 +42,20 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, setAttri
  */
 
 /**
- * TODO: figure out why @property syntax is not working for static methods
  * @link https://dev.to/dakmor/type-safe-web-components-with-jsdoc-4icf
  * @typedef {Object} Plugins
- * @property {Object|import("./plugins/column-resizer.js").default} [ColumnResizer]
- * @property {Object|import("./plugins/context-menu").default} [ContextMenu]
- * @property {Object|import('./plugins/draggable-headers.js').default} [DraggableHeaders]
- * @property {Object|import('./plugins/touch-support.js').default} [TouchSupport]
- * @property {Object|import('./plugins/selectable-rows.js').default} [SelectableRows]
- * @property {Object|import("./plugins/fixed-height.js").default} [FixedHeight]
- * @property {Object|import("./plugins/autosize-column.js").default} [AutosizeColumn]
- * @property {Object|import("./plugins/responsive-grid.js").default} [ResponsiveGrid]
+ * @property {module:ColumnResizer} [ColumnResizer] resize handlers in the headers
+ * @property {module:ContextMenu} [ContextMenu] menu to show/hide columns
+ * @property {module:DraggableHeaders} [DraggableHeaders] draggable headers columns
+ * @property {module:TouchSupport} [TouchSupport] touch swipe
+ * @property {module:SelectableRows} [SelectableRows] create a column with checkboxes to select rows
+ * @property {module:FixedHeight} [FixedHeight] allows having fixed height tables
+ * @property {module:AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
+ * @property {module:ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
  */
 
 /**
- * @typedef Options
- * @property {?String} id
- * @property {?String} url
- * @property {Boolean} debug
- * @property {Boolean} filter
- * @property {Boolean} menu
- * @property {Boolean} sort
- * @property {Boolean} server
- * @property {Object} serverParams
+ * @typedef ServerParams
  * @property {String} serverParams.start
  * @property {String} serverParams.length
  * @property {String} serverParams.search
@@ -77,22 +68,34 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, setAttri
  * @property {String} serverParams.metaFilteredKey
  * @property {String} serverParams.optionsKey
  * @property {String} serverParams.paramsKey
- * @property {String} defaultSort
- * @property {Boolean} reorder
- * @property {Boolean} resizable
- * @property {String} dir
- * @property {Array} perPageValues
- * @property {Column[]} columns
- * @property {Action[]} actions
- * @property {Boolean} collapseActions
- * @property {Number} defaultPage
- * @property {Number} perPage
- * @property {Boolean} selectable
- * @property {Boolean} selectVisibleOnly
- * @property {Boolean} autosize
- * @property {Boolean} expand
- * @property {Boolean} autoheight
- * @property {Boolean} responsive
+ */
+
+/**
+ * @typedef Options
+ * @property {?String} id Custom id for the grid
+ * @property {?String} url An URL with data to display in JSON format
+ * @property {Boolean} debug Log actions in DevTools console
+ * @property {Boolean} filter Allows a filtering functionality
+ * @property {Boolean} sort Allows a sort by column functionality
+ * @property {String} defaultSort Default sort field if sorting is enabled
+ * @property {Boolean} server Is a server side powered grid
+ * @property {ServerParams} serverParams Describe keys passed to the server backend
+ * @property {String} dir Dir
+ * @property {Array} perPageValues Available per page options
+ * @property {Column[]} columns Available columns
+ * @property {Action[]} actions Row actions
+ * @property {Boolean} collapseActions Group actions
+ * @property {Number} defaultPage Starting page
+ * @property {Number} perPage Number of records displayed per page
+ * @property {Boolean} expand  Allow cell content to spawn over multiple lines
+ * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
+ * @property {Boolean} selectable Allow selecting rows with a checkbox (SelectableRows module)
+ * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
+ * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
+ * @property {Boolean} autoheight Adjust fixed height so that it matches table size (Autoheight module)
+ * @property {Boolean} menu Right click menu on column headers (ContextMenu module)
+ * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
+ * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  */
 
 /**
@@ -705,7 +708,7 @@ class DataGrid extends BaseElement {
       row.setAttribute("hidden", "");
     }
   }
-  
+
   reorderChanged() {
     this.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
       if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
@@ -1283,7 +1286,7 @@ class DataGrid extends BaseElement {
     if (thead.offsetWidth > availableWidth) {
       this.log("adjust width to fix size");
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-      if(this.options.responsive && plugins.ResponsiveGrid) {
+      if (this.options.responsive && plugins.ResponsiveGrid) {
         diff += scrollbarWidth;
       }
       // Remove diff for columns that can afford it
@@ -1528,7 +1531,7 @@ class DataGrid extends BaseElement {
             button.formAction = interpolate(action.url, item);
           }
           if (action.class) {
-            button.classList.add(...action.class.split(' '));
+            button.classList.add(...action.class.split(" "));
           }
           const actionHandler = (ev) => {
             ev.stopPropagation();
