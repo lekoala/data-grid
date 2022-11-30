@@ -66,7 +66,11 @@ class ColumnResizer extends BasePlugin {
       const mouseUpHandler = () => {
         grid.log("resized column");
 
-        grid.isResizing = false;
+        // Prevent accidental sorting if mouse is not over resize handler
+        setTimeout(() => {
+          grid.isResizing = false;
+        }, 0);
+
         removeClass(resizer, "dg-resizer-active");
         if (grid.options.reorder) {
           col.draggable = true;

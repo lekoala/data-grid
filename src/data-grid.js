@@ -704,6 +704,10 @@ class DataGrid extends BaseElement {
     return len;
   }
 
+  /**
+   * Global configuration and renderTable
+   * This should be called after your data has been loaded
+   */
   configureUi() {
     setAttribute(this.querySelector("table"), "aria-rowcount", this.data.length);
 
@@ -1031,6 +1035,10 @@ class DataGrid extends BaseElement {
     // Early exit
     if (col && this.getColProp(col.getAttribute("field"), "noSort")) {
       this.log("sorting prevented because column is not sortable");
+      return;
+    }
+    if (this.isResizing) {
+      this.log("sorting prevented because resizing");
       return;
     }
     if (this.loading) {
