@@ -141,9 +141,15 @@ class DataGrid extends BaseElement {
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
 
-    // The grid displays that data
+    /**
+     * The grid displays that data
+     * @type {Array}
+     */
     this.data = [];
-    // We store the original data in this
+    /**
+     * We store the original data in this
+     * @type {Array}
+     */
     this.originalData = [];
 
     /**
@@ -158,8 +164,8 @@ class DataGrid extends BaseElement {
     this.pages = 0;
     this.meta = {};
 
-    // Expose observed attributes in the dom
-    // Do it when fireEvents is disabled to avoid firing callbacks
+    // Expose options as observed attributes in the dom
+    // Do it when fireEvents is disabled to avoid firing change callbacks
     for (const attr of DataGrid.observedAttributes) {
       if (attr.indexOf("data-") === 0) {
         setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
@@ -176,6 +182,7 @@ class DataGrid extends BaseElement {
      * @type {Column[]}
      */
     this.actions = this.actions ?? null;
+
     // selectable-rows.js
     /**
      * @type {HTMLInputElement}
@@ -434,7 +441,7 @@ class DataGrid extends BaseElement {
     this.page = this.constrainPageValue(this.page);
 
     // Show current page in input
-    this.inputPage.setAttribute("max", "" + this.pages);
+    setAttribute(this.inputPage, "max", this.pages);
     this.inputPage.value = "" + this.page;
     this.inputPage.disabled = this.pages === 1;
   }
@@ -492,7 +499,7 @@ class DataGrid extends BaseElement {
   }
 
   dirChanged() {
-    this.setAttribute("dir", this.options.dir);
+    setAttribute(this, "dir", this.options.dir);
   }
 
   defaultSortChanged() {
@@ -698,7 +705,7 @@ class DataGrid extends BaseElement {
   }
 
   configureUi() {
-    this.querySelector("table").setAttribute("aria-rowcount", this.data.length);
+    setAttribute(this.querySelector("table"), "aria-rowcount", this.data.length);
 
     this.table.style.visibility = "hidden";
     this.renderTable();
@@ -720,10 +727,10 @@ class DataGrid extends BaseElement {
   filterChanged() {
     const row = this.querySelector("thead tr.dg-head-filters");
     if (this.options.filter) {
-      row.removeAttribute("hidden");
+      removeAttribute(row, "hidden");
     } else {
       this.clearFilters();
-      row.setAttribute("hidden", "");
+      setAttribute(row, "hidden", "");
     }
   }
 
@@ -752,9 +759,9 @@ class DataGrid extends BaseElement {
         return;
       }
       if (this.options.sort && !this.getColProp(fieldName, "noSort")) {
-        th.setAttribute("aria-sort", "none");
+        setAttribute(th, "aria-sort", "none");
       } else {
-        th.removeAttribute("aria-sort");
+        removeAttribute(th, "aria-sort");
       }
     });
   }
@@ -1438,9 +1445,9 @@ class DataGrid extends BaseElement {
 
     this.data.forEach((item, i) => {
       tr = document.createElement("tr");
-      tr.setAttribute("role", "row");
-      tr.setAttribute("hidden", "");
-      tr.setAttribute("aria-rowindex", i + 1);
+      setAttribute(tr, "role", "row");
+      setAttribute(tr, "hidden", "");
+      setAttribute(tr, "aria-rowindex", i + 1);
       tr.tabIndex = 0;
 
       // Selectable

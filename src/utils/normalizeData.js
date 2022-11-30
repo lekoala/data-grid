@@ -20,9 +20,9 @@ export default function normalizeData(v) {
     return Number(v);
   }
   // Only attempt json parsing for array or objects
-  if (v && (v.indexOf("[") === 0 || v.indexOf("{") === 0)) {
+  if (v && ["[", "{"].includes(v.substring(0, 1))) {
     try {
-      // In case we have only single quoted vues
+      // In case we have only single quoted values, like ['one', 'two', 'three']
       if (v.indexOf('"') === -1) {
         v = v.replace(/'/g, '"');
       }

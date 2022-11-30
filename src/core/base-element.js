@@ -12,7 +12,7 @@ class BaseElement extends HTMLElement {
    */
   constructor(options = {}) {
     super();
-    this.options = Object.assign(this.defaultOptions, this.normalizedDataset, options);
+    this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
 
     this.log("constructor");
 
@@ -95,7 +95,7 @@ class BaseElement extends HTMLElement {
   _connected() {}
 
   connectedCallback() {
-    // ensure whenDefined callbacks are run first
+    // ensure whenDefined callbacks run first
     setTimeout(() => {
       this.log("connectedCallback");
 
