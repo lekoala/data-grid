@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import debounce from "../utils/debounce.js";
-import { addClass, findAll, removeClass } from "../utils/shortcuts.js";
+import { addClass, find, findAll, removeClass } from "../utils/shortcuts.js";
 
 function sortByPriority(list) {
   return Array.from(list).sort(function (a, b) {
@@ -37,16 +37,17 @@ const callback = debounce((entries) => {
     // We have an array with the columns to show/hide are in order, most important first
     const headerCols = sortByPriority(
       findAll(grid.headerRow, "th[field]")
-        .reverse()
+        .reverse() // Order takes precedence if no priority is set
         .filter((col) => {
+          // Leave out unresponsive columns
           return col.dataset.responsive !== "0";
         })
     );
     let changed = false;
 
-    // grid.log(`table is ${tableWidth}/${realTableWidth} and available size is ${size}`);
+    grid.log(`table is ${tableWidth}/${realTableWidth} and available size is ${size}. Diff: ${diff}`);
 
-    // The table is too big
+    // The table is too big when diff has a high value, otherwise it will be like -1 or -2
     if (diff > 0) {
       let remaining = diff;
       let cols = headerCols.filter((col) => {
@@ -91,10 +92,9 @@ const callback = debounce((entries) => {
       // Compute available width to insert columns
       let remaining = size - requiredWidth;
       // Do we have any hidden column that we can restore ?
-      // Reverse the array to restore the columns in the proper order
       headerCols
         .slice()
-        .reverse()
+        .reverse() // Reverse the array to restore the columns in the proper order
         .filter((col) => {
           return col.hasAttribute("hidden");
         })
@@ -105,7 +105,7 @@ const callback = debounce((entries) => {
           const colWidth = parseInt(col.dataset.minWidth);
 
           // We need to have enough space to restore it
-          if (size < colWidth + requiredWidth) {
+          if (colWidth > remaining) {
             remaining = -1; // break loop to keep restoring in order
             return;
           }
@@ -123,10 +123,14 @@ const callback = debounce((entries) => {
     }
 
     // Check footer
-    const footer = grid.table.querySelector("tfoot");
-    if (footer.offsetWidth > size) {
+    const footer = find(grid.table, "tfoot");
+    const realFooterWidth = findAll(grid.table, ".dg-footer > div").reduce((result, div) => {
+      return result + div.offsetWidth;
+    }, 0);
+    const availableFooterWidth = footer.offsetWidth - realFooterWidth;
+    if (realFooterWidth > size) {
       addClass(footer, "dg-footer-compact");
-    } else if (footer.offsetWidth < size + 200) {
+    } else if (availableFooterWidth > 250) {
       removeClass(footer, "dg-footer-compact");
     }
     if (changed) {
