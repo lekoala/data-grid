@@ -1123,7 +1123,10 @@ class DataGrid extends BaseElement {
     }
 
     let base = window.location.href;
-    base += base.endsWith("/") ? "" : "/";
+    // Fix trailing slash if no extension is present
+    if (!base.split("/").pop().includes(".")) {
+      base += base.endsWith("/") ? "" : "/";
+    }
     let url = new URL(this.options.url, base);
     let params = {
       r: Date.now(),
