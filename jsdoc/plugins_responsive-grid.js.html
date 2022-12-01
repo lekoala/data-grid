@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: plugins/responsive-grid.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: plugins/responsive-grid.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
+import debounce from "../utils/debounce.js";
+import { addClass, find, findAll, removeClass } from "../utils/shortcuts.js";
+
+function sortByPriority(list) {
+  return Array.from(list).sort(function (a, b) {
+    a = parseInt(a.dataset.responsive) || 1;
+    b = parseInt(b.dataset.responsive) || 1;
+    if (a === b) {
+      b++;
+    }
+    return b - a;
+  });
+}
+
+/**
+ * @type {ResizeObserverCallback}
+ */
+//@ts-ignore
+const callback = debounce((entries) => {
+  for (const entry of entries) {
+    /**
+     * @type {import("../data-grid").default}
+     */
+    // @ts-ignore
+    const grid = entry.target;
+    const table = grid.table;
+    // check inlineSize (width) and not blockSize (height)
+    const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
+    const size = parseInt(contentBoxSize.inlineSize);
+    const tableWidth = table.offsetWidth;
+    const realTableWidth = findAll(grid.headerRow, "th").reduce((result, th) => {
+      return result + th.offsetWidth;
+    }, 0);
+    const diff = (realTableWidth || tableWidth) - size - 1;
+    const minWidth = 50;
+    // We have an array with the columns to show/hide are in order, most important first
+    const headerCols = sortByPriority(
+      findAll(grid.headerRow, "th[field]")
+        .reverse() // Order takes precedence if no priority is set
+        .filter((col) => {
+          // Leave out unresponsive columns
+          return col.dataset.responsive !== "0";
+        })
+    );
+    let changed = false;
+
+    grid.log(`table is ${tableWidth}/${realTableWidth} and available size is ${size}. Diff: ${diff}`);
+
+    // The table is too big when diff has a high value, otherwise it will be like -1 or -2
+    if (diff > 0) {
+      let remaining = diff;
+      let cols = headerCols.filter((col) => {
+        return !col.hasAttribute("hidden") &amp;&amp; col.hasAttribute("data-responsive");
+      });
+      if (cols.length === 0) {
+        cols = headerCols.filter((col) => {
+          return !col.hasAttribute("hidden");
+        });
+        // Always keep one column
+        if (cols.length === 1) {
+          return;
+        }
+      }
+      cols.forEach((col) => {
+        if (remaining &lt; 0) {
+          return;
+        }
+
+        const colWidth = col.offsetWidth;
+        const field = col.getAttribute("field");
+        if (!field) {
+          return;
+        }
+        col.dataset.baseWidth = col.offsetWidth;
+        grid.hideColumn(field, false);
+        changed = true;
+
+        remaining -= colWidth;
+        remaining = Math.round(remaining);
+      });
+    } else {
+      const requiredWidth =
+        headerCols
+          .filter((col) => {
+            return !col.hasAttribute("hidden");
+          })
+          .reduce((result, col) => {
+            return result + parseInt(col.dataset.minWidth);
+          }, 0) + minWidth; // Add an offset so that inserting column is smoother
+
+      // Compute available width to insert columns
+      let remaining = size - requiredWidth;
+      // Do we have any hidden column that we can restore ?
+      headerCols
+        .slice()
+        .reverse() // Reverse the array to restore the columns in the proper order
+        .filter((col) => {
+          return col.hasAttribute("hidden");
+        })
+        .forEach((col) => {
+          if (remaining &lt; minWidth) {
+            return;
+          }
+          const colWidth = parseInt(col.dataset.minWidth);
+
+          // We need to have enough space to restore it
+          if (colWidth > remaining) {
+            remaining = -1; // break loop to keep restoring in order
+            return;
+          }
+
+          const field = col.getAttribute("field");
+          if (!field) {
+            return;
+          }
+          grid.showColumn(field, false);
+          changed = true;
+
+          remaining -= colWidth;
+          remaining = Math.round(remaining);
+        });
+    }
+
+    // Check footer
+    const footer = find(grid.table, "tfoot");
+    const realFooterWidth = findAll(grid.table, ".dg-footer > div").reduce((result, div) => {
+      return result + div.offsetWidth;
+    }, 0);
+    const availableFooterWidth = footer.offsetWidth - realFooterWidth;
+    if (realFooterWidth > size) {
+      addClass(footer, "dg-footer-compact");
+    } else if (availableFooterWidth > 250) {
+      removeClass(footer, "dg-footer-compact");
+    }
+    if (changed) {
+      grid.renderTable();
+    }
+    grid.table.style.visibility = "visible";
+  }
+}, 100);
+const resizeObserver = new ResizeObserver(callback);
+
+/**
+ * Responsive data grid
+ */
+class ResponsiveGrid extends BasePlugin {
+  static get pluginName() {
+    return "ResponsiveGrid";
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static connected(grid) {
+    if (grid.options.responsive) {
+      this.observe(grid);
+    }
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static disconnected(grid) {
+    this.unobserve(grid);
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static observe(grid) {
+    if (!grid.options.responsive) {
+      return;
+    }
+    resizeObserver.observe(grid);
+    grid.style.display = "block"; // Otherwise resize doesn't happen
+    grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static unobserve(grid) {
+    resizeObserver.unobserve(grid);
+    grid.style.display = "unset";
+    grid.style.overflowX = "unset";
+  }
+}
+
+export default ResponsiveGrid;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: plugins/context-menu.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: plugins/context-menu.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
+import getParentElement from "../utils/getParentElement.js";
+import { asAnyElement, find, off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
+
+/**
+ * Create a right click menu on the headers
+ */
+class ContextMenu extends BasePlugin {
+  static get pluginName() {
+    return "ContextMenu";
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static disconnected(grid) {
+    if (grid.headerRow) {
+      grid.headerRow.oncontextmenu = null;
+    }
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static attachContextMenu(grid) {
+    on(grid.headerRow, "contextmenu", (ev) => {
+      ContextMenu.showContextMenu(grid, ev);
+    });
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static showContextMenu(grid, e) {
+    e.preventDefault();
+
+    const target = getParentElement(e.target, "THEAD");
+    /**
+     * @type {HTMLUListElement}
+     */
+    const menu = find(grid, ".dg-menu");
+    const rect = target.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    menu.style.top = `${y}px`;
+    menu.style.left = `${x}px`;
+
+    removeAttribute(menu, "hidden");
+    if (x + 150 > rect.width) {
+      x -= menu.offsetWidth;
+      menu.style.left = `${x}px`;
+    }
+
+    const documentClickHandler = (e) => {
+      if (!menu.contains(e.target)) {
+        setAttribute(menu, "hidden", "");
+        off(document, "click", documentClickHandler);
+      }
+    };
+    on(document, "click", documentClickHandler);
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   */
+  static createMenu(grid) {
+    /**
+     * @type {HTMLUListElement}
+     */
+    const menu = find(grid, ".dg-menu");
+    while (menu.lastChild) {
+      menu.removeChild(menu.lastChild);
+    }
+    grid.options.columns.forEach((col) => {
+      if (col.attr) {
+        return;
+      }
+      const field = col.field;
+      const li = document.createElement("li");
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      setAttribute(checkbox, "type", "checkbox");
+      setAttribute(checkbox, "data-name", col.field);
+      if (!col.hidden) {
+        checkbox.checked = true;
+      }
+      on(checkbox, "change", (e) => {
+        /**
+         * @type {HTMLInputElement}
+         */
+        const t = asAnyElement(e.target);
+        if (t.checked) {
+          grid.showColumn(field);
+        } else {
+          // Prevent hidding last
+          if (grid.visibleColumns().length &lt;= 1) {
+            // Restore checkbox value
+            t.checked = true;
+            return;
+          }
+          grid.hideColumn(field);
+        }
+      });
+
+      const text = document.createTextNode(col.title);
+
+      label.appendChild(checkbox);
+      label.appendChild(text);
+
+      li.appendChild(label);
+      menu.appendChild(li);
+    });
+  }
+}
+
+export default ContextMenu;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

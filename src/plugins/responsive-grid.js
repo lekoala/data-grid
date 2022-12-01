@@ -145,41 +145,26 @@ const resizeObserver = new ResizeObserver(callback);
  * Responsive data grid
  */
 class ResponsiveGrid extends BasePlugin {
-  static get pluginName() {
-    return "ResponsiveGrid";
-  }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static connected(grid) {
-    if (grid.options.responsive) {
-      this.observe(grid);
+  connected() {
+    if (this.grid.options.responsive) {
+      this.observe();
     }
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static disconnected(grid) {
-    this.unobserve(grid);
+  disconnected() {
+    this.unobserve();
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static observe(grid) {
-    if (!grid.options.responsive) {
+  observe() {
+    if (!this.grid.options.responsive) {
       return;
     }
-    resizeObserver.observe(grid);
-    grid.style.display = "block"; // Otherwise resize doesn't happen
-    grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
+    resizeObserver.observe(this.grid);
+    this.grid.style.display = "block"; // Otherwise resize doesn't happen
+    this.grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static unobserve(grid) {
-    resizeObserver.unobserve(grid);
-    grid.style.display = "unset";
-    grid.style.overflowX = "unset";
+  unobserve() {
+    resizeObserver.unobserve(this.grid);
+    this.grid.style.display = "unset";
+    this.grid.style.overflowX = "unset";
   }
 }
 

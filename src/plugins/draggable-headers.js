@@ -6,21 +6,18 @@ import { asElement, dispatch, findAll, getAttribute, on, setAttribute } from "..
  * Allows to move headers
  */
 class DraggableHeaders extends BasePlugin {
-  static get pluginName() {
-    return "DraggableHeaders";
-  }
   /**
-   * @param {import("../data-grid").default} grid
-   * @param {HTMLTableRowElement} th
+   * @param {HTMLTableCellElement} th
    */
-  static makeHeaderDraggable(grid, th) {
+  makeHeaderDraggable(th) {
+    const grid = this.grid;
     th.draggable = true;
     on(th, "dragstart", (e) => {
-      if (grid.isResizing && e.preventDefault) {
-        e.preventDefault();
+      if (!(e.target instanceof HTMLElement)) {
         return;
       }
-      if (!(e.target instanceof HTMLElement)) {
+      if (grid.plugins.ColumnResizer && grid.plugins.ColumnResizer.isResizing && e.preventDefault) {
+        e.preventDefault();
         return;
       }
       grid.log("reorder col");

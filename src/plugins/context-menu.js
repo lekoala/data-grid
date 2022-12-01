@@ -6,31 +6,19 @@ import { asAnyElement, find, off, on, removeAttribute, setAttribute } from "../u
  * Create a right click menu on the headers
  */
 class ContextMenu extends BasePlugin {
-  static get pluginName() {
-    return "ContextMenu";
-  }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static disconnected(grid) {
-    if (grid.headerRow) {
-      grid.headerRow.oncontextmenu = null;
+  disconnected() {
+    if (this.grid.headerRow) {
+      off(this.grid.headerRow, "oncontextmenu", this);
     }
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static attachContextMenu(grid) {
-    on(grid.headerRow, "contextmenu", (ev) => {
-      ContextMenu.showContextMenu(grid, ev);
-    });
+  attachContextMenu() {
+    const grid = this.grid;
+    on(grid.headerRow, "contextmenu", this);
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static showContextMenu(grid, e) {
-    e.preventDefault();
 
+  oncontextmenu(e) {
+    e.preventDefault();
+    const grid = this.grid;
     const target = getParentElement(e.target, "THEAD");
     /**
      * @type {HTMLUListElement}
@@ -57,10 +45,8 @@ class ContextMenu extends BasePlugin {
     };
     on(document, "click", documentClickHandler);
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static createMenu(grid) {
+  createMenu() {
+    const grid = this.grid;
     /**
      * @type {HTMLUListElement}
      */

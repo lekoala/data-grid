@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: core/base-element.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: core/base-element.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import camelize from "../utils/camelize.js";
+import normalizeData from "../utils/normalizeData.js";
+import { dispatch, getAttribute, setAttribute } from "../utils/shortcuts.js";
+
+/**
+ * Base element that does not contain any specific logic
+ * related to this project but makes HTMLElemnt usable
+ */
+class BaseElement extends HTMLElement {
+  /**
+   * @param {Object} options
+   */
+  constructor(options = {}) {
+    super();
+    this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
+
+    this.log("constructor");
+
+    this.fireEvents = true;
+    this._ready();
+
+    this.log("ready");
+  }
+
+  get defaultOptions() {
+    return {};
+  }
+
+  /**
+   * @param {String} opt
+   * @returns {any}
+   */
+  getOption(opt) {
+    return this.options[opt];
+  }
+
+  /**
+   * @param {String} opt
+   * @param {any} v
+   */
+  setOption(opt, v) {
+    setAttribute(this, `data-${opt}`, v);
+  }
+
+  /**
+   * @param {String} opt
+   */
+  toggleOption(opt) {
+    setAttribute(this, `data-${opt}`, !this.getOption(opt));
+  }
+
+  get normalizedDataset() {
+    let data = { ...this.dataset };
+    for (var key in data) {
+      data[key] = normalizeData(data[key]);
+    }
+    return data;
+  }
+
+  /**
+   * @returns {String}
+   */
+  static template() {
+    return "";
+  }
+
+  /**
+   * This is called at the end of constructor. Extend in subclass if needed.
+   */
+  _ready() {}
+
+  /**
+   * @param {String|Error} message
+   */
+  log(message) {
+    if (this.options.debug) {
+      console.log("[" + getAttribute(this, "id") + "] " + message);
+    }
+  }
+
+  /**
+   * Handle events within the component
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
+   * @param {Event} event
+   */
+  handleEvent(event) {
+    if (this[`on${event.type}`]) {
+      this[`on${event.type}`](event);
+    }
+  }
+
+  /**
+   * This is called when connected. Extend in subclass if needed.
+   */
+  _connected() {}
+
+  connectedCallback() {
+    // ensure whenDefined callbacks run first
+    setTimeout(() => {
+      this.log("connectedCallback");
+
+      // Append only when labels had the opportunity to be set
+      // Don't use shadow dom as it makes theming super hard
+      const template = document.createElement("template");
+      // @ts-ignore
+      template.innerHTML = this.constructor.template();
+      this.appendChild(template.content.cloneNode(true));
+
+      this._connected();
+      // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events
+      dispatch(this, "connected");
+    }, 0);
+  }
+
+  /**
+   * This is called when disconnected. Extend in subclass if needed.
+   */
+  _disconnected() {}
+
+  disconnectedCallback() {
+    this.log("disconnectedCallback");
+    this._disconnected();
+    // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events
+    dispatch(this, "disconnected");
+  }
+
+  /**
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#a-props-like-accessor
+   * @returns {Object}
+   */
+  get transformAttributes() {
+    return {};
+  }
+
+  /**
+   * This is only meant to work with data attributes
+   * This allows us to have properties that reflect automatically in the component
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dataset-attributes
+   * @param {String} attributeName
+   * @param {String} oldValue
+   * @param {String} newValue
+   */
+  attributeChangedCallback(attributeName, oldValue, newValue) {
+    // It didn't change
+    if (oldValue === newValue) {
+      return;
+    }
+
+    this.log("attributeChangedCallback: " + attributeName);
+
+    let isOption = false;
+    const transformer = this.transformAttributes[attributeName] ?? normalizeData;
+
+    // Data attributes are mapped to options while other attributes are mapped as properties
+    if (attributeName.indexOf("data-") === 0) {
+      attributeName = attributeName.slice(5);
+      isOption = true;
+    }
+    attributeName = camelize(attributeName);
+    if (isOption) {
+      this.options[attributeName] = transformer(newValue);
+    } else {
+      this[attributeName] = transformer(newValue);
+    }
+
+    // Fire internal event
+    if (this.fireEvents &amp;&amp; this[`${attributeName}Changed`]) {
+      this[`${attributeName}Changed`]();
+    }
+  }
+}
+
+export default BaseElement;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

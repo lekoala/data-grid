@@ -7,13 +7,10 @@ import { setAttribute } from "../utils/shortcuts.js";
  * We should add a fake row to push the footer down in case we don't have enough rows
  */
 class FixedHeight extends BasePlugin {
-  static get pluginName() {
-    return "FixedHeight";
-  }
   /**
-   * @param {import("../data-grid").default} grid
    */
-  static computeDefaultHeight(grid) {
+  computeDefaultHeight() {
+    const grid = this.grid;
     // Wait until height is fully computed
     requestAnimationFrame(() => {
       grid.defaultHeight = grid.querySelector("table").offsetHeight;
@@ -37,9 +34,9 @@ class FixedHeight extends BasePlugin {
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    */
-  static createFakeRow(grid) {
+  createFakeRow() {
+    const grid = this.grid;
     const tbody = grid.querySelector("tbody");
     let tr = document.createElement("tr");
     setAttribute(tr, "role", "row");
@@ -50,9 +47,9 @@ class FixedHeight extends BasePlugin {
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    */
-  static updateFakeRow(grid) {
+  updateFakeRow() {
+    const grid = this.grid;
     if (!grid.style.height) {
       return;
     }

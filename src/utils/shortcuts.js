@@ -22,7 +22,7 @@ const supportedPassiveTypes = [
 ];
 
 /**
- *
+ * Automatically set passive options based on type
  * @param {string} type
  * @returns {AddEventListenerOptions}
  */
@@ -75,7 +75,7 @@ export function removeAttribute(el, name) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {FlexibleListener} listener
+ * @param {EventListenerOrEventListenerObject|FlexibleListener} listener
  */
 export function on(el, type, listener) {
   el.addEventListener(type, listener, passiveOpts(type));
@@ -84,7 +84,7 @@ export function on(el, type, listener) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerOrEventListenerObject&FlexibleListener} listener
+ * @param {EventListenerOrEventListenerObject|FlexibleListener} listener
  */
 export function off(el, type, listener) {
   el.removeEventListener(type, listener, passiveOpts(type));
@@ -93,7 +93,7 @@ export function off(el, type, listener) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerOrEventListenerObject&FlexibleListener} listener
+ * @param {EventListenerOrEventListenerObject|FlexibleListener} listener
  */
 export function one(el, type, listener) {
   el.addEventListener(type, listener, {

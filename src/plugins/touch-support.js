@@ -4,48 +4,39 @@ import BasePlugin from "../core/base-plugin.js";
  * Allows to paginate with horizontal swipe motions
  */
 class TouchSupport extends BasePlugin {
-  static get pluginName() {
-    return "TouchSupport";
+  constructor(grid) {
+    super(grid);
+    this.touch = null;
+  }
+  connected() {
+    const grid = this.grid;
+    grid.addEventListener("touchstart", this, { passive: true });
+    grid.addEventListener("touchmove", this, { passive: true });
   }
 
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static connected(grid) {
-    grid.touch = null;
-    grid.touchstart = TouchSupport.touchstart.bind(grid);
-    grid.touchmove = TouchSupport.touchmove.bind(grid);
-    grid.addEventListener("touchstart", grid.touchstart, { passive: true });
-    grid.addEventListener("touchmove", grid.touchmove, { passive: true });
+  disconnected() {
+    const grid = this.grid;
+    grid.removeEventListener("touchstart", this);
+    grid.removeEventListener("touchmove", this);
   }
 
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static disconnected(grid) {
-    grid.removeEventListener("touchstart", grid.touchstart);
-    grid.removeEventListener("touchmove", grid.touchmove);
-  }
-
-  static touchstart(e) {
+  ontouchstart(e) {
     this.touch = e.touches[0];
   }
 
-  /**
-   * @this {import("../data-grid").default}
-   */
-  static touchmove(e) {
+  ontouchmove(e) {
     if (!this.touch) {
       return;
     }
+    const grid = this.grid;
     const xDiff = this.touch.clientX - e.touches[0].clientX;
     const yDiff = this.touch.clientY - e.touches[0].clientY;
 
     if (Math.abs(xDiff) > Math.abs(yDiff)) {
       if (xDiff > 0) {
-        this.getNext();
+        grid.getNext();
       } else {
-        this.getPrev();
+        grid.getPrev();
       }
     }
     this.touch = null;

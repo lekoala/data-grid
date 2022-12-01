@@ -41,17 +41,26 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
  * @property {Boolean} default - is the default row action
  */
 
+/** @typedef {import('./plugins/autosize-column').default} AutosizeColumn */
+/** @typedef {import('./plugins/column-resizer').default} ColumnResizer */
+/** @typedef {import('./plugins/context-menu').default} ContextMenu */
+/** @typedef {import('./plugins/draggable-headers').default} DraggableHeaders */
+/** @typedef {import('./plugins/fixed-height').default} FixedHeight */
+/** @typedef {import('./plugins/responsive-grid').default} ResponsiveGrid */
+/** @typedef {import('./plugins/selectable-rows').default} SelectableRows */
+/** @typedef {import('./plugins/touch-support').default} TouchSupport */
+
 /**
- * @link https://dev.to/dakmor/type-safe-web-components-with-jsdoc-4icf
+ * These plugins are all optional
  * @typedef {Object} Plugins
- * @property {module:ColumnResizer} [ColumnResizer] resize handlers in the headers
- * @property {module:ContextMenu} [ContextMenu] menu to show/hide columns
- * @property {module:DraggableHeaders} [DraggableHeaders] draggable headers columns
- * @property {module:TouchSupport} [TouchSupport] touch swipe
- * @property {module:SelectableRows} [SelectableRows] create a column with checkboxes to select rows
- * @property {module:FixedHeight} [FixedHeight] allows having fixed height tables
- * @property {module:AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
- * @property {module:ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
+ * @property {ColumnResizer} [ColumnResizer] resize handlers in the headers
+ * @property {ContextMenu} [ContextMenu] menu to show/hide columns
+ * @property {DraggableHeaders} [DraggableHeaders] draggable headers columns
+ * @property {TouchSupport} [TouchSupport] touch swipe
+ * @property {SelectableRows} [SelectableRows] create a column with checkboxes to select rows
+ * @property {FixedHeight} [FixedHeight] allows having fixed height tables
+ * @property {AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
+ * @property {ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
  */
 
 /**
@@ -136,6 +145,19 @@ let labels = {
 };
 
 /**
+ * @param {HTMLElement} el
+ * @param {Object} definition
+ */
+function applyColumnDefinition(el, definition) {
+  if (definition.width) {
+    el.setAttribute("width", definition.width);
+  }
+  if (definition.class) {
+    el.setAttribute("class", definition.class);
+  }
+}
+
+/**
  */
 class DataGrid extends BaseElement {
   _ready() {
@@ -152,6 +174,7 @@ class DataGrid extends BaseElement {
      */
     this.originalData = [];
 
+    // Make the IDE happy
     /**
      * @type {Options}
      */
@@ -163,6 +186,15 @@ class DataGrid extends BaseElement {
     this.page = this.options.defaultPage || 1;
     this.pages = 0;
     this.meta = {};
+    /**
+     * @type {Plugins}
+     */
+    this.plugins = {};
+    // Init plugins
+    for (const [pluginName, pluginClass] of Object.entries(plugins)) {
+      // @ts-ignore until we can set typeof import ...
+      this.plugins[pluginName] = new pluginClass(this);
+    }
 
     // Expose options as observed attributes in the dom
     // Do it when fireEvents is disabled to avoid firing change callbacks
@@ -171,41 +203,6 @@ class DataGrid extends BaseElement {
         setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
       }
     }
-
-    // Some IDE types stuff
-
-    /**
-     * @type {Column[]}
-     */
-    this.columns = this.columns ?? null;
-    /**
-     * @type {Column[]}
-     */
-    this.actions = this.actions ?? null;
-
-    // selectable-rows.js
-    /**
-     * @type {HTMLInputElement}
-     */
-    this.selectAll = null;
-    /**
-     * @type {EventListenerOrEventListenerObject}
-     */
-    this.toggleSelectAll = null;
-
-    // touch-support.js
-    this.touch = null;
-    /**
-     * @type {EventListenerOrEventListenerObject}
-     */
-    this.touchstart = null;
-    /**
-     * @type {EventListenerOrEventListenerObject}
-     */
-    this.touchmove = null;
-
-    // column-resizer.js
-    this.isResizing = false;
   }
 
   static template() {
@@ -326,28 +323,22 @@ class DataGrid extends BaseElement {
     plugins = list;
   }
 
-  static unregisterPlugins() {
-    plugins = {};
+  /**
+   * @param {String} plugin
+   */
+  static unregisterPlugins(plugin = null) {
+    if (plugin === null) {
+      plugins = {};
+    } else {
+      delete plugins[plugin];
+    }
   }
 
   /**
    * @returns {Plugins}
    */
-  static plugins() {
+  static registeredPlugins() {
     return plugins;
-  }
-
-  /**
-   * @param {HTMLElement} el
-   * @param {Object} definition
-   */
-  static applyColumnDefinition(el, definition) {
-    if (definition.width) {
-      el.setAttribute("width", definition.width);
-    }
-    if (definition.class) {
-      el.setAttribute("class", definition.class);
-    }
   }
 
   /**
@@ -451,13 +442,13 @@ class DataGrid extends BaseElement {
   }
 
   responsiveChanged() {
-    if (!plugins.ResponsiveGrid) {
+    if (!this.plugins.ResponsiveGrid) {
       return;
     }
     if (this.options.responsive) {
-      plugins.ResponsiveGrid.observe(this);
+      this.plugins.ResponsiveGrid.observe();
     } else {
-      plugins.ResponsiveGrid.unobserve(this);
+      this.plugins.ResponsiveGrid.unobserve();
     }
   }
 
@@ -565,9 +556,9 @@ class DataGrid extends BaseElement {
     this.selectPerPage.addEventListener("change", this.changePerPage);
     this.inputPage.addEventListener("input", this.gotoPage);
 
-    for (const plugin in plugins) {
-      plugins[plugin].connected(this);
-    }
+    Object.values(this.plugins).forEach((plugin) => {
+      plugin.connected();
+    });
 
     // Display even if we don't have data
     this.dirChanged();
@@ -599,9 +590,9 @@ class DataGrid extends BaseElement {
     this.selectPerPage.removeEventListener("change", this.changePerPage);
     this.inputPage.removeEventListener("input", this.gotoPage);
 
-    for (const plugin in plugins) {
-      plugins[plugin].disconnected(this);
-    }
+    Object.values(this.plugins).forEach((plugin) => {
+      plugin.disconnected();
+    });
   }
 
   getCol(field) {
@@ -667,7 +658,7 @@ class DataGrid extends BaseElement {
    * @returns {Number}
    */
   startColIndex() {
-    return this.options.selectable && plugins.SelectableRows ? 2 : 1;
+    return this.options.selectable && this.plugins.SelectableRows ? 2 : 1;
   }
 
   hasActions() {
@@ -695,7 +686,7 @@ class DataGrid extends BaseElement {
         len++;
       }
     });
-    if (this.options.selectable && plugins.SelectableRows) {
+    if (this.options.selectable && this.plugins.SelectableRows) {
       len++;
     }
     if (this.options.actions.length) {
@@ -713,7 +704,7 @@ class DataGrid extends BaseElement {
 
     this.table.style.visibility = "hidden";
     this.renderTable();
-    if (this.options.responsive && plugins.ResponsiveGrid) {
+    if (this.options.responsive && this.plugins.ResponsiveGrid) {
       // Let the observer make the table visible
     } else {
       this.table.style.visibility = "visible";
@@ -746,7 +737,7 @@ class DataGrid extends BaseElement {
       if (!(th instanceof HTMLTableRowElement)) {
         return;
       }
-      if (this.options.reorder && plugins.DraggableHeaders) {
+      if (this.options.reorder && this.plugins.DraggableHeaders) {
         th.draggable = true;
       } else {
         th.removeAttribute("draggable");
@@ -808,10 +799,10 @@ class DataGrid extends BaseElement {
    * @returns {Array}
    */
   getSelection(key = null) {
-    if (!plugins.SelectableRows) {
+    if (!this.plugins.SelectableRows) {
       return [];
     }
-    return plugins.SelectableRows.getSelection(this, key);
+    return this.plugins.SelectableRows.getSelection(key);
   }
 
   getData() {
@@ -826,7 +817,9 @@ class DataGrid extends BaseElement {
     this.data = this.originalData = [];
     this.renderBody();
     // Recompute height if needed
-    plugins.FixedHeight && plugins.FixedHeight.computeDefaultHeight(this);
+    if (this.plugins.FixedHeight) {
+      this.plugins.FixedHeight.computeDefaultHeight();
+    }
   }
 
   refresh(cb = null) {
@@ -1037,7 +1030,7 @@ class DataGrid extends BaseElement {
       this.log("sorting prevented because column is not sortable");
       return;
     }
-    if (this.isResizing) {
+    if (this.plugins.ColumnResizer && this.plugins.ColumnResizer.isResizing) {
       this.log("sorting prevented because resizing");
       return;
     }
@@ -1164,8 +1157,8 @@ class DataGrid extends BaseElement {
   renderTable() {
     this.log("render table");
 
-    if (this.options.menu && plugins.ContextMenu) {
-      plugins.ContextMenu.createMenu(this);
+    if (this.options.menu && this.plugins.ContextMenu) {
+      this.plugins.ContextMenu.createMenu();
     }
 
     let sortedColumn;
@@ -1197,8 +1190,8 @@ class DataGrid extends BaseElement {
     this.createColumnHeaders(thead);
     this.createColumnFilters(thead);
 
-    if (this.options.resizable && plugins.ColumnResizer) {
-      plugins.ColumnResizer.renderResizer(this, labels.resizeColumn);
+    if (this.options.resizable && this.plugins.ColumnResizer) {
+      this.plugins.ColumnResizer.renderResizer(labels.resizeColumn);
     }
 
     this.dispatchEvent(new CustomEvent("headerRendered"));
@@ -1236,8 +1229,8 @@ class DataGrid extends BaseElement {
     tr.setAttribute("aria-rowindex", "1");
     tr.setAttribute("class", "dg-head-columns");
 
-    if (this.options.selectable && plugins.SelectableRows) {
-      plugins.SelectableRows.createHeaderCol(this, tr);
+    if (this.options.selectable && this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.createHeaderCol(tr);
     }
 
     // We need a real th from the dom to compute the size
@@ -1264,22 +1257,22 @@ class DataGrid extends BaseElement {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      if (plugins.ResponsiveGrid) {
+      if (this.plugins.ResponsiveGrid) {
         setAttribute(th, "data-responsive", column.responsive);
       }
       // Make sure the header fits (+ add some room for sort icon if necessary)
       const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
       th.dataset.minWidth = "" + computedWidth;
-      DataGrid.applyColumnDefinition(th, column);
+      applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
 
       let w = 0;
       // Autosize small based on first/last row ?
       // Take into account minWidth of the header and max available size based on col numbers
-      if (this.options.autosize && plugins.AutosizeColumn) {
+      if (this.options.autosize && this.plugins.AutosizeColumn) {
         const colAvailableWidth = Math.min(availableWidth - totalWidth, colMaxWidth);
-        w = plugins.AutosizeColumn.autosizeColumn(this, th, column, parseInt(th.dataset.minWidth), colAvailableWidth);
+        w = this.plugins.AutosizeColumn.computeSize(th, column, parseInt(th.dataset.minWidth), colAvailableWidth);
       } else {
         w = Math.max(parseInt(th.dataset.minWidth), parseInt(th.getAttribute("width")));
       }
@@ -1292,8 +1285,8 @@ class DataGrid extends BaseElement {
       }
 
       // Reorder columns with drag/drop
-      if (this.options.reorder && plugins.DraggableHeaders) {
-        plugins.DraggableHeaders.makeHeaderDraggable(this, th);
+      if (this.options.reorder && this.plugins.DraggableHeaders) {
+        this.plugins.DraggableHeaders.makeHeaderDraggable(th);
       }
 
       tr.appendChild(th);
@@ -1325,7 +1318,7 @@ class DataGrid extends BaseElement {
     if (thead.offsetWidth > availableWidth) {
       this.log("adjust width to fix size");
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-      if (this.options.responsive && plugins.ResponsiveGrid) {
+      if (this.options.responsive && this.plugins.ResponsiveGrid) {
         diff += scrollbarWidth;
       }
       // Remove diff for columns that can afford it
@@ -1352,8 +1345,8 @@ class DataGrid extends BaseElement {
     }
 
     // Context menu
-    if (this.options.menu && plugins.ContextMenu) {
-      plugins.ContextMenu.attachContextMenu(this);
+    if (this.options.menu && this.plugins.ContextMenu) {
+      this.plugins.ContextMenu.attachContextMenu();
     }
 
     // Sort col on click
@@ -1379,8 +1372,8 @@ class DataGrid extends BaseElement {
     }
 
     // Selectable
-    if (this.options.selectable && plugins.SelectableRows) {
-      plugins.SelectableRows.createFilterCol(this, tr);
+    if (this.options.selectable && this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.createFilterCol(tr);
     }
 
     this.options.columns.forEach((column) => {
@@ -1462,8 +1455,8 @@ class DataGrid extends BaseElement {
       tr.tabIndex = 0;
 
       // Selectable
-      if (this.options.selectable && plugins.SelectableRows) {
-        plugins.SelectableRows.createDataCol(this, tr);
+      if (this.options.selectable && this.plugins.SelectableRows) {
+        this.plugins.SelectableRows.createDataCol(tr);
       }
 
       // Expandable
@@ -1487,7 +1480,7 @@ class DataGrid extends BaseElement {
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startColIndex());
-        DataGrid.applyColumnDefinition(td, column);
+        applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
 
@@ -1609,14 +1602,14 @@ class DataGrid extends BaseElement {
     tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
     this.querySelector("table").replaceChild(tbody, prev);
 
-    if (plugins.FixedHeight) {
-      plugins.FixedHeight.createFakeRow(this);
+    if (this.plugins.FixedHeight) {
+      this.plugins.FixedHeight.createFakeRow();
     }
 
     this.paginate();
 
-    if (plugins.SelectableRows) {
-      plugins.SelectableRows.shouldSelectAll(this, tbody);
+    if (this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.shouldSelectAll(tbody);
     }
 
     this.dispatchEvent(new CustomEvent("bodyRendered"));
@@ -1657,16 +1650,16 @@ class DataGrid extends BaseElement {
       }
     });
 
-    if (this.options.selectable && plugins.SelectableRows) {
-      plugins.SelectableRows.clearCheckboxes(this, tbody);
+    if (this.options.selectable && this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.clearCheckboxes(tbody);
     }
 
     // Store default height and update styles if needed
-    if (plugins.FixedHeight) {
+    if (this.plugins.FixedHeight) {
       if (this.defaultHeight == 0) {
-        plugins.FixedHeight.computeDefaultHeight(this);
+        this.plugins.FixedHeight.computeDefaultHeight();
       }
-      plugins.FixedHeight.updateFakeRow(this);
+      this.plugins.FixedHeight.updateFakeRow();
     }
 
     // Enable/disable buttons if shown

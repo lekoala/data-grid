@@ -17,7 +17,8 @@
     "build-all-locally": "npm run build && npm run build-css",
     "bump": "npm run build-all && npm version patch",
     "update-deps": "npx npm-check-updates -u",
-    "jsdoc": "npx jsdoc2md src/data-grid.js",
+    "jsdoc": "jsdoc -c jsdoc.conf.json -d ./jsdoc -r src/",
+    "jsdoc2md": "jsdoc2md -c jsdoc.conf.json src/data-grid.js",
     "local-server": "php -S localhost:8002 -t ."
   },
   "repository": {
@@ -38,7 +39,11 @@
   "devDependencies": {
     "@happy-dom/global-registrator": "^7.7.0",
     "ava": "^5.1.0",
-    "esbuild": "^0.15.16"
+    "esbuild": "^0.15.16",
+    "jsdoc": "^4.0.0",
+    "jsdoc-plugin-intersection": "^1.0.4",
+    "jsdoc-to-markdown": "^8.0.0",
+    "jsdoc-tsimport-plugin": "^1.0.5"
   },
   "author": "LeKoala",
   "license": "MIT",

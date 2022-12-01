@@ -6,19 +6,16 @@ import { getAttribute, hasAttribute, setAttribute } from "../utils/shortcuts.js"
  * Allows to resize columns
  */
 class AutosizeColumn extends BasePlugin {
-  static get pluginName() {
-    return "AutosizeColumn";
-  }
   /**
    * Autosize col based on column data
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableCellElement} th
    * @param {import("../data-grid").Column} column
    * @param {Number} min
    * @param {Number} max
    * @returns {Number}
    */
-  static autosizeColumn(grid, th, column, min, max) {
+  computeSize(th, column, min, max) {
+    const grid = this.grid;
     if (hasAttribute(th, "width")) {
       return getAttribute(th, "width");
     }

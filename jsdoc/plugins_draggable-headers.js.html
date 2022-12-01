@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: plugins/draggable-headers.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: plugins/draggable-headers.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
+import getParentElement from "../utils/getParentElement.js";
+import { asElement, dispatch, findAll, getAttribute, on, setAttribute } from "../utils/shortcuts.js";
+
+/**
+ * Allows to move headers
+ */
+class DraggableHeaders extends BasePlugin {
+  static get pluginName() {
+    return "DraggableHeaders";
+  }
+  /**
+   * @param {import("../data-grid").default} grid
+   * @param {HTMLTableRowElement} th
+   */
+  static makeHeaderDraggable(grid, th) {
+    th.draggable = true;
+    on(th, "dragstart", (e) => {
+      if (grid.isResizing &amp;&amp; e.preventDefault) {
+        e.preventDefault();
+        return;
+      }
+      if (!(e.target instanceof HTMLElement)) {
+        return;
+      }
+      grid.log("reorder col");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
+    });
+    on(th, "dragover", (e) => {
+      if (e.preventDefault) {
+        e.preventDefault();
+      }
+      e.dataTransfer.dropEffect = "move";
+      return false;
+    });
+    on(th, "drop", (e) => {
+      if (e.stopPropagation) {
+        e.stopPropagation();
+      }
+      const t = asElement(e.target);
+      const target = getParentElement(t, "TH");
+      const index = parseInt(e.dataTransfer.getData("text/plain"));
+      const targetIndex = parseInt(target.getAttribute("aria-colindex"));
+
+      if (index === targetIndex) {
+        grid.log("reordered col stayed the same");
+        return;
+      }
+      grid.log("reordered col from " + index + " to " + targetIndex);
+
+      const offset = grid.startColIndex();
+      const tmp = grid.options.columns[index - offset];
+      grid.options.columns[index - offset] = grid.options.columns[targetIndex - offset];
+      grid.options.columns[targetIndex - offset] = tmp;
+
+      const swapNodes = (selector, el1) => {
+        const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
+        const el2 = grid.querySelector(selector + " tr[aria-rowindex='" + rowIndex + "'] [aria-colindex='" + targetIndex + "']");
+        setAttribute(el1, "aria-colindex", targetIndex);
+        setAttribute(el2, "aria-colindex", index);
+        const newNode = document.createElement("th");
+        el1.parentNode.insertBefore(newNode, el1);
+        el2.parentNode.replaceChild(el1, el2);
+        newNode.parentNode.replaceChild(el2, newNode);
+      };
+
+      // Swap all rows in header and body
+      findAll(grid, "thead th[aria-colindex='" + index + "']").forEach((el1) => {
+        swapNodes("thead", el1);
+      });
+      findAll(grid, 'tbody td[aria-colindex="' + index + '"]').forEach((el1) => {
+        swapNodes("tbody", el1);
+      });
+
+      // Updates the columns
+      grid.options.columns = findAll(grid, "thead tr.dg-head-columns th[field]").map((th) =>
+        grid.options.columns.find((c) => c.field == getAttribute(th, "field"))
+      );
+
+      dispatch(grid, "columnReordered", {
+        col: tmp.field,
+        from: index,
+        to: targetIndex,
+      });
+      return false;
+    });
+  }
+}
+
+export default DraggableHeaders;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

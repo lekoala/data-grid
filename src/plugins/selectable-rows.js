@@ -5,25 +5,21 @@ import { dispatch } from "../utils/shortcuts.js";
  * Allows to select rows
  */
 class SelectableRows extends BasePlugin {
-  static get pluginName() {
-    return "SelectableRows";
+  constructor(grid) {
+    super(grid);
   }
-
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static disconnected(grid) {
-    if (grid.selectAll) {
-      grid.selectAll.removeEventListener("change", grid.toggleSelectAll);
+  disconnected() {
+    if (this.selectAll) {
+      this.selectAll.removeEventListener("change", this);
     }
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {String} key Return a specific key (eg: id) instead of the whole row
    * @returns {Array}
    */
-  static getSelection(grid, key = null) {
+  getSelection(key = null) {
+    const grid = this.grid;
     let selectedData = [];
 
     Array.from(grid.querySelectorAll("tbody .dg-selectable input:checked")).forEach((checkbox) => {
@@ -46,10 +42,10 @@ class SelectableRows extends BasePlugin {
 
   /**
    * Uncheck box if hidden and visible only
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableSectionElement} tbody
    */
-  static clearCheckboxes(grid, tbody) {
+  clearCheckboxes(tbody) {
+    const grid = this.grid;
     if (!grid.options.selectVisibleOnly) {
       return;
     }
@@ -61,10 +57,9 @@ class SelectableRows extends BasePlugin {
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableRowElement} tr
    */
-  static createHeaderCol(grid, tr) {
+  createHeaderCol(tr) {
     let th = document.createElement("th");
     th.setAttribute("scope", "col");
     th.setAttribute("role", "columnheader button");
@@ -72,15 +67,13 @@ class SelectableRows extends BasePlugin {
     th.classList.add(...["dg-selectable", "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
 
-    grid.selectAll = document.createElement("input");
-    grid.selectAll.type = "checkbox";
-    grid.selectAll.classList.add("dg-select-all");
-
-    grid.toggleSelectAll = this.toggleSelectAll.bind(grid);
-    grid.selectAll.addEventListener("change", grid.toggleSelectAll);
+    this.selectAll = document.createElement("input");
+    this.selectAll.type = "checkbox";
+    this.selectAll.classList.add("dg-select-all");
+    this.selectAll.addEventListener("change", this);
 
     let label = document.createElement("label");
-    label.appendChild(grid.selectAll);
+    label.appendChild(this.selectAll);
 
     th.appendChild(label);
 
@@ -89,10 +82,9 @@ class SelectableRows extends BasePlugin {
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableRowElement} tr
    */
-  static createFilterCol(grid, tr) {
+  createFilterCol(tr) {
     let th = document.createElement("th");
     th.setAttribute("role", "columnheader button");
     th.setAttribute("aria-colindex", "1");
@@ -108,11 +100,11 @@ class SelectableRows extends BasePlugin {
    * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked.
    * It should check selectAll if all is checked
    * It should uncheck selectAll if any is unchecked
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableSectionElement} tbody
    */
-  static shouldSelectAll(grid, tbody) {
-    if (!grid.selectAll) {
+  shouldSelectAll(tbody) {
+    const grid = this.grid;
+    if (!this.selectAll) {
       return;
     }
     // Delegate listener for change events on input checkboxes
@@ -124,7 +116,7 @@ class SelectableRows extends BasePlugin {
         const totalCheckboxes = grid.querySelectorAll("tbody .dg-selectable input[type=checkbox]");
         // @ts-ignore
         const totalChecked = Array.from(totalCheckboxes).filter((n) => n.checked);
-        grid.selectAll.checked = totalChecked.length == totalCheckboxes.length;
+        this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
 
         dispatch(grid, "rowsSelected", {
           selection: grid.getSelection(),
@@ -135,10 +127,9 @@ class SelectableRows extends BasePlugin {
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableRowElement} tr
    */
-  static createDataCol(grid, tr) {
+  createDataCol(tr) {
     // Create col
     let td = document.createElement("td");
     td.setAttribute("role", "gridcell button");
@@ -155,16 +146,22 @@ class SelectableRows extends BasePlugin {
     label.appendChild(selectOne);
     td.appendChild(label);
 
+    // Prevent unwanted click behaviour on row
+    label.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
     tr.appendChild(td);
   }
 
   /**
    * Reflect state
-   * @this {import("../data-grid").default}
+   * @param {Event} e
    */
-  static toggleSelectAll() {
-    const visibleOnly = this.options.selectVisibleOnly;
-    this.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
+  onchange(e) {
+    const grid = this.grid;
+    const visibleOnly = grid.options.selectVisibleOnly;
+    grid.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
       if (!(cb instanceof HTMLInputElement)) {
         return;
       }
@@ -174,7 +171,7 @@ class SelectableRows extends BasePlugin {
       cb.checked = this.selectAll.checked;
     });
 
-    dispatch(this, "rowsSelected", {
+    dispatch(grid, "rowsSelected", {
       selection: this.getSelection(),
     });
   }

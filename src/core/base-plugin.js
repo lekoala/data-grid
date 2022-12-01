@@ -1,24 +1,26 @@
+/** @typedef {import("../data-grid").default} DataGrid */
+
 class BasePlugin {
   /**
-   * Could be changed due to minification process
-   * It's better to set the actual class name in the plugin itself
+   * @param {DataGrid} grid
    */
-  static get pluginName() {
-    return this.name;
+  constructor(grid) {
+    this.grid = grid;
   }
 
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static connected(grid) {
-    grid;
-  }
+  connected() {}
+
+  disconnected() {}
 
   /**
-   * @param {import("../data-grid").default} grid
+   * Handle events within the plugin
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
+   * @param {Event} event
    */
-  static disconnected(grid) {
-    grid;
+  handleEvent(event) {
+    if (this[`on${event.type}`]) {
+      this[`on${event.type}`](event);
+    }
   }
 }
 

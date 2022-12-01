@@ -18,19 +18,16 @@ import {
  * Allows to resize columns
  */
 class ColumnResizer extends BasePlugin {
-  static get pluginName() {
-    return "ColumnResizer";
+  constructor(grid) {
+    super(grid);
+    this.isResizing = false;
   }
+
   /**
-   * @param {import("../data-grid").default} grid
+   * @param {String} resizeLabel 
    */
-  static connected(grid) {
-    grid.isResizing = false;
-  }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static renderResizer(grid, resizeLabel) {
+  renderResizer(resizeLabel) {
+    const grid = this.grid;
     const table = grid.table;
     const cols = $$("thead tr.dg-head-columns th", grid);
 
@@ -68,7 +65,7 @@ class ColumnResizer extends BasePlugin {
 
         // Prevent accidental sorting if mouse is not over resize handler
         setTimeout(() => {
-          grid.isResizing = false;
+          this.isResizing = false;
         }, 0);
 
         removeClass(resizer, "dg-resizer-active");
@@ -94,7 +91,7 @@ class ColumnResizer extends BasePlugin {
       on(resizer, "mousedown", (e) => {
         e.stopPropagation();
 
-        grid.isResizing = true;
+        this.isResizing = true;
 
         const target = asElement(e.target);
         const currentCols = $$(".dg-head-columns th", grid);
