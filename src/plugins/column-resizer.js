@@ -73,6 +73,7 @@ class ColumnResizer extends BasePlugin {
         }
         col.style.overflow = "hidden";
 
+        // Remove handlers
         off(document, "mousemove", mouseMoveHandler);
         off(document, "mouseup", mouseUpHandler);
 

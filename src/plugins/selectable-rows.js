@@ -1,5 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, on } from "../utils/shortcuts.js";
+import { dispatch, findAll, hasClass, on } from "../utils/shortcuts.js";
 
 /**
  * Allows to select rows
@@ -94,30 +94,18 @@ class SelectableRows extends BasePlugin {
   }
 
   /**
-   * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked.
+   * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
    * It should check selectAll if all is checked
    * It should uncheck selectAll if any is unchecked
    * @param {HTMLTableSectionElement} tbody
    */
   shouldSelectAll(tbody) {
-    const grid = this.grid;
     if (!this.selectAll) {
       return;
     }
     // Delegate listener for change events on input checkboxes
-    on(tbody, "change", (e) => {
-      if (!e.target.closest(".dg-selectable")) {
-        return;
-      }
-      const totalCheckboxes = findAll(grid, "tbody .dg-selectable input[type=checkbox]");
-      // @ts-ignore
-      const totalChecked = totalCheckboxes.filter((n) => n.checked);
-      this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
-
-      dispatch(grid, "rowsSelected", {
-        selection: grid.getSelection(),
-      });
-    });
+    on(tbody, "change", this);
+    // Make sure state is up to date
     tbody.dispatchEvent(new Event("change"));
   }
 
@@ -142,31 +130,50 @@ class SelectableRows extends BasePlugin {
     td.appendChild(label);
 
     // Prevent unwanted click behaviour on row
-    label.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
+    label.addEventListener("click", this);
 
     tr.appendChild(td);
   }
 
   /**
-   * Reflect state
    * @param {Event} e
+   */
+  onclick(e) {
+    e.stopPropagation();
+  }
+
+  /**
+   * Handle change event on select all or any select checkbox in the table body
+   * @param {import("../utils/shortcuts.js").FlexibleEvent} e
    */
   onchange(e) {
     const grid = this.grid;
-    const visibleOnly = grid.options.selectVisibleOnly;
-    const inputs = findAll(grid, "tbody .dg-selectable input");
-    inputs.forEach((cb) => {
-      if (visibleOnly && !cb.offsetWidth) {
+    if (hasClass(e.target, "dg-select-all")) {
+      const visibleOnly = grid.options.selectVisibleOnly;
+      const inputs = findAll(grid, "tbody .dg-selectable input");
+      inputs.forEach((cb) => {
+        if (visibleOnly && !cb.offsetWidth) {
+          return;
+        }
+        cb.checked = this.selectAll.checked;
+      });
+
+      dispatch(grid, "rowsSelected", {
+        selection: this.getSelection(),
+      });
+    } else {
+      if (!e.target.closest(".dg-selectable")) {
         return;
       }
-      cb.checked = this.selectAll.checked;
-    });
+      const totalCheckboxes = findAll(grid, "tbody .dg-selectable input[type=checkbox]");
+      // @ts-ignore
+      const totalChecked = totalCheckboxes.filter((n) => n.checked);
+      this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
 
-    dispatch(grid, "rowsSelected", {
-      selection: this.getSelection(),
-    });
+      dispatch(grid, "rowsSelected", {
+        selection: grid.getSelection(),
+      });
+    }
   }
 }
 
