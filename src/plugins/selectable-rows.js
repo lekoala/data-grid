@@ -1,5 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch } from "../utils/shortcuts.js";
+import { dispatch, findAll, on } from "../utils/shortcuts.js";
 
 /**
  * Allows to select rows
@@ -22,10 +22,8 @@ class SelectableRows extends BasePlugin {
     const grid = this.grid;
     let selectedData = [];
 
-    Array.from(grid.querySelectorAll("tbody .dg-selectable input:checked")).forEach((checkbox) => {
-      if (!(checkbox instanceof HTMLElement)) {
-        return;
-      }
+    const inputs = findAll(grid, "tbody .dg-selectable input:checked");
+    inputs.forEach((checkbox) => {
       const idx = parseInt(checkbox.dataset.id);
       const item = grid.data[idx - 1];
       if (!item) {
@@ -49,10 +47,9 @@ class SelectableRows extends BasePlugin {
     if (!grid.options.selectVisibleOnly) {
       return;
     }
-    tbody.querySelectorAll("tr[hidden] .dg-selectable input").forEach((input) => {
-      if (input instanceof HTMLInputElement) {
-        input.checked = false;
-      }
+    const inputs = findAll(tbody, "tr[hidden] .dg-selectable input");
+    inputs.forEach((input) => {
+      input.checked = false;
     });
   }
 
@@ -108,20 +105,18 @@ class SelectableRows extends BasePlugin {
       return;
     }
     // Delegate listener for change events on input checkboxes
-    tbody.addEventListener("change", (e) => {
-      if (e.target instanceof HTMLInputElement) {
-        if (!e.target.closest(".dg-selectable")) {
-          return;
-        }
-        const totalCheckboxes = grid.querySelectorAll("tbody .dg-selectable input[type=checkbox]");
-        // @ts-ignore
-        const totalChecked = Array.from(totalCheckboxes).filter((n) => n.checked);
-        this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
-
-        dispatch(grid, "rowsSelected", {
-          selection: grid.getSelection(),
-        });
+    on(tbody, "change", (e) => {
+      if (!e.target.closest(".dg-selectable")) {
+        return;
       }
+      const totalCheckboxes = findAll(grid, "tbody .dg-selectable input[type=checkbox]");
+      // @ts-ignore
+      const totalChecked = totalCheckboxes.filter((n) => n.checked);
+      this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
+
+      dispatch(grid, "rowsSelected", {
+        selection: grid.getSelection(),
+      });
     });
     tbody.dispatchEvent(new Event("change"));
   }
@@ -161,10 +156,8 @@ class SelectableRows extends BasePlugin {
   onchange(e) {
     const grid = this.grid;
     const visibleOnly = grid.options.selectVisibleOnly;
-    grid.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
-      if (!(cb instanceof HTMLInputElement)) {
-        return;
-      }
+    const inputs = findAll(grid, "tbody .dg-selectable input");
+    inputs.forEach((cb) => {
       if (visibleOnly && !cb.offsetWidth) {
         return;
       }

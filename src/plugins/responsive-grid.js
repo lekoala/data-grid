@@ -2,14 +2,15 @@ import BasePlugin from "../core/base-plugin.js";
 import debounce from "../utils/debounce.js";
 import { addClass, find, findAll, removeClass } from "../utils/shortcuts.js";
 
+/**
+ * @param {Array<HTMLElement>} list
+ * @returns {Array<HTMLElement>}
+ */
 function sortByPriority(list) {
-  return Array.from(list).sort(function (a, b) {
-    a = parseInt(a.dataset.responsive) || 1;
-    b = parseInt(b.dataset.responsive) || 1;
-    if (a === b) {
-      b++;
-    }
-    return b - a;
+  return list.sort((a, b) => {
+    const v1 = parseInt(a.dataset.responsive) || 1;
+    const v2 = parseInt(b.dataset.responsive) || 1;
+    return v2 - v1;
   });
 }
 
@@ -72,7 +73,7 @@ const callback = debounce((entries) => {
         if (!field) {
           return;
         }
-        col.dataset.baseWidth = col.offsetWidth;
+        col.dataset.baseWidth = "" + col.offsetWidth;
         grid.hideColumn(field, false);
         changed = true;
 

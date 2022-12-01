@@ -15,7 +15,7 @@ import elementOffset from "./utils/elementOffset.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import interpolate from "./utils/interpolate.js";
 import randstr from "./utils/randstr.js";
-import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute } from "./utils/shortcuts.js";
+import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute, on } from "./utils/shortcuts.js";
 
 /**
  * @typedef Column
@@ -516,31 +516,31 @@ class DataGrid extends BaseElement {
     /**
      * @type {HTMLTableElement}
      */
-    this.table = find(this, "table");
+    this.table = this.querySelector("table");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnFirst = find(this, ".dg-btn-first");
+    this.btnFirst = this.querySelector(".dg-btn-first");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnPrev = find(this, ".dg-btn-prev");
+    this.btnPrev = this.querySelector(".dg-btn-prev");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnNext = find(this, ".dg-btn-next");
+    this.btnNext = this.querySelector(".dg-btn-next");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnLast = find(this, ".dg-btn-last");
+    this.btnLast = this.querySelector(".dg-btn-last");
     /**
      * @type {HTMLSelectElement}
      */
-    this.selectPerPage = find(this, ".dg-select-per-page");
+    this.selectPerPage = this.querySelector(".dg-select-per-page");
     /**
      * @type {HTMLInputElement}
      */
-    this.inputPage = find(this, ".dg-input-page");
+    this.inputPage = this.querySelector(".dg-input-page");
 
     this.getFirst = this.getFirst.bind(this);
     this.getPrev = this.getPrev.bind(this);
@@ -712,8 +712,8 @@ class DataGrid extends BaseElement {
 
     // Store row height for later usage
     if (!this.rowHeight) {
-      const tr = this.querySelector("tbody tr") || this.querySelector("table tr");
-      if (tr instanceof HTMLTableRowElement) {
+      const tr = find(this, "tbody tr") || find(this, "table tr");
+      if (tr) {
         this.rowHeight = tr.offsetHeight;
       }
     }
@@ -730,11 +730,9 @@ class DataGrid extends BaseElement {
   }
 
   reorderChanged() {
-    this.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
+    const headers = findAll(this, "thead tr.dg-head-columns th");
+    headers.forEach((th) => {
       if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
-        return;
-      }
-      if (!(th instanceof HTMLTableRowElement)) {
         return;
       }
       if (this.options.reorder && this.plugins.DraggableHeaders) {
@@ -966,19 +964,17 @@ class DataGrid extends BaseElement {
 
   getFilters() {
     let filters = [];
-    this.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-      if (input instanceof HTMLInputElement) {
-        filters[input.dataset.name] = input.value;
-      }
+    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    inputs.forEach((input) => {
+      filters[input.dataset.name] = input.value;
     });
     return filters;
   }
 
   clearFilters() {
-    this.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-      if (input instanceof HTMLInputElement) {
-        input.value = "";
-      }
+    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    inputs.forEach((input) => {
+      input.value = "";
     });
     this.filterData();
   }
@@ -994,10 +990,8 @@ class DataGrid extends BaseElement {
       this.data = this.originalData.slice();
 
       // Look for rows matching the filters
-      this.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-        if (!(input instanceof HTMLInputElement)) {
-          return;
-        }
+      const inputs = findAll(this, "thead tr.dg-head-filters input");
+      inputs.forEach((input) => {
         let value = input.value;
         if (value) {
           let name = input.dataset.name;
@@ -1322,16 +1316,16 @@ class DataGrid extends BaseElement {
         diff += scrollbarWidth;
       }
       // Remove diff for columns that can afford it
-      tr.querySelectorAll("th[width]").forEach((th) => {
+      const thWithWidth = findAll(tr, "th[width]");
+      thWithWidth.forEach((th) => {
         if (hasClass(th, "dg-not-resizable")) {
           return;
         }
         if (diff <= 0) {
           return;
         }
-        const col = asElement(th);
-        const actualWidth = parseInt(col.getAttribute("width"));
-        const minWidth = col.dataset.minWidth ? parseInt(col.dataset.minWidth) : 0;
+        const actualWidth = parseInt(th.getAttribute("width"));
+        const minWidth = th.dataset.minWidth ? parseInt(th.dataset.minWidth) : 0;
         if (actualWidth > minWidth) {
           let newWidth = actualWidth - diff;
           if (newWidth < minWidth) {
@@ -1542,10 +1536,8 @@ class DataGrid extends BaseElement {
         actionsToggle.classList.add("dg-actions-toggle");
         actionsToggle.innerHTML = "☰";
         td.appendChild(actionsToggle);
-        actionsToggle.addEventListener("click", (ev) => {
-          if (ev.target instanceof HTMLElement) {
-            ev.target.parentElement.classList.toggle("dg-actions-expand");
-          }
+        on(actionsToggle, "click", (ev) => {
+          ev.target.parentElement.classList.toggle("dg-actions-expand");
         });
 
         this.options.actions.forEach((action) => {

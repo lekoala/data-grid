@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import getParentElement from "../utils/getParentElement.js";
-import { asElement, dispatch, findAll, getAttribute, on, setAttribute } from "../utils/shortcuts.js";
+import { dispatch, findAll, getAttribute, on, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Allows to move headers
@@ -13,9 +13,6 @@ class DraggableHeaders extends BasePlugin {
     const grid = this.grid;
     th.draggable = true;
     on(th, "dragstart", (e) => {
-      if (!(e.target instanceof HTMLElement)) {
-        return;
-      }
       if (grid.plugins.ColumnResizer && grid.plugins.ColumnResizer.isResizing && e.preventDefault) {
         e.preventDefault();
         return;
@@ -35,7 +32,7 @@ class DraggableHeaders extends BasePlugin {
       if (e.stopPropagation) {
         e.stopPropagation();
       }
-      const t = asElement(e.target);
+      const t = e.target;
       const target = getParentElement(t, "TH");
       const index = parseInt(e.dataTransfer.getData("text/plain"));
       const targetIndex = parseInt(target.getAttribute("aria-colindex"));

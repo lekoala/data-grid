@@ -1,7 +1,47 @@
 /**
- * @callback FlexibleListener
- * @param {Event&MouseEvent&InputEvent&DragEvent&FocusEvent&KeyboardEvent&PointerEvent} event
+ * @typedef FlexibleHTMLProps
+ * @property {boolean} [checked] (HTMLInputElement)
+ * @property {string} [value] (HTMLInputElement)
+ * @property {number} [rowHeight] (HTMLTableRowElement)
+ *
+ * A flexible type HTMLElement type that does not require using instanceof all over the place
+ * Make sure that your selector is indeed valid
+ * Only includes most commons props
+ * @typedef {HTMLElement & FlexibleHTMLProps} FlexibleHTMLElement
  */
+
+/**
+ * Keep this as reference for easy documentation
+ * @typedef {HTMLElement&HTMLInputElement&HTMLTableRowElement} MixedHTMLElement
+ */
+
+/**
+ * @typedef FlexibleEventProps
+ * @property {FlexibleHTMLElement} target
+ * @property {FlexibleHTMLElement} currentTarget
+ * @property {DataTransfer} [dataTransfer] (DragEvent)
+ * @property {number} [clientX] (MouseEvent)
+ * @property {number} [clientY] (MouseEvent)
+ *
+ * @typedef {Event & FlexibleEventProps} FlexibleEvent
+ */
+
+/**
+ * Keep this as reference for easy documentation
+ * @typedef {Event&MouseEvent&InputEvent&DragEvent&FocusEvent&KeyboardEvent&PointerEvent} MixedEvent
+ */
+
+/**
+ * @callback FlexibleListener
+ * @param {FlexibleEvent} event
+ */
+
+class FlexibleEventListenerObject {
+  /**
+   * @param {FlexibleEvent} e
+   */
+  handleEvent(e) {}
+}
 
 const supportedPassiveTypes = [
   "scroll",
@@ -75,7 +115,7 @@ export function removeAttribute(el, name) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerOrEventListenerObject|FlexibleListener} listener
+ * @param {EventListenerObject|FlexibleListener} listener
  */
 export function on(el, type, listener) {
   el.addEventListener(type, listener, passiveOpts(type));
@@ -84,7 +124,7 @@ export function on(el, type, listener) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerOrEventListenerObject|FlexibleListener} listener
+ * @param {EventListenerObject|FlexibleListener} listener
  */
 export function off(el, type, listener) {
   el.removeEventListener(type, listener, passiveOpts(type));
@@ -93,7 +133,7 @@ export function off(el, type, listener) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerOrEventListenerObject|FlexibleListener} listener
+ * @param {EventListenerObject|FlexibleListener} listener
  */
 export function one(el, type, listener) {
   el.addEventListener(type, listener, {
@@ -154,7 +194,7 @@ export function toggleClass(el, name) {
 /**
  * @param {String|HTMLElement} selector
  * @param {HTMLElement|Document} base
- * @returns {HTMLElement|null}
+ * @returns {FlexibleHTMLElement|null}
  */
 export function $(selector, base = document) {
   if (selector instanceof HTMLElement) {
@@ -166,42 +206,30 @@ export function $(selector, base = document) {
 /**
  * @param {String} selector
  * @param {Element|Document} base
- * @returns {Array<HTMLElement>}
+ * @returns {Array<FlexibleHTMLElement>}
  */
 export function $$(selector, base = document) {
   return Array.from(base.querySelectorAll(selector));
 }
 
 /**
+ * Easily retrieve untyped element
+ * For actual type, prefer use of el.querySelector
  * @param {HTMLElement} el
  * @param {String|HTMLElement} selector
- * @returns {any}
+ * @returns {FlexibleHTMLElement}
  */
 export function find(el, selector) {
   return $(selector, el);
 }
 
 /**
+ * Easily retrieve untyped elements
+ * For actual type, prefer use of el.querySelectorAll
  * @param {Element} el
  * @param {String} selector
- * @returns {Array<HTMLElement>}
+ * @returns {Array<FlexibleHTMLElement>}
  */
 export function findAll(el, selector) {
   return $$(selector, el);
-}
-
-/**
- * @param {any} el
- * @returns {HTMLElement}
- */
-export function asElement(el) {
-  return el instanceof HTMLElement ? el : new HTMLElement();
-}
-
-/**
- * @param {any} el
- * @returns {any}
- */
-export function asAnyElement(el) {
-  return el instanceof HTMLElement ? el : new HTMLElement();
 }

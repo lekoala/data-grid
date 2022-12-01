@@ -1,10 +1,9 @@
 import BasePlugin from "../core/base-plugin.js";
 import elementOffset from "../utils/elementOffset.js";
 import {
-  $$,
   addClass,
-  asElement,
   dispatch,
+  findAll,
   getAttribute,
   hasClass,
   off,
@@ -24,12 +23,12 @@ class ColumnResizer extends BasePlugin {
   }
 
   /**
-   * @param {String} resizeLabel 
+   * @param {String} resizeLabel
    */
   renderResizer(resizeLabel) {
     const grid = this.grid;
     const table = grid.table;
-    const cols = $$("thead tr.dg-head-columns th", grid);
+    const cols = findAll(grid, "thead tr.dg-head-columns th");
 
     cols.forEach((col) => {
       if (hasClass(col, "dg-not-resizable")) {
@@ -93,13 +92,12 @@ class ColumnResizer extends BasePlugin {
 
         this.isResizing = true;
 
-        const target = asElement(e.target);
-        const currentCols = $$(".dg-head-columns th", grid);
-        const visibleCols = Array.from(currentCols).filter((col) => {
+        const target = e.target;
+        const currentCols = findAll(grid, "dg-head-columns th");
+        const visibleCols = currentCols.filter((col) => {
           return !col.hasAttribute("hidden");
         });
-        const columns = Array.from(visibleCols);
-        const columnIndex = columns.findIndex((column) => column == target.parentNode);
+        const columnIndex = visibleCols.findIndex((column) => column == target.parentNode);
         grid.log("resize column");
 
         addClass(resizer, "dg-resizer-active");

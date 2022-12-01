@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import getParentElement from "../utils/getParentElement.js";
-import { asAnyElement, find, off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
+import { find, off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Create a right click menu on the headers
@@ -23,7 +23,7 @@ class ContextMenu extends BasePlugin {
     /**
      * @type {HTMLUListElement}
      */
-    const menu = find(grid, ".dg-menu");
+    const menu = grid.querySelector(".dg-menu");
     const rect = target.getBoundingClientRect();
     let x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -50,7 +50,7 @@ class ContextMenu extends BasePlugin {
     /**
      * @type {HTMLUListElement}
      */
-    const menu = find(grid, ".dg-menu");
+     const menu = grid.querySelector(".dg-menu");
     while (menu.lastChild) {
       menu.removeChild(menu.lastChild);
     }
@@ -68,10 +68,7 @@ class ContextMenu extends BasePlugin {
         checkbox.checked = true;
       }
       on(checkbox, "change", (e) => {
-        /**
-         * @type {HTMLInputElement}
-         */
-        const t = asAnyElement(e.target);
+        const t = e.target;
         if (t.checked) {
           grid.showColumn(field);
         } else {
