@@ -1,0 +1,126 @@
+// CSS Only responsive
+@media only screen and (max-width: 767px) {
+  data-grid[responsive] {
+    // Doesn't make any sense to resize
+    .dg-resizer {
+      display: none;
+    }
+
+    // more compact footer
+    .dg-meta {
+      display: none;
+    }
+    .dg-input-page {
+      display: none;
+    }
+
+    // everything as blocks
+    table,
+    tbody,
+    tfoot,
+    th,
+    td,
+    tr:not([hidden]) {
+      display: block;
+    }
+
+    // use flex for thead
+    thead {
+      display: flex;
+
+      > tr {
+        flex-grow: 1;
+      }
+      th {
+        width: auto;
+      }
+
+      border-bottom: 2px solid var(--header-background);
+    }
+
+    // use pseudo element to display column name
+    tbody {
+      tr {
+        padding: 0;
+        border: 1px solid var(--header-background);
+      }
+      td {
+        border: none;
+        border-bottom: 1px solid var(--row-border-color);
+        position: relative;
+        padding-left: calc(100% - var(--responsive-width) - var(--padding) * 2);
+
+        &:last-child {
+          border: 0;
+        }
+        &:before {
+          position: absolute;
+          top: 0;
+          left: 0;
+          padding: var(--padding);
+          width: calc(100% - var(--responsive-width) - var(--padding) * 4);
+          white-space: nowrap;
+          content: attr(data-name);
+          display: block;
+          font-weight: bold;
+          background-color: var(--header-background);
+        }
+      }
+    }
+
+    // give selectable some room
+    .dg-selectable {
+      height: 28px;
+      margin: 2px 1px 2px;
+    }
+
+    td {
+      &.dg-selectable::before,
+      &.dg-actions::before {
+        padding: 0;
+      }
+      &.dg-selectable label {
+        padding: 5px;
+      }
+      &[role="gridcell"] {
+        min-height: 35px;
+        width: auto;
+      }
+      &[data-name]::before {
+        height: 100%;
+      }
+      &.dg-actions {
+        padding-left: inherit;
+        width: inherit;
+      }
+    }
+    .dg-actions button {
+      width: inherit !important;
+    }
+    tr {
+      &.dg-head-columns {
+        padding: 0;
+        width: calc(100% - var(--responsive-width) - var(--padding) * 4);
+
+        th[role="columnheader button"] {
+          padding: 0.36em 1.3em 0.36em 0.75em;
+        }
+      }
+      &.dg-head-filters {
+        background: transparent;
+        vertical-align: top;
+        padding: 0;
+        width: calc(100% - (100% - var(--responsive-width) - var(--padding) * 4));
+      }
+    }
+    .dg-head-filters th input:not([type="checkbox"], [type="radio"]) {
+      height: 2.25em;
+    }
+    .dg-head-filters th.dg-selectable {
+      background: transparent;
+    }
+    .dg-head-filters th.dg-selectable label::before {
+      content: "Column Filters";
+    }
+  }
+}

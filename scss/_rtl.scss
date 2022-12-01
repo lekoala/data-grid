@@ -1,0 +1,22 @@
+data-grid {
+  &[dir="rtl"] {
+    th,
+    td {
+      text-align: right;
+    }
+    [aria-sort] {
+      padding-left: 1rem;
+      padding-right: 0.5rem;
+    }
+    [aria-sort="none"]:after,
+    [aria-sort="none"]:before,
+    [aria-sort="ascending"]:before,
+    [aria-sort="descending"]:after {
+      left: 0.75rem;
+      right: auto;
+    }
+    tfoot .dg-meta {
+      text-align: left;
+    }
+  }
+}

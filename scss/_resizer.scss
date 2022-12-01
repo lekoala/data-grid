@@ -1,0 +1,32 @@
+data-grid {
+  .dg-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px; // clickable zone
+    z-index: 2;
+    cursor: col-resize;
+    user-select: none;
+
+    &:before {
+      content: "";
+      display: block;
+      position: absolute;
+      top: var(--padding-y-header);
+      height: 1.5rem;
+      right: 0;
+      width: 2px;
+      background: var(--gray-400);
+    }
+    &:hover:before {
+      background: var(--color);
+    }
+    &.dg-resizer-active {
+      border-right: 1px dashed var(--color);
+
+      &:before {
+        background: var(--color);
+      }
+    }
+  }
+}

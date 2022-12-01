@@ -15,7 +15,7 @@ import elementOffset from "./utils/elementOffset.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import interpolate from "./utils/interpolate.js";
 import randstr from "./utils/randstr.js";
-import { asElement, dispatch, find, findAll, hasClass, removeAttribute, setAttribute } from "./utils/shortcuts.js";
+import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute } from "./utils/shortcuts.js";
 
 /**
  * @typedef Column
@@ -1646,14 +1646,14 @@ class DataGrid extends BaseElement {
     // since the server is taking care of actual pagination
     tbody.querySelectorAll("tr").forEach((tr) => {
       if (this.options.server) {
-        tr.removeAttribute("hidden");
+        removeAttribute(tr, "hidden");
         return;
       }
-      index = Number(tr.getAttribute("aria-rowindex"));
+      index = Number(getAttribute(tr, "aria-rowindex"));
       if (index > high || index < low) {
         setAttribute(tr, "hidden", "");
       } else {
-        tr.removeAttribute("hidden");
+        removeAttribute(tr, "hidden");
       }
     });
 
