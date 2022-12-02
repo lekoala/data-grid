@@ -8,6 +8,7 @@ import SelectableRows from "./src/plugins/selectable-rows.js";
 import FixedHeight from "./src/plugins/fixed-height.js";
 import AutosizeColumn from "./src/plugins/autosize-column.js";
 import ResponsiveGrid from "./src/plugins/responsive-grid.js";
+import RowActions from "./src/plugins/row-actions.js";
 
 // Using shorthand property names
 // This make them reserved and keys will be preserved
@@ -21,6 +22,7 @@ DataGrid.registerPlugins({
   FixedHeight,
   AutosizeColumn,
   ResponsiveGrid,
+  RowActions,
 });
 
 customElements.define("data-grid", DataGrid);

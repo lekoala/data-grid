@@ -1,13 +1,10 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, hasClass, on } from "../utils/shortcuts.js";
+import { dispatch, findAll, hasClass } from "../utils/shortcuts.js";
 
 /**
  * Allows to select rows
  */
 class SelectableRows extends BasePlugin {
-  constructor(grid) {
-    super(grid);
-  }
   disconnected() {
     if (this.selectAll) {
       this.selectAll.removeEventListener("change", this);
@@ -104,7 +101,7 @@ class SelectableRows extends BasePlugin {
       return;
     }
     // Delegate listener for change events on input checkboxes
-    on(tbody, "change", this);
+    tbody.addEventListener("change", this);
     // Make sure state is up to date
     tbody.dispatchEvent(new Event("change"));
   }

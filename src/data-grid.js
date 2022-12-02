@@ -13,11 +13,11 @@ import camelize from "./utils/camelize.js";
 import convertArray from "./utils/convertArray.js";
 import elementOffset from "./utils/elementOffset.js";
 import getTextWidth from "./utils/getTextWidth.js";
-import interpolate from "./utils/interpolate.js";
 import randstr from "./utils/randstr.js";
-import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute, on } from "./utils/shortcuts.js";
+import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute } from "./utils/shortcuts.js";
 
 /**
+ * Column definition
  * @typedef Column
  * @property {String} field - the key in the data
  * @property {String} title - the title to display in the header (defaults to "field" if not set)
@@ -31,6 +31,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  */
 
 /**
+ * Row action
  * @typedef Action
  * @property {String} title - the title of the button
  * @property {String} name - the name of the action
@@ -47,6 +48,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
 /** @typedef {import('./plugins/draggable-headers').default} DraggableHeaders */
 /** @typedef {import('./plugins/fixed-height').default} FixedHeight */
 /** @typedef {import('./plugins/responsive-grid').default} ResponsiveGrid */
+/** @typedef {import('./plugins/row-actions').default} RowActions */
 /** @typedef {import('./plugins/selectable-rows').default} SelectableRows */
 /** @typedef {import('./plugins/touch-support').default} TouchSupport */
 
@@ -61,9 +63,11 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {FixedHeight} [FixedHeight] allows having fixed height tables
  * @property {AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
  * @property {ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
+ * @property {RowActions} [RowActions] add action on rows
  */
 
 /**
+ * Parameters to pass along or receive from the server
  * @typedef ServerParams
  * @property {String} serverParams.start
  * @property {String} serverParams.length
@@ -80,6 +84,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  */
 
 /**
+ * Available data grid options, plugins included
  * @typedef Options
  * @property {?String} id Custom id for the grid
  * @property {?String} url An URL with data to display in JSON format
@@ -92,11 +97,11 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {String} dir Dir
  * @property {Array} perPageValues Available per page options
  * @property {Column[]} columns Available columns
- * @property {Action[]} actions Row actions
- * @property {Boolean} collapseActions Group actions
  * @property {Number} defaultPage Starting page
  * @property {Number} perPage Number of records displayed per page
  * @property {Boolean} expand  Allow cell content to spawn over multiple lines
+ * @property {Action[]} actions Row actions (RowActions module)
+ * @property {Boolean} collapseActions Group actions (RowActions module)
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
  * @property {Boolean} selectable Allow selecting rows with a checkbox (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
@@ -108,6 +113,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  */
 
 /**
+ * Available labels that can be translated
  * @typedef Labels
  * @property {String} itemsPerPage
  * @property {String} gotoPage
@@ -123,6 +129,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  */
 
 /**
+ * List of registered plugins
  * @type {Plugins}
  */
 let plugins = {};
@@ -145,6 +152,7 @@ let labels = {
 };
 
 /**
+ * Column definition will update some props on the html element
  * @param {HTMLElement} el
  * @param {Object} definition
  */
@@ -245,6 +253,20 @@ class DataGrid extends BaseElement {
     <ul class="dg-menu" hidden></ul>
 </table>
 `;
+  }
+
+  /**
+   * @returns {Labels}
+   */
+  get labels() {
+    return labels;
+  }
+
+  /**
+   * @returns {Labels}
+   */
+  static getLabels() {
+    return labels;
   }
 
   /**
@@ -663,13 +685,6 @@ class DataGrid extends BaseElement {
 
   hasActions() {
     return this.options.actions.length > 0;
-  }
-
-  get actionClass() {
-    if (this.options.actions.length < 3 && !this.options.collapseActions) {
-      return "dg-actions-" + this.options.actions.length;
-    }
-    return "dg-actions-more";
   }
 
   /**
@@ -1297,13 +1312,8 @@ class DataGrid extends BaseElement {
     }
 
     // Actions
-    if (this.options.actions.length) {
-      let actionsTh = document.createElement("th");
-      setAttribute(actionsTh, "role", "columnheader button");
-      setAttribute(actionsTh, "aria-colindex", this.columnsLength(true));
-      actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
-      actionsTh.tabIndex = 0;
-      tr.appendChild(actionsTh);
+    if (this.options.actions.length && this.plugins.RowActions) {
+      this.plugins.RowActions.makeActionHeader(tr);
     }
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
@@ -1408,13 +1418,8 @@ class DataGrid extends BaseElement {
     });
 
     // Actions
-    if (this.options.actions.length) {
-      let actionsTh = document.createElement("th");
-      actionsTh.setAttribute("role", "columnheader button");
-      actionsTh.setAttribute("aria-colindex", "" + this.columnsLength(true));
-      actionsTh.classList.add(...["dg-actions", this.actionClass]);
-      actionsTh.tabIndex = 0;
-      tr.appendChild(actionsTh);
+    if (this.options.actions.length && this.plugins.RowActions) {
+      this.plugins.RowActions.makeActionFilter(tr);
     }
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
@@ -1524,64 +1529,8 @@ class DataGrid extends BaseElement {
       });
 
       // Actions
-      if (this.options.actions.length) {
-        td = document.createElement("td");
-        setAttribute(td, "role", "gridcell");
-        setAttribute(td, "aria-colindex", this.columnsLength(true));
-        td.classList.add(...["dg-actions", this.actionClass]);
-        td.tabIndex = 0;
-
-        // Add menu toggle
-        let actionsToggle = document.createElement("button");
-        actionsToggle.classList.add("dg-actions-toggle");
-        actionsToggle.innerHTML = "☰";
-        td.appendChild(actionsToggle);
-        on(actionsToggle, "click", (ev) => {
-          ev.target.parentElement.classList.toggle("dg-actions-expand");
-        });
-
-        this.options.actions.forEach((action) => {
-          let button = document.createElement("button");
-          if (action.html) {
-            button.innerHTML = action.html;
-          } else {
-            button.innerText = action.title ?? action.name;
-          }
-          if (action.title) {
-            button.title = action.title;
-          }
-          if (action.url) {
-            button.type = "submit";
-            button.formAction = interpolate(action.url, item);
-          }
-          if (action.class) {
-            button.classList.add(...action.class.split(" "));
-          }
-          const actionHandler = (ev) => {
-            ev.stopPropagation();
-            if (action.confirm) {
-              let c = confirm(labels.areYouSure);
-              if (!c) {
-                ev.preventDefault();
-                return;
-              }
-            }
-            dispatch(this, "action", {
-              data: item,
-              action: action.name,
-            });
-          };
-          button.addEventListener("click", actionHandler);
-          td.appendChild(button);
-
-          // Row action
-          if (action.default) {
-            tr.classList.add("dg-actionable");
-            tr.addEventListener("click", actionHandler);
-          }
-        });
-
-        tr.appendChild(td);
+      if (this.options.actions.length && this.plugins.RowActions) {
+        this.plugins.RowActions.makeActionRow(tr, item);
       }
 
       tbody.appendChild(tr);
