@@ -24,7 +24,7 @@
         "field": "first_name",
         "title": "First Name",
         "width": 200,
-        "class": "wrap-cell"
+        "class": "dg-wrap"
       },
       {
         "field": "last_name",

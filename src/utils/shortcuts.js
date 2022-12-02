@@ -172,7 +172,7 @@ export function hasClass(el, name) {
  * @param {String} name
  */
 export function addClass(el, name) {
-  el.classList.add(name);
+  el.classList.add(...name.split(" "));
 }
 
 /**
@@ -180,7 +180,7 @@ export function addClass(el, name) {
  * @param {String} name
  */
 export function removeClass(el, name) {
-  el.classList.remove(name);
+  el.classList.remove(...name.split(" "));
 }
 
 /**

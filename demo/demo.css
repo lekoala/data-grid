@@ -2,11 +2,6 @@
   text-align: center;
 }
 
-.wrap-cell {
-  white-space: normal;
-  word-break: break-all;
-}
-
 .is-danger {
   background: red;
   color: #fff;

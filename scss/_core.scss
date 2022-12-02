@@ -120,8 +120,6 @@ data-grid {
     &[tabindex] {
       outline: none;
       word-break: normal;
-      // Without this content could flow outside of cell
-      // word-wrap: break-word;
     }
   }
   th {
@@ -138,6 +136,12 @@ data-grid {
     // These two properties keep content on one line
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    // Use this to allow content to flow over multiple lines
+    &.dg-wrap {
+      white-space: normal;
+      word-break: break-all;
+    }
   }
 
   // Expand on multiple lines on row click
@@ -146,10 +150,7 @@ data-grid {
 
     &.dg-expanded td {
       white-space: normal;
-
-      &.dg-actions.dg-actions-2 {
-        white-space: nowrap;
-      }
+      word-break: break-all;
     }
   }
 

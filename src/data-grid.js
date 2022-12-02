@@ -14,7 +14,7 @@ import convertArray from "./utils/convertArray.js";
 import elementOffset from "./utils/elementOffset.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
-import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute } from "./utils/shortcuts.js";
+import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute, addClass } from "./utils/shortcuts.js";
 
 /**
  * Column definition
@@ -161,7 +161,7 @@ function applyColumnDefinition(el, definition) {
     el.setAttribute("width", definition.width);
   }
   if (definition.class) {
-    el.setAttribute("class", definition.class);
+    addClass(el, definition.class);
   }
 }
 
@@ -693,6 +693,7 @@ class DataGrid extends BaseElement {
    */
   columnsLength(visibleOnly = false) {
     let len = 0;
+    // One column per (visible) column
     this.options.columns.forEach((col) => {
       if (visibleOnly && col.hidden) {
         return;
@@ -701,10 +702,12 @@ class DataGrid extends BaseElement {
         len++;
       }
     });
+    // Add one col for selectable checkbox at the beginning
     if (this.options.selectable && this.plugins.SelectableRows) {
       len++;
     }
-    if (this.options.actions.length) {
+    // Add one col for actions at the end
+    if (this.options.actions.length && this.plugins.RowActions) {
       len++;
     }
     return len;
@@ -1461,7 +1464,7 @@ class DataGrid extends BaseElement {
       // Expandable
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
-        tr.addEventListener("click", function () {
+        tr.addEventListener("click", function (ev) {
           this.classList.toggle("dg-expanded");
         });
       }
@@ -1472,8 +1475,13 @@ class DataGrid extends BaseElement {
           console.log(this.options.columns);
         }
         // It should be applied as an attr of the row
-        if (column.attr) {
-          tr.setAttribute(column.attr, item[column.field]);
+        if (column.attr && item[column.field]) {
+          // Special case if we try to write over the class attr
+          if (column.attr === "class") {
+            addClass(tr, item[column.field]);
+          } else {
+            tr.setAttribute(column.attr, item[column.field]);
+          }
           return;
         }
         td = document.createElement("td");

@@ -3,6 +3,7 @@ data-grid {
     text-overflow: initial;
     width: 100px;
     text-align: right;
+    white-space: nowrap !important;
 
     button {
       margin: 0;

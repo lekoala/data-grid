@@ -50,6 +50,7 @@ class RowActions extends BasePlugin {
     actionsToggle.innerHTML = "☰";
     td.appendChild(actionsToggle);
     on(actionsToggle, "click", (ev) => {
+      ev.stopPropagation();
       ev.target.parentElement.classList.toggle("dg-actions-expand");
     });
 

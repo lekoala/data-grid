@@ -33,7 +33,7 @@
         "field": "first_name",
         "title": "First Name",
         "width": 200,
-        "class": "wrap-cell"
+        "class": ""
       },
       {
         "field": "last_name",
@@ -66,7 +66,7 @@
     {
       "id": 1,
       "status": "approved",
-      "first_name": "Cherilynn has a very long name that would overflow the cell",
+      "first_name": "Cherilynn has a very longgggggggggggggggggggggggggggggggggggggggggggggggggggggggggg name that would overflow the cell",
       "last_name": "Quiddington",
       "email": "cquiddington0@a8.net",
       "company": "Twitterwire",
