@@ -25,9 +25,9 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {String} class - class to set on the column (target body or header with th.class or td.class)
  * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} hidden - hide the column
- * @property {Boolean} editable - replace with input
  * @property {Boolean} noSort - allow disabling sort for a given column
- * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0
+ * @property {Boolean} editable - replace with input (EditableColumn module)
+ * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  */
 
 /**
@@ -46,6 +46,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
 /** @typedef {import('./plugins/column-resizer').default} ColumnResizer */
 /** @typedef {import('./plugins/context-menu').default} ContextMenu */
 /** @typedef {import('./plugins/draggable-headers').default} DraggableHeaders */
+/** @typedef {import('./plugins/editable-column').default} EditableColumn */
 /** @typedef {import('./plugins/fixed-height').default} FixedHeight */
 /** @typedef {import('./plugins/responsive-grid').default} ResponsiveGrid */
 /** @typedef {import('./plugins/row-actions').default} RowActions */
@@ -58,6 +59,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {ColumnResizer} [ColumnResizer] resize handlers in the headers
  * @property {ContextMenu} [ContextMenu] menu to show/hide columns
  * @property {DraggableHeaders} [DraggableHeaders] draggable headers columns
+ * @property {EditableColumn} [EditableColumn] draggable headers columns
  * @property {TouchSupport} [TouchSupport] touch swipe
  * @property {SelectableRows} [SelectableRows] create a column with checkboxes to select rows
  * @property {FixedHeight} [FixedHeight] allows having fixed height tables
@@ -1492,40 +1494,8 @@ class DataGrid extends BaseElement {
         td.tabIndex = -1;
 
         // Inline editing
-        if (column.editable) {
-          let input = document.createElement("input");
-          input.type = "text";
-          input.autocomplete = "off";
-          input.spellcheck = false;
-          input.tabIndex = 0;
-          input.classList.add("dg-editable");
-          input.name = this.getAttribute("id").replace("-", "_") + "[" + (i + 1) + "]" + "[" + column.field + "]";
-          input.value = item[column.field];
-          input.dataset.field = column.field;
-
-          input.addEventListener("click", (ev) => ev.stopPropagation());
-          input.addEventListener("keypress", (ev) => {
-            if (ev.type === "keypress") {
-              const key = ev.keyCode || ev.key;
-              if (key === 13 || key === "Enter") {
-                input.blur();
-              }
-            }
-          });
-          input.addEventListener("blur", () => {
-            // Only fire on update
-            if (input.value == item[input.dataset.field]) {
-              return;
-            }
-            // Update underlying data
-            item[input.dataset.field] = input.value;
-            // Notify
-            dispatch(this, "edit", {
-              data: item,
-              value: input.value,
-            });
-          });
-          td.appendChild(input);
+        if (column.editable && this.plugins.EditableColumn) {
+          this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
           td.textContent = item[column.field];
         }
