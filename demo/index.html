@@ -92,8 +92,8 @@
         <data-grid
           id="basic-demo"
           sticky
-          data-per-page="25"
           data-url="demo.json"
+          data-per-page="25"
           data-expand="true"
           data-selectable="true"
           data-menu="true"
@@ -106,16 +106,15 @@
         ></data-grid>
       </div>
       <div class="container g-0 mb-4 mw-100">
-        <p>Fixed height with basic data</p>
+        <p>Fixed height with basic data. This looks odd if you set a height bigger than the number of rows per page. It works better with <code>sticky</code>.</p>
         <data-grid
           id="fixed-demo"
           sticky
-          style="height: 400px"
-          data-expand="false"
-          data-menu="true"
-          data-filter="true"
-          data-per-page="10"
+          style="height:400px"
           data-url="demo-simple.json"
+          data-per-page="25"
+          data-expand="true"
+          data-selectable="true"
           data-debug="true"
         ></data-grid>
       </div>

@@ -22,8 +22,10 @@ class AutosizeColumn extends BasePlugin {
     if (!grid.data.length) {
       return;
     }
-    let v = grid.data[0][column.field].toString();
-    let v2 = grid.data[grid.data.length - 1][column.field].toString();
+    const firstVal = grid.data[0];
+    const lastVal = grid.data[grid.data.length - 1];
+    let v = firstVal[column.field] ? firstVal[column.field].toString() : "";
+    let v2 = lastVal[column.field] ? lastVal[column.field].toString() : "";
     if (v2.length > v.length) {
       v = v2;
     }
@@ -35,6 +37,9 @@ class AutosizeColumn extends BasePlugin {
     } else {
       // Add some extra room to have some spare space
       width = getTextWidth(v + "0000", th);
+    }
+    if (width > max) {
+      width = max;
     }
     if (width < min) {
       width = min;

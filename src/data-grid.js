@@ -108,7 +108,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {Boolean} selectable Allow selecting rows with a checkbox (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
- * @property {Boolean} autoheight Adjust fixed height so that it matches table size (Autoheight module)
+ * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} menu Right click menu on column headers (ContextMenu module)
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
@@ -192,7 +192,6 @@ class DataGrid extends BaseElement {
 
     // Init values
     this.fireEvents = false;
-    this.defaultHeight = 0;
     this.page = this.options.defaultPage || 1;
     this.pages = 0;
     this.meta = {};
@@ -502,12 +501,14 @@ class DataGrid extends BaseElement {
       updatePage--;
     }
     if (updatePage != this.page) {
+      // Triggers pageChanged, which will trigger reload
       this.page = updatePage;
     } else {
+      // Simply reload current page
       this.reload(() => {
-        // Scroll and keep a sizable amount of data displayed
-        if (this.hasAttribute("sticky")) {
-          window.scroll({ top: elementOffset(this.selectPerPage).top - this.defaultHeight });
+        // Preserve distance between top of page and select control if no fixed height
+        if (!this.plugins.FixedHeight || !this.plugins.FixedHeight.hasFixedHeight) {
+          this.selectPerPage.scrollIntoView();
         }
       });
     }
@@ -689,6 +690,10 @@ class DataGrid extends BaseElement {
     return this.options.actions.length > 0;
   }
 
+  isSticky() {
+    return this.hasAttribute("sticky");
+  }
+
   /**
    * @param {Boolean} visibleOnly
    * @returns {Number}
@@ -834,10 +839,6 @@ class DataGrid extends BaseElement {
     }
     this.data = this.originalData = [];
     this.renderBody();
-    // Recompute height if needed
-    if (this.plugins.FixedHeight) {
-      this.plugins.FixedHeight.computeDefaultHeight();
-    }
   }
 
   refresh(cb = null) {
@@ -855,9 +856,6 @@ class DataGrid extends BaseElement {
       // If we load data from the server, we redraw the table body
       // Otherwise, we just need to paginate
       this.options.server || needRender ? this.renderBody() : this.paginate();
-
-      // Recompute height if needed
-      // plugins.FixedHeight && plugins.FixedHeight.computeDefaultHeight(this);
       if (cb) {
         cb();
       }
@@ -1227,9 +1225,6 @@ class DataGrid extends BaseElement {
    */
   createColumnHeaders(thead) {
     // @link https://stackoverflow.com/questions/21064101/understanding-offsetwidth-clientwidth-scrollwidth-and-height-respectively
-    // const computedStyles = getComputedStyle(this.table);
-    // const scrollbarWidth = this.offsetWidth - this.clientWidth - parseInt(computedStyles.borderLeftWidth) - parseInt(computedStyles.borderRightWidth);
-    const scrollbarWidth = 8;
     const availableWidth = this.clientWidth;
     const colMaxWidth = Math.round((availableWidth / this.columnsLength(true)) * 2);
 
@@ -1243,15 +1238,15 @@ class DataGrid extends BaseElement {
     tr.setAttribute("aria-rowindex", "1");
     tr.setAttribute("class", "dg-head-columns");
 
-    if (this.options.selectable && this.plugins.SelectableRows) {
-      this.plugins.SelectableRows.createHeaderCol(tr);
-    }
-
     // We need a real th from the dom to compute the size
     let sampleTh = thead.querySelector("tr.dg-head-columns th");
     if (!sampleTh) {
       sampleTh = document.createElement("th");
       thead.querySelector("tr").appendChild(sampleTh);
+    }
+
+    if (this.options.selectable && this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.createHeaderCol(tr);
     }
 
     // Create columns
@@ -1308,7 +1303,7 @@ class DataGrid extends BaseElement {
     });
 
     // There is too much available width, and we want to avoid fixed layout to split remaining amount
-    if (totalWidth <= availableWidth) {
+    if (totalWidth < availableWidth) {
       const visibleCols = findAll(tr, "th:not([hidden])");
       if (visibleCols.length) {
         const lastCol = visibleCols[visibleCols.length - 1];
@@ -1326,6 +1321,7 @@ class DataGrid extends BaseElement {
     // Once columns are inserted, we have an actual dom to query
     if (thead.offsetWidth > availableWidth) {
       this.log("adjust width to fix size");
+      const scrollbarWidth = this.offsetWidth - this.clientWidth;
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
       if (this.options.responsive && this.plugins.ResponsiveGrid) {
         diff += scrollbarWidth;
@@ -1347,7 +1343,6 @@ class DataGrid extends BaseElement {
             newWidth = minWidth;
           }
           diff -= actualWidth - newWidth;
-
           setAttribute(th, "width", newWidth);
         }
       });
@@ -1575,10 +1570,7 @@ class DataGrid extends BaseElement {
 
     // Store default height and update styles if needed
     if (this.plugins.FixedHeight) {
-      if (this.defaultHeight == 0) {
-        this.plugins.FixedHeight.computeDefaultHeight();
-      }
-      this.plugins.FixedHeight.updateFakeRow();
+      this.plugins.FixedHeight.computeDefaultHeight();
     }
 
     // Enable/disable buttons if shown

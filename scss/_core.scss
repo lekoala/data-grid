@@ -42,7 +42,6 @@ data-grid {
   --gray-900: var(--bs-gray-900, #212529);
 
   display: block;
-  background: var(--header-background);
   min-height: 6rem;
   position: relative;
 
@@ -91,6 +90,8 @@ data-grid {
     width: 100%;
     max-width: 100%;
     white-space: normal;
+    // Background needs to be on the table, not on the component in case the table overflows the component
+    background: var(--header-background);
   }
 
   thead,
