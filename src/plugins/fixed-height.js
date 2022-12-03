@@ -20,26 +20,6 @@ class FixedHeight extends BasePlugin {
 
   /**
    */
-  computeDefaultHeight() {
-    console.log("compute");
-    const grid = this.grid;
-    this.updateFakeRow();
-
-    if (grid.options.autoheight && !this.hasFixedHeight) {
-      const h = 0;
-      // Adjust height so that it fits our table size
-      // grid.style.height = h + "px";
-
-      // If our min height is too big, adjust value
-      const mh = grid.style.minHeight;
-      if (mh && parseInt(mh) > h) {
-        grid.style.minHeight = h + "px";
-      }
-    }
-  }
-
-  /**
-   */
   createFakeRow() {
     const grid = this.grid;
     const tbody = grid.querySelector("tbody");
@@ -56,34 +36,28 @@ class FixedHeight extends BasePlugin {
   }
 
   /**
-   * On last page, adjust height if using fixed height
+   * On last page, use a fake row to push footer down
    */
   updateFakeRow() {
     const grid = this.grid;
-    if (!grid.style.height) {
-      // return;
-    }
     const fakeRow = this.fakeRow;
     if (!fakeRow) {
       return;
     }
 
-    // Find remaining missing height
-    let max = grid.options.perPage * grid.rowHeight;
-    if (this.hasFixedHeight) {
-      let h = parseInt(this.grid.style.height);
-      const thead = this.grid.querySelector("thead").offsetHeight;
-      const tfoot = this.grid.querySelector("tfoot").offsetHeight;
-      if (grid.isSticky()) {
-        max = h + (thead + tfoot);
-      } else {
-        max = h;
-      }
+    // We don't need a fake row if we display everything
+    if (grid.options.perPage > grid.totalRecords()) {
+      return;
+    }
+    // We are not on last page
+    if (grid.page !== grid.totalPages()) {
+      return;
     }
 
+    // Find remaining missing height
+    const max = grid.options.perPage * grid.rowHeight;
     const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
     const fakeHeight = visibleRows > 1 ? max - visibleRows * grid.rowHeight : max;
-console.log(fakeHeight);
     if (fakeHeight > 0) {
       setAttribute(fakeRow, "height", fakeHeight);
       fakeRow.removeAttribute("hidden");

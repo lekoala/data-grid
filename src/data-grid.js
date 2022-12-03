@@ -1206,7 +1206,7 @@ class DataGrid extends BaseElement {
       this.plugins.ColumnResizer.renderResizer(labels.resizeColumn);
     }
 
-    this.dispatchEvent(new CustomEvent("headerRendered"));
+    dispatch(this, "headerRendered");
   }
 
   renderFooter() {
@@ -1526,7 +1526,7 @@ class DataGrid extends BaseElement {
       this.plugins.SelectableRows.shouldSelectAll(tbody);
     }
 
-    this.dispatchEvent(new CustomEvent("bodyRendered"));
+    dispatch(this, "bodyRendered");
   }
 
   paginate() {
@@ -1570,7 +1570,7 @@ class DataGrid extends BaseElement {
 
     // Store default height and update styles if needed
     if (this.plugins.FixedHeight) {
-      this.plugins.FixedHeight.computeDefaultHeight();
+      this.plugins.FixedHeight.updateFakeRow();
     }
 
     // Enable/disable buttons if shown
@@ -1582,13 +1582,19 @@ class DataGrid extends BaseElement {
     }
     tfoot.querySelector(".dg-low").textContent = low.toString();
     tfoot.querySelector(".dg-high").textContent = high.toString();
-    tfoot.querySelector(".dg-total").textContent = this.totalRecords();
+    tfoot.querySelector(".dg-total").textContent = "" + this.totalRecords();
   }
 
+  /**
+   * @returns {number}
+   */
   totalPages() {
     return Math.ceil(this.totalRecords() / this.options.perPage);
   }
 
+  /**
+   * @returns {number}
+   */
   totalRecords() {
     if (this.options.server) {
       return this.meta[this.options.serverParams.metaFilteredKey] || 0;
