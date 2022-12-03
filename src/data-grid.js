@@ -1266,8 +1266,8 @@ class DataGrid extends BaseElement {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      if (this.plugins.ResponsiveGrid) {
-        setAttribute(th, "data-responsive", column.responsive);
+      if (this.plugins.ResponsiveGrid && this.options.responsive) {
+        setAttribute(th, "data-responsive", column.responsive || 0);
       }
       // Make sure the header fits (+ add some room for sort icon if necessary)
       const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
@@ -1469,15 +1469,17 @@ class DataGrid extends BaseElement {
       idx = 0;
       this.options.columns.forEach((column) => {
         if (!column) {
-          console.log(this.options.columns);
+          console.log("Empty column found!", this.options.columns);
         }
         // It should be applied as an attr of the row
-        if (column.attr && item[column.field]) {
-          // Special case if we try to write over the class attr
-          if (column.attr === "class") {
-            addClass(tr, item[column.field]);
-          } else {
-            tr.setAttribute(column.attr, item[column.field]);
+        if (column.attr) {
+          if (item[column.field]) {
+            // Special case if we try to write over the class attr
+            if (column.attr === "class") {
+              addClass(tr, item[column.field]);
+            } else {
+              tr.setAttribute(column.attr, item[column.field]);
+            }
           }
           return;
         }

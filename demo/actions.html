@@ -66,11 +66,15 @@
       <h2>Actions</h2>
       <p>
         The returned response can have a <code>options</code> key alongside its <code>data</code> key. It can be used to configure the grid
-        if nedded.
+        if needed.
       </p>
-      <p></p>
+      <ul>
+        <li>Note the <code>dg-wrap</code> class being assigned on firstname column</li>
+      </ul>
       <div class="container g-0 mb-4 mw-100">
-        <data-grid id="action-demo" data-url="demo-actions.json" data-debug="true" data-expand="true"></data-grid>
+        <div class="resize-me">
+          <data-grid id="action-demo" data-url="demo-actions.json" data-debug="true" data-expand="true" data-responsive="true"></data-grid>
+        </div>
       </div>
 
       <textarea name="" id="debug-zone" cols="30" rows="10" style="width: 100%"></textarea>
