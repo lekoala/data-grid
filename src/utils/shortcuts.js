@@ -97,7 +97,7 @@ export function hasAttribute(el, name) {
  * @param {any} v
  * @param {Boolean} check Prevent setting if attribute is already there
  */
-export function setAttribute(el, name, v, check = false) {
+export function setAttribute(el, name, v = "", check = false) {
   if (check && hasAttribute(el, name)) return;
   el.setAttribute(name, "" + v);
 }
@@ -232,4 +232,8 @@ export function find(el, selector) {
  */
 export function findAll(el, selector) {
   return $$(selector, el);
+}
+
+export function insertAfter(newNode, existingNode) {
+  existingNode.parentNode.insertBefore(newNode, existingNode.nextSibling);
 }

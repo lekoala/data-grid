@@ -28,6 +28,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {Boolean} noSort - allow disabling sort for a given column
  * @property {Boolean} editable - replace with input (EditableColumn module)
  * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
+ * @property {Boolean} responsiveHidden - hidden through responsive module (ResponsiveGrid module)
  */
 
 /**
@@ -112,6 +113,7 @@ import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAt
  * @property {Boolean} menu Right click menu on column headers (ContextMenu module)
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
+ * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  */
 
 /**
@@ -156,14 +158,20 @@ let labels = {
 /**
  * Column definition will update some props on the html element
  * @param {HTMLElement} el
- * @param {Object} definition
+ * @param {Column} column
  */
-function applyColumnDefinition(el, definition) {
-  if (definition.width) {
-    el.setAttribute("width", definition.width);
+function applyColumnDefinition(el, column) {
+  if (column.width) {
+    setAttribute(el, "width", column.width);
   }
-  if (definition.class) {
-    addClass(el, definition.class);
+  if (column.class) {
+    addClass(el, column.class);
+  }
+  if (column.hidden) {
+    setAttribute(el, "hidden", "");
+    if (column.responsiveHidden) {
+      addClass(el, "dg-responsive-hidden");
+    }
   }
 }
 
@@ -336,6 +344,7 @@ class DataGrid extends BaseElement {
       expand: false,
       autoheight: true,
       responsive: false,
+      responsiveToggle: true,
     };
   }
 
@@ -620,6 +629,10 @@ class DataGrid extends BaseElement {
     });
   }
 
+  /**
+   * @param {string} field
+   * @returns {Column}
+   */
   getCol(field) {
     let found = null;
     this.options.columns.forEach((col) => {
@@ -683,13 +696,19 @@ class DataGrid extends BaseElement {
    * @returns {Number}
    */
   startColIndex() {
-    return this.options.selectable && this.plugins.SelectableRows ? 2 : 1;
+    let start = 1;
+    if (this.options.selectable && this.plugins.SelectableRows) {
+      start++;
+    }
+    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      start++;
+    }
+    return start;
   }
 
-  hasActions() {
-    return this.options.actions.length > 0;
-  }
-
+  /**
+   * @returns {Boolean}
+   */
   isSticky() {
     return this.hasAttribute("sticky");
   }
@@ -715,6 +734,10 @@ class DataGrid extends BaseElement {
     }
     // Add one col for actions at the end
     if (this.options.actions.length && this.plugins.RowActions) {
+      len++;
+    }
+    // Add one col for the responsive toggle
+    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
       len++;
     }
     return len;
@@ -1248,6 +1271,9 @@ class DataGrid extends BaseElement {
     if (this.options.selectable && this.plugins.SelectableRows) {
       this.plugins.SelectableRows.createHeaderCol(tr);
     }
+    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      this.plugins.ResponsiveGrid.createHeaderCol(tr);
+    }
 
     // Create columns
     idx = 0;
@@ -1267,7 +1293,7 @@ class DataGrid extends BaseElement {
       }
       th.setAttribute("field", column.field);
       if (this.plugins.ResponsiveGrid && this.options.responsive) {
-        setAttribute(th, "data-responsive", column.responsive || 0);
+        setAttribute(th, "data-responsive", column.responsive || "");
       }
       // Make sure the header fits (+ add some room for sort icon if necessary)
       const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
@@ -1375,9 +1401,11 @@ class DataGrid extends BaseElement {
       tr.setAttribute("hidden", "");
     }
 
-    // Selectable
     if (this.options.selectable && this.plugins.SelectableRows) {
       this.plugins.SelectableRows.createFilterCol(tr);
+    }
+    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      this.plugins.ResponsiveGrid.createFilterCol(tr);
     }
 
     this.options.columns.forEach((column) => {
@@ -1453,9 +1481,11 @@ class DataGrid extends BaseElement {
       setAttribute(tr, "aria-rowindex", i + 1);
       tr.tabIndex = 0;
 
-      // Selectable
       if (this.options.selectable && this.plugins.SelectableRows) {
         this.plugins.SelectableRows.createDataCol(tr);
+      }
+      if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+        this.plugins.ResponsiveGrid.createDataCol(tr);
       }
 
       // Expandable
@@ -1495,9 +1525,6 @@ class DataGrid extends BaseElement {
           this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
           td.textContent = item[column.field];
-        }
-        if (column.hidden) {
-          setAttribute(td, "hidden", "");
         }
         tr.appendChild(td);
         idx++;

@@ -1,3 +1,9 @@
+data-grid {
+  .dg-responsive-table {
+    table-layout: auto;
+  }
+}
+
 // CSS Only responsive
 @media only screen and (max-width: 767px) {
   data-grid[responsive] {

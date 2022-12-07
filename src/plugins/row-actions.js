@@ -7,6 +7,13 @@ import { dispatch, on, setAttribute } from "../utils/shortcuts.js";
  */
 class RowActions extends BasePlugin {
   /**
+   * @returns {Boolean}
+   */
+  hasActions() {
+    return this.grid.options.actions.length > 0;
+  }
+
+  /**
    *
    * @param {HTMLTableRowElement} tr
    */

@@ -1,5 +1,8 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, hasClass } from "../utils/shortcuts.js";
+import { dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
+
+const SELECTABLE_CLASS = "dg-selectable";
+const SELECT_ALL_CLASS = "dg-select-all";
 
 /**
  * Allows to select rows
@@ -19,7 +22,7 @@ class SelectableRows extends BasePlugin {
     const grid = this.grid;
     let selectedData = [];
 
-    const inputs = findAll(grid, "tbody .dg-selectable input:checked");
+    const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input:checked`);
     inputs.forEach((checkbox) => {
       const idx = parseInt(checkbox.dataset.id);
       const item = grid.data[idx - 1];
@@ -44,10 +47,14 @@ class SelectableRows extends BasePlugin {
     if (!grid.options.selectVisibleOnly) {
       return;
     }
-    const inputs = findAll(tbody, "tr[hidden] .dg-selectable input");
+    const inputs = findAll(tbody, `tr[hidden] .${SELECTABLE_CLASS} input`);
     inputs.forEach((input) => {
       input.checked = false;
     });
+  }
+
+  colIndex() {
+    return this.grid.startColIndex() - 2;
   }
 
   /**
@@ -55,15 +62,15 @@ class SelectableRows extends BasePlugin {
    */
   createHeaderCol(tr) {
     let th = document.createElement("th");
-    th.setAttribute("scope", "col");
-    th.setAttribute("role", "columnheader button");
-    th.setAttribute("aria-colindex", "1");
-    th.classList.add(...["dg-selectable", "dg-not-resizable", "dg-not-sortable"]);
+    setAttribute(th, "scope", "col");
+    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "aria-colindex", this.colIndex());
+    th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
 
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
-    this.selectAll.classList.add("dg-select-all");
+    this.selectAll.classList.add(SELECT_ALL_CLASS);
     this.selectAll.addEventListener("change", this);
 
     let label = document.createElement("label");
@@ -80,13 +87,11 @@ class SelectableRows extends BasePlugin {
    */
   createFilterCol(tr) {
     let th = document.createElement("th");
-    th.setAttribute("role", "columnheader button");
-    th.setAttribute("aria-colindex", "1");
-    th.classList.add("dg-selectable");
+    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "aria-colindex", this.colIndex());
+    th.classList.add(SELECTABLE_CLASS);
     th.tabIndex = 0;
 
-    let label = document.createElement("label");
-    th.appendChild(label);
     tr.appendChild(th);
   }
 
@@ -112,9 +117,9 @@ class SelectableRows extends BasePlugin {
   createDataCol(tr) {
     // Create col
     let td = document.createElement("td");
-    td.setAttribute("role", "gridcell button");
-    td.setAttribute("aria-colindex", "1");
-    td.classList.add("dg-selectable");
+    setAttribute(td, "role", "gridcell button");
+    setAttribute(td, "aria-colindex", this.colIndex());
+    td.classList.add(SELECTABLE_CLASS);
 
     // Create input
     let selectOne = document.createElement("input");
@@ -145,9 +150,9 @@ class SelectableRows extends BasePlugin {
    */
   onchange(e) {
     const grid = this.grid;
-    if (hasClass(e.target, "dg-select-all")) {
+    if (hasClass(e.target, SELECT_ALL_CLASS)) {
       const visibleOnly = grid.options.selectVisibleOnly;
-      const inputs = findAll(grid, "tbody .dg-selectable input");
+      const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input`);
       inputs.forEach((cb) => {
         if (visibleOnly && !cb.offsetWidth) {
           return;
@@ -159,10 +164,10 @@ class SelectableRows extends BasePlugin {
         selection: this.getSelection(),
       });
     } else {
-      if (!e.target.closest(".dg-selectable")) {
+      if (!e.target.closest(`${SELECTABLE_CLASS}`)) {
         return;
       }
-      const totalCheckboxes = findAll(grid, "tbody .dg-selectable input[type=checkbox]");
+      const totalCheckboxes = findAll(grid, `tbody .${SELECTABLE_CLASS} input[type=checkbox]`);
       // @ts-ignore
       const totalChecked = totalCheckboxes.filter((n) => n.checked);
       this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
