@@ -6,6 +6,7 @@
 
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
     <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@shoelace-style/shoelace/dist/shoelace.js"></script>
 
     <script type="module" src="../data-grid.min.js"></script>
     <script type="module">
@@ -107,6 +108,10 @@
       </div>
       <div class="container g-0 mb-4 mw-100">
         <p>Fixed height with basic data. This looks odd if you set a height bigger than the number of rows per page. It works better with <code>sticky</code>.</p>
+        <ul>
+          <li><code>transform</code> Can transform row content</li>
+          <li><code>format</code> Use custom formatting (eg: display a flag, use shoelace number formatting)</li>
+        </ul>
         <data-grid
           id="fixed-demo"
           sticky

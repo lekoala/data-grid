@@ -12,6 +12,7 @@ import appendParamsToUrl from "./utils/appendParamsToUrl.js";
 import camelize from "./utils/camelize.js";
 import convertArray from "./utils/convertArray.js";
 import elementOffset from "./utils/elementOffset.js";
+import interpolate from "./utils/interpolate.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
 import {
@@ -37,6 +38,8 @@ import {
  * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} hidden - hide the column
  * @property {Boolean} noSort - allow disabling sort for a given column
+ * @property {String} format - custom data formatting
+ * @property {String} transform - custom value transformation
  * @property {Boolean} editable - replace with input (EditableColumn module)
  * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} responsiveHidden - hidden through responsive module (ResponsiveGrid module)
@@ -311,6 +314,8 @@ class DataGrid extends BaseElement {
       noSort: false,
       responsive: 1,
       responsiveHidden: false,
+      format: "",
+      transform: "",
     };
   }
 
@@ -394,21 +399,24 @@ class DataGrid extends BaseElement {
     // Convert key:value objects to actual columns
     if (typeof columns === "object" && !Array.isArray(columns)) {
       Object.keys(columns).forEach((key) => {
-        let col = this.defaultColumn;
+        let col = Object.assign({}, this.defaultColumn);
         col.title = columns[key];
         col.field = key;
         cols.push(col);
       });
     } else {
       columns.forEach((item) => {
-        let col = this.defaultColumn;
+        let col = Object.assign({}, this.defaultColumn);
         if (typeof item === "string") {
           col.title = item;
           col.field = item;
         } else if (typeof item === "object") {
-          col = item;
+          col = Object.assign(col, item);
           if (!col.field) {
             console.error("Invalid column definition", item);
+          }
+          if (!col.title) {
+            col.title = col.field;
           }
         } else {
           console.error("Column definition must be a string or an object");
@@ -943,7 +951,6 @@ class DataGrid extends BaseElement {
           this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
           // It should return meta data (see metaFilteredKey)
           this.meta = response[this.options.serverParams.metaKey] ?? {};
-
           this.data = response[this.options.serverParams.dataKey];
         }
         this.originalData = this.data.slice();
@@ -952,6 +959,8 @@ class DataGrid extends BaseElement {
         // Make sure we have a proper set of columns
         if (this.options.columns.length === 0 && this.originalData.length) {
           this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
+        } else {
+          this.options.columns = this.convertColumns(this.options.columns);
         }
       })
       .catch((err) => {
@@ -1544,7 +1553,34 @@ class DataGrid extends BaseElement {
         if (column.editable && this.plugins.EditableColumn) {
           this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
-          td.textContent = item[column.field];
+          const v = item[column.field] ?? "";
+          let tv;
+          // TODO: make this modular
+          switch (column.transform) {
+            case "uppercase":
+              tv = v.toUpperCase();
+              break;
+            case "lowercase":
+              tv = v.toLowerCase();
+              break;
+            default:
+              tv = v;
+              break;
+          }
+          if (column.format && tv) {
+            td.innerHTML = interpolate(
+              column.format,
+              Object.assign(
+                {
+                  _v: v,
+                  _tv: tv,
+                },
+                item
+              )
+            );
+          } else {
+            td.textContent = tv;
+          }
         }
         tr.appendChild(td);
         idx++;

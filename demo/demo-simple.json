@@ -1,18 +1,42 @@
-[
-  { "id": 1, "first_name": "Cherilyn", "last_name": "Quiddington", "some_col": "", "some_other_col": "" },
-  { "id": 2, "first_name": "Tynan", "last_name": "Kintish" },
-  { "id": 3, "first_name": "Barbabas", "last_name": "Frean" },
-  { "id": 4, "first_name": "Sher", "last_name": "Scemp" },
-  { "id": 5, "first_name": "Bell", "last_name": "O'Looney" },
-  { "id": 6, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 7, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 8, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 9, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 10, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 11, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 12, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 13, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 14, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 15, "first_name": "Shaylah", "last_name": "MacGeaney" },
-  { "id": 16, "first_name": "Shaylah", "last_name": "MacGeaney" }
-]
+{
+  "options": {
+    "columns": [
+      {
+        "field": "id"
+      },
+      {
+        "field": "first_name"
+      },
+      {
+        "field": "last_name"
+      },
+      {
+        "field": "country",
+        "transform": "lowercase",
+        "format": "<l-i name='{_tv}' set='fl'></l-i>"
+      },
+      {
+        "field": "income",
+        "format": "<sl-format-number type='currency' currency='EUR' value='{_v}'></sl-format-number>"
+      }
+    ]
+  },
+  "data": [
+    { "id": 1, "first_name": "Cherilyn", "last_name": "Quiddington", "country": "BE", "income": "35000" },
+    { "id": 2, "first_name": "Tynan", "last_name": "Kintish", "country": "FR", "income": "50000" },
+    { "id": 3, "first_name": "Barbabas", "last_name": "Frean" },
+    { "id": 4, "first_name": "Sher", "last_name": "Scemp" },
+    { "id": 5, "first_name": "Bell", "last_name": "O'Looney" },
+    { "id": 6, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 7, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 8, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 9, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 10, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 11, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 12, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 13, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 14, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 15, "first_name": "Shaylah", "last_name": "MacGeaney" },
+    { "id": 16, "first_name": "Shaylah", "last_name": "MacGeaney" }
+  ]
+}
