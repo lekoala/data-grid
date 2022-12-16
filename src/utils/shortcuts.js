@@ -234,6 +234,31 @@ export function findAll(el, selector) {
   return $$(selector, el);
 }
 
+/**
+ * @param {*} el
+ * @returns {FlexibleHTMLElement}
+ */
+export function el(el) {
+  return el;
+}
+
+/**
+ * @param {string} tagName
+ * @param {HTMLElement} parent
+ * @returns {FlexibleHTMLElement}
+ */
+export function ce(tagName, parent = null) {
+  const el = document.createElement(tagName);
+  if (parent) {
+    parent.appendChild(el);
+  }
+  return el;
+}
+
+/**
+ * @param {HTMLElement} newNode
+ * @param {HTMLElement} existingNode
+ */
 export function insertAfter(newNode, existingNode) {
   existingNode.parentNode.insertBefore(newNode, existingNode.nextSibling);
 }

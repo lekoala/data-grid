@@ -128,6 +128,7 @@ class SelectableRows extends BasePlugin {
     selectOne.type = "checkbox";
     // Label need to take full space thanks to css to make the whole cell clickable
     let label = document.createElement("label");
+    label.classList.add('dg-clickable-cell');
     label.appendChild(selectOne);
     td.appendChild(label);
 

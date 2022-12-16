@@ -1,6 +1,23 @@
 data-grid {
+  .dg-responsive-toggle {
+    padding: 0;
+    text-align: center;
+  }
+  .dg-responsive-child-row > td {
+    padding: 0;
+  }
   .dg-responsive-table {
     table-layout: auto;
+    border: 0;
+
+    td,
+    th {
+      white-space: normal;
+    }
+
+    th {
+      max-width: 40%;
+    }
   }
 }
 

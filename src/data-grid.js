@@ -14,7 +14,18 @@ import convertArray from "./utils/convertArray.js";
 import elementOffset from "./utils/elementOffset.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
-import { dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute, addClass } from "./utils/shortcuts.js";
+import {
+  dispatch,
+  find,
+  findAll,
+  hasClass,
+  removeAttribute,
+  getAttribute,
+  setAttribute,
+  addClass,
+  toggleClass,
+  on,
+} from "./utils/shortcuts.js";
 
 /**
  * Column definition
@@ -1491,8 +1502,15 @@ class DataGrid extends BaseElement {
       // Expandable
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
-        tr.addEventListener("click", function (ev) {
-          this.classList.toggle("dg-expanded");
+
+        on(tr, "click", (ev) => {
+          if (this.plugins.ResponsiveGrid) {
+            this.plugins.ResponsiveGrid.blockObserver();
+          }
+          toggleClass(ev.currentTarget, "dg-expanded");
+          if (this.plugins.ResponsiveGrid) {
+            this.plugins.ResponsiveGrid.unblockObserver();
+          }
         });
       }
 

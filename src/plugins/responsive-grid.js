@@ -1,8 +1,10 @@
 import BasePlugin from "../core/base-plugin.js";
 import debounce from "../utils/debounce.js";
-import { addClass, find, findAll, hasClass, insertAfter, removeAttribute, removeClass, setAttribute } from "../utils/shortcuts.js";
+import { addClass, ce, find, findAll, hasClass, insertAfter, removeAttribute, removeClass, setAttribute } from "../utils/shortcuts.js";
 
 const RESPONSIVE_CLASS = "dg-responsive";
+
+let obsTo;
 
 /**
  * @param {Array<HTMLElement>} list
@@ -28,7 +30,7 @@ const callback = debounce((entries) => {
     // @ts-ignore
     const grid = entry.target;
     const table = grid.table;
-    if (grid.plugins.ResponsiveGrid.blockObserver) {
+    if (grid.plugins.ResponsiveGrid.observerBlocked) {
       return;
     }
     // check inlineSize (width) and not blockSize (height)
@@ -156,16 +158,19 @@ class ResponsiveGrid extends BasePlugin {
   constructor(grid) {
     super(grid);
 
-    this.blockObserver = false;
+    this.observerBlocked = false;
   }
+
   connected() {
     if (this.grid.options.responsive) {
       this.observe();
     }
   }
+
   disconnected() {
     this.unobserve();
   }
+
   observe() {
     if (!this.grid.options.responsive) {
       return;
@@ -174,10 +179,24 @@ class ResponsiveGrid extends BasePlugin {
     this.grid.style.display = "block"; // Otherwise resize doesn't happen
     this.grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
   }
+
   unobserve() {
     resizeObserver.unobserve(this.grid);
     this.grid.style.display = "unset";
     this.grid.style.overflowX = "unset";
+  }
+
+  blockObserver() {
+    this.observerBlocked = true;
+    if (obsTo) {
+      clearTimeout(obsTo);
+    }
+  }
+
+  unblockObserver() {
+    obsTo = setTimeout(() => {
+      this.observerBlocked = false;
+    }, 200); // more than debounce
   }
 
   /**
@@ -204,15 +223,13 @@ class ResponsiveGrid extends BasePlugin {
     if (!this.grid.options.responsiveToggle) {
       return;
     }
-    let th = document.createElement("th");
+    let th = ce("th", tr);
     setAttribute(th, "scope", "col");
     setAttribute(th, "role", "columnheader button");
     setAttribute(th, "aria-colindex", this.colIndex());
-    th.classList.add(...[RESPONSIVE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
+    setAttribute(th, "width", "40");
+    th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
-
-    th.setAttribute("width", "40");
-    tr.appendChild(th);
   }
 
   /**
@@ -222,13 +239,11 @@ class ResponsiveGrid extends BasePlugin {
     if (!this.grid.options.responsiveToggle) {
       return;
     }
-    let th = document.createElement("th");
+    let th = ce("th", tr);
     setAttribute(th, "role", "columnheader button");
     setAttribute(th, "aria-colindex", this.colIndex());
-    th.classList.add(RESPONSIVE_CLASS);
+    th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
     th.tabIndex = 0;
-
-    tr.appendChild(th);
   }
 
   /**
@@ -242,21 +257,43 @@ class ResponsiveGrid extends BasePlugin {
     let td = document.createElement("td");
     setAttribute(td, "role", "gridcell button");
     setAttribute(td, "aria-colindex", this.colIndex());
-    td.classList.add(RESPONSIVE_CLASS);
-    td.style.padding = "0";
-    td.style.textAlign = "center";
+    td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
 
     // Create icon
-    td.innerHTML = `<svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+    td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
   <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>
 <svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg>`;
+</svg></div>`;
     tr.appendChild(td);
 
     td.addEventListener("click", this);
+    td.addEventListener("mousedown", this);
+  }
+
+  computeLabelWidth() {
+    let idealWidth = 0;
+    let consideredCol = 0;
+    while (idealWidth < 120) {
+      consideredCol++;
+      const hCol = find(this.grid, `.dg-head-columns th[aria-colindex="${consideredCol}"]`);
+      if (hCol) {
+        idealWidth += hCol.offsetWidth;
+      } else {
+        break;
+      }
+    }
+    return idealWidth;
+  }
+
+  /**
+   * @param {Event} ev
+   */
+  onmousedown(ev) {
+    // Avoid selection through double click
+    ev.preventDefault();
   }
 
   /**
@@ -278,7 +315,8 @@ class ResponsiveGrid extends BasePlugin {
     const open = find(td, `.${RESPONSIVE_CLASS}-open`);
     const close = find(td, `.${RESPONSIVE_CLASS}-close`);
 
-    this.blockObserver = true;
+    this.blockObserver();
+
     const isExpanded = hasClass(tr, `${RESPONSIVE_CLASS}-expanded`);
     if (isExpanded) {
       removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
@@ -301,30 +339,35 @@ class ResponsiveGrid extends BasePlugin {
       close.style.display = "unset";
 
       // Create a child row and move rows into it
-      const childRow = document.createElement("tr");
+      const childRow = ce("tr");
       insertAfter(childRow, tr);
       addClass(childRow, `${RESPONSIVE_CLASS}-child-row`);
-      const childRowTd = document.createElement("td");
-      setAttribute(childRowTd, "colspan", this.grid.columnsLength(true));
-      childRow.appendChild(childRowTd);
 
-      const childTable = document.createElement("table");
+      const childRowTd = ce("td", childRow);
+      setAttribute(childRowTd, "colspan", this.grid.columnsLength(true));
+
+      const childTable = ce("table", childRowTd);
       addClass(childTable, `${RESPONSIVE_CLASS}-table`);
-      childRowTd.appendChild(childTable);
 
       const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
+      const idealWidth = this.computeLabelWidth();
       hiddenCols.forEach((col) => {
-        const childTableRow = document.createElement("tr");
-        childTable.appendChild(childTableRow);
-        childTableRow.appendChild(col);
+        const childTableRow = ce("tr", childTable);
 
+        // Add label
+        const label = this.grid.getColProp(col.dataset.name, "title");
+        const labelCol = ce("th", childTableRow);
+        // It looks much better when aligned with an actual col
+        labelCol.style.width = `${idealWidth}px`;
+        labelCol.innerHTML = label;
+
+        // Add actual row
+        childTableRow.appendChild(col);
         removeAttribute(col, "hidden");
       });
     }
 
-    setTimeout(() => {
-      this.blockObserver = false;
-    });
+    this.unblockObserver();
   }
 }
 

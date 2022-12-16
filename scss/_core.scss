@@ -155,6 +155,19 @@ data-grid {
     }
   }
 
+  .dg-clickable-cell {
+    margin: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   // Stick headers
   // https://css-tricks.com/making-tables-with-sticky-header-and-footers-got-a-bit-easier/
   &[sticky] table {
