@@ -1536,6 +1536,7 @@ class DataGrid extends BaseElement {
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startColIndex());
         applyColumnDefinition(td, column);
+        // This is required for pure css responsive layout
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
 

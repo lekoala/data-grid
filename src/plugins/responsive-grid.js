@@ -373,7 +373,7 @@ class ResponsiveGrid extends BasePlugin {
         const childTableRow = ce("tr", childTable);
 
         // Add label
-        const label = this.grid.getColProp(col.dataset.name, "title");
+        const label = col.dataset.name;
         const labelCol = ce("th", childTableRow);
         // It looks much better when aligned with an actual col
         labelCol.style.width = `${idealWidth}px`;
