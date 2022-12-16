@@ -42,6 +42,7 @@ const callback = debounce((entries) => {
     }, 0);
     const diff = (realTableWidth || tableWidth) - size - 1;
     const minWidth = 50;
+    const prevAction = grid.plugins.ResponsiveGrid.prevAction;
     // We have an array with the columns to show/hide are in order, most important first
     const headerCols = sortByPriority(
       findAll(grid.headerRow, "th[field]")
@@ -57,6 +58,10 @@ const callback = debounce((entries) => {
 
     // The table is too big when diff has a high value, otherwise it will be like -1 or -2
     if (diff > 0) {
+      if (prevAction === "show") {
+        return;
+      }
+      grid.plugins.ResponsiveGrid.prevAction = "hide";
       let remaining = diff;
       let cols = headerCols.filter((col) => {
         return !col.hasAttribute("hidden") && col.hasAttribute("data-responsive");
@@ -81,6 +86,7 @@ const callback = debounce((entries) => {
           return;
         }
         col.dataset.baseWidth = "" + col.offsetWidth;
+
         grid.hideColumn(field, false);
         grid.setColProp(field, "responsiveHidden", true);
         changed = true;
@@ -89,13 +95,19 @@ const callback = debounce((entries) => {
         remaining = Math.round(remaining);
       });
     } else {
+      if (prevAction === "hide") {
+        return;
+      }
+      grid.plugins.ResponsiveGrid.prevAction = "show";
+
       const requiredWidth =
         headerCols
           .filter((col) => {
             return !col.hasAttribute("hidden");
           })
           .reduce((result, col) => {
-            return result + parseInt(col.dataset.minWidth);
+            const width = col.dataset.minWidth ? parseInt(col.dataset.minWidth) : col.offsetWidth;
+            return result + width;
           }, 0) + minWidth; // Add an offset so that inserting column is smoother
 
       // Compute available width to insert columns
@@ -123,6 +135,7 @@ const callback = debounce((entries) => {
           if (!field) {
             return;
           }
+
           grid.showColumn(field, false);
           grid.setColProp(field, "responsiveHidden", false);
           changed = true;
@@ -146,6 +159,10 @@ const callback = debounce((entries) => {
     if (changed) {
       grid.renderTable();
     }
+    // Prevent resize loop
+    setTimeout(() => {
+      grid.plugins.ResponsiveGrid.prevAction = null;
+    }, 1000);
     grid.table.style.visibility = "visible";
   }
 }, 100);
@@ -159,6 +176,7 @@ class ResponsiveGrid extends BasePlugin {
     super(grid);
 
     this.observerBlocked = false;
+    this.prevAction = null;
   }
 
   connected() {

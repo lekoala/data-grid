@@ -28,7 +28,7 @@ export default function normalizeData(v) {
       }
       return JSON.parse(decodeURIComponent(v));
     } catch {
-      console.log("Failed to parse " + v);
+      console.error("Failed to parse " + v);
       return {};
     }
   }

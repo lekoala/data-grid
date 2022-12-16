@@ -310,6 +310,7 @@ class DataGrid extends BaseElement {
       editable: false,
       noSort: false,
       responsive: 1,
+      responsiveHidden: false,
     };
   }
 
@@ -1341,7 +1342,7 @@ class DataGrid extends BaseElement {
 
     // There is too much available width, and we want to avoid fixed layout to split remaining amount
     if (totalWidth < availableWidth) {
-      const visibleCols = findAll(tr, "th:not([hidden])");
+      const visibleCols = findAll(tr, "th:not([hidden],.dg-not-resizable)");
       if (visibleCols.length) {
         const lastCol = visibleCols[visibleCols.length - 1];
         removeAttribute(lastCol, "width");
@@ -1357,7 +1358,7 @@ class DataGrid extends BaseElement {
 
     // Once columns are inserted, we have an actual dom to query
     if (thead.offsetWidth > availableWidth) {
-      this.log("adjust width to fix size");
+      this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
       const scrollbarWidth = this.offsetWidth - this.clientWidth;
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
       if (this.options.responsive && this.plugins.ResponsiveGrid) {
@@ -1517,7 +1518,7 @@ class DataGrid extends BaseElement {
       idx = 0;
       this.options.columns.forEach((column) => {
         if (!column) {
-          console.log("Empty column found!", this.options.columns);
+          console.error("Empty column found!", this.options.columns);
         }
         // It should be applied as an attr of the row
         if (column.attr) {
