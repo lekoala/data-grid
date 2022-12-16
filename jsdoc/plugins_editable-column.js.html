@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: plugins/autosize-column.js</title>
+    <title>JSDoc: Source: plugins/editable-column.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: plugins/autosize-column.js</h1>
+    <h1 class="page-title">Source: plugins/editable-column.js</h1>
 
     
 
@@ -27,57 +27,62 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
-import getTextWidth from "../utils/getTextWidth.js";
-import { getAttribute, hasAttribute, setAttribute } from "../utils/shortcuts.js";
+import { dispatch } from "../utils/shortcuts.js";
 
 /**
- * Allows to resize columns
+ * Make editable inputs in rows
  */
-class AutosizeColumn extends BasePlugin {
+class EditableColumn extends BasePlugin {
   /**
-   * Autosize col based on column data
-   * @param {HTMLTableCellElement} th
+   *
+   * @param {HTMLTableCellElement} td
    * @param {import("../data-grid").Column} column
-   * @param {Number} min
-   * @param {Number} max
-   * @returns {Number}
+   * @param {Object} item
+   * @param {number} i
    */
-  computeSize(th, column, min, max) {
-    const grid = this.grid;
-    if (hasAttribute(th, "width")) {
-      return getAttribute(th, "width");
-    }
-    if (!grid.data.length) {
-      return;
-    }
-    const firstVal = grid.data[0];
-    const lastVal = grid.data[grid.data.length - 1];
-    let v = firstVal[column.field] ? firstVal[column.field].toString() : "";
-    let v2 = lastVal[column.field] ? lastVal[column.field].toString() : "";
-    if (v2.length > v.length) {
-      v = v2;
-    }
-    let width = 0;
-    if (v.length &lt;= 6) {
-      width = min;
-    } else if (v.length > 50) {
-      width = max;
-    } else {
-      // Add some extra room to have some spare space
-      width = getTextWidth(v + "0000", th);
-    }
-    if (width > max) {
-      width = max;
-    }
-    if (width &lt; min) {
-      width = min;
-    }
-    setAttribute(th, "width", width);
-    return width;
+  makeEditableInput(td, column, item, i) {
+    const gridId = this.grid.getAttribute("id");
+    let input = document.createElement("input");
+    input.type = "text";
+    input.autocomplete = "off";
+    input.spellcheck = false;
+    input.tabIndex = 0;
+    input.classList.add("dg-editable");
+    input.name = gridId.replace("-", "_") + "[" + (i + 1) + "]" + "[" + column.field + "]";
+    input.value = item[column.field];
+    input.dataset.field = column.field;
+
+    // Prevent row action
+    input.addEventListener("click", (ev) => ev.stopPropagation());
+    // Enter validates edit
+    input.addEventListener("keypress", (ev) => {
+      if (ev.type === "keypress") {
+        const key = ev.keyCode || ev.key;
+        if (key === 13 || key === "Enter") {
+          input.blur();
+          ev.preventDefault();
+        }
+      }
+    });
+    // Save on blur
+    input.addEventListener("blur", () => {
+      // Only fire on update
+      if (input.value == item[input.dataset.field]) {
+        return;
+      }
+      // Update underlying data
+      item[input.dataset.field] = input.value;
+      // Notify
+      dispatch(this.grid, "edit", {
+        data: item,
+        value: input.value,
+      });
+    });
+    td.appendChild(input);
   }
 }
 
-export default AutosizeColumn;
+export default EditableColumn;
 </code></pre>
         </article>
     </section>

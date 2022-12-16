@@ -93,7 +93,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_column-resizer.js.html">plugins/column-resizer.js</a>, <a href="plugins_column-resizer.js.html#line20">line 20</a>
+        <a href="plugins_column-resizer.js.html">plugins/column-resizer.js</a>, <a href="plugins_column-resizer.js.html#line19">line 19</a>
     </li></ul></dd>
     
 
@@ -149,7 +149,7 @@
     
 
     
-    <h4 class="name" id=".connected"><span class="type-signature">(static) </span>connected<span class="signature">(grid)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="renderResizer"><span class="type-signature"></span>renderResizer<span class="signature">(resizeLabel)</span><span class="type-signature"></span></h4>
     
 
     
@@ -189,13 +189,13 @@
 
         <tr>
             
-                <td class="name"><code>grid</code></td>
+                <td class="name"><code>resizeLabel</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">default</span>
+<span class="param-type">String</span>
 
 
             
@@ -246,140 +246,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_column-resizer.js.html">plugins/column-resizer.js</a>, <a href="plugins_column-resizer.js.html#line27">line 27</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id=".renderResizer"><span class="type-signature">(static) </span>renderResizer<span class="signature">(grid)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>grid</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">default</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_column-resizer.js.html">plugins/column-resizer.js</a>, <a href="plugins_column-resizer.js.html#line33">line 33</a>
+        <a href="plugins_column-resizer.js.html">plugins/column-resizer.js</a>, <a href="plugins_column-resizer.js.html#line28">line 28</a>
     </li></ul></dd>
     
 
@@ -425,13 +292,13 @@
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -40,12 +40,24 @@ import appendParamsToUrl from "./utils/appendParamsToUrl.js";
 import camelize from "./utils/camelize.js";
 import convertArray from "./utils/convertArray.js";
 import elementOffset from "./utils/elementOffset.js";
-import getTextWidth from "./utils/getTextWidth.js";
 import interpolate from "./utils/interpolate.js";
+import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
-import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttribute, setAttribute } from "./utils/shortcuts.js";
+import {
+  dispatch,
+  find,
+  findAll,
+  hasClass,
+  removeAttribute,
+  getAttribute,
+  setAttribute,
+  addClass,
+  toggleClass,
+  on,
+} from "./utils/shortcuts.js";
 
 /**
+ * Column definition
  * @typedef Column
  * @property {String} field - the key in the data
  * @property {String} title - the title to display in the header (defaults to "field" if not set)
@@ -53,12 +65,16 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
  * @property {String} class - class to set on the column (target body or header with th.class or td.class)
  * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} hidden - hide the column
- * @property {Boolean} editable - replace with input
  * @property {Boolean} noSort - allow disabling sort for a given column
- * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0
+ * @property {String} format - custom data formatting
+ * @property {String} transform - custom value transformation
+ * @property {Boolean} editable - replace with input (EditableColumn module)
+ * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
+ * @property {Boolean} responsiveHidden - hidden through responsive module (ResponsiveGrid module)
  */
 
 /**
+ * Row action
  * @typedef Action
  * @property {String} title - the title of the button
  * @property {String} name - the name of the action
@@ -73,8 +89,10 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
 /** @typedef {import('./plugins/column-resizer').default} ColumnResizer */
 /** @typedef {import('./plugins/context-menu').default} ContextMenu */
 /** @typedef {import('./plugins/draggable-headers').default} DraggableHeaders */
+/** @typedef {import('./plugins/editable-column').default} EditableColumn */
 /** @typedef {import('./plugins/fixed-height').default} FixedHeight */
 /** @typedef {import('./plugins/responsive-grid').default} ResponsiveGrid */
+/** @typedef {import('./plugins/row-actions').default} RowActions */
 /** @typedef {import('./plugins/selectable-rows').default} SelectableRows */
 /** @typedef {import('./plugins/touch-support').default} TouchSupport */
 
@@ -84,14 +102,17 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
  * @property {ColumnResizer} [ColumnResizer] resize handlers in the headers
  * @property {ContextMenu} [ContextMenu] menu to show/hide columns
  * @property {DraggableHeaders} [DraggableHeaders] draggable headers columns
+ * @property {EditableColumn} [EditableColumn] draggable headers columns
  * @property {TouchSupport} [TouchSupport] touch swipe
  * @property {SelectableRows} [SelectableRows] create a column with checkboxes to select rows
  * @property {FixedHeight} [FixedHeight] allows having fixed height tables
  * @property {AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
  * @property {ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
+ * @property {RowActions} [RowActions] add action on rows
  */
 
 /**
+ * Parameters to pass along or receive from the server
  * @typedef ServerParams
  * @property {String} serverParams.start
  * @property {String} serverParams.length
@@ -108,6 +129,7 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
  */
 
 /**
+ * Available data grid options, plugins included
  * @typedef Options
  * @property {?String} id Custom id for the grid
  * @property {?String} url An URL with data to display in JSON format
@@ -120,22 +142,24 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
  * @property {String} dir Dir
  * @property {Array} perPageValues Available per page options
  * @property {Column[]} columns Available columns
- * @property {Action[]} actions Row actions
- * @property {Boolean} collapseActions Group actions
  * @property {Number} defaultPage Starting page
  * @property {Number} perPage Number of records displayed per page
  * @property {Boolean} expand  Allow cell content to spawn over multiple lines
+ * @property {Action[]} actions Row actions (RowActions module)
+ * @property {Boolean} collapseActions Group actions (RowActions module)
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
  * @property {Boolean} selectable Allow selecting rows with a checkbox (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
- * @property {Boolean} autoheight Adjust fixed height so that it matches table size (Autoheight module)
+ * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} menu Right click menu on column headers (ContextMenu module)
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
+ * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  */
 
 /**
+ * Available labels that can be translated
  * @typedef Labels
  * @property {String} itemsPerPage
  * @property {String} gotoPage
@@ -151,6 +175,7 @@ import { asElement, dispatch, find, findAll, hasClass, removeAttribute, getAttri
  */
 
 /**
+ * List of registered plugins
  * @type {Plugins}
  */
 let plugins = {};
@@ -173,6 +198,26 @@ let labels = {
 };
 
 /**
+ * Column definition will update some props on the html element
+ * @param {HTMLElement} el
+ * @param {Column} column
+ */
+function applyColumnDefinition(el, column) {
+  if (column.width) {
+    setAttribute(el, "width", column.width);
+  }
+  if (column.class) {
+    addClass(el, column.class);
+  }
+  if (column.hidden) {
+    setAttribute(el, "hidden", "");
+    if (column.responsiveHidden) {
+      addClass(el, "dg-responsive-hidden");
+    }
+  }
+}
+
+/**
  */
 class DataGrid extends BaseElement {
   _ready() {
@@ -189,6 +234,7 @@ class DataGrid extends BaseElement {
      */
     this.originalData = [];
 
+    // Make the IDE happy
     /**
      * @type {Options}
      */
@@ -196,10 +242,18 @@ class DataGrid extends BaseElement {
 
     // Init values
     this.fireEvents = false;
-    this.defaultHeight = 0;
     this.page = this.options.defaultPage || 1;
     this.pages = 0;
     this.meta = {};
+    /**
+     * @type {Plugins}
+     */
+    this.plugins = {};
+    // Init plugins
+    for (const [pluginName, pluginClass] of Object.entries(plugins)) {
+      // @ts-ignore until we can set typeof import ...
+      this.plugins[pluginName] = new pluginClass(this);
+    }
 
     // Expose options as observed attributes in the dom
     // Do it when fireEvents is disabled to avoid firing change callbacks
@@ -208,41 +262,6 @@ class DataGrid extends BaseElement {
         setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
       }
     }
-
-    // Some IDE types stuff
-
-    /**
-     * @type {Column[]}
-     */
-    this.columns = this.columns ?? null;
-    /**
-     * @type {Column[]}
-     */
-    this.actions = this.actions ?? null;
-
-    // selectable-rows.js
-    /**
-     * @type {HTMLInputElement}
-     */
-    this.selectAll = null;
-    /**
-     * @type {EventListenerOrEventListenerObject}
-     */
-    this.toggleSelectAll = null;
-
-    // touch-support.js
-    this.touch = null;
-    /**
-     * @type {EventListenerOrEventListenerObject}
-     */
-    this.touchstart = null;
-    /**
-     * @type {EventListenerOrEventListenerObject}
-     */
-    this.touchmove = null;
-
-    // column-resizer.js
-    this.isResizing = false;
   }
 
   static template() {
@@ -288,6 +307,20 @@ class DataGrid extends BaseElement {
   }
 
   /**
+   * @returns {Labels}
+   */
+  get labels() {
+    return labels;
+  }
+
+  /**
+   * @returns {Labels}
+   */
+  static getLabels() {
+    return labels;
+  }
+
+  /**
    * @param {Object} v
    */
   static setLabels(v) {
@@ -308,6 +341,9 @@ class DataGrid extends BaseElement {
       editable: false,
       noSort: false,
       responsive: 1,
+      responsiveHidden: false,
+      format: "",
+      transform: "",
     };
   }
 
@@ -353,6 +389,7 @@ class DataGrid extends BaseElement {
       expand: false,
       autoheight: true,
       responsive: false,
+      responsiveToggle: true,
     };
   }
 
@@ -382,19 +419,6 @@ class DataGrid extends BaseElement {
   }
 
   /**
-   * @param {HTMLElement} el
-   * @param {Object} definition
-   */
-  static applyColumnDefinition(el, definition) {
-    if (definition.width) {
-      el.setAttribute("width", definition.width);
-    }
-    if (definition.class) {
-      el.setAttribute("class", definition.class);
-    }
-  }
-
-  /**
    * @param {Object|Array} columns
    * @returns {Column[]}
    */
@@ -403,21 +427,24 @@ class DataGrid extends BaseElement {
     // Convert key:value objects to actual columns
     if (typeof columns === "object" &amp;&amp; !Array.isArray(columns)) {
       Object.keys(columns).forEach((key) => {
-        let col = this.defaultColumn;
+        let col = Object.assign({}, this.defaultColumn);
         col.title = columns[key];
         col.field = key;
         cols.push(col);
       });
     } else {
       columns.forEach((item) => {
-        let col = this.defaultColumn;
+        let col = Object.assign({}, this.defaultColumn);
         if (typeof item === "string") {
           col.title = item;
           col.field = item;
         } else if (typeof item === "object") {
-          col = item;
+          col = Object.assign(col, item);
           if (!col.field) {
             console.error("Invalid column definition", item);
+          }
+          if (!col.title) {
+            col.title = col.field;
           }
         } else {
           console.error("Column definition must be a string or an object");
@@ -495,13 +522,13 @@ class DataGrid extends BaseElement {
   }
 
   responsiveChanged() {
-    if (!plugins.ResponsiveGrid) {
+    if (!this.plugins.ResponsiveGrid) {
       return;
     }
     if (this.options.responsive) {
-      plugins.ResponsiveGrid.observe(this);
+      this.plugins.ResponsiveGrid.observe();
     } else {
-      plugins.ResponsiveGrid.unobserve(this);
+      this.plugins.ResponsiveGrid.unobserve();
     }
   }
 
@@ -531,12 +558,14 @@ class DataGrid extends BaseElement {
       updatePage--;
     }
     if (updatePage != this.page) {
+      // Triggers pageChanged, which will trigger reload
       this.page = updatePage;
     } else {
+      // Simply reload current page
       this.reload(() => {
-        // Scroll and keep a sizable amount of data displayed
-        if (this.hasAttribute("sticky")) {
-          window.scroll({ top: elementOffset(this.selectPerPage).top - this.defaultHeight });
+        // Preserve distance between top of page and select control if no fixed height
+        if (!this.plugins.FixedHeight || !this.plugins.FixedHeight.hasFixedHeight) {
+          this.selectPerPage.scrollIntoView();
         }
       });
     }
@@ -569,31 +598,31 @@ class DataGrid extends BaseElement {
     /**
      * @type {HTMLTableElement}
      */
-    this.table = find(this, "table");
+    this.table = this.querySelector("table");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnFirst = find(this, ".dg-btn-first");
+    this.btnFirst = this.querySelector(".dg-btn-first");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnPrev = find(this, ".dg-btn-prev");
+    this.btnPrev = this.querySelector(".dg-btn-prev");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnNext = find(this, ".dg-btn-next");
+    this.btnNext = this.querySelector(".dg-btn-next");
     /**
      * @type {HTMLInputElement}
      */
-    this.btnLast = find(this, ".dg-btn-last");
+    this.btnLast = this.querySelector(".dg-btn-last");
     /**
      * @type {HTMLSelectElement}
      */
-    this.selectPerPage = find(this, ".dg-select-per-page");
+    this.selectPerPage = this.querySelector(".dg-select-per-page");
     /**
      * @type {HTMLInputElement}
      */
-    this.inputPage = find(this, ".dg-input-page");
+    this.inputPage = this.querySelector(".dg-input-page");
 
     this.getFirst = this.getFirst.bind(this);
     this.getPrev = this.getPrev.bind(this);
@@ -609,9 +638,9 @@ class DataGrid extends BaseElement {
     this.selectPerPage.addEventListener("change", this.changePerPage);
     this.inputPage.addEventListener("input", this.gotoPage);
 
-    for (const plugin in plugins) {
-      plugins[plugin].connected(this);
-    }
+    Object.values(this.plugins).forEach((plugin) => {
+      plugin.connected();
+    });
 
     // Display even if we don't have data
     this.dirChanged();
@@ -643,11 +672,15 @@ class DataGrid extends BaseElement {
     this.selectPerPage.removeEventListener("change", this.changePerPage);
     this.inputPage.removeEventListener("input", this.gotoPage);
 
-    for (const plugin in plugins) {
-      plugins[plugin].disconnected(this);
-    }
+    Object.values(this.plugins).forEach((plugin) => {
+      plugin.disconnected();
+    });
   }
 
+  /**
+   * @param {string} field
+   * @returns {Column}
+   */
   getCol(field) {
     let found = null;
     this.options.columns.forEach((col) => {
@@ -711,18 +744,21 @@ class DataGrid extends BaseElement {
    * @returns {Number}
    */
   startColIndex() {
-    return this.options.selectable &amp;&amp; plugins.SelectableRows ? 2 : 1;
-  }
-
-  hasActions() {
-    return this.options.actions.length > 0;
-  }
-
-  get actionClass() {
-    if (this.options.actions.length &lt; 3 &amp;&amp; !this.options.collapseActions) {
-      return "dg-actions-" + this.options.actions.length;
+    let start = 1;
+    if (this.options.selectable &amp;&amp; this.plugins.SelectableRows) {
+      start++;
     }
-    return "dg-actions-more";
+    if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid &amp;&amp; this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      start++;
+    }
+    return start;
+  }
+
+  /**
+   * @returns {Boolean}
+   */
+  isSticky() {
+    return this.hasAttribute("sticky");
   }
 
   /**
@@ -731,6 +767,7 @@ class DataGrid extends BaseElement {
    */
   columnsLength(visibleOnly = false) {
     let len = 0;
+    // One column per (visible) column
     this.options.columns.forEach((col) => {
       if (visibleOnly &amp;&amp; col.hidden) {
         return;
@@ -739,10 +776,16 @@ class DataGrid extends BaseElement {
         len++;
       }
     });
-    if (this.options.selectable &amp;&amp; plugins.SelectableRows) {
+    // Add one col for selectable checkbox at the beginning
+    if (this.options.selectable &amp;&amp; this.plugins.SelectableRows) {
       len++;
     }
-    if (this.options.actions.length) {
+    // Add one col for actions at the end
+    if (this.options.actions.length &amp;&amp; this.plugins.RowActions) {
+      len++;
+    }
+    // Add one col for the responsive toggle
+    if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid &amp;&amp; this.plugins.ResponsiveGrid.hasHiddenColumns()) {
       len++;
     }
     return len;
@@ -757,7 +800,7 @@ class DataGrid extends BaseElement {
 
     this.table.style.visibility = "hidden";
     this.renderTable();
-    if (this.options.responsive &amp;&amp; plugins.ResponsiveGrid) {
+    if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid) {
       // Let the observer make the table visible
     } else {
       this.table.style.visibility = "visible";
@@ -765,8 +808,8 @@ class DataGrid extends BaseElement {
 
     // Store row height for later usage
     if (!this.rowHeight) {
-      const tr = this.querySelector("tbody tr") || this.querySelector("table tr");
-      if (tr instanceof HTMLTableRowElement) {
+      const tr = find(this, "tbody tr") || find(this, "table tr");
+      if (tr) {
         this.rowHeight = tr.offsetHeight;
       }
     }
@@ -783,14 +826,12 @@ class DataGrid extends BaseElement {
   }
 
   reorderChanged() {
-    this.querySelectorAll("thead tr.dg-head-columns th").forEach((th) => {
+    const headers = findAll(this, "thead tr.dg-head-columns th");
+    headers.forEach((th) => {
       if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
         return;
       }
-      if (!(th instanceof HTMLTableRowElement)) {
-        return;
-      }
-      if (this.options.reorder &amp;&amp; plugins.DraggableHeaders) {
+      if (this.options.reorder &amp;&amp; this.plugins.DraggableHeaders) {
         th.draggable = true;
       } else {
         th.removeAttribute("draggable");
@@ -852,10 +893,10 @@ class DataGrid extends BaseElement {
    * @returns {Array}
    */
   getSelection(key = null) {
-    if (!plugins.SelectableRows) {
+    if (!this.plugins.SelectableRows) {
       return [];
     }
-    return plugins.SelectableRows.getSelection(this, key);
+    return this.plugins.SelectableRows.getSelection(key);
   }
 
   getData() {
@@ -869,8 +910,6 @@ class DataGrid extends BaseElement {
     }
     this.data = this.originalData = [];
     this.renderBody();
-    // Recompute height if needed
-    plugins.FixedHeight &amp;&amp; plugins.FixedHeight.computeDefaultHeight(this);
   }
 
   refresh(cb = null) {
@@ -888,9 +927,6 @@ class DataGrid extends BaseElement {
       // If we load data from the server, we redraw the table body
       // Otherwise, we just need to paginate
       this.options.server || needRender ? this.renderBody() : this.paginate();
-
-      // Recompute height if needed
-      // plugins.FixedHeight &amp;&amp; plugins.FixedHeight.computeDefaultHeight(this);
       if (cb) {
         cb();
       }
@@ -943,7 +979,6 @@ class DataGrid extends BaseElement {
           this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
           // It should return meta data (see metaFilteredKey)
           this.meta = response[this.options.serverParams.metaKey] ?? {};
-
           this.data = response[this.options.serverParams.dataKey];
         }
         this.originalData = this.data.slice();
@@ -952,6 +987,8 @@ class DataGrid extends BaseElement {
         // Make sure we have a proper set of columns
         if (this.options.columns.length === 0 &amp;&amp; this.originalData.length) {
           this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
+        } else {
+          this.options.columns = this.convertColumns(this.options.columns);
         }
       })
       .catch((err) => {
@@ -1017,19 +1054,17 @@ class DataGrid extends BaseElement {
 
   getFilters() {
     let filters = [];
-    this.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-      if (input instanceof HTMLInputElement) {
-        filters[input.dataset.name] = input.value;
-      }
+    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    inputs.forEach((input) => {
+      filters[input.dataset.name] = input.value;
     });
     return filters;
   }
 
   clearFilters() {
-    this.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-      if (input instanceof HTMLInputElement) {
-        input.value = "";
-      }
+    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    inputs.forEach((input) => {
+      input.value = "";
     });
     this.filterData();
   }
@@ -1045,10 +1080,8 @@ class DataGrid extends BaseElement {
       this.data = this.originalData.slice();
 
       // Look for rows matching the filters
-      this.querySelectorAll("thead tr.dg-head-filters input").forEach((input) => {
-        if (!(input instanceof HTMLInputElement)) {
-          return;
-        }
+      const inputs = findAll(this, "thead tr.dg-head-filters input");
+      inputs.forEach((input) => {
         let value = input.value;
         if (value) {
           let name = input.dataset.name;
@@ -1081,7 +1114,7 @@ class DataGrid extends BaseElement {
       this.log("sorting prevented because column is not sortable");
       return;
     }
-    if (this.isResizing) {
+    if (this.plugins.ColumnResizer &amp;&amp; this.plugins.ColumnResizer.isResizing) {
       this.log("sorting prevented because resizing");
       return;
     }
@@ -1208,8 +1241,8 @@ class DataGrid extends BaseElement {
   renderTable() {
     this.log("render table");
 
-    if (this.options.menu &amp;&amp; plugins.ContextMenu) {
-      plugins.ContextMenu.createMenu(this);
+    if (this.options.menu &amp;&amp; this.plugins.ContextMenu) {
+      this.plugins.ContextMenu.createMenu();
     }
 
     let sortedColumn;
@@ -1241,11 +1274,11 @@ class DataGrid extends BaseElement {
     this.createColumnHeaders(thead);
     this.createColumnFilters(thead);
 
-    if (this.options.resizable &amp;&amp; plugins.ColumnResizer) {
-      plugins.ColumnResizer.renderResizer(this, labels.resizeColumn);
+    if (this.options.resizable &amp;&amp; this.plugins.ColumnResizer) {
+      this.plugins.ColumnResizer.renderResizer(labels.resizeColumn);
     }
 
-    this.dispatchEvent(new CustomEvent("headerRendered"));
+    dispatch(this, "headerRendered");
   }
 
   renderFooter() {
@@ -1264,9 +1297,6 @@ class DataGrid extends BaseElement {
    */
   createColumnHeaders(thead) {
     // @link https://stackoverflow.com/questions/21064101/understanding-offsetwidth-clientwidth-scrollwidth-and-height-respectively
-    // const computedStyles = getComputedStyle(this.table);
-    // const scrollbarWidth = this.offsetWidth - this.clientWidth - parseInt(computedStyles.borderLeftWidth) - parseInt(computedStyles.borderRightWidth);
-    const scrollbarWidth = 8;
     const availableWidth = this.clientWidth;
     const colMaxWidth = Math.round((availableWidth / this.columnsLength(true)) * 2);
 
@@ -1280,15 +1310,18 @@ class DataGrid extends BaseElement {
     tr.setAttribute("aria-rowindex", "1");
     tr.setAttribute("class", "dg-head-columns");
 
-    if (this.options.selectable &amp;&amp; plugins.SelectableRows) {
-      plugins.SelectableRows.createHeaderCol(this, tr);
-    }
-
     // We need a real th from the dom to compute the size
     let sampleTh = thead.querySelector("tr.dg-head-columns th");
     if (!sampleTh) {
       sampleTh = document.createElement("th");
       thead.querySelector("tr").appendChild(sampleTh);
+    }
+
+    if (this.options.selectable &amp;&amp; this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.createHeaderCol(tr);
+    }
+    if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid &amp;&amp; this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      this.plugins.ResponsiveGrid.createHeaderCol(tr);
     }
 
     // Create columns
@@ -1308,22 +1341,22 @@ class DataGrid extends BaseElement {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
-      if (plugins.ResponsiveGrid) {
-        setAttribute(th, "data-responsive", column.responsive);
+      if (this.plugins.ResponsiveGrid &amp;&amp; this.options.responsive) {
+        setAttribute(th, "data-responsive", column.responsive || "");
       }
       // Make sure the header fits (+ add some room for sort icon if necessary)
       const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
       th.dataset.minWidth = "" + computedWidth;
-      DataGrid.applyColumnDefinition(th, column);
+      applyColumnDefinition(th, column);
       th.tabIndex = 0;
       th.textContent = column.title;
 
       let w = 0;
       // Autosize small based on first/last row ?
       // Take into account minWidth of the header and max available size based on col numbers
-      if (this.options.autosize &amp;&amp; plugins.AutosizeColumn) {
+      if (this.options.autosize &amp;&amp; this.plugins.AutosizeColumn) {
         const colAvailableWidth = Math.min(availableWidth - totalWidth, colMaxWidth);
-        w = plugins.AutosizeColumn.autosizeColumn(this, th, column, parseInt(th.dataset.minWidth), colAvailableWidth);
+        w = this.plugins.AutosizeColumn.computeSize(th, column, parseInt(th.dataset.minWidth), colAvailableWidth);
       } else {
         w = Math.max(parseInt(th.dataset.minWidth), parseInt(th.getAttribute("width")));
       }
@@ -1336,8 +1369,8 @@ class DataGrid extends BaseElement {
       }
 
       // Reorder columns with drag/drop
-      if (this.options.reorder &amp;&amp; plugins.DraggableHeaders) {
-        plugins.DraggableHeaders.makeHeaderDraggable(this, th);
+      if (this.options.reorder &amp;&amp; this.plugins.DraggableHeaders) {
+        this.plugins.DraggableHeaders.makeHeaderDraggable(th);
       }
 
       tr.appendChild(th);
@@ -1345,8 +1378,8 @@ class DataGrid extends BaseElement {
     });
 
     // There is too much available width, and we want to avoid fixed layout to split remaining amount
-    if (totalWidth &lt;= availableWidth) {
-      const visibleCols = findAll(tr, "th:not([hidden])");
+    if (totalWidth &lt; availableWidth) {
+      const visibleCols = findAll(tr, "th:not([hidden],.dg-not-resizable)");
       if (visibleCols.length) {
         const lastCol = visibleCols[visibleCols.length - 1];
         removeAttribute(lastCol, "width");
@@ -1354,50 +1387,45 @@ class DataGrid extends BaseElement {
     }
 
     // Actions
-    if (this.options.actions.length) {
-      let actionsTh = document.createElement("th");
-      setAttribute(actionsTh, "role", "columnheader button");
-      setAttribute(actionsTh, "aria-colindex", this.columnsLength(true));
-      actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
-      actionsTh.tabIndex = 0;
-      tr.appendChild(actionsTh);
+    if (this.options.actions.length &amp;&amp; this.plugins.RowActions) {
+      this.plugins.RowActions.makeActionHeader(tr);
     }
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
 
     // Once columns are inserted, we have an actual dom to query
     if (thead.offsetWidth > availableWidth) {
-      this.log("adjust width to fix size");
+      this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
+      const scrollbarWidth = this.offsetWidth - this.clientWidth;
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-      if (this.options.responsive &amp;&amp; plugins.ResponsiveGrid) {
+      if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid) {
         diff += scrollbarWidth;
       }
       // Remove diff for columns that can afford it
-      tr.querySelectorAll("th[width]").forEach((th) => {
+      const thWithWidth = findAll(tr, "th[width]");
+      thWithWidth.forEach((th) => {
         if (hasClass(th, "dg-not-resizable")) {
           return;
         }
         if (diff &lt;= 0) {
           return;
         }
-        const col = asElement(th);
-        const actualWidth = parseInt(col.getAttribute("width"));
-        const minWidth = col.dataset.minWidth ? parseInt(col.dataset.minWidth) : 0;
+        const actualWidth = parseInt(th.getAttribute("width"));
+        const minWidth = th.dataset.minWidth ? parseInt(th.dataset.minWidth) : 0;
         if (actualWidth > minWidth) {
           let newWidth = actualWidth - diff;
           if (newWidth &lt; minWidth) {
             newWidth = minWidth;
           }
           diff -= actualWidth - newWidth;
-
           setAttribute(th, "width", newWidth);
         }
       });
     }
 
     // Context menu
-    if (this.options.menu &amp;&amp; plugins.ContextMenu) {
-      plugins.ContextMenu.attachContextMenu(this);
+    if (this.options.menu &amp;&amp; this.plugins.ContextMenu) {
+      this.plugins.ContextMenu.attachContextMenu();
     }
 
     // Sort col on click
@@ -1422,9 +1450,11 @@ class DataGrid extends BaseElement {
       tr.setAttribute("hidden", "");
     }
 
-    // Selectable
-    if (this.options.selectable &amp;&amp; plugins.SelectableRows) {
-      plugins.SelectableRows.createFilterCol(this, tr);
+    if (this.options.selectable &amp;&amp; this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.createFilterCol(tr);
+    }
+    if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid &amp;&amp; this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      this.plugins.ResponsiveGrid.createFilterCol(tr);
     }
 
     this.options.columns.forEach((column) => {
@@ -1465,13 +1495,8 @@ class DataGrid extends BaseElement {
     });
 
     // Actions
-    if (this.options.actions.length) {
-      let actionsTh = document.createElement("th");
-      actionsTh.setAttribute("role", "columnheader button");
-      actionsTh.setAttribute("aria-colindex", "" + this.columnsLength(true));
-      actionsTh.classList.add(...["dg-actions", this.actionClass]);
-      actionsTh.tabIndex = 0;
-      tr.appendChild(actionsTh);
+    if (this.options.actions.length &amp;&amp; this.plugins.RowActions) {
+      this.plugins.RowActions.makeActionFilter(tr);
     }
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
@@ -1505,142 +1530,93 @@ class DataGrid extends BaseElement {
       setAttribute(tr, "aria-rowindex", i + 1);
       tr.tabIndex = 0;
 
-      // Selectable
-      if (this.options.selectable &amp;&amp; plugins.SelectableRows) {
-        plugins.SelectableRows.createDataCol(this, tr);
+      if (this.options.selectable &amp;&amp; this.plugins.SelectableRows) {
+        this.plugins.SelectableRows.createDataCol(tr);
+      }
+      if (this.options.responsive &amp;&amp; this.plugins.ResponsiveGrid &amp;&amp; this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+        this.plugins.ResponsiveGrid.createDataCol(tr);
       }
 
       // Expandable
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
-        tr.addEventListener("click", function () {
-          this.classList.toggle("dg-expanded");
+
+        on(tr, "click", (ev) => {
+          if (this.plugins.ResponsiveGrid) {
+            this.plugins.ResponsiveGrid.blockObserver();
+          }
+          toggleClass(ev.currentTarget, "dg-expanded");
+          if (this.plugins.ResponsiveGrid) {
+            this.plugins.ResponsiveGrid.unblockObserver();
+          }
         });
       }
 
       idx = 0;
       this.options.columns.forEach((column) => {
         if (!column) {
-          console.log(this.options.columns);
+          console.error("Empty column found!", this.options.columns);
         }
         // It should be applied as an attr of the row
         if (column.attr) {
-          tr.setAttribute(column.attr, item[column.field]);
+          if (item[column.field]) {
+            // Special case if we try to write over the class attr
+            if (column.attr === "class") {
+              addClass(tr, item[column.field]);
+            } else {
+              tr.setAttribute(column.attr, item[column.field]);
+            }
+          }
           return;
         }
         td = document.createElement("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startColIndex());
-        DataGrid.applyColumnDefinition(td, column);
+        applyColumnDefinition(td, column);
+        // This is required for pure css responsive layout
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
 
         // Inline editing
-        if (column.editable) {
-          let input = document.createElement("input");
-          input.type = "text";
-          input.autocomplete = "off";
-          input.spellcheck = false;
-          input.tabIndex = 0;
-          input.classList.add("dg-editable");
-          input.name = this.getAttribute("id").replace("-", "_") + "[" + (i + 1) + "]" + "[" + column.field + "]";
-          input.value = item[column.field];
-          input.dataset.field = column.field;
-
-          input.addEventListener("click", (ev) => ev.stopPropagation());
-          input.addEventListener("keypress", (ev) => {
-            if (ev.type === "keypress") {
-              const key = ev.keyCode || ev.key;
-              if (key === 13 || key === "Enter") {
-                input.blur();
-              }
-            }
-          });
-          input.addEventListener("blur", () => {
-            // Only fire on update
-            if (input.value == item[input.dataset.field]) {
-              return;
-            }
-            // Update underlying data
-            item[input.dataset.field] = input.value;
-            // Notify
-            dispatch(this, "edit", {
-              data: item,
-              value: input.value,
-            });
-          });
-          td.appendChild(input);
+        if (column.editable &amp;&amp; this.plugins.EditableColumn) {
+          this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
-          td.textContent = item[column.field];
-        }
-        if (column.hidden) {
-          setAttribute(td, "hidden", "");
+          const v = item[column.field] ?? "";
+          let tv;
+          // TODO: make this modular
+          switch (column.transform) {
+            case "uppercase":
+              tv = v.toUpperCase();
+              break;
+            case "lowercase":
+              tv = v.toLowerCase();
+              break;
+            default:
+              tv = v;
+              break;
+          }
+          if (column.format &amp;&amp; tv) {
+            td.innerHTML = interpolate(
+              column.format,
+              Object.assign(
+                {
+                  _v: v,
+                  _tv: tv,
+                },
+                item
+              )
+            );
+          } else {
+            td.textContent = tv;
+          }
         }
         tr.appendChild(td);
         idx++;
       });
 
       // Actions
-      if (this.options.actions.length) {
-        td = document.createElement("td");
-        setAttribute(td, "role", "gridcell");
-        setAttribute(td, "aria-colindex", this.columnsLength(true));
-        td.classList.add(...["dg-actions", this.actionClass]);
-        td.tabIndex = 0;
-
-        // Add menu toggle
-        let actionsToggle = document.createElement("button");
-        actionsToggle.classList.add("dg-actions-toggle");
-        actionsToggle.innerHTML = "☰";
-        td.appendChild(actionsToggle);
-        actionsToggle.addEventListener("click", (ev) => {
-          if (ev.target instanceof HTMLElement) {
-            ev.target.parentElement.classList.toggle("dg-actions-expand");
-          }
-        });
-
-        this.options.actions.forEach((action) => {
-          let button = document.createElement("button");
-          if (action.html) {
-            button.innerHTML = action.html;
-          } else {
-            button.innerText = action.title ?? action.name;
-          }
-          if (action.title) {
-            button.title = action.title;
-          }
-          if (action.url) {
-            button.type = "submit";
-            button.formAction = interpolate(action.url, item);
-          }
-          if (action.class) {
-            button.classList.add(...action.class.split(" "));
-          }
-          const actionHandler = (ev) => {
-            ev.stopPropagation();
-            if (action.confirm) {
-              let c = confirm(labels.areYouSure);
-              if (!c) {
-                ev.preventDefault();
-                return;
-              }
-            }
-            dispatch(this, "action", {
-              data: item,
-              action: action.name,
-            });
-          };
-          button.addEventListener("click", actionHandler);
-          td.appendChild(button);
-
-          // Row action
-          if (action.default) {
-            tr.classList.add("dg-actionable");
-            tr.addEventListener("click", actionHandler);
-          }
-        });
-
-        tr.appendChild(td);
+      if (this.options.actions.length &amp;&amp; this.plugins.RowActions) {
+        this.plugins.RowActions.makeActionRow(tr, item);
       }
 
       tbody.appendChild(tr);
@@ -1653,17 +1629,17 @@ class DataGrid extends BaseElement {
     tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
     this.querySelector("table").replaceChild(tbody, prev);
 
-    if (plugins.FixedHeight) {
-      plugins.FixedHeight.createFakeRow(this);
+    if (this.plugins.FixedHeight) {
+      this.plugins.FixedHeight.createFakeRow();
     }
 
     this.paginate();
 
-    if (plugins.SelectableRows) {
-      plugins.SelectableRows.shouldSelectAll(this, tbody);
+    if (this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.shouldSelectAll(tbody);
     }
 
-    this.dispatchEvent(new CustomEvent("bodyRendered"));
+    dispatch(this, "bodyRendered");
   }
 
   paginate() {
@@ -1701,16 +1677,13 @@ class DataGrid extends BaseElement {
       }
     });
 
-    if (this.options.selectable &amp;&amp; plugins.SelectableRows) {
-      plugins.SelectableRows.clearCheckboxes(this, tbody);
+    if (this.options.selectable &amp;&amp; this.plugins.SelectableRows) {
+      this.plugins.SelectableRows.clearCheckboxes(tbody);
     }
 
     // Store default height and update styles if needed
-    if (plugins.FixedHeight) {
-      if (this.defaultHeight == 0) {
-        plugins.FixedHeight.computeDefaultHeight(this);
-      }
-      plugins.FixedHeight.updateFakeRow(this);
+    if (this.plugins.FixedHeight) {
+      this.plugins.FixedHeight.updateFakeRow();
     }
 
     // Enable/disable buttons if shown
@@ -1722,13 +1695,19 @@ class DataGrid extends BaseElement {
     }
     tfoot.querySelector(".dg-low").textContent = low.toString();
     tfoot.querySelector(".dg-high").textContent = high.toString();
-    tfoot.querySelector(".dg-total").textContent = this.totalRecords();
+    tfoot.querySelector(".dg-total").textContent = "" + this.totalRecords();
   }
 
+  /**
+   * @returns {number}
+   */
   totalPages() {
     return Math.ceil(this.totalRecords() / this.options.perPage);
   }
 
+  /**
+   * @returns {number}
+   */
   totalRecords() {
     if (this.options.server) {
       return this.meta[this.options.serverParams.metaFilteredKey] || 0;
@@ -1748,13 +1727,13 @@ export default DataGrid;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

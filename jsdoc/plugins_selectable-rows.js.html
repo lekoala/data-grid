@@ -27,37 +27,31 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
-import { dispatch } from "../utils/shortcuts.js";
+import { dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
+
+const SELECTABLE_CLASS = "dg-selectable";
+const SELECT_ALL_CLASS = "dg-select-all";
 
 /**
  * Allows to select rows
  */
 class SelectableRows extends BasePlugin {
-  static get pluginName() {
-    return "SelectableRows";
-  }
-
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static disconnected(grid) {
-    if (grid.selectAll) {
-      grid.selectAll.removeEventListener("change", grid.toggleSelectAll);
+  disconnected() {
+    if (this.selectAll) {
+      this.selectAll.removeEventListener("change", this);
     }
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {String} key Return a specific key (eg: id) instead of the whole row
    * @returns {Array}
    */
-  static getSelection(grid, key = null) {
+  getSelection(key = null) {
+    const grid = this.grid;
     let selectedData = [];
 
-    Array.from(grid.querySelectorAll("tbody .dg-selectable input:checked")).forEach((checkbox) => {
-      if (!(checkbox instanceof HTMLElement)) {
-        return;
-      }
+    const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input:checked`);
+    inputs.forEach((checkbox) => {
       const idx = parseInt(checkbox.dataset.id);
       const item = grid.data[idx - 1];
       if (!item) {
@@ -74,41 +68,41 @@ class SelectableRows extends BasePlugin {
 
   /**
    * Uncheck box if hidden and visible only
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableSectionElement} tbody
    */
-  static clearCheckboxes(grid, tbody) {
+  clearCheckboxes(tbody) {
+    const grid = this.grid;
     if (!grid.options.selectVisibleOnly) {
       return;
     }
-    tbody.querySelectorAll("tr[hidden] .dg-selectable input").forEach((input) => {
-      if (input instanceof HTMLInputElement) {
-        input.checked = false;
-      }
+    const inputs = findAll(tbody, `tr[hidden] .${SELECTABLE_CLASS} input`);
+    inputs.forEach((input) => {
+      input.checked = false;
     });
   }
 
+  colIndex() {
+    return this.grid.startColIndex() - 2;
+  }
+
   /**
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableRowElement} tr
    */
-  static createHeaderCol(grid, tr) {
+  createHeaderCol(tr) {
     let th = document.createElement("th");
-    th.setAttribute("scope", "col");
-    th.setAttribute("role", "columnheader button");
-    th.setAttribute("aria-colindex", "1");
-    th.classList.add(...["dg-selectable", "dg-not-resizable", "dg-not-sortable"]);
+    setAttribute(th, "scope", "col");
+    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "aria-colindex", this.colIndex());
+    th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
 
-    grid.selectAll = document.createElement("input");
-    grid.selectAll.type = "checkbox";
-    grid.selectAll.classList.add("dg-select-all");
-
-    grid.toggleSelectAll = this.toggleSelectAll.bind(grid);
-    grid.selectAll.addEventListener("change", grid.toggleSelectAll);
+    this.selectAll = document.createElement("input");
+    this.selectAll.type = "checkbox";
+    this.selectAll.classList.add(SELECT_ALL_CLASS);
+    this.selectAll.addEventListener("change", this);
 
     let label = document.createElement("label");
-    label.appendChild(grid.selectAll);
+    label.appendChild(this.selectAll);
 
     th.appendChild(label);
 
@@ -117,61 +111,43 @@ class SelectableRows extends BasePlugin {
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableRowElement} tr
    */
-  static createFilterCol(grid, tr) {
+  createFilterCol(tr) {
     let th = document.createElement("th");
-    th.setAttribute("role", "columnheader button");
-    th.setAttribute("aria-colindex", "1");
-    th.classList.add("dg-selectable");
+    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "aria-colindex", this.colIndex());
+    th.classList.add(SELECTABLE_CLASS);
     th.tabIndex = 0;
 
-    let label = document.createElement("label");
-    th.appendChild(label);
     tr.appendChild(th);
   }
 
   /**
-   * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked.
+   * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
    * It should check selectAll if all is checked
    * It should uncheck selectAll if any is unchecked
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableSectionElement} tbody
    */
-  static shouldSelectAll(grid, tbody) {
-    if (!grid.selectAll) {
+  shouldSelectAll(tbody) {
+    if (!this.selectAll) {
       return;
     }
     // Delegate listener for change events on input checkboxes
-    tbody.addEventListener("change", (e) => {
-      if (e.target instanceof HTMLInputElement) {
-        if (!e.target.closest(".dg-selectable")) {
-          return;
-        }
-        const totalCheckboxes = grid.querySelectorAll("tbody .dg-selectable input[type=checkbox]");
-        // @ts-ignore
-        const totalChecked = Array.from(totalCheckboxes).filter((n) => n.checked);
-        grid.selectAll.checked = totalChecked.length == totalCheckboxes.length;
-
-        dispatch(grid, "rowsSelected", {
-          selection: grid.getSelection(),
-        });
-      }
-    });
+    tbody.addEventListener("change", this);
+    // Make sure state is up to date
     tbody.dispatchEvent(new Event("change"));
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    * @param {HTMLTableRowElement} tr
    */
-  static createDataCol(grid, tr) {
+  createDataCol(tr) {
     // Create col
     let td = document.createElement("td");
-    td.setAttribute("role", "gridcell button");
-    td.setAttribute("aria-colindex", "1");
-    td.classList.add("dg-selectable");
+    setAttribute(td, "role", "gridcell button");
+    setAttribute(td, "aria-colindex", this.colIndex());
+    td.classList.add(SELECTABLE_CLASS);
 
     // Create input
     let selectOne = document.createElement("input");
@@ -180,36 +156,55 @@ class SelectableRows extends BasePlugin {
     selectOne.type = "checkbox";
     // Label need to take full space thanks to css to make the whole cell clickable
     let label = document.createElement("label");
+    label.classList.add('dg-clickable-cell');
     label.appendChild(selectOne);
     td.appendChild(label);
 
     // Prevent unwanted click behaviour on row
-    label.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
+    label.addEventListener("click", this);
 
     tr.appendChild(td);
   }
 
   /**
-   * Reflect state
-   * @this {import("../data-grid").default}
+   * @param {Event} e
    */
-  static toggleSelectAll() {
-    const visibleOnly = this.options.selectVisibleOnly;
-    this.querySelectorAll("tbody .dg-selectable input").forEach((cb) => {
-      if (!(cb instanceof HTMLInputElement)) {
-        return;
-      }
-      if (visibleOnly &amp;&amp; !cb.offsetWidth) {
-        return;
-      }
-      cb.checked = this.selectAll.checked;
-    });
+  onclick(e) {
+    e.stopPropagation();
+  }
 
-    dispatch(this, "rowsSelected", {
-      selection: this.getSelection(),
-    });
+  /**
+   * Handle change event on select all or any select checkbox in the table body
+   * @param {import("../utils/shortcuts.js").FlexibleEvent} e
+   */
+  onchange(e) {
+    const grid = this.grid;
+    if (hasClass(e.target, SELECT_ALL_CLASS)) {
+      const visibleOnly = grid.options.selectVisibleOnly;
+      const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input`);
+      inputs.forEach((cb) => {
+        if (visibleOnly &amp;&amp; !cb.offsetWidth) {
+          return;
+        }
+        cb.checked = this.selectAll.checked;
+      });
+
+      dispatch(grid, "rowsSelected", {
+        selection: this.getSelection(),
+      });
+    } else {
+      if (!e.target.closest(`${SELECTABLE_CLASS}`)) {
+        return;
+      }
+      const totalCheckboxes = findAll(grid, `tbody .${SELECTABLE_CLASS} input[type=checkbox]`);
+      // @ts-ignore
+      const totalChecked = totalCheckboxes.filter((n) => n.checked);
+      this.selectAll.checked = totalChecked.length == totalCheckboxes.length;
+
+      dispatch(grid, "rowsSelected", {
+        selection: grid.getSelection(),
+      });
+    }
   }
 }
 
@@ -224,13 +219,13 @@ export default SelectableRows;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

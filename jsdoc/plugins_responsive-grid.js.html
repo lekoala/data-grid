@@ -28,16 +28,21 @@
         <article>
             <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
 import debounce from "../utils/debounce.js";
-import { addClass, find, findAll, removeClass } from "../utils/shortcuts.js";
+import { addClass, ce, find, findAll, hasClass, insertAfter, removeAttribute, removeClass, setAttribute } from "../utils/shortcuts.js";
 
+const RESPONSIVE_CLASS = "dg-responsive";
+
+let obsTo;
+
+/**
+ * @param {Array&lt;HTMLElement>} list
+ * @returns {Array&lt;HTMLElement>}
+ */
 function sortByPriority(list) {
-  return Array.from(list).sort(function (a, b) {
-    a = parseInt(a.dataset.responsive) || 1;
-    b = parseInt(b.dataset.responsive) || 1;
-    if (a === b) {
-      b++;
-    }
-    return b - a;
+  return list.sort((a, b) => {
+    const v1 = parseInt(a.dataset.responsive) || 1;
+    const v2 = parseInt(b.dataset.responsive) || 1;
+    return v2 - v1;
   });
 }
 
@@ -53,6 +58,9 @@ const callback = debounce((entries) => {
     // @ts-ignore
     const grid = entry.target;
     const table = grid.table;
+    if (grid.plugins.ResponsiveGrid.observerBlocked) {
+      return;
+    }
     // check inlineSize (width) and not blockSize (height)
     const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
     const size = parseInt(contentBoxSize.inlineSize);
@@ -62,6 +70,7 @@ const callback = debounce((entries) => {
     }, 0);
     const diff = (realTableWidth || tableWidth) - size - 1;
     const minWidth = 50;
+    const prevAction = grid.plugins.ResponsiveGrid.prevAction;
     // We have an array with the columns to show/hide are in order, most important first
     const headerCols = sortByPriority(
       findAll(grid.headerRow, "th[field]")
@@ -77,6 +86,10 @@ const callback = debounce((entries) => {
 
     // The table is too big when diff has a high value, otherwise it will be like -1 or -2
     if (diff > 0) {
+      if (prevAction === "show") {
+        return;
+      }
+      grid.plugins.ResponsiveGrid.prevAction = "hide";
       let remaining = diff;
       let cols = headerCols.filter((col) => {
         return !col.hasAttribute("hidden") &amp;&amp; col.hasAttribute("data-responsive");
@@ -100,21 +113,29 @@ const callback = debounce((entries) => {
         if (!field) {
           return;
         }
-        col.dataset.baseWidth = col.offsetWidth;
+        col.dataset.baseWidth = "" + col.offsetWidth;
+
         grid.hideColumn(field, false);
+        grid.setColProp(field, "responsiveHidden", true);
         changed = true;
 
         remaining -= colWidth;
         remaining = Math.round(remaining);
       });
     } else {
+      if (prevAction === "hide") {
+        return;
+      }
+      grid.plugins.ResponsiveGrid.prevAction = "show";
+
       const requiredWidth =
         headerCols
           .filter((col) => {
             return !col.hasAttribute("hidden");
           })
           .reduce((result, col) => {
-            return result + parseInt(col.dataset.minWidth);
+            const width = col.dataset.minWidth ? parseInt(col.dataset.minWidth) : col.offsetWidth;
+            return result + width;
           }, 0) + minWidth; // Add an offset so that inserting column is smoother
 
       // Compute available width to insert columns
@@ -142,7 +163,9 @@ const callback = debounce((entries) => {
           if (!field) {
             return;
           }
+
           grid.showColumn(field, false);
+          grid.setColProp(field, "responsiveHidden", false);
           changed = true;
 
           remaining -= colWidth;
@@ -164,6 +187,10 @@ const callback = debounce((entries) => {
     if (changed) {
       grid.renderTable();
     }
+    // Prevent resize loop
+    setTimeout(() => {
+      grid.plugins.ResponsiveGrid.prevAction = null;
+    }, 1000);
     grid.table.style.visibility = "visible";
   }
 }, 100);
@@ -173,41 +200,220 @@ const resizeObserver = new ResizeObserver(callback);
  * Responsive data grid
  */
 class ResponsiveGrid extends BasePlugin {
-  static get pluginName() {
-    return "ResponsiveGrid";
+  constructor(grid) {
+    super(grid);
+
+    this.observerBlocked = false;
+    this.prevAction = null;
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static connected(grid) {
-    if (grid.options.responsive) {
-      this.observe(grid);
+
+  connected() {
+    if (this.grid.options.responsive) {
+      this.observe();
     }
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static disconnected(grid) {
-    this.unobserve(grid);
+
+  disconnected() {
+    this.unobserve();
   }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static observe(grid) {
-    if (!grid.options.responsive) {
+
+  observe() {
+    if (!this.grid.options.responsive) {
       return;
     }
-    resizeObserver.observe(grid);
-    grid.style.display = "block"; // Otherwise resize doesn't happen
-    grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
+    resizeObserver.observe(this.grid);
+    this.grid.style.display = "block"; // Otherwise resize doesn't happen
+    this.grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
   }
+
+  unobserve() {
+    resizeObserver.unobserve(this.grid);
+    this.grid.style.display = "unset";
+    this.grid.style.overflowX = "unset";
+  }
+
+  blockObserver() {
+    this.observerBlocked = true;
+    if (obsTo) {
+      clearTimeout(obsTo);
+    }
+  }
+
+  unblockObserver() {
+    obsTo = setTimeout(() => {
+      this.observerBlocked = false;
+    }, 200); // more than debounce
+  }
+
   /**
-   * @param {import("../data-grid").default} grid
+   * @returns {Boolean}
    */
-  static unobserve(grid) {
-    resizeObserver.unobserve(grid);
-    grid.style.display = "unset";
-    grid.style.overflowX = "unset";
+  hasHiddenColumns() {
+    let flag = false;
+    this.grid.options.columns.forEach((col) => {
+      if (col.responsiveHidden) {
+        flag = true;
+      }
+    });
+    return flag;
+  }
+
+  colIndex() {
+    return this.grid.startColIndex() - 1;
+  }
+
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
+  createHeaderCol(tr) {
+    if (!this.grid.options.responsiveToggle) {
+      return;
+    }
+    let th = ce("th", tr);
+    setAttribute(th, "scope", "col");
+    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "aria-colindex", this.colIndex());
+    setAttribute(th, "width", "40");
+    th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
+    th.tabIndex = 0;
+  }
+
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
+  createFilterCol(tr) {
+    if (!this.grid.options.responsiveToggle) {
+      return;
+    }
+    let th = ce("th", tr);
+    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "aria-colindex", this.colIndex());
+    th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
+    th.tabIndex = 0;
+  }
+
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
+  createDataCol(tr) {
+    if (!this.grid.options.responsiveToggle) {
+      return;
+    }
+    // Create col
+    let td = document.createElement("td");
+    setAttribute(td, "role", "gridcell button");
+    setAttribute(td, "aria-colindex", this.colIndex());
+    td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
+
+    // Create icon
+    td.innerHTML = `&lt;div class='dg-clickable-cell'>&lt;svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+  &lt;line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  &lt;line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+&lt;/svg>
+&lt;svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
+  &lt;line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+&lt;/svg>&lt;/div>`;
+    tr.appendChild(td);
+
+    td.addEventListener("click", this);
+    td.addEventListener("mousedown", this);
+  }
+
+  computeLabelWidth() {
+    let idealWidth = 0;
+    let consideredCol = 0;
+    while (idealWidth &lt; 120) {
+      consideredCol++;
+      const hCol = find(this.grid, `.dg-head-columns th[aria-colindex="${consideredCol}"]`);
+      if (hCol) {
+        idealWidth += hCol.offsetWidth;
+      } else {
+        break;
+      }
+    }
+    return idealWidth;
+  }
+
+  /**
+   * @param {Event} ev
+   */
+  onmousedown(ev) {
+    // Avoid selection through double click
+    ev.preventDefault();
+  }
+
+  /**
+   * @param {Event} ev
+   */
+  onclick(ev) {
+    // Prevent expandable
+    ev.stopPropagation();
+
+    // target is the element that triggered the event (e.g., the user clicked on)
+    // currentTarget is the element that the event listener is attached to.
+
+    /**
+     * @type {HTMLTableRowElement}
+     */
+    //@ts-ignore
+    const td = ev.currentTarget;
+    const tr = td.parentElement;
+    const open = find(td, `.${RESPONSIVE_CLASS}-open`);
+    const close = find(td, `.${RESPONSIVE_CLASS}-close`);
+
+    this.blockObserver();
+
+    const isExpanded = hasClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+    if (isExpanded) {
+      removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+      open.style.display = "unset";
+      close.style.display = "none";
+
+      // Move back rows and cleanup row
+      const childRow = tr.nextElementSibling;
+      const hiddenCols = findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`);
+      hiddenCols.forEach((col) => {
+        // We don't really need to care where we insert them since we are going to redraw anyway
+        tr.appendChild(col);
+        setAttribute(col, "hidden");
+      });
+
+      childRow.parentElement.removeChild(childRow);
+    } else {
+      addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+      open.style.display = "none";
+      close.style.display = "unset";
+
+      // Create a child row and move rows into it
+      const childRow = ce("tr");
+      insertAfter(childRow, tr);
+      addClass(childRow, `${RESPONSIVE_CLASS}-child-row`);
+
+      const childRowTd = ce("td", childRow);
+      setAttribute(childRowTd, "colspan", this.grid.columnsLength(true));
+
+      const childTable = ce("table", childRowTd);
+      addClass(childTable, `${RESPONSIVE_CLASS}-table`);
+
+      const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
+      const idealWidth = this.computeLabelWidth();
+      hiddenCols.forEach((col) => {
+        const childTableRow = ce("tr", childTable);
+
+        // Add label
+        const label = col.dataset.name;
+        const labelCol = ce("th", childTableRow);
+        // It looks much better when aligned with an actual col
+        labelCol.style.width = `${idealWidth}px`;
+        labelCol.innerHTML = label;
+
+        // Add actual row
+        childTableRow.appendChild(col);
+        removeAttribute(col, "hidden");
+      });
+    }
+
+    this.unblockObserver();
   }
 }
 
@@ -222,13 +428,13 @@ export default ResponsiveGrid;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

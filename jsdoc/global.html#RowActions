@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Class: ResponsiveGrid</title>
+    <title>JSDoc: Class: RowActions</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Class: ResponsiveGrid</h1>
+    <h1 class="page-title">Class: RowActions</h1>
 
     
 
@@ -28,9 +28,9 @@
 
 <header>
     
-        <h2><span class="attribs"><span class="type-signature"></span></span>ResponsiveGrid<span class="signature">()</span><span class="type-signature"></span></h2>
+        <h2><span class="attribs"><span class="type-signature"></span></span>RowActions<span class="signature">()</span><span class="type-signature"></span></h2>
         
-            <div class="class-description">Responsive data grid</div>
+            <div class="class-description">Add action on rows</div>
         
     
 </header>
@@ -45,7 +45,7 @@
     
 
     
-    <h4 class="name" id="ResponsiveGrid"><span class="type-signature"></span>new ResponsiveGrid<span class="signature">()</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="RowActions"><span class="type-signature"></span>new RowActions<span class="signature">()</span><span class="type-signature"></span></h4>
     
 
     
@@ -93,7 +93,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line174">line 174</a>
+        <a href="plugins_row-actions.js.html">plugins/row-actions.js</a>, <a href="plugins_row-actions.js.html#line8">line 8</a>
     </li></ul></dd>
     
 
@@ -149,7 +149,7 @@
     
 
     
-    <h4 class="name" id="createDataCol"><span class="type-signature"></span>createDataCol<span class="signature">(tr)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="hasActions"><span class="type-signature"></span>hasActions<span class="signature">()</span><span class="type-signature"> &rarr; {Boolean}</span></h4>
     
 
     
@@ -162,55 +162,6 @@
 
 
 
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>tr</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">HTMLTableRowElement</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-    </tbody>
-</table>
 
 
 
@@ -246,357 +197,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line270">line 270</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="createFilterCol"><span class="type-signature"></span>createFilterCol<span class="signature">(tr)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>tr</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">HTMLTableRowElement</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line256">line 256</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="createHeaderCol"><span class="type-signature"></span>createHeaderCol<span class="signature">(tr)</span><span class="type-signature"></span></h4>
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>tr</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">HTMLTableRowElement</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line240">line 240</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="hasHiddenColumns"><span class="type-signature"></span>hasHiddenColumns<span class="signature">()</span><span class="type-signature"> &rarr; {Boolean}</span></h4>
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line223">line 223</a>
+        <a href="plugins_row-actions.js.html">plugins/row-actions.js</a>, <a href="plugins_row-actions.js.html#line12">line 12</a>
     </li></ul></dd>
     
 
@@ -650,7 +251,7 @@
     
 
     
-    <h4 class="name" id="onclick"><span class="type-signature"></span>onclick<span class="signature">(ev)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="makeActionFilter"><span class="type-signature"></span>makeActionFilter<span class="signature">(tr)</span><span class="type-signature"></span></h4>
     
 
     
@@ -690,13 +291,13 @@
 
         <tr>
             
-                <td class="name"><code>ev</code></td>
+                <td class="name"><code>tr</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Event</span>
+<span class="param-type">HTMLTableRowElement</span>
 
 
             
@@ -747,7 +348,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line320">line 320</a>
+        <a href="plugins_row-actions.js.html">plugins/row-actions.js</a>, <a href="plugins_row-actions.js.html#line33">line 33</a>
     </li></ul></dd>
     
 
@@ -783,7 +384,7 @@
     
 
     
-    <h4 class="name" id="onmousedown"><span class="type-signature"></span>onmousedown<span class="signature">(ev)</span><span class="type-signature"></span></h4>
+    <h4 class="name" id="makeActionHeader"><span class="type-signature"></span>makeActionHeader<span class="signature">(tr)</span><span class="type-signature"></span></h4>
     
 
     
@@ -823,13 +424,13 @@
 
         <tr>
             
-                <td class="name"><code>ev</code></td>
+                <td class="name"><code>tr</code></td>
             
 
             <td class="type">
             
                 
-<span class="param-type">Event</span>
+<span class="param-type">HTMLTableRowElement</span>
 
 
             
@@ -880,7 +481,163 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="plugins_responsive-grid.js.html">plugins/responsive-grid.js</a>, <a href="plugins_responsive-grid.js.html#line312">line 312</a>
+        <a href="plugins_row-actions.js.html">plugins/row-actions.js</a>, <a href="plugins_row-actions.js.html#line20">line 20</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="makeActionRow"><span class="type-signature"></span>makeActionRow<span class="signature">(tr, item)</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>tr</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">HTMLTableRowElement</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>item</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="plugins_row-actions.js.html">plugins/row-actions.js</a>, <a href="plugins_row-actions.js.html#line46">line 46</a>
     </li></ul></dd>
     
 

@@ -35,39 +35,21 @@ import { setAttribute } from "../utils/shortcuts.js";
  * We should add a fake row to push the footer down in case we don't have enough rows
  */
 class FixedHeight extends BasePlugin {
-  static get pluginName() {
-    return "FixedHeight";
-  }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static computeDefaultHeight(grid) {
-    // Wait until height is fully computed
-    requestAnimationFrame(() => {
-      grid.defaultHeight = grid.querySelector("table").offsetHeight;
+  constructor(grid) {
+    super(grid);
 
-      // If we have a fixed height, make sure we have overflowY set
-      if (grid.style.height) {
-        grid.style.overflowY = "auto";
-      }
-
-      if (grid.options.autoheight) {
-        // Adjust height so that it fits our table size
-        if (grid.style.height) {
-          grid.style.height = grid.defaultHeight + "px";
-        }
-        // If our min height is too big, adjust value
-        if (grid.style.minHeight &amp;&amp; parseInt(grid.style.minHeight) > grid.defaultHeight) {
-          grid.style.minHeight = grid.defaultHeight + "px";
-        }
-      }
-    });
+    this.hasFixedHeight = false;
+    // If we have a fixed height, make sure we have overflowY set
+    if (grid.style.height) {
+      grid.style.overflowY = "auto";
+      this.hasFixedHeight = true;
+    }
   }
 
   /**
-   * @param {import("../data-grid").default} grid
    */
-  static createFakeRow(grid) {
+  createFakeRow() {
+    const grid = this.grid;
     const tbody = grid.querySelector("tbody");
     let tr = document.createElement("tr");
     setAttribute(tr, "role", "row");
@@ -77,24 +59,34 @@ class FixedHeight extends BasePlugin {
     tbody.appendChild(tr);
   }
 
+  get fakeRow() {
+    return this.grid.querySelector(".dg-fake-row");
+  }
+
   /**
-   * @param {import("../data-grid").default} grid
+   * On last page, use a fake row to push footer down
    */
-  static updateFakeRow(grid) {
-    if (!grid.style.height) {
-      return;
-    }
-    // On last page, adjust height if using fixed height
-    let fakeRow = grid.querySelector(".dg-fake-row");
+  updateFakeRow() {
+    const grid = this.grid;
+    const fakeRow = this.fakeRow;
     if (!fakeRow) {
       return;
     }
 
-    // Check if we are below set height
-    if (parseInt(grid.style.height) > grid.querySelector("tbody").offsetHeight) {
-      const max = grid.options.perPage * grid.rowHeight;
-      const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
-      const fakeHeight = visibleRows > 1 ? max - visibleRows * grid.rowHeight : max;
+    // We don't need a fake row if we display everything
+    if (grid.options.perPage > grid.totalRecords()) {
+      return;
+    }
+    // We are not on last page
+    if (grid.page !== grid.totalPages()) {
+      return;
+    }
+
+    // Find remaining missing height
+    const max = grid.options.perPage * grid.rowHeight;
+    const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
+    const fakeHeight = visibleRows > 1 ? max - visibleRows * grid.rowHeight : max;
+    if (fakeHeight > 0) {
       setAttribute(fakeRow, "height", fakeHeight);
       fakeRow.removeAttribute("hidden");
     } else {
@@ -114,13 +106,13 @@ export default FixedHeight;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

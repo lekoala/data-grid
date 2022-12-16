@@ -29,10 +29,9 @@
             <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
 import elementOffset from "../utils/elementOffset.js";
 import {
-  $$,
   addClass,
-  asElement,
   dispatch,
+  findAll,
   getAttribute,
   hasClass,
   off,
@@ -46,21 +45,18 @@ import {
  * Allows to resize columns
  */
 class ColumnResizer extends BasePlugin {
-  static get pluginName() {
-    return "ColumnResizer";
+  constructor(grid) {
+    super(grid);
+    this.isResizing = false;
   }
+
   /**
-   * @param {import("../data-grid").default} grid
+   * @param {String} resizeLabel
    */
-  static connected(grid) {
-    grid.isResizing = false;
-  }
-  /**
-   * @param {import("../data-grid").default} grid
-   */
-  static renderResizer(grid, resizeLabel) {
+  renderResizer(resizeLabel) {
+    const grid = this.grid;
     const table = grid.table;
-    const cols = $$("thead tr.dg-head-columns th", grid);
+    const cols = findAll(grid, "thead tr.dg-head-columns th");
 
     cols.forEach((col) => {
       if (hasClass(col, "dg-not-resizable")) {
@@ -96,7 +92,7 @@ class ColumnResizer extends BasePlugin {
 
         // Prevent accidental sorting if mouse is not over resize handler
         setTimeout(() => {
-          grid.isResizing = false;
+          this.isResizing = false;
         }, 0);
 
         removeClass(resizer, "dg-resizer-active");
@@ -105,6 +101,7 @@ class ColumnResizer extends BasePlugin {
         }
         col.style.overflow = "hidden";
 
+        // Remove handlers
         off(document, "mousemove", mouseMoveHandler);
         off(document, "mouseup", mouseUpHandler);
 
@@ -122,15 +119,14 @@ class ColumnResizer extends BasePlugin {
       on(resizer, "mousedown", (e) => {
         e.stopPropagation();
 
-        grid.isResizing = true;
+        this.isResizing = true;
 
-        const target = asElement(e.target);
-        const currentCols = $$(".dg-head-columns th", grid);
-        const visibleCols = Array.from(currentCols).filter((col) => {
+        const target = e.target;
+        const currentCols = findAll(grid, "dg-head-columns th");
+        const visibleCols = currentCols.filter((col) => {
           return !col.hasAttribute("hidden");
         });
-        const columns = Array.from(visibleCols);
-        const columnIndex = columns.findIndex((column) => column == target.parentNode);
+        const columnIndex = visibleCols.findIndex((column) => column == target.parentNode);
         grid.log("resize column");
 
         addClass(resizer, "dg-resizer-active");
@@ -178,13 +174,13 @@ export default ColumnResizer;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="DataGrid.html">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#asAnyElement">asAnyElement</a></li><li><a href="global.html#asElement">asElement</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Thu Dec 01 2022 12:09:03 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>
