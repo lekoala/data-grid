@@ -16,16 +16,17 @@ data-grid {
       height: 1.5rem;
       right: 0;
       width: 2px;
-      background: var(--gray-400);
+      background: var(--body-color);
+      opacity: 0.2;
     }
     &:hover:before {
-      background: var(--color);
+      opacity: 0.6;
     }
     &.dg-resizer-active {
       border-right: 1px dashed var(--color);
 
       &:before {
-        background: var(--color);
+        opacity: 0.6;
       }
     }
   }

@@ -59,9 +59,9 @@ Grid customizations are possible via attributes.
 
 ### Styling
 
-Data Grid inherits wherever possible from Bootstrap 5 styles.
+Data Grid inherits wherever possible from Bootstrap 5 styles (including dark mode support).
 
-You can also override the following variables.
+You can also override the following variables (see _core.scss).
 
 ```css
 data-grid {

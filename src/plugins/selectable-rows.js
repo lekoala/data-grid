@@ -3,6 +3,7 @@ import { dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
+const CHECKBOX_CLASS = "form-check-input"; //bs5
 
 /**
  * Allows to select rows
@@ -71,6 +72,7 @@ class SelectableRows extends BasePlugin {
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
     this.selectAll.classList.add(SELECT_ALL_CLASS);
+    this.selectAll.classList.add(CHECKBOX_CLASS);
     this.selectAll.addEventListener("change", this);
 
     let label = document.createElement("label");
@@ -126,9 +128,10 @@ class SelectableRows extends BasePlugin {
     // Alias row id for easy retrieval in getSelection
     selectOne.dataset.id = tr.getAttribute("aria-rowindex");
     selectOne.type = "checkbox";
+    selectOne.classList.add(CHECKBOX_CLASS);
     // Label need to take full space thanks to css to make the whole cell clickable
     let label = document.createElement("label");
-    label.classList.add('dg-clickable-cell');
+    label.classList.add("dg-clickable-cell");
     label.appendChild(selectOne);
     td.appendChild(label);
 

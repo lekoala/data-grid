@@ -19,8 +19,12 @@ data-grid {
   --highlight-color: #fffcee;
   --header-background: var(--bs-gray-200, #e9ecef);
   --header-color: var(--bs-dark, #212529);
-  --btn-background: var(--white, #ffffff);
+  --input-background: var(--bs-form-control-bg, #ffffff);
+  --input-border-color: var(--bs-border-color, #e9ecef);
+  --btn-background: var(--bs-form-control-bg, #ffffff);
   --btn-color: var(--color);
+  --btn-border-color: var(--bs-border-color, #e9ecef);
+  --body-bg: var(--bs-body-bg, #212529);
   --body-color: var(--bs-body-color, #212529);
   --icon-scale: 1;
   --border-radius: 0.25rem;
@@ -240,10 +244,10 @@ data-grid {
 
   // Default actions buttons
   button {
-    background-color: var(--white);
-    border: solid 1px var(--gray-100);
+    background-color: var(--btn-background);
+    border: solid 1px var(--btn-border-color);
     border-radius: var(--border-radius);
-    color: var(--color);
+    color: var(--body-color);
     height: 2rem;
     margin: 0 0.2rem;
     padding: 0 0.5rem;
@@ -252,8 +256,7 @@ data-grid {
     cursor: pointer;
 
     &:hover {
-      background-color: var(--gray-200);
-      border-color: var(--gray-300);
+      opacity: 0.7;
     }
     &:disabled:hover {
       background-color: inherit;
@@ -267,9 +270,10 @@ data-grid {
   }
   input:not([type="checkbox"]),
   select {
-    background-color: var(--bs-form-control-bg, "#fff");
+    background-color: var(--input-background, "#fff");
+    color: currentColor;
     box-sizing: border-box;
-    border: var(--bs-border-width, 1) solid var(--bs-border-color, "#f0f0f0");
+    border: 1px solid var(--input-border-color, "#f0f0f0");
     border-radius: var(--border-radius);
     height: 2rem;
     margin: 0 0.2rem;
@@ -294,8 +298,7 @@ data-grid {
   // Filters (2nd header row)
   thead tr:nth-child(2) th {
     padding: 0;
-    background-color: var(--white);
-
+    background-color: transparent;
     input {
       width: 100%;
       border-radius: 0;
@@ -423,33 +426,37 @@ data-grid {
 
   [aria-sort="none"] {
     &:before {
-      border-bottom-color: var(--bs-gray-400, #ced4da);
+      border-bottom-color: currentColor;
+      opacity: 0.25;
       top: calc(50% - 0.6rem);
     }
 
     &:after {
-      border-top-color: var(--bs-gray-400, #ced4da);
+      border-top-color: currentColor;
+      opacity: 0.25;
       bottom: calc(50% - 0.5rem);
       top: auto;
     }
   }
 
   [aria-sort="ascending"]:before {
-    border-bottom-color: var(--bs-dark, #212529);
+    border-bottom-color: var(--body-color);
+    opacity: 0.75;
   }
 
   [aria-sort="descending"]:after {
-    border-top-color: var(--bs-dark, #212529);
+    border-top-color: var(--body-color);
+    opacity: 0.75;
     bottom: calc(50% - 0.5rem);
     top: auto;
   }
 }
 
 [data-bs-theme="dark"] data-grid {
+  --scroller-color-lightness: 20%;
   --highlight-color: #43423e;
   --header-background: var(--bs-gray-800, #34373b);
   --header-color: var(--bs-light, #e9ecef);
-  --btn-background: var(--bs-gray-900, #212325);
   --body-color: var(--bs-body-color, #494e53);
   --row-border-color: var(--bs-gray-900, #212325);
   tbody tr {
