@@ -267,9 +267,9 @@ data-grid {
   }
   input:not([type="checkbox"]),
   select {
-    background-color: #fff;
+    background-color: var(--bs-form-control-bg, "#fff");
     box-sizing: border-box;
-    border: solid 1px #f0f0f0;
+    border: var(--bs-border-width, 1) solid var(--bs-border-color, "#f0f0f0");
     border-radius: var(--border-radius);
     height: 2rem;
     margin: 0 0.2rem;
