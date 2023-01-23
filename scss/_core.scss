@@ -338,23 +338,18 @@ data-grid {
 
   // Zebra rows
   tbody tr {
-    &:nth-child(odd) {
-      background-color: var(--bs-white, #ffffff);
-      color: var(--bs-dark, #212529);
-    }
     &:nth-child(even) {
-      background-color: var(--bs-light, #f8f9fa);
-      color: var(--bs-dark, #212529);
+      background-color: var(--bs-table-striped-bg, #f8f9fa);
     }
 
     border-bottom: solid 1px var(--row-border-color);
 
     &:hover {
-      background-color: var(--highlight-color);
+      background-color: var(--highlight-color) !important;
     }
     &:focus {
-      background-color: var(--highlight-color);
-      border-bottom-color: var(--highlight-color);
+      background-color: var(--highlight-color) !important;
+      border-bottom-color: var(--highlight-color) !important;
       outline: none;
     }
   }
@@ -447,5 +442,19 @@ data-grid {
     border-top-color: var(--bs-dark, #212529);
     bottom: calc(50% - 0.5rem);
     top: auto;
+  }
+}
+
+[data-bs-theme="dark"] data-grid {
+  --highlight-color: #43423e;
+  --header-background: var(--bs-gray-800, #34373b);
+  --header-color: var(--bs-light, #e9ecef);
+  --btn-background: var(--bs-gray-900, #212325);
+  --body-color: var(--bs-body-color, #494e53);
+  --row-border-color: var(--bs-gray-900, #212325);
+  tbody tr {
+    &:nth-child(even) {
+      background-color: var(--bs-table-striped-bg, #2c3034);
+    }
   }
 }
