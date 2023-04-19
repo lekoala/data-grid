@@ -46,3 +46,6 @@ body {
   content: "Resize me!";
   right: 0.85rem;
 }
+input[type=checkbox].dg-select-all, .dg-selectable input[type=checkbox] {
+    padding: initial;
+}
