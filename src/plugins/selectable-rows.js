@@ -168,7 +168,7 @@ class SelectableRows extends BasePlugin {
         selection: this.getSelection(),
       });
     } else {
-      if (!e.target.closest(`${SELECTABLE_CLASS}`)) {
+      if (!e.target.closest(`.${SELECTABLE_CLASS}`)) {
         return;
       }
       const totalCheckboxes = findAll(grid, `tbody .${SELECTABLE_CLASS} input[type=checkbox]`);
