@@ -52,6 +52,7 @@ class SelectableRows extends BasePlugin {
     inputs.forEach((input) => {
       input.checked = false;
     });
+    this.selectAll.checked = false;
   }
 
   colIndex() {
