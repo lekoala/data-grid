@@ -1,3 +1,5 @@
+/*** Data Grid Web component * https://github.com/lekoala/data-grid ***/
+
 // src/utils/camelize.js
 function camelize(str) {
   return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
