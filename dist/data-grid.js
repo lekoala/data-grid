@@ -127,6 +127,9 @@ function insertAfter(newNode, existingNode) {
 
 // src/core/base-element.js
 var BaseElement = class extends HTMLElement {
+  /**
+   * @param {Object} options
+   */
   constructor(options = {}) {
     super();
     this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
@@ -138,12 +141,23 @@ var BaseElement = class extends HTMLElement {
   get defaultOptions() {
     return {};
   }
+  /**
+   * @param {String} opt
+   * @returns {any}
+   */
   getOption(opt) {
     return this.options[opt];
   }
+  /**
+   * @param {String} opt
+   * @param {any} v
+   */
   setOption(opt, v) {
     setAttribute(this, `data-${opt}`, v);
   }
+  /**
+   * @param {String} opt
+   */
   toggleOption(opt) {
     setAttribute(this, `data-${opt}`, !this.getOption(opt));
   }
@@ -154,21 +168,38 @@ var BaseElement = class extends HTMLElement {
     }
     return data;
   }
+  /**
+   * @returns {String}
+   */
   static template() {
     return "";
   }
+  /**
+   * This is called at the end of constructor. Extend in subclass if needed.
+   */
   _ready() {
   }
+  /**
+   * @param {String|Error} message
+   */
   log(message) {
     if (this.options.debug) {
       console.log("[" + getAttribute(this, "id") + "] " + message);
     }
   }
+  /**
+   * Handle events within the component
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
+   * @param {Event} event
+   */
   handleEvent(event) {
     if (this[`on${event.type}`]) {
       this[`on${event.type}`](event);
     }
   }
+  /**
+   * This is called when connected. Extend in subclass if needed.
+   */
   _connected() {
   }
   connectedCallback() {
@@ -181,6 +212,9 @@ var BaseElement = class extends HTMLElement {
       dispatch(this, "connected");
     }, 0);
   }
+  /**
+   * This is called when disconnected. Extend in subclass if needed.
+   */
   _disconnected() {
   }
   disconnectedCallback() {
@@ -188,9 +222,21 @@ var BaseElement = class extends HTMLElement {
     this._disconnected();
     dispatch(this, "disconnected");
   }
+  /**
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#a-props-like-accessor
+   * @returns {Object}
+   */
   get transformAttributes() {
     return {};
   }
+  /**
+   * This is only meant to work with data attributes
+   * This allows us to have properties that reflect automatically in the component
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dataset-attributes
+   * @param {String} attributeName
+   * @param {String} oldValue
+   * @param {String} newValue
+   */
   attributeChangedCallback(attributeName, oldValue, newValue) {
     if (oldValue === newValue) {
       return;
@@ -385,15 +431,27 @@ var DataGrid = class extends base_element_default {
 </table>
 `;
   }
+  /**
+   * @returns {Labels}
+   */
   get labels() {
     return labels;
   }
+  /**
+   * @returns {Labels}
+   */
   static getLabels() {
     return labels;
   }
+  /**
+   * @param {Object} v
+   */
   static setLabels(v) {
     labels = Object.assign(labels, v);
   }
+  /**
+   * @returns {Column}
+   */
   get defaultColumn() {
     return {
       field: "",
@@ -410,6 +468,9 @@ var DataGrid = class extends base_element_default {
       transform: ""
     };
   }
+  /**
+   * @returns {Options}
+   */
   get defaultOptions() {
     return {
       id: null,
@@ -452,9 +513,15 @@ var DataGrid = class extends base_element_default {
       responsiveToggle: true
     };
   }
+  /**
+   * @param {Plugins} list
+   */
   static registerPlugins(list) {
     plugins = list;
   }
+  /**
+   * @param {String} plugin
+   */
   static unregisterPlugins(plugin = null) {
     if (plugin === null) {
       plugins = {};
@@ -462,9 +529,16 @@ var DataGrid = class extends base_element_default {
       delete plugins[plugin];
     }
   }
+  /**
+   * @returns {Plugins}
+   */
   static registeredPlugins() {
     return plugins;
   }
+  /**
+   * @param {Object|Array} columns
+   * @returns {Column[]}
+   */
   convertColumns(columns) {
     let cols = [];
     if (typeof columns === "object" && !Array.isArray(columns)) {
@@ -496,6 +570,10 @@ var DataGrid = class extends base_element_default {
     }
     return cols;
   }
+  /**
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
+   * @returns {Array}
+   */
   static get observedAttributes() {
     return [
       "page",
@@ -561,10 +639,16 @@ var DataGrid = class extends base_element_default {
   menuChanged() {
     this.renderHeader();
   }
+  /**
+   * This is the callback for the select control
+   */
   changePerPage() {
     this.options.perPage = parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value);
     this.perPageChanged();
   }
+  /**
+   * This is the actual event triggered on attribute change
+   */
   perPageChanged() {
     if (this.options.perPage !== parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value)) {
       this.perPageValuesChanged();
@@ -589,6 +673,9 @@ var DataGrid = class extends base_element_default {
   defaultSortChanged() {
     this.sortChanged();
   }
+  /**
+   * Populate the select dropdown according to options
+   */
   perPageValuesChanged() {
     if (!this.selectPerPage) {
       return;
@@ -649,6 +736,10 @@ var DataGrid = class extends base_element_default {
       plugin.disconnected();
     });
   }
+  /**
+   * @param {string} field
+   * @returns {Column}
+   */
   getCol(field) {
     let found = null;
     this.options.columns.forEach((col) => {
@@ -696,6 +787,10 @@ var DataGrid = class extends base_element_default {
       visibility: "hidden"
     });
   }
+  /**
+   * Returns the starting index of actual data
+   * @returns {Number}
+   */
   startColIndex() {
     let start = 1;
     if (this.options.selectable && this.plugins.SelectableRows) {
@@ -706,9 +801,16 @@ var DataGrid = class extends base_element_default {
     }
     return start;
   }
+  /**
+   * @returns {Boolean}
+   */
   isSticky() {
     return this.hasAttribute("sticky");
   }
+  /**
+   * @param {Boolean} visibleOnly
+   * @returns {Number}
+   */
   columnsLength(visibleOnly = false) {
     let len = 0;
     this.options.columns.forEach((col) => {
@@ -730,6 +832,10 @@ var DataGrid = class extends base_element_default {
     }
     return len;
   }
+  /**
+   * Global configuration and renderTable
+   * This should be called after your data has been loaded
+   */
   configureUi() {
     setAttribute(this.querySelector("table"), "aria-rowcount", this.data.length);
     this.table.style.visibility = "hidden";
@@ -790,6 +896,10 @@ var DataGrid = class extends base_element_default {
     this.data = this.originalData.slice();
     this.sortData();
   }
+  /**
+   * @param {any} value Value to remove. Defaults to last row.
+   * @param {String} key The key of the item to remove. Defaults to first column
+   */
   removeRow(value = null, key = null) {
     if (key === null) {
       key = this.options.columns[0]["field"];
@@ -807,6 +917,10 @@ var DataGrid = class extends base_element_default {
     this.data = this.originalData.slice();
     this.sortData();
   }
+  /**
+   * @param {String} key Return a specific key (eg: id) instead of the whole row
+   * @returns {Array}
+   */
   getSelection(key = null) {
     if (!this.plugins.SelectableRows) {
       return [];
@@ -838,6 +952,9 @@ var DataGrid = class extends base_element_default {
       }
     });
   }
+  /**
+   * @returns {Promise}
+   */
   loadData() {
     if (this.originalData.length) {
       if (!this.options.server || this.options.server && !this.fireEvents) {
@@ -975,6 +1092,10 @@ var DataGrid = class extends base_element_default {
       }
     }
   }
+  /**
+   * Data will be sorted then rendered using renderBody
+   * @param {Element} col The column that was clicked or null to use current sort
+   */
   sortData(col = null) {
     this.log("sort data");
     if (col && this.getColProp(col.getAttribute("field"), "noSort")) {
@@ -1099,6 +1220,11 @@ var DataGrid = class extends base_element_default {
     }
     this.renderFooter();
   }
+  /**
+   * Create table header
+   * - One row for the column headers
+   * - One row for the filters
+   */
   renderHeader() {
     this.log("render header");
     const thead = this.querySelector("thead");
@@ -1117,6 +1243,10 @@ var DataGrid = class extends base_element_default {
     setAttribute(td, "colspan", this.columnsLength(true));
     tfoot.style.display = "";
   }
+  /**
+   * Create the column headers based on column definitions and set options
+   * @param {HTMLTableSectionElement} thead
+   */
   createColumnHeaders(thead) {
     const availableWidth = this.clientWidth;
     const colMaxWidth = Math.round(availableWidth / this.columnsLength(true) * 2);
@@ -1288,6 +1418,10 @@ var DataGrid = class extends base_element_default {
       });
     });
   }
+  /**
+   * Render the data as rows in tbody
+   * It will call paginate() at the end
+   */
   renderBody() {
     this.log("render body");
     let tr;
@@ -1434,9 +1568,15 @@ var DataGrid = class extends base_element_default {
     tfoot.querySelector(".dg-high").textContent = high.toString();
     tfoot.querySelector(".dg-total").textContent = "" + this.totalRecords();
   }
+  /**
+   * @returns {number}
+   */
   totalPages() {
     return Math.ceil(this.totalRecords() / this.options.perPage);
   }
+  /**
+   * @returns {number}
+   */
   totalRecords() {
     if (this.options.server) {
       return this.meta[this.options.serverParams.metaFilteredKey] || 0;
@@ -1448,6 +1588,9 @@ var data_grid_default = DataGrid;
 
 // src/core/base-plugin.js
 var BasePlugin = class {
+  /**
+   * @param {DataGrid} grid
+   */
   constructor(grid) {
     this.grid = grid;
   }
@@ -1455,6 +1598,11 @@ var BasePlugin = class {
   }
   disconnected() {
   }
+  /**
+   * Handle events within the plugin
+   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
+   * @param {Event} event
+   */
   handleEvent(event) {
     if (this[`on${event.type}`]) {
       this[`on${event.type}`](event);
@@ -1469,6 +1617,9 @@ var ColumnResizer = class extends base_plugin_default {
     super(grid);
     this.isResizing = false;
   }
+  /**
+   * @param {String} resizeLabel
+   */
   renderResizer(resizeLabel) {
     const grid = this.grid;
     const table = grid.table;
@@ -1637,6 +1788,9 @@ var context_menu_default = ContextMenu;
 
 // src/plugins/draggable-headers.js
 var DraggableHeaders = class extends base_plugin_default {
+  /**
+   * @param {HTMLTableCellElement} th
+   */
   makeHeaderDraggable(th) {
     const grid = this.grid;
     th.draggable = true;
@@ -1751,6 +1905,10 @@ var SelectableRows = class extends base_plugin_default {
       this.selectAll.removeEventListener("change", this);
     }
   }
+  /**
+   * @param {String} key Return a specific key (eg: id) instead of the whole row
+   * @returns {Array}
+   */
   getSelection(key = null) {
     const grid = this.grid;
     let selectedData = [];
@@ -1769,6 +1927,10 @@ var SelectableRows = class extends base_plugin_default {
     });
     return selectedData;
   }
+  /**
+   * Uncheck box if hidden and visible only
+   * @param {HTMLTableSectionElement} tbody
+   */
   clearCheckboxes(tbody) {
     const grid = this.grid;
     if (!grid.options.selectVisibleOnly) {
@@ -1783,6 +1945,9 @@ var SelectableRows = class extends base_plugin_default {
   colIndex() {
     return this.grid.startColIndex() - 2;
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
   createHeaderCol(tr) {
     let th = document.createElement("th");
     setAttribute(th, "scope", "col");
@@ -1801,6 +1966,9 @@ var SelectableRows = class extends base_plugin_default {
     th.setAttribute("width", "40");
     tr.appendChild(th);
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
   createFilterCol(tr) {
     let th = document.createElement("th");
     setAttribute(th, "role", "columnheader button");
@@ -1809,6 +1977,12 @@ var SelectableRows = class extends base_plugin_default {
     th.tabIndex = 0;
     tr.appendChild(th);
   }
+  /**
+   * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
+   * It should check selectAll if all is checked
+   * It should uncheck selectAll if any is unchecked
+   * @param {HTMLTableSectionElement} tbody
+   */
   shouldSelectAll(tbody) {
     if (!this.selectAll) {
       return;
@@ -1816,6 +1990,9 @@ var SelectableRows = class extends base_plugin_default {
     tbody.addEventListener("change", this);
     tbody.dispatchEvent(new Event("change"));
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
   createDataCol(tr) {
     let td = document.createElement("td");
     setAttribute(td, "role", "gridcell button");
@@ -1832,9 +2009,16 @@ var SelectableRows = class extends base_plugin_default {
     label.addEventListener("click", this);
     tr.appendChild(td);
   }
+  /**
+   * @param {Event} e
+   */
   onclick(e) {
     e.stopPropagation();
   }
+  /**
+   * Handle change event on select all or any select checkbox in the table body
+   * @param {import("../utils/shortcuts.js").FlexibleEvent} e
+   */
   onchange(e) {
     const grid = this.grid;
     if (hasClass(e.target, SELECT_ALL_CLASS)) {
@@ -1874,6 +2058,8 @@ var FixedHeight = class extends base_plugin_default {
       this.hasFixedHeight = true;
     }
   }
+  /**
+   */
   createFakeRow() {
     const grid = this.grid;
     const tbody = grid.querySelector("tbody");
@@ -1887,6 +2073,9 @@ var FixedHeight = class extends base_plugin_default {
   get fakeRow() {
     return this.grid.querySelector(".dg-fake-row");
   }
+  /**
+   * On last page, use a fake row to push footer down
+   */
   updateFakeRow() {
     const grid = this.grid;
     const fakeRow = this.fakeRow;
@@ -1914,6 +2103,14 @@ var fixed_height_default = FixedHeight;
 
 // src/plugins/autosize-column.js
 var AutosizeColumn = class extends base_plugin_default {
+  /**
+   * Autosize col based on column data
+   * @param {HTMLTableCellElement} th
+   * @param {import("../data-grid").Column} column
+   * @param {Number} min
+   * @param {Number} max
+   * @returns {Number}
+   */
   computeSize(th, column, min, max) {
     const grid = this.grid;
     if (hasAttribute(th, "width")) {
@@ -1950,12 +2147,13 @@ var AutosizeColumn = class extends base_plugin_default {
 var autosize_column_default = AutosizeColumn;
 
 // src/utils/debounce.js
-function debounce(func, timeout = 300) {
-  let timer;
+function debounce(handler, timeout = 300) {
+  let timer = null;
   return (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      func.apply(this, args);
+      timer = null;
+      handler(...args);
     }, timeout);
   };
 }
@@ -2118,6 +2316,9 @@ var ResponsiveGrid = class extends base_plugin_default {
       this.observerBlocked = false;
     }, 200);
   }
+  /**
+   * @returns {Boolean}
+   */
   hasHiddenColumns() {
     let flag = false;
     this.grid.options.columns.forEach((col) => {
@@ -2130,6 +2331,9 @@ var ResponsiveGrid = class extends base_plugin_default {
   colIndex() {
     return this.grid.startColIndex() - 1;
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
   createHeaderCol(tr) {
     if (!this.grid.options.responsiveToggle) {
       return;
@@ -2142,6 +2346,9 @@ var ResponsiveGrid = class extends base_plugin_default {
     th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
   createFilterCol(tr) {
     if (!this.grid.options.responsiveToggle) {
       return;
@@ -2152,6 +2359,9 @@ var ResponsiveGrid = class extends base_plugin_default {
     th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
     th.tabIndex = 0;
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   */
   createDataCol(tr) {
     if (!this.grid.options.responsiveToggle) {
       return;
@@ -2185,9 +2395,15 @@ var ResponsiveGrid = class extends base_plugin_default {
     }
     return idealWidth;
   }
+  /**
+   * @param {Event} ev
+   */
   onmousedown(ev) {
     ev.preventDefault();
   }
+  /**
+   * @param {Event} ev
+   */
   onclick(ev) {
     ev.stopPropagation();
     const td = ev.currentTarget;
@@ -2237,9 +2453,16 @@ var responsive_grid_default = ResponsiveGrid;
 
 // src/plugins/row-actions.js
 var RowActions = class extends base_plugin_default {
+  /**
+   * @returns {Boolean}
+   */
   hasActions() {
     return this.grid.options.actions.length > 0;
   }
+  /**
+   *
+   * @param {HTMLTableRowElement} tr
+   */
   makeActionHeader(tr) {
     let actionsTh = document.createElement("th");
     setAttribute(actionsTh, "role", "columnheader button");
@@ -2248,6 +2471,10 @@ var RowActions = class extends base_plugin_default {
     actionsTh.tabIndex = 0;
     tr.appendChild(actionsTh);
   }
+  /**
+   *
+   * @param {HTMLTableRowElement} tr
+   */
   makeActionFilter(tr) {
     let actionsTh = document.createElement("th");
     actionsTh.setAttribute("role", "columnheader button");
@@ -2256,6 +2483,10 @@ var RowActions = class extends base_plugin_default {
     actionsTh.tabIndex = 0;
     tr.appendChild(actionsTh);
   }
+  /**
+   * @param {HTMLTableRowElement} tr
+   * @param {Object} item
+   */
   makeActionRow(tr, item) {
     const labels2 = this.grid.labels;
     const td = document.createElement("td");
@@ -2322,6 +2553,13 @@ var row_actions_default = RowActions;
 
 // src/plugins/editable-column.js
 var EditableColumn = class extends base_plugin_default {
+  /**
+   *
+   * @param {HTMLTableCellElement} td
+   * @param {import("../data-grid").Column} column
+   * @param {Object} item
+   * @param {number} i
+   */
   makeEditableInput(td, column, item, i) {
     const gridId = this.grid.getAttribute("id");
     let input = document.createElement("input");

@@ -243,9 +243,10 @@ export function el(el) {
 }
 
 /**
- * @param {string} tagName
+ * @template {keyof HTMLElementTagNameMap} K
+ * @param {K} tagName
  * @param {HTMLElement} parent
- * @returns {FlexibleHTMLElement}
+ * @returns {HTMLElementTagNameMap[K]}
  */
 export function ce(tagName, parent = null) {
   const el = document.createElement(tagName);

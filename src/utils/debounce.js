@@ -1,14 +1,20 @@
 /**
- * @param {Function} func
- * @param {Number} timeout
- * @returns {Function}
+ * Define a function that can be happily passed to addEventListener
+ * @typedef {Function & EventListenerOrEventListenerObject} ExtendedFunction
  */
-export default function debounce(func, timeout = 300) {
-  let timer;
+
+/**
+ * @param {Function} handler
+ * @param {Number} timeout
+ * @returns {ExtendedFunction}
+ */
+export default function debounce(handler, timeout = 300) {
+  let timer = null;
   return (...args) => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      func.apply(this, args);
+      timer = null;
+      handler(...args);
     }, timeout);
   };
 }

@@ -9,8 +9,8 @@
     "build-min": "esbuild --bundle --minify --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=dist/data-grid.min.js",
     "build-dev": "esbuild --bundle --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=dist/data-grid.js",
     "build": "npm run build-min && npm run build-dev",
-    "start": "npm run build -- --servedir=.",
-    "watch": "npm run build -- --watch",
+    "start": "npm run build-dev -- --servedir=.",
+    "watch": "npm run build-dev -- --watch",
     "compile-css-min": "sass data-grid.scss:dist/data-grid.min.css --style compressed",
     "compile-css-dev": "sass data-grid.scss dist/data-grid.css",
     "watch-css": "npm run compile-css -- --watch --poll",
@@ -43,10 +43,10 @@
     ]
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^8.1.0",
-    "ava": "^5.1.0",
-    "esbuild": "^0.16.7",
-    "jsdoc": "^4.0.0",
+    "@happy-dom/global-registrator": "^9.8.4",
+    "ava": "^5.2.0",
+    "esbuild": "^0.17.17",
+    "jsdoc": "^4.0.2",
     "jsdoc-plugin-intersection": "^1.0.4",
     "jsdoc-to-markdown": "^8.0.0",
     "jsdoc-tsimport-plugin": "^1.0.5"
@@ -54,9 +54,9 @@
   "author": "LeKoala",
   "license": "MIT",
   "dependencies": {
-    "autoprefixer": "^10.4.13",
-    "postcss": "^8.4.20",
+    "autoprefixer": "^10.4.14",
+    "postcss": "^8.4.23",
     "postcss-cli": "^10.1.0",
-    "sass": "^1.56.2"
+    "sass": "^1.62.0"
   }
 }

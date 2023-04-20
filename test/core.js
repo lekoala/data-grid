@@ -18,9 +18,9 @@ function makeInst(opts = {}) {
   return new ctor(opts);
 }
 
-// Somehow new Event syntax is not working
-// eslint-disable-next-line no-global-assign
+// Need this otherwise it fails?
 Event = window.Event;
+CustomEvent = window.CustomEvent;
 
 test("it is registered", (t) => {
   t.assert(makeInst() instanceof DataGrid);
@@ -53,7 +53,7 @@ test("it can set labels", async (t) => {
 });
 
 test("it can register plugins", (t) => {
-  t.assert(Object.keys(DataGrid.plugins()).length > 0);
+  t.assert(Object.keys(DataGrid.registeredPlugins()).length > 0);
   DataGrid.unregisterPlugins();
-  t.assert(Object.keys(DataGrid.plugins()).length == 0);
+  t.assert(Object.keys(DataGrid.registeredPlugins()).length == 0);
 });
