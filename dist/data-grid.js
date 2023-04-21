@@ -1113,8 +1113,9 @@ var DataGrid = class extends base_element_default {
       return;
     }
     if (col !== null) {
+      const haveClasses = (c) => ["dg-selectable", "dg-actions", "dg-responsive-toggle"].includes(c);
       this.querySelectorAll("thead tr:first-child th").forEach((th) => {
-        if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
+        if ([...th.classList].some(haveClasses)) {
           return;
         }
         if (th !== col) {
