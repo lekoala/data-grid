@@ -144,6 +144,7 @@ import {
  * @property {String} resizeColumn
  * @property {String} noData
  * @property {String} areYouSure
+ * @property {String} networkError
  */
 
 /**
@@ -167,6 +168,7 @@ let labels = {
   resizeColumn: "Resize column",
   noData: "No data",
   areYouSure: "Are you sure?",
+  networkError: "Network response was not OK"
 };
 
 /**
@@ -1203,7 +1205,7 @@ class DataGrid extends BaseElement {
     return fetch(url)
       .then((response) => {
         if (!response.ok) {
-          throw new Error(response.statusText);
+          throw new Error(response.statusText || labels.networkError);
         }
         return response.json();
       })
