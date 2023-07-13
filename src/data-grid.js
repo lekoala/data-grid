@@ -618,10 +618,13 @@ class DataGrid extends BaseElement {
     this.dirChanged();
     this.perPageValuesChanged();
 
+    // @ts-ignore
     this.loadData().finally(() => {
       this.configureUi();
 
       this.sortChanged();
+      this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
+
       this.filterChanged();
       this.reorderChanged();
 
@@ -629,7 +632,6 @@ class DataGrid extends BaseElement {
       this.perPageValuesChanged();
       this.pageChanged();
 
-      this.classList.add("dg-initialized");
       this.fireEvents = true; // We can now fire attributeChangedCallback events
 
       this.log("initialized");
@@ -910,7 +912,7 @@ class DataGrid extends BaseElement {
    */
   loadData() {
     // We already have some data
-    if (this.originalData.length) {
+    if (this.originalData.length || this.classList.contains("dg-initialized")) {
       // We don't use server side data
       if (!this.options.server || (this.options.server && !this.fireEvents)) {
         // if (!this.options.server) {
