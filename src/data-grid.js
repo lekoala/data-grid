@@ -38,7 +38,7 @@ import {
  * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} hidden - hide the column
  * @property {Boolean} noSort - allow disabling sort for a given column
- * @property {String} format - custom data formatting
+ * @property {any} format - custom data formatting - either by a string of HTML template or with a function.
  * @property {String} transform - custom value transformation
  * @property {Boolean} editable - replace with input (EditableColumn module)
  * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
@@ -1573,8 +1573,9 @@ class DataGrid extends BaseElement {
               tv = v;
               break;
           }
-          if (column.format && tv) {
+          if (column.format instanceof String && tv) {
             td.innerHTML = interpolate(
+              // @ts-ignore
               column.format,
               Object.assign(
                 {
@@ -1584,6 +1585,9 @@ class DataGrid extends BaseElement {
                 item
               )
             );
+          } else if (column.format instanceof Function) { 
+            const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
+            td.innerHTML = val || tv;
           } else {
             td.textContent = tv;
           }
@@ -1596,7 +1600,13 @@ class DataGrid extends BaseElement {
       if (this.options.actions.length && this.plugins.RowActions) {
         this.plugins.RowActions.makeActionRow(tr, item);
       }
+      //dispatch(this, "beforeRowCreated", {
+      //  col: field,
+      //  visibility: "visible",
+      //});
+      //if (this.options.beforeRowCreated instanceof Function) {
 
+      //}
       tbody.appendChild(tr);
     });
 
