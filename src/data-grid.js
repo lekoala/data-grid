@@ -168,7 +168,7 @@ let labels = {
   resizeColumn: "Resize column",
   noData: "No data",
   areYouSure: "Are you sure?",
-  networkError: "Network response was not OK"
+  networkError: "Network response error"
 };
 
 /**
