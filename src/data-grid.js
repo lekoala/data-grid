@@ -488,7 +488,7 @@ class DataGrid extends BaseElement {
     // Show current page in input
     setAttribute(this.inputPage, "max", this.pages);
     this.inputPage.value = "" + this.page;
-    this.inputPage.disabled = this.pages === 1;
+    this.inputPage.disabled = this.pages < 2;
   }
 
   pageChanged() {
