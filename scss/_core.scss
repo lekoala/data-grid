@@ -371,6 +371,7 @@ data-grid {
     .dg-page-nav {
       display: flex;
       align-items: center;
+      min-width: 160px;
     }
     .dg-input-page {
       width: 4rem;
