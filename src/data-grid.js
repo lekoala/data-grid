@@ -38,7 +38,7 @@ import {
  * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} hidden - hide the column
  * @property {Boolean} noSort - allow disabling sort for a given column
- * @property {any} format - custom data formatting - either by a string of HTML template or with a function.
+ * @property {String | Function} format - custom data formatting - either by a string of HTML template or by a function with an object parameter consisting of column, rowData, cellData, td, tr.
  * @property {String} transform - custom value transformation
  * @property {Boolean} editable - replace with input (EditableColumn module)
  * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
@@ -92,7 +92,6 @@ import {
  * @property {String} serverParams.sort
  * @property {String} serverParams.sortDir
  * @property {String} serverParams.dataKey
- * @property {String} serverParams.errorKey
  * @property {String} serverParams.metaKey
  * @property {String} serverParams.metaTotalKey
  * @property {String} serverParams.metaFilteredKey
@@ -341,7 +340,6 @@ class DataGrid extends BaseElement {
         sort: "sort",
         sortDir: "sortDir",
         dataKey: "data",
-        errorKey: "error",
         metaKey: "meta",
         metaTotalKey: "total",
         metaFilteredKey: "filtered",
@@ -913,12 +911,14 @@ class DataGrid extends BaseElement {
    * @returns {Promise}
    */
   loadData() {
+    const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
     // We already have some data
     if (this.originalData.length || this.classList.contains("dg-initialized")) {
       // We don't use server side data
       if (!this.options.server || (this.options.server && !this.fireEvents)) {
         // if (!this.options.server) {
         this.log("skip loadData");
+        flagEmpty();
         return new Promise((resolve) => {
           resolve();
         });
@@ -927,24 +927,14 @@ class DataGrid extends BaseElement {
     this.log("loadData");
     this.loading = true;
     this.classList.add("dg-loading");
+    this.classList.remove("dg-empty", "dg-network-error");
     return this.fetchData()
       .then((response) => {
-        this.classList.remove("dg-loading");
-        this.loading = false;
-
         // We can get a straight array or an object
         if (Array.isArray(response)) {
           this.data = response;
         } else {
           // Object must contain data key
-          if (response[this.options.serverParams.errorKey]) {
-            this.querySelector("tbody").setAttribute(
-              "data-empty",
-              response[this.options.serverParams.errorKey].replace(/^\s+|\r\n|\n|\r$/g, "")
-            );
-            this.removeAttribute("data-url");
-            return;
-          }
           if (!response[this.options.serverParams.dataKey]) {
             console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
             this.options.url = null;
@@ -969,6 +959,17 @@ class DataGrid extends BaseElement {
       })
       .catch((err) => {
         this.log(err);
+        this.querySelector("tbody").setAttribute(
+          "data-empty",
+          err.message.replace(/^\s+|\r\n|\n|\r$/g, "")
+        );
+        this.classList.add("dg-empty", "dg-network-error");
+      })
+      // @ts-ignore
+      .finally(() => {
+        flagEmpty();
+        this.classList.remove("dg-loading");
+        this.loading = false;
       });
   }
 
@@ -1208,11 +1209,6 @@ class DataGrid extends BaseElement {
           throw new Error(response.statusText || labels.networkError);
         }
         return response.json();
-      })
-      .catch((err) => {
-        return {
-          error: err.message,
-        };
       });
   }
 
@@ -1587,7 +1583,7 @@ class DataGrid extends BaseElement {
             );
           } else if (column.format instanceof Function) { 
             const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
-            td.innerHTML = val || tv;
+            td.innerHTML = val || tv || v;
           } else {
             td.textContent = tv;
           }

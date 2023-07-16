@@ -109,12 +109,21 @@ data-grid {
     color: var(--header-color);
   }
 
-  &.dg-loading tbody {
-    animation-name: dataGridShow;
-    animation-timing-function: ease-in;
-    animation-fill-mode: forwards;
-    animation-duration: 0.3s; // only triggers after 300ms
-    pointer-events: none; // disable clicks while loading
+  &.dg-loading {
+    &:not(.dg-initialized) {
+      thead,
+      tfoot {
+        background: none;
+      }
+    }
+
+    tbody {
+      animation-name: dataGridShow;
+      animation-timing-function: ease-in;
+      animation-fill-mode: forwards;
+      animation-duration: 0.3s; // only triggers after 300ms
+      pointer-events: none; // disable clicks while loading
+    }
   }
 
   tr {
@@ -325,22 +334,40 @@ data-grid {
   }
 
   // Empty table or error message (don't use :empty as it would create fouc on load)
-  &:not([data-url]) tbody {
-    height: 8rem;
-    position: relative;
-    &:before {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      content: attr(data-empty);
-      transform: translate(-50%, -50%);
-      opacity: 0.5;
-      font-size: 2rem;
-      text-align: center;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-      overflow: hidden;
-      width: 90%;
+  &.dg-empty { 
+    tbody {
+      height: 4rem;
+      position: relative;
+      &:before {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        content: attr(data-empty);
+        transform: translate(-50%, -50%);
+        opacity: 0.5;
+        font-size: 1.5rem;
+        text-align: center;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        width: 90%;
+      }
+    }
+    &.dg-network-error {
+      table {
+        color: #842029;
+        background-color: #f8d7da;
+        border: 1px solid #f5c2c7;
+      }
+      tbody {
+        height: 8rem;
+        &:before {
+          font-size: 2rem;
+        }
+        tr:not(.dg-fake-row) {
+          display: none;
+        }
+      }
     }
   }
 
