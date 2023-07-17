@@ -205,7 +205,7 @@ class DataGrid extends BaseElement {
      * We store the original data in this
      * @type {Array}
      */
-    this.originalData = [];
+    this.originalData; // declared uninitialized to allow data preloading before fetch.
 
     // Make the IDE happy
     /**
@@ -217,7 +217,7 @@ class DataGrid extends BaseElement {
     this.fireEvents = false;
     this.page = this.options.defaultPage || 1;
     this.pages = 0;
-    this.meta = {};
+    this.meta; // declared uninitialized to allow data preloading before fetch.
     /**
      * @type {Plugins}
      */
@@ -886,6 +886,18 @@ class DataGrid extends BaseElement {
     this.renderBody();
   }
 
+  /**
+   * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. 
+   * Subsequent grid actions after initialization will operate as normal.
+   * @param {Object} data - an object with meta ({total, filtered, start}) and data (array of objects) properties.
+   */
+  preload(data) {
+    const metaKey = this.options.serverParams.metaKey,
+      dataKey = this.options.serverParams.dataKey;
+    if (data?.[metaKey]) this.meta = data[metaKey];
+    if (data?.[dataKey]) this.data = this.originalData = data[dataKey];
+  }
+
   refresh(cb = null) {
     this.data = this.originalData = [];
     return this.reload(cb);
@@ -895,8 +907,9 @@ class DataGrid extends BaseElement {
     this.log("reload");
 
     // If the data was cleared, we need to render again
-    const needRender = this.originalData.length === 0;
+    const needRender = !this.originalData?.length;
     this.fixPage();
+    // @ts-ignore
     this.loadData().finally(() => {
       // If we load data from the server, we redraw the table body
       // Otherwise, we just need to paginate
@@ -913,10 +926,9 @@ class DataGrid extends BaseElement {
   loadData() {
     const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
     // We already have some data
-    if (this.originalData.length || this.classList.contains("dg-initialized")) {
+    if (this.meta || this.originalData || this.classList.contains("dg-initialized")) {
       // We don't use server side data
       if (!this.options.server || (this.options.server && !this.fireEvents)) {
-        // if (!this.options.server) {
         this.log("skip loadData");
         flagEmpty();
         return new Promise((resolve) => {
@@ -1191,12 +1203,12 @@ class DataGrid extends BaseElement {
       // 0 based
       params[this.options.serverParams.start] = this.page - 1;
       params[this.options.serverParams.length] = this.options.perPage;
-      params[this.options.serverParams.search] = this.getFilters();
+      if (this.options.filter) params[this.options.serverParams.search] = this.getFilters();
       params[this.options.serverParams.sort] = this.getSort() || "";
       params[this.options.serverParams.sortDir] = this.getSortDir();
 
       // extra params ?
-      if (this.meta[this.options.serverParams.paramsKey]) {
+      if (this.meta?.[this.options.serverParams.paramsKey]) {
         params = Object.assign(params, this.meta[this.options.serverParams.paramsKey]);
       }
     }
