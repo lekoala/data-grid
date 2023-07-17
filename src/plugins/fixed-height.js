@@ -53,7 +53,9 @@ class FixedHeight extends BasePlugin {
     if (grid.page !== grid.totalPages()) {
       return;
     }
-
+    if (!grid.options.autoheight) {
+      return;
+    }
     // Find remaining missing height
     const max = grid.options.perPage * grid.rowHeight;
     const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
