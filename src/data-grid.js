@@ -112,9 +112,10 @@ import {
  * @property {ServerParams} serverParams Describe keys passed to the server backend
  * @property {String} dir Dir
  * @property {Array} perPageValues Available per page options
+ * @property {Boolean} hidePerPage Hides the page size select element
  * @property {Column[]} columns Available columns
  * @property {Number} defaultPage Starting page
- * @property {Number} perPage Number of records displayed per page
+ * @property {Number} perPage Number of records displayed per page (page size)
  * @property {Boolean} expand  Allow cell content to spawn over multiple lines
  * @property {Action[]} actions Row actions (RowActions module)
  * @property {Boolean} collapseActions Group actions (RowActions module)
@@ -123,6 +124,7 @@ import {
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
+ * @property {Boolean} autohidePager auto-hides the pager when number of records falls below the selected page size
  * @property {Boolean} menu Right click menu on column headers (ContextMenu module)
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
@@ -350,6 +352,7 @@ class DataGrid extends BaseElement {
       reorder: false,
       dir: "ltr",
       perPageValues: [10, 25, 50, 100, 250],
+      hidePerPage: false,
       columns: [],
       actions: [],
       collapseActions: false,
@@ -360,6 +363,7 @@ class DataGrid extends BaseElement {
       autosize: true,
       expand: false,
       autoheight: true,
+      autohidePager: false,
       responsive: false,
       responsiveToggle: true,
     };
@@ -608,6 +612,7 @@ class DataGrid extends BaseElement {
     this.btnNext.addEventListener("click", this.getNext);
     this.btnLast.addEventListener("click", this.getLast);
     this.selectPerPage.addEventListener("change", this.changePerPage);
+    this.selectPerPage.toggleAttribute("hidden", this.options.hidePerPage);
     this.inputPage.addEventListener("input", this.gotoPage);
 
     Object.values(this.plugins).forEach((plugin) => {
@@ -1692,6 +1697,7 @@ class DataGrid extends BaseElement {
     tfoot.querySelector(".dg-low").textContent = low.toString();
     tfoot.querySelector(".dg-high").textContent = high.toString();
     tfoot.querySelector(".dg-total").textContent = "" + this.totalRecords();
+    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.options.perPage > this.totalRecords());
   }
 
   /**
