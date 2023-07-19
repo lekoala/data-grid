@@ -169,7 +169,7 @@ let labels = {
   resizeColumn: "Resize column",
   noData: "No data",
   areYouSure: "Are you sure?",
-  networkError: "Network response error"
+  networkError: "Network response error",
 };
 
 /**
@@ -894,7 +894,7 @@ class DataGrid extends BaseElement {
   }
 
   /**
-   * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. 
+   * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time.
    * Subsequent grid actions after initialization will operate as normal.
    * @param {Object} data - an object with meta ({total, filtered, start}) and data (array of objects) properties.
    */
@@ -947,49 +947,50 @@ class DataGrid extends BaseElement {
     this.loading = true;
     this.classList.add("dg-loading");
     this.classList.remove("dg-empty", "dg-network-error");
-    return this.fetchData()
-      .then((response) => {
-        // We can get a straight array or an object
-        if (Array.isArray(response)) {
-          this.data = response;
-        } else {
-          // Object must contain data key
-          if (!response[this.options.serverParams.dataKey]) {
-            console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
-            this.options.url = null;
-            return;
+    return (
+      this.fetchData()
+        .then((response) => {
+          // We can get a straight array or an object
+          if (Array.isArray(response)) {
+            this.data = response;
+          } else {
+            // Object must contain data key
+            if (!response[this.options.serverParams.dataKey]) {
+              console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
+              this.options.url = null;
+              return;
+            }
+
+            // We may have a config object
+            this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
+            // It should return meta data (see metaFilteredKey)
+            this.meta = response[this.options.serverParams.metaKey] ?? {};
+            this.data = response[this.options.serverParams.dataKey];
           }
+          this.originalData = this.data.slice();
+          this.fixPage();
 
-          // We may have a config object
-          this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
-          // It should return meta data (see metaFilteredKey)
-          this.meta = response[this.options.serverParams.metaKey] ?? {};
-          this.data = response[this.options.serverParams.dataKey];
-        }
-        this.originalData = this.data.slice();
-        this.fixPage();
-
-        // Make sure we have a proper set of columns
-        if (this.options.columns.length === 0 && this.originalData.length) {
-          this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
-        } else {
-          this.options.columns = this.convertColumns(this.options.columns);
-        }
-      })
-      .catch((err) => {
-        this.log(err);
-        this.querySelector("tbody").setAttribute(
-          "data-empty",
-          err.message.replace(/^\s+|\r\n|\n|\r$/g, "")
-        );
-        this.classList.add("dg-empty", "dg-network-error");
-      })
-      // @ts-ignore
-      .finally(() => {
-        flagEmpty();
-        this.classList.remove("dg-loading");
-        this.loading = false;
-      });
+          // Make sure we have a proper set of columns
+          if (this.options.columns.length === 0 && this.originalData.length) {
+            this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
+          } else {
+            this.options.columns = this.convertColumns(this.options.columns);
+          }
+        })
+        .catch((err) => {
+          this.log(err);
+          if (err.message) {
+            this.querySelector("tbody").setAttribute("data-empty", err.message.replace(/^\s+|\r\n|\n|\r$/g, ""));
+          }
+          this.classList.add("dg-empty", "dg-network-error");
+        })
+        // @ts-ignore
+        .finally(() => {
+          flagEmpty();
+          this.classList.remove("dg-loading");
+          this.loading = false;
+        })
+    );
   }
 
   getFirst() {
@@ -1122,7 +1123,7 @@ class DataGrid extends BaseElement {
     // We clicked on a column, update sort state
     if (col !== null) {
       // Remove active sort if any
-      const haveClasses = c => ["dg-selectable", "dg-actions", "dg-responsive-toggle"].includes(c);
+      const haveClasses = (c) => ["dg-selectable", "dg-actions", "dg-responsive-toggle"].includes(c);
       this.querySelectorAll("thead tr:first-child th").forEach((th) => {
         // @ts-ignore
         if ([...th.classList].some(haveClasses)) {
@@ -1222,13 +1223,12 @@ class DataGrid extends BaseElement {
 
     appendParamsToUrl(url, params);
 
-    return fetch(url)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(response.statusText || labels.networkError);
-        }
-        return response.json();
-      });
+    return fetch(url).then((response) => {
+      if (!response.ok) {
+        throw new Error(response.statusText || labels.networkError);
+      }
+      return response.json();
+    });
   }
 
   renderTable() {
@@ -1600,7 +1600,7 @@ class DataGrid extends BaseElement {
                 item
               )
             );
-          } else if (column.format instanceof Function) { 
+          } else if (column.format instanceof Function) {
             const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
             td.innerHTML = val || tv || v;
           } else {
@@ -1615,7 +1615,7 @@ class DataGrid extends BaseElement {
       if (this.options.actions.length && this.plugins.RowActions) {
         this.plugins.RowActions.makeActionRow(tr, item);
       }
- 
+
       tbody.appendChild(tr);
     });
 
