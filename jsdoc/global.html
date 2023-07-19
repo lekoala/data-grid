@@ -216,7 +216,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line158">line 158</a>
+        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line160">line 160</a>
     </li></ul></dd>
     
 
@@ -288,7 +288,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line153">line 153</a>
+        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line155">line 155</a>
     </li></ul></dd>
     
 
@@ -956,7 +956,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line177">line 177</a>
+        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line180">line 180</a>
     </li></ul></dd>
     
 
@@ -992,7 +992,7 @@
     
 
     
-    <h4 class="name" id="ce"><span class="type-signature"></span>ce<span class="signature">(tagName, parent)</span><span class="type-signature"> &rarr; {<a href="global.html#FlexibleHTMLElement">FlexibleHTMLElement</a>}</span></h4>
+    <h4 class="name" id="ce"><span class="type-signature"></span>ce<span class="signature">(tagName, parent)</span><span class="type-signature"></span></h4>
     
 
     
@@ -1038,7 +1038,7 @@
             <td class="type">
             
                 
-<span class="param-type">string</span>
+<span class="param-type">K</span>
 
 
             
@@ -1071,7 +1071,7 @@
 
             
 
-            <td class="description last"></td>
+            <td class="description last">//  * @returns {HTMLElementTagNameMap[K]}</td>
         </tr>
 
     
@@ -1112,7 +1112,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="utils_shortcuts.js.html">utils/shortcuts.js</a>, <a href="utils_shortcuts.js.html#line250">line 250</a>
+        <a href="utils_shortcuts.js.html">utils/shortcuts.js</a>, <a href="utils_shortcuts.js.html#line251">line 251</a>
     </li></ul></dd>
     
 
@@ -1137,24 +1137,6 @@
 
 
 
-<h5>Returns:</h5>
-
-        
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type"><a href="global.html#FlexibleHTMLElement">FlexibleHTMLElement</a></span>
-
-
-    </dd>
-</dl>
-
-    
 
 
 
@@ -2520,7 +2502,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="utils_shortcuts.js.html">utils/shortcuts.js</a>, <a href="utils_shortcuts.js.html#line262">line 262</a>
+        <a href="utils_shortcuts.js.html">utils/shortcuts.js</a>, <a href="utils_shortcuts.js.html#line263">line 263</a>
     </li></ul></dd>
     
 
@@ -4609,6 +4591,9 @@
             
                 
 <span class="param-type">String</span>
+|
+
+<span class="param-type">function</span>
 
 
             
@@ -4618,7 +4603,7 @@
 
             
 
-            <td class="description last">custom data formatting</td>
+            <td class="description last">custom data formatting - either by a string of HTML template or by a function with an object parameter consisting of column, rowData, cellData, td, tr.</td>
         </tr>
 
     
@@ -5099,6 +5084,94 @@
 
     
 </dl>
+
+
+
+
+
+
+            
+                
+
+    
+
+    
+    <h4 class="name" id="ExtendedFunction"><span class="type-signature"></span>ExtendedFunction<span class="signature">()</span><span class="type-signature"></span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Define a function that can be happily passed to addEventListener
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="utils_debounce.js.html">utils/debounce.js</a>, <a href="utils_debounce.js.html#line1">line 1</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -6047,6 +6120,29 @@
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>networkError</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">String</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last"></td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -6082,7 +6178,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line133">line 133</a>
+        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line134">line 134</a>
     </li></ul></dd>
     
 
@@ -6605,6 +6701,35 @@
 
         <tr>
             
+                <td class="name"><code>hidePerPage</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Hides the page size select element</td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>columns</code></td>
             
 
@@ -6685,7 +6810,7 @@
 
             
 
-            <td class="description last">Number of records displayed per page</td>
+            <td class="description last">Number of records displayed per page (page size)</td>
         </tr>
 
     
@@ -6924,6 +7049,35 @@
 
         <tr>
             
+                <td class="name"><code>autohidePager</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Boolean</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">auto-hides the pager when number of records falls below the selected page size</td>
+        </tr>
+
+    
+
+        <tr>
+            
                 <td class="name"><code>menu</code></td>
             
 
@@ -7072,7 +7226,7 @@
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line103">line 103</a>
+        <a href="data-grid.js.html">data-grid.js</a>, <a href="data-grid.js.html#line102">line 102</a>
     </li></ul></dd>
     
 
@@ -7886,29 +8040,6 @@
 
         <tr>
             
-                <td class="name"><code>serverParams.errorKey</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">String</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last"></td>
-        </tr>
-
-    
-
-        <tr>
-            
                 <td class="name"><code>serverParams.metaKey</code></td>
             
 
@@ -8160,7 +8291,7 @@
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.0</a> on Fri Dec 16 2022 18:21:02 GMT+0100 (heure normale d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Jul 19 2023 10:52:25 GMT+0200 (heure d’été d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>
