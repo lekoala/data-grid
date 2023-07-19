@@ -356,7 +356,8 @@ var labels = {
   items: "items",
   resizeColumn: "Resize column",
   noData: "No data",
-  areYouSure: "Are you sure?"
+  areYouSure: "Are you sure?",
+  networkError: "Network response error"
 };
 function applyColumnDefinition(el, column) {
   if (column.width) {
@@ -376,12 +377,12 @@ var DataGrid = class extends base_element_default {
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
     this.data = [];
-    this.originalData = [];
+    this.originalData;
     this.options = this.options || this.defaultOptions;
     this.fireEvents = false;
     this.page = this.options.defaultPage || 1;
     this.pages = 0;
-    this.meta = {};
+    this.meta;
     this.plugins = {};
     for (const [pluginName, pluginClass] of Object.entries(plugins)) {
       this.plugins[pluginName] = new pluginClass(this);
@@ -490,7 +491,6 @@ var DataGrid = class extends base_element_default {
         sort: "sort",
         sortDir: "sortDir",
         dataKey: "data",
-        errorKey: "error",
         metaKey: "meta",
         metaTotalKey: "total",
         metaFilteredKey: "filtered",
@@ -501,6 +501,7 @@ var DataGrid = class extends base_element_default {
       reorder: false,
       dir: "ltr",
       perPageValues: [10, 25, 50, 100, 250],
+      hidePerPage: false,
       columns: [],
       actions: [],
       collapseActions: false,
@@ -511,6 +512,7 @@ var DataGrid = class extends base_element_default {
       autosize: true,
       expand: false,
       autoheight: true,
+      autohidePager: false,
       responsive: false,
       responsiveToggle: true
     };
@@ -623,7 +625,7 @@ var DataGrid = class extends base_element_default {
     this.page = this.constrainPageValue(this.page);
     setAttribute(this.inputPage, "max", this.pages);
     this.inputPage.value = "" + this.page;
-    this.inputPage.disabled = this.pages === 1;
+    this.inputPage.disabled = this.pages < 2;
   }
   pageChanged() {
     this.reload();
@@ -708,6 +710,7 @@ var DataGrid = class extends base_element_default {
     this.btnNext.addEventListener("click", this.getNext);
     this.btnLast.addEventListener("click", this.getLast);
     this.selectPerPage.addEventListener("change", this.changePerPage);
+    this.selectPerPage.toggleAttribute("hidden", this.options.hidePerPage);
     this.inputPage.addEventListener("input", this.gotoPage);
     Object.values(this.plugins).forEach((plugin) => {
       plugin.connected();
@@ -717,12 +720,12 @@ var DataGrid = class extends base_element_default {
     this.loadData().finally(() => {
       this.configureUi();
       this.sortChanged();
+      this.classList.add("dg-initialized");
       this.filterChanged();
       this.reorderChanged();
       this.dirChanged();
       this.perPageValuesChanged();
       this.pageChanged();
-      this.classList.add("dg-initialized");
       this.fireEvents = true;
       this.log("initialized");
     });
@@ -893,6 +896,8 @@ var DataGrid = class extends base_element_default {
     this.renderTable();
   }
   addRow(row) {
+    if (!Array.isArray(this.originalData))
+      return;
     this.log("Add row");
     this.originalData.push(row);
     this.data = this.originalData.slice();
@@ -903,6 +908,8 @@ var DataGrid = class extends base_element_default {
    * @param {String} key The key of the item to remove. Defaults to first column
    */
   removeRow(value = null, key = null) {
+    if (!Array.isArray(this.originalData))
+      return;
     if (key === null) {
       key = this.options.columns[0]["field"];
     }
@@ -939,13 +946,25 @@ var DataGrid = class extends base_element_default {
     this.data = this.originalData = [];
     this.renderBody();
   }
+  /**
+   * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. 
+   * Subsequent grid actions after initialization will operate as normal.
+   * @param {Object} data - an object with meta ({total, filtered, start}) and data (array of objects) properties.
+   */
+  preload(data) {
+    const metaKey = this.options.serverParams.metaKey, dataKey = this.options.serverParams.dataKey;
+    if (data?.[metaKey])
+      this.meta = data[metaKey];
+    if (data?.[dataKey])
+      this.data = this.originalData = data[dataKey];
+  }
   refresh(cb = null) {
     this.data = this.originalData = [];
     return this.reload(cb);
   }
   reload(cb = null) {
     this.log("reload");
-    const needRender = this.originalData.length === 0;
+    const needRender = !this.originalData?.length;
     this.fixPage();
     this.loadData().finally(() => {
       this.options.server || needRender ? this.renderBody() : this.paginate();
@@ -958,9 +977,11 @@ var DataGrid = class extends base_element_default {
    * @returns {Promise}
    */
   loadData() {
-    if (this.originalData.length) {
+    const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
+    if (this.meta || this.originalData || this.classList.contains("dg-initialized")) {
       if (!this.options.server || this.options.server && !this.fireEvents) {
         this.log("skip loadData");
+        flagEmpty();
         return new Promise((resolve) => {
           resolve();
         });
@@ -969,20 +990,11 @@ var DataGrid = class extends base_element_default {
     this.log("loadData");
     this.loading = true;
     this.classList.add("dg-loading");
+    this.classList.remove("dg-empty", "dg-network-error");
     return this.fetchData().then((response) => {
-      this.classList.remove("dg-loading");
-      this.loading = false;
       if (Array.isArray(response)) {
         this.data = response;
       } else {
-        if (response[this.options.serverParams.errorKey]) {
-          this.querySelector("tbody").setAttribute(
-            "data-empty",
-            response[this.options.serverParams.errorKey].replace(/^\s+|\r\n|\n|\r$/g, "")
-          );
-          this.removeAttribute("data-url");
-          return;
-        }
         if (!response[this.options.serverParams.dataKey]) {
           console.error("Invalid response, it should contain a data key with an array or be a plain array", response);
           this.options.url = null;
@@ -1001,6 +1013,15 @@ var DataGrid = class extends base_element_default {
       }
     }).catch((err) => {
       this.log(err);
+      this.querySelector("tbody").setAttribute(
+        "data-empty",
+        err.message.replace(/^\s+|\r\n|\n|\r$/g, "")
+      );
+      this.classList.add("dg-empty", "dg-network-error");
+    }).finally(() => {
+      flagEmpty();
+      this.classList.remove("dg-loading");
+      this.loading = false;
     });
   }
   getFirst() {
@@ -1073,7 +1094,7 @@ var DataGrid = class extends base_element_default {
     if (this.options.server) {
       this.reload();
     } else {
-      this.data = this.originalData.slice();
+      this.data = this.originalData?.slice() ?? [];
       const inputs = findAll(this, "thead tr.dg-head-filters input");
       inputs.forEach((input) => {
         let value = input.value;
@@ -1140,7 +1161,7 @@ var DataGrid = class extends base_element_default {
       const sort = col ? col.getAttribute("aria-sort") : "none";
       if (sort === "none") {
         let stack = [];
-        this.originalData.some((itemA) => {
+        this.originalData?.some((itemA) => {
           this.data.some((itemB) => {
             if (JSON.stringify(itemA) === JSON.stringify(itemB)) {
               stack.push(itemB);
@@ -1187,23 +1208,20 @@ var DataGrid = class extends base_element_default {
     if (this.options.server) {
       params[this.options.serverParams.start] = this.page - 1;
       params[this.options.serverParams.length] = this.options.perPage;
-      params[this.options.serverParams.search] = this.getFilters();
+      if (this.options.filter)
+        params[this.options.serverParams.search] = this.getFilters();
       params[this.options.serverParams.sort] = this.getSort() || "";
       params[this.options.serverParams.sortDir] = this.getSortDir();
-      if (this.meta[this.options.serverParams.paramsKey]) {
+      if (this.meta?.[this.options.serverParams.paramsKey]) {
         params = Object.assign(params, this.meta[this.options.serverParams.paramsKey]);
       }
     }
     appendParamsToUrl(url, params);
     return fetch(url).then((response) => {
       if (!response.ok) {
-        throw new Error(response.statusText);
+        throw new Error(response.statusText || labels.networkError);
       }
       return response.json();
-    }).catch((err) => {
-      return {
-        error: err.message
-      };
     });
   }
   renderTable() {
@@ -1492,8 +1510,9 @@ var DataGrid = class extends base_element_default {
               tv = v;
               break;
           }
-          if (column.format && tv) {
+          if (column.format instanceof String && tv) {
             td.innerHTML = interpolate(
+              // @ts-ignore
               column.format,
               Object.assign(
                 {
@@ -1503,6 +1522,9 @@ var DataGrid = class extends base_element_default {
                 item
               )
             );
+          } else if (column.format instanceof Function) {
+            const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
+            td.innerHTML = val || tv || v;
           } else {
             td.textContent = tv;
           }
@@ -1570,6 +1592,7 @@ var DataGrid = class extends base_element_default {
     tfoot.querySelector(".dg-low").textContent = low.toString();
     tfoot.querySelector(".dg-high").textContent = high.toString();
     tfoot.querySelector(".dg-total").textContent = "" + this.totalRecords();
+    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.options.perPage > this.totalRecords());
   }
   /**
    * @returns {number}
@@ -1582,7 +1605,7 @@ var DataGrid = class extends base_element_default {
    */
   totalRecords() {
     if (this.options.server) {
-      return this.meta[this.options.serverParams.metaFilteredKey] || 0;
+      return this.meta?.[this.options.serverParams.metaFilteredKey] || 0;
     }
     return this.data.length;
   }
@@ -2089,6 +2112,9 @@ var FixedHeight = class extends base_plugin_default {
       return;
     }
     if (grid.page !== grid.totalPages()) {
+      return;
+    }
+    if (!grid.options.autoheight) {
       return;
     }
     const max = grid.options.perPage * grid.rowHeight;

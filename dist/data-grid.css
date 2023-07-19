@@ -95,6 +95,10 @@ data-grid tfoot {
   background-color: var(--header-background);
   color: var(--header-color);
 }
+data-grid.dg-loading:not(.dg-initialized) thead,
+data-grid.dg-loading:not(.dg-initialized) tfoot {
+  background: none;
+}
 data-grid.dg-loading tbody {
   animation-name: dataGridShow;
   animation-timing-function: ease-in;
@@ -279,23 +283,37 @@ data-grid tbody td input.dg-editable {
 data-grid tbody td input.dg-editable:hover {
   box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
 }
-data-grid:not([data-url]) tbody {
-  height: 8rem;
+data-grid.dg-empty tbody {
+  height: 4rem;
   position: relative;
 }
-data-grid:not([data-url]) tbody:before {
+data-grid.dg-empty tbody:before {
   position: absolute;
   top: 50%;
   left: 50%;
   content: attr(data-empty);
   transform: translate(-50%, -50%);
   opacity: 0.5;
-  font-size: 2rem;
+  font-size: 1.5rem;
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
   width: 90%;
+}
+data-grid.dg-empty.dg-network-error table {
+  color: #842029;
+  background-color: #f8d7da;
+  border: 1px solid #f5c2c7;
+}
+data-grid.dg-empty.dg-network-error tbody {
+  height: 8rem;
+}
+data-grid.dg-empty.dg-network-error tbody:before {
+  font-size: 2rem;
+}
+data-grid.dg-empty.dg-network-error tbody tr:not(.dg-fake-row) {
+  display: none;
 }
 data-grid tbody tr {
   border-bottom: solid 1px var(--row-border-color);
@@ -320,6 +338,7 @@ data-grid tfoot td {
 data-grid tfoot .dg-page-nav {
   display: flex;
   align-items: center;
+  min-width: 160px;
 }
 data-grid tfoot .dg-input-page {
   width: 4rem;
@@ -597,6 +616,9 @@ data-grid .dg-responsive-table th {
     display: block;
     font-weight: bold;
     background-color: var(--header-background);
+  }
+  data-grid[responsive] tbody td[role=gridcell] {
+    padding-left: calc(100% - var(--responsive-width) - var(--padding) * 4 + 0.5rem);
   }
   data-grid[responsive] .dg-selectable {
     height: 28px;
