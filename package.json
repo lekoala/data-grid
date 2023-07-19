@@ -43,9 +43,9 @@
     ]
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^9.8.4",
-    "ava": "^5.2.0",
-    "esbuild": "^0.17.17",
+    "@happy-dom/global-registrator": "^10.5.1",
+    "ava": "^5.3.1",
+    "esbuild": "^0.18.14",
     "jsdoc": "^4.0.2",
     "jsdoc-plugin-intersection": "^1.0.4",
     "jsdoc-to-markdown": "^8.0.0",
@@ -55,8 +55,8 @@
   "license": "MIT",
   "dependencies": {
     "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.23",
+    "postcss": "^8.4.26",
     "postcss-cli": "^10.1.0",
-    "sass": "^1.62.0"
+    "sass": "^1.63.6"
   }
 }
