@@ -164,10 +164,15 @@ var BaseElement = class extends HTMLElement {
     setAttribute(this, `data-${opt}`, !this.getOption(opt));
   }
   get normalizedDataset() {
+    let jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
     let data = { ...this.dataset };
     for (var key in data) {
+      if (key == "config") {
+        continue;
+      }
       data[key] = normalizeData(data[key]);
     }
+    Object.assign(data, jsonConfig);
     return data;
   }
   /**
@@ -947,7 +952,7 @@ var DataGrid = class extends base_element_default {
     this.renderBody();
   }
   /**
-   * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. 
+   * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time.
    * Subsequent grid actions after initialization will operate as normal.
    * @param {Object} data - an object with meta ({total, filtered, start}) and data (array of objects) properties.
    */
@@ -1013,10 +1018,9 @@ var DataGrid = class extends base_element_default {
       }
     }).catch((err) => {
       this.log(err);
-      this.querySelector("tbody").setAttribute(
-        "data-empty",
-        err.message.replace(/^\s+|\r\n|\n|\r$/g, "")
-      );
+      if (err.message) {
+        this.querySelector("tbody").setAttribute("data-empty", err.message.replace(/^\s+|\r\n|\n|\r$/g, ""));
+      }
       this.classList.add("dg-empty", "dg-network-error");
     }).finally(() => {
       flagEmpty();
@@ -1273,14 +1277,14 @@ var DataGrid = class extends base_element_default {
     const colMaxWidth = Math.round(availableWidth / this.columnsLength(true) * 2);
     let idx = 0;
     let tr;
-    tr = document.createElement("tr");
+    tr = ce("tr");
     this.headerRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "1");
     tr.setAttribute("class", "dg-head-columns");
     let sampleTh = thead.querySelector("tr.dg-head-columns th");
     if (!sampleTh) {
-      sampleTh = document.createElement("th");
+      sampleTh = ce("th");
       thead.querySelector("tr").appendChild(sampleTh);
     }
     if (this.options.selectable && this.plugins.SelectableRows) {
@@ -1296,7 +1300,7 @@ var DataGrid = class extends base_element_default {
         return;
       }
       const colIdx = idx + this.startColIndex();
-      let th = document.createElement("th");
+      let th = ce("th");
       th.setAttribute("scope", "col");
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", "" + colIdx);
@@ -1381,7 +1385,7 @@ var DataGrid = class extends base_element_default {
   createColumnFilters(thead) {
     let idx = 0;
     let tr;
-    tr = document.createElement("tr");
+    tr = ce("tr");
     this.filterRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "2");
@@ -1405,10 +1409,11 @@ var DataGrid = class extends base_element_default {
         console.warn("Related th not found", colIdx);
         return;
       }
-      let th = document.createElement("th");
+      let th = ce("th");
       th.setAttribute("aria-colindex", "" + colIdx);
-      let input = document.createElement("input");
+      let input = ce("input");
       input.type = "text";
+      input.inputMode = "search";
       input.autocomplete = "off";
       input.spellcheck = false;
       input.dataset.name = column.field;
@@ -1448,9 +1453,9 @@ var DataGrid = class extends base_element_default {
     let tr;
     let td;
     let idx;
-    let tbody = document.createElement("tbody");
+    let tbody = ce("tbody");
     this.data.forEach((item, i) => {
-      tr = document.createElement("tr");
+      tr = ce("tr");
       setAttribute(tr, "role", "row");
       setAttribute(tr, "hidden", "");
       setAttribute(tr, "aria-rowindex", i + 1);
@@ -1488,13 +1493,14 @@ var DataGrid = class extends base_element_default {
           }
           return;
         }
-        td = document.createElement("td");
+        td = ce("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startColIndex());
         applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
         if (column.editable && this.plugins.EditableColumn) {
+          addClass(td, "dg-editable-col");
           this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
           const v = item[column.field] ?? "";
@@ -1510,21 +1516,26 @@ var DataGrid = class extends base_element_default {
               tv = v;
               break;
           }
-          if (column.format instanceof String && tv) {
-            td.innerHTML = interpolate(
-              // @ts-ignore
-              column.format,
-              Object.assign(
-                {
-                  _v: v,
-                  _tv: tv
-                },
-                item
-              )
-            );
-          } else if (column.format instanceof Function) {
-            const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
-            td.innerHTML = val || tv || v;
+          if (column.format) {
+            if (column.defaultFormatValue != void 0 && (tv === "" || tv === null)) {
+              tv = column.defaultFormatValue + "";
+            }
+            if (typeof column.format === "string" && tv) {
+              td.innerHTML = interpolate(
+                // @ts-ignore
+                column.format,
+                Object.assign(
+                  {
+                    _v: v,
+                    _tv: tv
+                  },
+                  item
+                )
+              );
+            } else if (column.format instanceof Function) {
+              const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
+              td.innerHTML = val || tv || v;
+            }
           } else {
             td.textContent = tv;
           }
@@ -2592,7 +2603,14 @@ var EditableColumn = class extends base_plugin_default {
   makeEditableInput(td, column, item, i) {
     const gridId = this.grid.getAttribute("id");
     let input = document.createElement("input");
-    input.type = "text";
+    input.type = column.editableType || "text";
+    if (input.type == "email") {
+      input.inputMode = "email";
+    }
+    if (input.type == "decimal") {
+      input.type = "text";
+      input.inputMode = "decimal";
+    }
     input.autocomplete = "off";
     input.spellcheck = false;
     input.tabIndex = 0;
@@ -2638,7 +2656,9 @@ data_grid_default.registerPlugins({
   RowActions: row_actions_default,
   EditableColumn: editable_column_default
 });
-customElements.define("data-grid", data_grid_default);
+if (!customElements.get("data-grid")) {
+  customElements.define("data-grid", data_grid_default);
+}
 var data_grid_default2 = data_grid_default;
 export {
   data_grid_default2 as default

@@ -529,7 +529,9 @@ data-grid .dg-resizer {
   width: 6px;
   z-index: 2;
   cursor: col-resize;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 data-grid .dg-resizer:before {
   content: "";
