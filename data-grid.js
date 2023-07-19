@@ -27,6 +27,9 @@ DataGrid.registerPlugins({
   EditableColumn,
 });
 
-customElements.define("data-grid", DataGrid);
+// Prevent errors if included multiple times
+if (!customElements.get("data-grid")) {
+  customElements.define("data-grid", DataGrid);
+}
 
 export default DataGrid;
