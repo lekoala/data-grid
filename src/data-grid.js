@@ -34,18 +34,18 @@ import {
  * @typedef Column
  * @property {String} field - the key in the data
  * @property {String} title - the title to display in the header (defaults to "field" if not set)
- * @property {Number} width - the width of the column (auto otherwise)
- * @property {String} class - class to set on the column (target body or header with th.class or td.class)
- * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
- * @property {Boolean} hidden - hide the column
- * @property {Boolean} noSort - allow disabling sort for a given column
- * @property {String | Function} format - custom data formatting
- * @property {String} defaultFormatValue - default value to use for formatting
- * @property {String} transform - custom value transformation
- * @property {Boolean} editable - replace with input (EditableColumn module)
- * @property {String} editableType - type of input (EditableColumn module)
- * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
- * @property {Boolean} responsiveHidden - hidden through responsive module (ResponsiveGrid module)
+ * @property {Number} [width] - the width of the column (auto otherwise)
+ * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
+ * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
+ * @property {Boolean} [hidden] - hide the column
+ * @property {Boolean} [noSort] - allow disabling sort for a given column
+ * @property {String | Function} [format] - custom data formatting
+ * @property {String} [defaultFormatValue] - default value to use for formatting
+ * @property {String} [transform] - custom value transformation
+ * @property {Boolean} [editable] - replace with input (EditableColumn module)
+ * @property {String} [editableType] - type of input (EditableColumn module)
+ * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
+ * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
  */
 
 /**
@@ -56,7 +56,7 @@ import {
  * @property {String} class - the class for the button
  * @property {String} url - link for the action
  * @property {String} html - custom button data
- * @property {Boolean} confirm - needs confirmation
+ * @property {Boolean} [confirm] - needs confirmation
  * @property {Boolean} default - is the default row action
  */
 
