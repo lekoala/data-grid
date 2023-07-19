@@ -29,10 +29,11 @@
 
   <script type="module">
     document.querySelector("#darkmode").addEventListener("click", function (ev) {
-      if (document.documentElement.dataset.bsTheme == "dark") {
-        document.documentElement.dataset.bsTheme = "light";
+      const docEl = document.documentElement;
+      if (docEl.dataset.bsTheme == "dark") {
+        docEl.dataset.bsTheme = "light";
       } else {
-        document.documentElement.dataset.bsTheme = "dark";
+        docEl.dataset.bsTheme = "dark";
       }
     });
   </script>
@@ -96,8 +97,9 @@
 
     <div class="container g-0 mb-4 mw-100">
       <button id="get-selection" class="btn btn-primary mb-3">Get selection</button>
-      <data-grid id="basic-demo" sticky data-url="demo.json" data-per-page="25" data-expand="true" data-selectable="true" data-menu="true"
-        data-filter="true" data-resizable="true" data-autosize="true" data-reorder="true" data-sort="true" data-debug="true"></data-grid>
+      <data-grid id="basic-demo" sticky data-url="demo.json" data-expand="true" data-selectable="true" data-menu="true" data-filter="true"
+        data-resizable="true" data-autosize="true" data-reorder="true" data-sort="true" data-debug="true"
+        data-config='{"perPage": 50}'></data-grid>
     </div>
     <div class="container g-0 mb-4 mw-100">
       <p>

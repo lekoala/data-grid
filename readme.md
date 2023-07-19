@@ -81,6 +81,7 @@ data-grid {
 ### Options attributes
 
 These are the options accessibles through the components data attributes. Some options only work if the proper plugin is loaded.
+You can also pass them as a json string in data-config.
 
 | Name              | Type                                         | Description                                                                    |
 | ----------------- | -------------------------------------------- | ------------------------------------------------------------------------------ |

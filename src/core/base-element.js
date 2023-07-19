@@ -50,10 +50,16 @@ class BaseElement extends HTMLElement {
   }
 
   get normalizedDataset() {
+    let jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
     let data = { ...this.dataset };
     for (var key in data) {
+      if (key == "config") {
+        continue;
+      }
       data[key] = normalizeData(data[key]);
     }
+    // Once normalized, merge into json config
+    Object.assign(data, jsonConfig);
     return data;
   }
 
