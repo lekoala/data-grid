@@ -1615,13 +1615,7 @@ class DataGrid extends BaseElement {
       if (this.options.actions.length && this.plugins.RowActions) {
         this.plugins.RowActions.makeActionRow(tr, item);
       }
-      //dispatch(this, "beforeRowCreated", {
-      //  col: field,
-      //  visibility: "visible",
-      //});
-      //if (this.options.beforeRowCreated instanceof Function) {
-
-      //}
+ 
       tbody.appendChild(tr);
     });
 
