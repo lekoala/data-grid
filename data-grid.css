@@ -2,6 +2,14 @@
  * Data Grid Web component 
  * https://github.com/lekoala/data-grid
  */
+@-webkit-keyframes dataGridShow {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.5;
+  }
+}
 @keyframes dataGridShow {
   0% {
     opacity: 1;
@@ -100,10 +108,14 @@ data-grid.dg-loading:not(.dg-initialized) tfoot {
   background: none;
 }
 data-grid.dg-loading tbody {
-  animation-name: dataGridShow;
-  animation-timing-function: ease-in;
-  animation-fill-mode: forwards;
-  animation-duration: 0.3s;
+  -webkit-animation-name: dataGridShow;
+          animation-name: dataGridShow;
+  -webkit-animation-timing-function: ease-in;
+          animation-timing-function: ease-in;
+  -webkit-animation-fill-mode: forwards;
+          animation-fill-mode: forwards;
+  -webkit-animation-duration: 0.3s;
+          animation-duration: 0.3s;
   pointer-events: none;
 }
 data-grid tr {
@@ -159,6 +171,7 @@ data-grid .dg-clickable-cell {
 data-grid[sticky] table thead,
 data-grid[sticky] table tfoot {
   z-index: 2;
+  position: -webkit-sticky;
   position: sticky;
   margin: 0;
   border: 0;
@@ -529,7 +542,9 @@ data-grid .dg-resizer {
   width: 6px;
   z-index: 2;
   cursor: col-resize;
-  user-select: none;
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
 }
 data-grid .dg-resizer:before {
   content: "";
@@ -582,11 +597,11 @@ data-grid .dg-responsive-table th {
     display: none;
   }
   data-grid[responsive] table,
-  data-grid[responsive] tbody,
-  data-grid[responsive] tfoot,
-  data-grid[responsive] th,
-  data-grid[responsive] td,
-  data-grid[responsive] tr:not([hidden]) {
+data-grid[responsive] tbody,
+data-grid[responsive] tfoot,
+data-grid[responsive] th,
+data-grid[responsive] td,
+data-grid[responsive] tr:not([hidden]) {
     display: block;
   }
   data-grid[responsive] thead {
@@ -674,5 +689,4 @@ data-grid .dg-responsive-table th {
     content: "Column Filters";
   }
 }
-
 /*# sourceMappingURL=data-grid.css.map */
