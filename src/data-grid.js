@@ -38,7 +38,7 @@ import {
  * @property {String} attr - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} hidden - hide the column
  * @property {Boolean} noSort - allow disabling sort for a given column
- * @property {String | Function} format - custom data formatting - either by a string of HTML template or by a function with an object parameter consisting of column, rowData, cellData, td, tr.
+ * @property {String | Function} format - custom data formatting
  * @property {String} transform - custom value transformation
  * @property {Boolean} editable - replace with input (EditableColumn module)
  * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
