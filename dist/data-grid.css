@@ -273,15 +273,24 @@ data-grid thead tr:nth-child(2) th input {
   border-radius: 0;
   margin: 0;
 }
+data-grid thead tr:nth-child(2) th input:focus {
+  box-shadow: inset 0px 0px 0px 1px var(--color);
+}
+data-grid tbody td.dg-editable-col {
+  padding: 0;
+  height: 0;
+}
 data-grid tbody td input.dg-editable {
   width: 100%;
   background: transparent;
   border: 0;
   border-radius: 0;
   margin: 0;
+  box-shadow: none;
+  height: 100%;
 }
-data-grid tbody td input.dg-editable:hover {
-  box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
+data-grid tbody td input.dg-editable:focus {
+  box-shadow: inset 0px 0px 0px 1px var(--color);
 }
 data-grid.dg-empty tbody {
   height: 4rem;
@@ -520,9 +529,7 @@ data-grid .dg-resizer {
   width: 6px;
   z-index: 2;
   cursor: col-resize;
-  -webkit-user-select: none;
-     -moz-user-select: none;
-          user-select: none;
+  user-select: none;
 }
 data-grid .dg-resizer:before {
   content: "";

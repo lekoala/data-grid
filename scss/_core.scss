@@ -7,6 +7,7 @@
   0% {
     opacity: 1;
   }
+
   100% {
     opacity: 0.5;
   }
@@ -65,16 +66,20 @@ data-grid {
     --scroller-background: transparent;
     scrollbar-color: var(--scroller-thumb) var(--scroller-background);
     scrollbar-width: thin;
+
     &::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
+
     &::-webkit-scrollbar-track {
       background: transparent;
     }
+
     &::-webkit-scrollbar-thumb {
       background: var(--scroller-thumb);
     }
+
     &::-webkit-scrollbar-thumb:hover {
       background: var(--scroller-thumb-hover);
     }
@@ -111,6 +116,7 @@ data-grid {
 
   &.dg-loading {
     &:not(.dg-initialized) {
+
       thead,
       tfoot {
         background: none;
@@ -141,6 +147,7 @@ data-grid {
       word-break: normal;
     }
   }
+
   th {
     font-weight: bold;
     padding: var(--padding-y-header) var(--padding-x);
@@ -189,6 +196,7 @@ data-grid {
   // Stick headers
   // https://css-tricks.com/making-tables-with-sticky-header-and-footers-got-a-bit-easier/
   &[sticky] table {
+
     thead,
     tfoot {
       z-index: 2;
@@ -196,10 +204,12 @@ data-grid {
       margin: 0;
       border: 0;
     }
+
     // Use silly value to prevent sub pixel alignment issue
     thead {
       inset-block-start: -1px;
     }
+
     tfoot {
       inset-block-end: -1px;
     }
@@ -225,6 +235,7 @@ data-grid {
       position: absolute;
     }
   }
+
   .dg-nav-icon::before {
     width: 0;
     height: 10px;
@@ -234,6 +245,7 @@ data-grid {
     top: 6px;
     left: 9px;
   }
+
   .dg-skip-icon {
     &::before {
       width: 3px;
@@ -242,6 +254,7 @@ data-grid {
       top: 6px;
       left: 14px;
     }
+
     &::after {
       width: 0;
       height: 10px;
@@ -252,6 +265,7 @@ data-grid {
       left: 7px;
     }
   }
+
   .dg-rotate {
     transform: rotate(-180deg);
   }
@@ -272,6 +286,7 @@ data-grid {
     &:hover {
       opacity: 0.7;
     }
+
     &:disabled:hover {
       background-color: inherit;
       border-color: inherit;
@@ -282,6 +297,7 @@ data-grid {
   input[type="checkbox"] {
     margin: 0;
   }
+
   input:not([type="checkbox"]),
   select {
     background-color: var(--input-background, "#fff");
@@ -294,6 +310,7 @@ data-grid {
     padding: 0 var(--padding);
     max-width: none;
   }
+
   input:not([type="checkbox"]),
   select,
   button {
@@ -313,31 +330,44 @@ data-grid {
   thead tr:nth-child(2) th {
     padding: 0;
     background-color: transparent;
+
     input {
       width: 100%;
       border-radius: 0;
       margin: 0;
+
+      &:focus {
+        box-shadow: inset 0px 0px 0px 1px var(--color);
+      }
     }
   }
 
   // Editable
+  tbody td.dg-editable-col {
+    padding: 0;
+    height: 0; // it needs a height for height 100%
+  }
+
   tbody td input.dg-editable {
     width: 100%;
     background: transparent;
     border: 0;
     border-radius: 0;
     margin: 0;
+    box-shadow: none;
+    height: 100%;
 
-    &:hover {
-      box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
+    &:focus {
+      box-shadow: inset 0px 0px 0px 1px var(--color);
     }
   }
 
   // Empty table or error message (don't use :empty as it would create fouc on load)
-  &.dg-empty { 
+  &.dg-empty {
     tbody {
       height: 4rem;
       position: relative;
+
       &:before {
         position: absolute;
         top: 50%;
@@ -353,17 +383,21 @@ data-grid {
         width: 90%;
       }
     }
+
     &.dg-network-error {
       table {
         color: #842029;
         background-color: #f8d7da;
         border: 1px solid #f5c2c7;
       }
+
       tbody {
         height: 8rem;
+
         &:before {
           font-size: 2rem;
         }
+
         tr:not(.dg-fake-row) {
           display: none;
         }
@@ -382,6 +416,7 @@ data-grid {
     &:hover {
       background-color: var(--highlight-color) !important;
     }
+
     &:focus {
       background-color: var(--highlight-color) !important;
       border-bottom-color: var(--highlight-color) !important;
@@ -392,23 +427,28 @@ data-grid {
   // Meta footer
   tfoot {
     min-width: 280px;
+
     td {
       padding: var(--padding-y-header) var(--padding-x);
     }
+
     .dg-page-nav {
       display: flex;
       align-items: center;
       min-width: 160px;
     }
+
     .dg-input-page {
       width: 4rem;
     }
+
     .dg-footer {
       display: flex;
       align-items: center;
       flex-direction: row;
       justify-content: space-between;
     }
+
     .dg-pagination {
       display: flex;
       text-align: center;
@@ -419,6 +459,7 @@ data-grid {
         width: 2rem;
       }
     }
+
     .dg-meta {
       // Prevent layout from jumping around
       min-width: 160px;
@@ -429,6 +470,7 @@ data-grid {
       .dg-meta {
         display: none;
       }
+
       .dg-input-page {
         display: none;
       }
@@ -492,6 +534,7 @@ data-grid {
   --header-color: var(--bs-light, #e9ecef);
   --body-color: var(--bs-body-color, #494e53);
   --row-border-color: var(--bs-gray-900, #212325);
+
   tbody tr {
     &:nth-child(even) {
       background-color: var(--bs-table-striped-bg, #2c3034);

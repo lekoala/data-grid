@@ -26,6 +26,7 @@ import {
   addClass,
   toggleClass,
   on,
+  ce,
 } from "./utils/shortcuts.js";
 
 /**
@@ -39,8 +40,10 @@ import {
  * @property {Boolean} hidden - hide the column
  * @property {Boolean} noSort - allow disabling sort for a given column
  * @property {String | Function} format - custom data formatting
+ * @property {String} defaultFormatValue - default value to use for formatting
  * @property {String} transform - custom value transformation
  * @property {Boolean} editable - replace with input (EditableColumn module)
+ * @property {String} editableType - type of input (EditableColumn module)
  * @property {Number} responsive - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} responsiveHidden - hidden through responsive module (ResponsiveGrid module)
  */
@@ -1297,7 +1300,7 @@ class DataGrid extends BaseElement {
     let tr;
 
     // Create row
-    tr = document.createElement("tr");
+    tr = ce("tr");
     this.headerRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "1");
@@ -1306,7 +1309,7 @@ class DataGrid extends BaseElement {
     // We need a real th from the dom to compute the size
     let sampleTh = thead.querySelector("tr.dg-head-columns th");
     if (!sampleTh) {
-      sampleTh = document.createElement("th");
+      sampleTh = ce("th");
       thead.querySelector("tr").appendChild(sampleTh);
     }
 
@@ -1325,7 +1328,7 @@ class DataGrid extends BaseElement {
         return;
       }
       const colIdx = idx + this.startColIndex();
-      let th = document.createElement("th");
+      let th = ce("th");
       th.setAttribute("scope", "col");
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", "" + colIdx);
@@ -1434,7 +1437,7 @@ class DataGrid extends BaseElement {
     let tr;
 
     // Create row for filters
-    tr = document.createElement("tr");
+    tr = ce("tr");
     this.filterRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "2");
@@ -1460,11 +1463,12 @@ class DataGrid extends BaseElement {
         console.warn("Related th not found", colIdx);
         return;
       }
-      let th = document.createElement("th");
+      let th = ce("th");
       th.setAttribute("aria-colindex", "" + colIdx);
 
-      let input = document.createElement("input");
+      let input = ce("input");
       input.type = "text";
+      input.inputMode = "search";
       input.autocomplete = "off";
       input.spellcheck = false;
       // Allows binding filter to this column
@@ -1514,10 +1518,10 @@ class DataGrid extends BaseElement {
     let tr;
     let td;
     let idx;
-    let tbody = document.createElement("tbody");
+    let tbody = ce("tbody");
 
     this.data.forEach((item, i) => {
-      tr = document.createElement("tr");
+      tr = ce("tr");
       setAttribute(tr, "role", "row");
       setAttribute(tr, "hidden", "");
       setAttribute(tr, "aria-rowindex", i + 1);
@@ -1562,7 +1566,7 @@ class DataGrid extends BaseElement {
           }
           return;
         }
-        td = document.createElement("td");
+        td = ce("td");
         td.setAttribute("role", "gridcell");
         td.setAttribute("aria-colindex", idx + this.startColIndex());
         applyColumnDefinition(td, column);
@@ -1572,6 +1576,7 @@ class DataGrid extends BaseElement {
 
         // Inline editing ...
         if (column.editable && this.plugins.EditableColumn) {
+          addClass(td, "dg-editable-col");
           this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
           // ... or formatting

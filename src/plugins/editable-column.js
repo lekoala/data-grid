@@ -15,7 +15,14 @@ class EditableColumn extends BasePlugin {
   makeEditableInput(td, column, item, i) {
     const gridId = this.grid.getAttribute("id");
     let input = document.createElement("input");
-    input.type = "text";
+    input.type = column.editableType || "text";
+    if (input.type == "email") {
+      input.inputMode = "email";
+    }
+    if (input.type == "decimal") {
+      input.type = "text";
+      input.inputMode = "decimal";
+    }
     input.autocomplete = "off";
     input.spellcheck = false;
     input.tabIndex = 0;
