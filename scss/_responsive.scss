@@ -88,6 +88,9 @@ data-grid {
           font-weight: bold;
           background-color: var(--header-background);
         }
+        &[role="gridcell"] {
+          padding-left: calc(100% - var(--responsive-width) - var(--padding) * 4 + 0.5rem);
+        }
       }
     }
 
