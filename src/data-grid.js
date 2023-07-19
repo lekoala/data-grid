@@ -839,6 +839,7 @@ class DataGrid extends BaseElement {
   }
 
   addRow(row) {
+    if (!Array.isArray(this.originalData)) return;
     this.log("Add row");
     this.originalData.push(row);
     this.data = this.originalData.slice();
@@ -850,6 +851,7 @@ class DataGrid extends BaseElement {
    * @param {String} key The key of the item to remove. Defaults to first column
    */
   removeRow(value = null, key = null) {
+    if (!Array.isArray(this.originalData)) return;
     if (key === null) {
       key = this.options.columns[0]["field"];
     }
@@ -1071,7 +1073,7 @@ class DataGrid extends BaseElement {
     if (this.options.server) {
       this.reload();
     } else {
-      this.data = this.originalData.slice();
+      this.data = this.originalData?.slice() ?? [];
 
       // Look for rows matching the filters
       const inputs = findAll(this, "thead tr.dg-head-filters input");
@@ -1155,7 +1157,7 @@ class DataGrid extends BaseElement {
         let stack = [];
 
         // Restore order while keeping filters
-        this.originalData.some((itemA) => {
+        this.originalData?.some((itemA) => {
           this.data.some((itemB) => {
             if (JSON.stringify(itemA) === JSON.stringify(itemB)) {
               stack.push(itemB);
@@ -1712,7 +1714,7 @@ class DataGrid extends BaseElement {
    */
   totalRecords() {
     if (this.options.server) {
-      return this.meta[this.options.serverParams.metaFilteredKey] || 0;
+      return this.meta?.[this.options.serverParams.metaFilteredKey] || 0;
     }
     return this.data.length;
   }
