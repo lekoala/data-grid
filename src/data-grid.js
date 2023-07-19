@@ -1570,10 +1570,11 @@ class DataGrid extends BaseElement {
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
 
-        // Inline editing
+        // Inline editing ...
         if (column.editable && this.plugins.EditableColumn) {
           this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
         } else {
+          // ... or formatting
           const v = item[column.field] ?? "";
           let tv;
           // TODO: make this modular
@@ -1588,21 +1589,27 @@ class DataGrid extends BaseElement {
               tv = v;
               break;
           }
-          if (column.format instanceof String && tv) {
-            td.innerHTML = interpolate(
-              // @ts-ignore
-              column.format,
-              Object.assign(
-                {
-                  _v: v,
-                  _tv: tv,
-                },
-                item
-              )
-            );
-          } else if (column.format instanceof Function) {
-            const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
-            td.innerHTML = val || tv || v;
+          if (column.format) {
+            // Only use formatting with values or if defaultFormatValue is set
+            if (column.defaultFormatValue != undefined && (tv === "" || tv === null)) {
+              tv = column.defaultFormatValue + "";
+            }
+            if (typeof column.format === "string" && tv) {
+              td.innerHTML = interpolate(
+                // @ts-ignore
+                column.format,
+                Object.assign(
+                  {
+                    _v: v,
+                    _tv: tv,
+                  },
+                  item
+                )
+              );
+            } else if (column.format instanceof Function) {
+              const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
+              td.innerHTML = val || tv || v;
+            }
           } else {
             td.textContent = tv;
           }
