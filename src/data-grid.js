@@ -934,7 +934,8 @@ class DataGrid extends BaseElement {
    * @returns {Promise}
    */
   loadData() {
-    const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
+    const flagEmpty = () => !this.data.length && this.classList.add("dg-empty"),
+      tbody = this.querySelector("tbody");
     // We already have some data
     if (this.meta || this.originalData || this.classList.contains("dg-initialized")) {
       // We don't use server side data
@@ -983,13 +984,16 @@ class DataGrid extends BaseElement {
         .catch((err) => {
           this.log(err);
           if (err.message) {
-            this.querySelector("tbody").setAttribute("data-empty", err.message.replace(/^\s+|\r\n|\n|\r$/g, ""));
+            tbody.setAttribute("data-empty", err.message.replace(/^\s+|\r\n|\n|\r$/g, ""));
           }
           this.classList.add("dg-empty", "dg-network-error");
         })
         // @ts-ignore
         .finally(() => {
           flagEmpty();
+          if (!this.classList.contains("dg-network-error") && tbody.getAttribute("data-empty") != this.labels.noData) {
+            tbody.setAttribute("data-empty", this.labels.noData);
+          }
           this.classList.remove("dg-loading");
           this.loading = false;
         })
