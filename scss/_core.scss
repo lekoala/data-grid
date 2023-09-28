@@ -384,6 +384,13 @@ data-grid {
       }
     }
 
+    tr {
+      &.dg-fake-row {
+        height: 4rem;
+        border: none;
+      }
+    }
+
     &.dg-network-error {
       table {
         color: #842029;
@@ -392,14 +399,25 @@ data-grid {
       }
 
       tbody {
-        height: 8rem;
+        height: auto;
 
         &:before {
           font-size: 2rem;
+          top: auto;
+          transform: translate(-50%);
         }
 
         tr:not(.dg-fake-row) {
           display: none;
+        }
+      }
+    }
+
+    &:not(.dg-network-error) {
+      tbody {
+        &:before {
+          top: auto;
+          transform: translate(-50%, 30%);
         }
       }
     }
