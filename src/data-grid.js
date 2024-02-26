@@ -46,6 +46,9 @@ import {
  * @property {String} [editableType] - type of input (EditableColumn module)
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
+ * @property {String} [filterType] - defines a filter field type ("text" or "select" - defaults to "text")
+ * @property {Array} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
+ * @property {Object} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
  */
 
 /**
@@ -70,6 +73,7 @@ import {
 /** @typedef {import('./plugins/row-actions').default} RowActions */
 /** @typedef {import('./plugins/selectable-rows').default} SelectableRows */
 /** @typedef {import('./plugins/touch-support').default} TouchSupport */
+/** @typedef {import('./plugins/spinner-support').default} SpinnerSupport */
 
 /**
  * These plugins are all optional
@@ -84,6 +88,7 @@ import {
  * @property {AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
  * @property {ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
  * @property {RowActions} [RowActions] add action on rows
+ * @property {SpinnerSupport} [SpinnerSupport] inserts a spinning icon element to indicate grid loading.
  */
 
 /**
@@ -132,6 +137,9 @@ import {
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
+ * @property {Boolean} filterOnEnter Toggles the ability to filter column data by pressing the Enter or Return key 
+ * @property {Boolean} showSpinner Shows or hides a spinning icon on grid loading
+ * @property {String} spinnerCssClasses Sets a space-delimited string of css classes for a spinner. (use spinner-border css class for bootstrap 5 spinner)
  */
 
 /**
@@ -198,6 +206,8 @@ function applyColumnDefinition(el, column) {
 /**
  */
 class DataGrid extends BaseElement {
+  #filterSelector = "[id^=dg-filter]";
+
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
 
@@ -240,6 +250,10 @@ class DataGrid extends BaseElement {
         setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
       }
     }
+
+    // Inserts spinner
+    if (this.options.showSpinner && this.plugins.SpinnerSupport)
+      this.plugins.SpinnerSupport.add();
   }
 
   static template() {
@@ -322,6 +336,8 @@ class DataGrid extends BaseElement {
       responsiveHidden: false,
       format: "",
       transform: "",
+      filterType: "text",
+      firstFilterOption: { value: "", text: "" }
     };
   }
 
@@ -369,6 +385,9 @@ class DataGrid extends BaseElement {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
+      filterOnEnter: true,
+      showSpinner: false,
+      spinnerCssClasses: ""
     };
   }
 
@@ -1058,7 +1077,7 @@ class DataGrid extends BaseElement {
 
   getFilters() {
     let filters = [];
-    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    const inputs = findAll(this, this.#filterSelector);
     inputs.forEach((input) => {
       filters[input.dataset.name] = input.value;
     });
@@ -1066,7 +1085,7 @@ class DataGrid extends BaseElement {
   }
 
   clearFilters() {
-    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    const inputs = findAll(this, this.#filterSelector);
     inputs.forEach((input) => {
       input.value = "";
     });
@@ -1084,7 +1103,7 @@ class DataGrid extends BaseElement {
       this.data = this.originalData?.slice() ?? [];
 
       // Look for rows matching the filters
-      const inputs = findAll(this, "thead tr.dg-head-filters input");
+      const inputs = findAll(this, this.#filterSelector);
       inputs.forEach((input) => {
         let value = input.value;
         if (value) {
@@ -1470,27 +1489,18 @@ class DataGrid extends BaseElement {
       let th = ce("th");
       th.setAttribute("aria-colindex", "" + colIdx);
 
-      let input = ce("input");
-      input.type = "text";
-      input.inputMode = "search";
-      input.autocomplete = "off";
-      input.spellcheck = false;
-      // Allows binding filter to this column
-      input.dataset.name = column.field;
-      input.id = randstr("dg-filter-");
-      // Don't use aria-label as it triggers autocomplete
-      input.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
+      let filter = this.createFilterElement(column, relatedTh);
       if (!this.options.filter) {
         th.tabIndex = 0;
       } else {
-        input.tabIndex = 0;
+        filter.tabIndex = 0;
       }
 
       if (column.hidden) {
         th.setAttribute("hidden", "");
       }
 
-      th.appendChild(input);
+      th.appendChild(filter);
       tr.appendChild(th);
       idx++;
     });
@@ -1502,15 +1512,44 @@ class DataGrid extends BaseElement {
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
 
-    // Filter content on enter
-    tr.querySelectorAll("input").forEach((input) => {
-      input.addEventListener("keypress", (e) => {
+    // Filter content by field events
+    tr.querySelectorAll(this.#filterSelector).forEach((el) => {
+      const eventName = /select/i.test(el.tagName) ? "change" : "keyup";
+      el.addEventListener(eventName, (e) => {
         const key = e.keyCode || e.key;
-        if (key === 13 || key === "Enter") {
+        if (key === 13 || key === "Enter" || !this.options.filterOnEnter || e.type == "change") {
           this.filterData.call(this);
         }
       });
     });
+  }
+
+  createFilterElement(column, relatedTh) {
+    const isSelect = column.filterType == "select",
+      filter = isSelect ? ce("select") : ce("input");
+    if (isSelect) {
+      if (!Array.isArray(column.filterList)) { // Gets unique values from column records
+        const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))].filter(v => !!v).sort();
+        column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(uniqueValues.map((e) => ({ value: e, text: e })));
+      }
+      column.filterList.forEach((e) => {
+        const opt = ce("option");
+        opt.value = e.value;
+        opt.text = e.text;
+        filter.add(opt);
+      });
+    } else {
+      filter.type = "text";
+      filter.inputMode = "search";
+      filter.autocomplete = "off";
+      filter.spellcheck = false;
+    }
+    // Allows binding filter to this column
+    filter.dataset.name = column.field;
+    filter.id = randstr("dg-filter-");
+    // Don't use aria-label as it triggers autocomplete
+    filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
+    return filter;
   }
 
   /**
@@ -1651,6 +1690,8 @@ class DataGrid extends BaseElement {
     if (this.plugins.SelectableRows) {
       this.plugins.SelectableRows.shouldSelectAll(tbody);
     }
+
+    this.data.length && this.classList.remove("dg-empty");
 
     dispatch(this, "bodyRendered");
   }

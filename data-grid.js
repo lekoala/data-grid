@@ -10,6 +10,7 @@ import AutosizeColumn from "./src/plugins/autosize-column.js";
 import ResponsiveGrid from "./src/plugins/responsive-grid.js";
 import RowActions from "./src/plugins/row-actions.js";
 import EditableColumn from "./src/plugins/editable-column.js";
+import SpinnerSupport from "./src/plugins/spinner-support.js";
 
 // Using shorthand property names
 // This make them reserved and keys will be preserved
@@ -25,6 +26,7 @@ DataGrid.registerPlugins({
   ResponsiveGrid,
   RowActions,
   EditableColumn,
+  SpinnerSupport
 });
 
 // Prevent errors if included multiple times
