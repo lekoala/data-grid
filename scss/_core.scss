@@ -85,6 +85,19 @@ data-grid {
     }
   }
 
+  // Before grid init, or on loading
+  &[class=""],
+  &:not([class]),
+  &.dg-loading {
+    > table {
+      &[role=grid] {
+        tr.dg-head-columns {
+          display: none; //ensures the empty column header bar is hidden
+        }
+      }
+    }
+  }
+
   img {
     border: none;
     height: auto;
@@ -328,14 +341,16 @@ data-grid {
 
   // Filters (2nd header row)
   thead tr:nth-child(2) th {
-    padding: 0;
+    padding: 0 2px 0 0;
     background-color: transparent;
 
-    input {
+    > * { 
       width: 100%;
       border-radius: 0;
       margin: 0;
+    }
 
+    input {
       &:focus {
         box-shadow: inset 0px 0px 0px 1px var(--color);
       }

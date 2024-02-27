@@ -378,7 +378,8 @@ function applyColumnDefinition(el, column) {
     }
   }
 }
-var DataGrid = class extends base_element_default {
+var DataGrid = class _DataGrid extends base_element_default {
+  #filterSelector = "[id^=dg-filter]";
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
     this.data = [];
@@ -392,11 +393,13 @@ var DataGrid = class extends base_element_default {
     for (const [pluginName, pluginClass] of Object.entries(plugins)) {
       this.plugins[pluginName] = new pluginClass(this);
     }
-    for (const attr of DataGrid.observedAttributes) {
+    for (const attr of _DataGrid.observedAttributes) {
       if (attr.indexOf("data-") === 0) {
         setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
       }
     }
+    if (this.options.spinnerClass && this.plugins.SpinnerSupport)
+      this.plugins.SpinnerSupport.add();
   }
   static template() {
     return `
@@ -473,7 +476,9 @@ var DataGrid = class extends base_element_default {
       responsive: 1,
       responsiveHidden: false,
       format: "",
-      transform: ""
+      transform: "",
+      filterType: "text",
+      firstFilterOption: { value: "", text: "" }
     };
   }
   /**
@@ -519,7 +524,8 @@ var DataGrid = class extends base_element_default {
       autoheight: true,
       autohidePager: false,
       responsive: false,
-      responsiveToggle: true
+      responsiveToggle: true,
+      filterOnEnter: true
     };
   }
   /**
@@ -1082,14 +1088,14 @@ var DataGrid = class extends base_element_default {
   }
   getFilters() {
     let filters = [];
-    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    const inputs = findAll(this, this.#filterSelector);
     inputs.forEach((input) => {
       filters[input.dataset.name] = input.value;
     });
     return filters;
   }
   clearFilters() {
-    const inputs = findAll(this, "thead tr.dg-head-filters input");
+    const inputs = findAll(this, this.#filterSelector);
     inputs.forEach((input) => {
       input.value = "";
     });
@@ -1102,7 +1108,7 @@ var DataGrid = class extends base_element_default {
       this.reload();
     } else {
       this.data = this.originalData?.slice() ?? [];
-      const inputs = findAll(this, "thead tr.dg-head-filters input");
+      const inputs = findAll(this, this.#filterSelector);
       inputs.forEach((input) => {
         let value = input.value;
         if (value) {
@@ -1414,23 +1420,16 @@ var DataGrid = class extends base_element_default {
       }
       let th = ce("th");
       th.setAttribute("aria-colindex", "" + colIdx);
-      let input = ce("input");
-      input.type = "text";
-      input.inputMode = "search";
-      input.autocomplete = "off";
-      input.spellcheck = false;
-      input.dataset.name = column.field;
-      input.id = randstr("dg-filter-");
-      input.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
+      let filter = this.createFilterElement(column, relatedTh);
       if (!this.options.filter) {
         th.tabIndex = 0;
       } else {
-        input.tabIndex = 0;
+        filter.tabIndex = 0;
       }
       if (column.hidden) {
         th.setAttribute("hidden", "");
       }
-      th.appendChild(input);
+      th.appendChild(filter);
       tr.appendChild(th);
       idx++;
     });
@@ -1438,14 +1437,39 @@ var DataGrid = class extends base_element_default {
       this.plugins.RowActions.makeActionFilter(tr);
     }
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
-    tr.querySelectorAll("input").forEach((input) => {
-      input.addEventListener("keypress", (e) => {
+    tr.querySelectorAll(this.#filterSelector).forEach((el) => {
+      const eventName = /select/i.test(el.tagName) ? "change" : "keyup";
+      el.addEventListener(eventName, (e) => {
         const key = e.keyCode || e.key;
-        if (key === 13 || key === "Enter") {
+        if (key === 13 || key === "Enter" || !this.options.filterOnEnter || e.type == "change") {
           this.filterData.call(this);
         }
       });
     });
+  }
+  createFilterElement(column, relatedTh) {
+    const isSelect = column.filterType == "select", filter = isSelect ? ce("select") : ce("input");
+    if (isSelect) {
+      if (!Array.isArray(column.filterList)) {
+        const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))].filter((v) => v).sort();
+        column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(uniqueValues.map((e) => ({ value: e, text: e })));
+      }
+      column.filterList.forEach((e) => {
+        const opt = ce("option");
+        opt.value = e.value;
+        opt.text = e.text;
+        filter.add(opt);
+      });
+    } else {
+      filter.type = "text";
+      filter.inputMode = "search";
+      filter.autocomplete = "off";
+      filter.spellcheck = false;
+    }
+    filter.dataset.name = column.field;
+    filter.id = randstr("dg-filter-");
+    filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
+    return filter;
   }
   /**
    * Render the data as rows in tbody
@@ -1562,6 +1586,7 @@ var DataGrid = class extends base_element_default {
     if (this.plugins.SelectableRows) {
       this.plugins.SelectableRows.shouldSelectAll(tbody);
     }
+    this.data.length && this.classList.remove("dg-empty");
     dispatch(this, "bodyRendered");
   }
   paginate() {
@@ -2646,6 +2671,34 @@ var EditableColumn = class extends base_plugin_default {
 };
 var editable_column_default = EditableColumn;
 
+// src/plugins/spinner-support.js
+var SpinnerSupport = class extends base_plugin_default {
+  /**
+   * Adds a spinner element with its associated css styles.
+   */
+  add() {
+    const grid = this.grid, classes = grid.options.spinnerClass;
+    if (!classes)
+      return;
+    const cls = classes.split(" ").map((e) => `.${e}`).join(""), template = `
+<style id="dg-styles">
+  data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
+  data-grid:not(.dg-loading) ${cls} { display: none; }
+  data-grid:not(.dg-initialized).dg-loading ${cls} { top: 0; }
+  @media only screen and (max-width: 767px) {
+    data-grid[responsive] ${cls} { top: 8rem; left: 42%; } 
+  }
+</style>
+`;
+    if (!$("#dg-styles")) {
+      const styleParent = $("head") ?? $("body"), position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
+      styleParent.insertAdjacentHTML(position, template);
+    }
+    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
+  }
+};
+var spinner_support_default = SpinnerSupport;
+
 // data-grid.js
 data_grid_default.registerPlugins({
   ColumnResizer: column_resizer_default,
@@ -2657,7 +2710,8 @@ data_grid_default.registerPlugins({
   AutosizeColumn: autosize_column_default,
   ResponsiveGrid: responsive_grid_default,
   RowActions: row_actions_default,
-  EditableColumn: editable_column_default
+  EditableColumn: editable_column_default,
+  SpinnerSupport: spinner_support_default
 });
 if (!customElements.get("data-grid")) {
   customElements.define("data-grid", data_grid_default);
