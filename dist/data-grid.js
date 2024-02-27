@@ -2692,11 +2692,11 @@ var SpinnerSupport = class extends base_plugin_default {
   }
 </style>
 `;
-    if (!document.getElementById("dg-styles")) {
-      const styleParent = document.querySelector("head") ?? document.querySelector("body"), position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
+    if (!$("#dg-styles")) {
+      const styleParent = $("head") ?? $("body"), position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
       styleParent.insertAdjacentHTML(position, template);
     }
-    grid.insertAdjacentHTML("afterbegin", `<i class="${cssClasses}"></i>`);
+    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${cssClasses}"></i>`);
   }
 };
 var spinner_support_default = SpinnerSupport;

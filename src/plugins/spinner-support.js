@@ -1,4 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
+import { $ } from "../utils/shortcuts.js"
 
 /**
  * Adds an element for showing a spinning icon on grid loading.
@@ -23,12 +24,12 @@ class SpinnerSupport extends BasePlugin {
   }
 </style>
 `;
-    if (!document.getElementById("dg-styles")) {
-      const styleParent = document.querySelector("head") ?? document.querySelector("body"),
+    if (!$("#dg-styles")) {
+      const styleParent = $("head") ?? $("body"),
         position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
       styleParent.insertAdjacentHTML(position, template);
     }
-    grid.insertAdjacentHTML("afterbegin", `<i class="${cssClasses}"></i>`);
+    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${cssClasses}"></i>`);
   }
 }
 
