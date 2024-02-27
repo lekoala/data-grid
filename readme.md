@@ -112,9 +112,8 @@ You can also pass them as a json string in data-config.
 | reorder           | <code>Boolean</code>                         | Allows a column reordering functionality (DraggableHeaders module)                                                  |
 | responsive        | <code>Boolean</code>                         | Change display mode on small screens (ResponsiveGrid module)                                                        |
 | responsiveToggle  | <code>Boolean</code>                         | Show toggle column (ResponsiveGrid module)                                                                          |
-| filterOnEnter     | <code>Boolean</code>                         | Toggles the ability to filter column data by pressing the Enter or Return key.                                      |
-| showSpinner       | <code>Boolean</code>                         | Shows or hides a spinning icon on grid loading                                                                      |
-| spinnerCssClasses | <code>String</code>                          | Sets a space-delimited string of css classes for a spinner. (use spinner-border css class for bootstrap 5 spinner)  |
+| filterOnEnter     | <code>Boolean</code>                         | Toggles the ability to filter column data by pressing the Enter or Return key                                       |
+| spinnerClass      | <code>String</code>                          | Sets a space-delimited string of css class(es) for a spinner (use spinner-border css class for bootstrap 5 spinner) |
 
 <a name="Column"></a>
 

@@ -10,10 +10,9 @@ class SpinnerSupport extends BasePlugin {
    */
   add() {
     const grid = this.grid,
-      show = grid.options.showSpinner;
-    if (!show) return;
-    const cssClasses = grid.options.spinnerCssClasses,
-      cls = cssClasses.split(" ").map(e => `.${e}`).join(""),
+      classes = grid.options.spinnerClass;
+    if (!classes) return;
+    const cls = classes.split(" ").map(e => `.${e}`).join(""),
       template = `
 <style id="dg-styles">
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
@@ -29,7 +28,7 @@ class SpinnerSupport extends BasePlugin {
         position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
       styleParent.insertAdjacentHTML(position, template);
     }
-    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${cssClasses}"></i>`);
+    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
   }
 }
 

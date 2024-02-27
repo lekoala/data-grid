@@ -398,7 +398,7 @@ var DataGrid = class _DataGrid extends base_element_default {
         setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
       }
     }
-    if (this.options.showSpinner && this.plugins.SpinnerSupport)
+    if (this.options.spinnerClass && this.plugins.SpinnerSupport)
       this.plugins.SpinnerSupport.add();
   }
   static template() {
@@ -525,9 +525,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
-      filterOnEnter: true,
-      showSpinner: false,
-      spinnerCssClasses: ""
+      filterOnEnter: true
     };
   }
   /**
@@ -1453,7 +1451,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     const isSelect = column.filterType == "select", filter = isSelect ? ce("select") : ce("input");
     if (isSelect) {
       if (!Array.isArray(column.filterList)) {
-        const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))].filter((v) => !!v).sort();
+        const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))].filter((v) => v).sort();
         column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(uniqueValues.map((e) => ({ value: e, text: e })));
       }
       column.filterList.forEach((e) => {
@@ -2679,10 +2677,10 @@ var SpinnerSupport = class extends base_plugin_default {
    * Adds a spinner element with its associated css styles.
    */
   add() {
-    const grid = this.grid, show = grid.options.showSpinner;
-    if (!show)
+    const grid = this.grid, classes = grid.options.spinnerClass;
+    if (!classes)
       return;
-    const cssClasses = grid.options.spinnerCssClasses, cls = cssClasses.split(" ").map((e) => `.${e}`).join(""), template = `
+    const cls = classes.split(" ").map((e) => `.${e}`).join(""), template = `
 <style id="dg-styles">
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
   data-grid:not(.dg-loading) ${cls} { display: none; }
@@ -2696,7 +2694,7 @@ var SpinnerSupport = class extends base_plugin_default {
       const styleParent = $("head") ?? $("body"), position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
       styleParent.insertAdjacentHTML(position, template);
     }
-    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${cssClasses}"></i>`);
+    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
   }
 };
 var spinner_support_default = SpinnerSupport;

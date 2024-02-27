@@ -138,8 +138,7 @@ import {
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  * @property {Boolean} filterOnEnter Toggles the ability to filter column data by pressing the Enter or Return key 
- * @property {Boolean} showSpinner Shows or hides a spinning icon on grid loading
- * @property {String} spinnerCssClasses Sets a space-delimited string of css classes for a spinner. (use spinner-border css class for bootstrap 5 spinner)
+ * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
  */
 
 /**
@@ -252,7 +251,7 @@ class DataGrid extends BaseElement {
     }
 
     // Inserts spinner
-    if (this.options.showSpinner && this.plugins.SpinnerSupport)
+    if (this.options.spinnerClass && this.plugins.SpinnerSupport)
       this.plugins.SpinnerSupport.add();
   }
 
@@ -385,9 +384,7 @@ class DataGrid extends BaseElement {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
-      filterOnEnter: true,
-      showSpinner: false,
-      spinnerCssClasses: ""
+      filterOnEnter: true
     };
   }
 
@@ -1529,7 +1526,7 @@ class DataGrid extends BaseElement {
       filter = isSelect ? ce("select") : ce("input");
     if (isSelect) {
       if (!Array.isArray(column.filterList)) { // Gets unique values from column records
-        const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))].filter(v => !!v).sort();
+        const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))].filter((v) => v).sort();
         column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(uniqueValues.map((e) => ({ value: e, text: e })));
       }
       column.filterList.forEach((e) => {
