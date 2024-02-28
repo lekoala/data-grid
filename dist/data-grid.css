@@ -73,7 +73,7 @@ data-grid::-webkit-scrollbar-thumb {
 data-grid::-webkit-scrollbar-thumb:hover {
   background: var(--scroller-thumb-hover);
 }
-data-grid[class=""] > table[role=grid] tr.dg-head-columns, data-grid:not([class]) > table[role=grid] tr.dg-head-columns, data-grid.dg-loading > table[role=grid] tr.dg-head-columns {
+data-grid > table[role=grid] tr.dg-head-columns:is(:empty, :has(:first-child:not([id^=dg-col]))) {
   display: none;
 }
 data-grid img {
