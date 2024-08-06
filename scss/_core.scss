@@ -88,7 +88,7 @@ data-grid {
   // Hides column header row when it's not populated
   > table {
     &[role=grid] {
-      tr.dg-head-columns:is(:empty, :has(:first-child:not([id^=dg-col]))) {
+      tr.dg-head-columns:is(:empty, :has(>:first-child:not([scope=col]))) {
         display: none;
       }
     }
