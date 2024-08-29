@@ -348,6 +348,18 @@ function randstr(prefix) {
   return Math.random().toString(36).replace("0.", prefix || "");
 }
 
+// src/utils/debounce.js
+function debounce(handler, timeout = 300) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      handler(...args);
+    }, timeout);
+  };
+}
+
 // src/data-grid.js
 var plugins = {};
 var labels = {
@@ -380,6 +392,45 @@ function applyColumnDefinition(el, column) {
 }
 var DataGrid = class _DataGrid extends base_element_default {
   #filterSelector = "[id^=dg-filter]";
+  #excludedKeys = [
+    37,
+    39,
+    38,
+    40,
+    45,
+    36,
+    35,
+    33,
+    34,
+    27,
+    20,
+    16,
+    17,
+    91,
+    92,
+    18,
+    93,
+    144,
+    231,
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Insert",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown",
+    "Escape",
+    "CapsLock",
+    "Shift",
+    "Control",
+    "Meta",
+    "Alt",
+    "ContextMenu",
+    "NumLock",
+    "Unidentified"
+  ];
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
     this.data = [];
@@ -525,7 +576,8 @@ var DataGrid = class _DataGrid extends base_element_default {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
-      filterOnEnter: true
+      filterOnEnter: true,
+      filterKeypressDelay: 500
     };
   }
   /**
@@ -1206,6 +1258,14 @@ var DataGrid = class _DataGrid extends base_element_default {
       this.renderBody();
     }
   }
+  #sort(columnName, sortDir) {
+    const col = this.querySelector(`.dg-head-columns th[field=${columnName}]`), dir = sortDir === "ascending" ? "none" : sortDir === "descending" ? "ascending" : "descending";
+    col.setAttribute("aria-sort", dir);
+    this.sortData(col);
+  }
+  sortAsc = (columnName) => this.#sort(columnName, "ascending");
+  sortDesc = (columnName) => this.#sort(columnName, "descending");
+  sortNone = (columnName) => this.#sort(columnName, "none");
   fetchData() {
     if (!this.options.url) {
       return new Promise((resolve, reject) => reject("No url set"));
@@ -1437,14 +1497,16 @@ var DataGrid = class _DataGrid extends base_element_default {
       this.plugins.RowActions.makeActionFilter(tr);
     }
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
+    if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
+      this.options.filterKeypressDelay = 0;
     tr.querySelectorAll(this.#filterSelector).forEach((el) => {
-      const eventName = /select/i.test(el.tagName) ? "change" : "keyup";
-      el.addEventListener(eventName, (e) => {
-        const key = e.keyCode || e.key;
-        if (key === 13 || key === "Enter" || !this.options.filterOnEnter || e.type == "change") {
+      const eventName = /select/i.test(el.tagName) ? "change" : "keyup", eventHandler = debounce((e) => {
+        const key = e.keyCode || e.key, isKeyPressFilter = !this.options.filterOnEnter && !this.#excludedKeys.some((k) => k == key);
+        if (key === 13 || key === "Enter" || isKeyPressFilter || e.type == "change") {
           this.filterData.call(this);
         }
-      });
+      }, this.options.filterKeypressDelay);
+      el.addEventListener(eventName, eventHandler);
     });
   }
   createFilterElement(column, relatedTh) {
@@ -2213,18 +2275,6 @@ var AutosizeColumn = class extends base_plugin_default {
   }
 };
 var autosize_column_default = AutosizeColumn;
-
-// src/utils/debounce.js
-function debounce(handler, timeout = 300) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      timer = null;
-      handler(...args);
-    }, timeout);
-  };
-}
 
 // src/plugins/responsive-grid.js
 var RESPONSIVE_CLASS = "dg-responsive";
