@@ -15,6 +15,7 @@ import elementOffset from "./utils/elementOffset.js";
 import interpolate from "./utils/interpolate.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
+import debounce from "./utils/debounce.js";
 import {
   dispatch,
   find,
@@ -139,6 +140,7 @@ import {
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  * @property {Boolean} filterOnEnter Toggles the ability to filter column data by pressing the Enter or Return key 
  * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
+ * @property {Number} filterKeypressDelay Sets a keypress delay time in milliseconds before triggering filter operation.
  */
 
 /**
@@ -206,6 +208,12 @@ function applyColumnDefinition(el, column) {
  */
 class DataGrid extends BaseElement {
   #filterSelector = "[id^=dg-filter]";
+  #excludedKeys = [
+    37, 39, 38, 40, 45, 36, 35, 33, 34, 27, 20, 16, 17, 91, 92, 18, 93, 144, 231,
+    "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
+    "Insert", "Home", "End", "PageUp", "PageDown",
+    "Escape", "CapsLock", "Shift", "Control", "Meta", "Alt", "ContextMenu", "NumLock", "Unidentified"
+  ];
 
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
@@ -384,7 +392,8 @@ class DataGrid extends BaseElement {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
-      filterOnEnter: true
+      filterOnEnter: true,
+      filterKeypressDelay: 500
     };
   }
 
@@ -1216,6 +1225,17 @@ class DataGrid extends BaseElement {
     }
   }
 
+  #sort(columnName, sortDir) {
+    const col = this.querySelector(`.dg-head-columns th[field=${columnName}]`),
+      dir = sortDir === "ascending" ? "none" : sortDir === "descending" ? "ascending" : "descending";
+    col.setAttribute("aria-sort", dir);
+    this.sortData(col);
+  }
+
+  sortAsc = (columnName) => this.#sort(columnName, "ascending");
+  sortDesc = (columnName) => this.#sort(columnName, "descending");
+  sortNone = (columnName) => this.#sort(columnName, "none");
+
   fetchData() {
     if (!this.options.url) {
       return new Promise((resolve, reject) => reject("No url set"));
@@ -1509,15 +1529,20 @@ class DataGrid extends BaseElement {
 
     thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
 
+    if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
+      this.options.filterKeypressDelay = 0;
+    
     // Filter content by field events
     tr.querySelectorAll(this.#filterSelector).forEach((el) => {
-      const eventName = /select/i.test(el.tagName) ? "change" : "keyup";
-      el.addEventListener(eventName, (e) => {
-        const key = e.keyCode || e.key;
-        if (key === 13 || key === "Enter" || !this.options.filterOnEnter || e.type == "change") {
-          this.filterData.call(this);
-        }
-      });
+      const eventName = /select/i.test(el.tagName) ? "change" : "keyup",
+        eventHandler = debounce((e) => {
+          const key = e.keyCode || e.key,
+            isKeyPressFilter = !this.options.filterOnEnter && !this.#excludedKeys.some(k => k == key);
+          if (key === 13 || key === "Enter" || isKeyPressFilter || e.type == "change") {
+            this.filterData.call(this);
+          }
+        }, this.options.filterKeypressDelay);
+      el.addEventListener(eventName, eventHandler);
     });
   }
 
