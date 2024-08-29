@@ -1,6 +1,6 @@
 {
   "name": "data-grid-component",
-  "version": "2.0.6",
+  "version": "2.0.7",
   "description": "Standalone data grid web component",
   "type": "module",
   "main": "data-grid",
