@@ -2770,4 +2770,9 @@ var data_grid_default2 = data_grid_default;
 export {
   data_grid_default2 as default
 };
+/**
+ * Data Grid custom element
+ * https://github.com/lekoala/data-grid/
+ * @license MIT
+ */
 //# sourceMappingURL=data-grid.js.map
