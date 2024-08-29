@@ -1,3 +1,9 @@
+/**
+ * Data Grid custom element
+ * https://github.com/lekoala/data-grid/
+ * @license MIT
+ */
+
 import DataGrid from "./src/data-grid.js";
 // Optional plugins
 import ColumnResizer from "./src/plugins/column-resizer.js";
