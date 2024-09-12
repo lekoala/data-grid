@@ -64,8 +64,7 @@ function hasAttribute(el, name) {
   return el.hasAttribute(name);
 }
 function setAttribute(el, name, v = "", check = false) {
-  if (check && hasAttribute(el, name))
-    return;
+  if (check && hasAttribute(el, name)) return;
   el.setAttribute(name, "" + v);
 }
 function removeAttribute(el, name) {
@@ -839,8 +838,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   showColumn(field, render = true) {
     this.setColProp(field, "hidden", false);
-    if (render)
-      this.renderTable();
+    if (render) this.renderTable();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "visible"
@@ -848,8 +846,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   hideColumn(field, render = true) {
     this.setColProp(field, "hidden", true);
-    if (render)
-      this.renderTable();
+    if (render) this.renderTable();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "hidden"
@@ -959,8 +956,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     this.renderTable();
   }
   addRow(row) {
-    if (!Array.isArray(this.originalData))
-      return;
+    if (!Array.isArray(this.originalData)) return;
     this.log("Add row");
     this.originalData.push(row);
     this.data = this.originalData.slice();
@@ -971,8 +967,7 @@ var DataGrid = class _DataGrid extends base_element_default {
    * @param {String} key The key of the item to remove. Defaults to first column
    */
   removeRow(value = null, key = null) {
-    if (!Array.isArray(this.originalData))
-      return;
+    if (!Array.isArray(this.originalData)) return;
     if (key === null) {
       key = this.options.columns[0]["field"];
     }
@@ -1016,10 +1011,8 @@ var DataGrid = class _DataGrid extends base_element_default {
    */
   preload(data) {
     const metaKey = this.options.serverParams.metaKey, dataKey = this.options.serverParams.dataKey;
-    if (data?.[metaKey])
-      this.meta = data[metaKey];
-    if (data?.[dataKey])
-      this.data = this.originalData = data[dataKey];
+    if (data?.[metaKey]) this.meta = data[metaKey];
+    if (data?.[dataKey]) this.data = this.originalData = data[dataKey];
   }
   refresh(cb = null) {
     this.data = this.originalData = [];
@@ -1260,7 +1253,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   #sort(columnName, sortDir) {
     const col = this.querySelector(`.dg-head-columns th[field=${columnName}]`), dir = sortDir === "ascending" ? "none" : sortDir === "descending" ? "ascending" : "descending";
-    col.setAttribute("aria-sort", dir);
+    col?.setAttribute("aria-sort", dir);
     this.sortData(col);
   }
   sortAsc = (columnName) => this.#sort(columnName, "ascending");
@@ -1281,8 +1274,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.server) {
       params[this.options.serverParams.start] = this.page - 1;
       params[this.options.serverParams.length] = this.options.perPage;
-      if (this.options.filter)
-        params[this.options.serverParams.search] = this.getFilters();
+      if (this.options.filter) params[this.options.serverParams.search] = this.getFilters();
       params[this.options.serverParams.sort] = this.getSort() || "";
       params[this.options.serverParams.sortDir] = this.getSortDir();
       if (this.meta?.[this.options.serverParams.paramsKey]) {
@@ -1860,6 +1852,7 @@ var ContextMenu = class extends base_plugin_default {
       }
       grid.hideColumn(field);
     }
+    grid.fixPage();
   }
   oncontextmenu(e) {
     e.preventDefault();
@@ -2728,8 +2721,7 @@ var SpinnerSupport = class extends base_plugin_default {
    */
   add() {
     const grid = this.grid, classes = grid.options.spinnerClass;
-    if (!classes)
-      return;
+    if (!classes) return;
     const cls = classes.split(" ").map((e) => `.${e}`).join(""), template = `
 <style id="dg-styles">
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
