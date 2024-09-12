@@ -38,6 +38,7 @@ class ContextMenu extends BasePlugin {
       }
       grid.hideColumn(field);
     }
+    grid.fixPage(); //fixes Chrome footer flexbox resize issues that may appear when there is a large number of columns (i.e. more than 10).
   }
 
   oncontextmenu(e) {
