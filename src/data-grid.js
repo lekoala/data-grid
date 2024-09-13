@@ -1228,7 +1228,7 @@ class DataGrid extends BaseElement {
   #sort(columnName, sortDir) {
     const col = this.querySelector(`.dg-head-columns th[field=${columnName}]`),
       dir = sortDir === "ascending" ? "none" : sortDir === "descending" ? "ascending" : "descending";
-    col.setAttribute("aria-sort", dir);
+    col?.setAttribute("aria-sort", dir);
     this.sortData(col);
   }
 
