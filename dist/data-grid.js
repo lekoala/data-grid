@@ -64,8 +64,7 @@ function hasAttribute(el, name) {
   return el.hasAttribute(name);
 }
 function setAttribute(el, name, v = "", check = false) {
-  if (check && hasAttribute(el, name))
-    return;
+  if (check && hasAttribute(el, name)) return;
   el.setAttribute(name, "" + v);
 }
 function removeAttribute(el, name) {
@@ -839,8 +838,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   showColumn(field, render = true) {
     this.setColProp(field, "hidden", false);
-    if (render)
-      this.renderTable();
+    if (render) this.renderTable();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "visible"
@@ -848,8 +846,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   hideColumn(field, render = true) {
     this.setColProp(field, "hidden", true);
-    if (render)
-      this.renderTable();
+    if (render) this.renderTable();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "hidden"
@@ -959,8 +956,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     this.renderTable();
   }
   addRow(row) {
-    if (!Array.isArray(this.originalData))
-      return;
+    if (!Array.isArray(this.originalData)) return;
     this.log("Add row");
     this.originalData.push(row);
     this.data = this.originalData.slice();
@@ -971,8 +967,7 @@ var DataGrid = class _DataGrid extends base_element_default {
    * @param {String} key The key of the item to remove. Defaults to first column
    */
   removeRow(value = null, key = null) {
-    if (!Array.isArray(this.originalData))
-      return;
+    if (!Array.isArray(this.originalData)) return;
     if (key === null) {
       key = this.options.columns[0]["field"];
     }
@@ -1016,10 +1011,8 @@ var DataGrid = class _DataGrid extends base_element_default {
    */
   preload(data) {
     const metaKey = this.options.serverParams.metaKey, dataKey = this.options.serverParams.dataKey;
-    if (data?.[metaKey])
-      this.meta = data[metaKey];
-    if (data?.[dataKey])
-      this.data = this.originalData = data[dataKey];
+    if (data?.[metaKey]) this.meta = data[metaKey];
+    if (data?.[dataKey]) this.data = this.originalData = data[dataKey];
   }
   refresh(cb = null) {
     this.data = this.originalData = [];
@@ -1281,8 +1274,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.server) {
       params[this.options.serverParams.start] = this.page - 1;
       params[this.options.serverParams.length] = this.options.perPage;
-      if (this.options.filter)
-        params[this.options.serverParams.search] = this.getFilters();
+      if (this.options.filter) params[this.options.serverParams.search] = this.getFilters();
       params[this.options.serverParams.sort] = this.getSort() || "";
       params[this.options.serverParams.sortDir] = this.getSortDir();
       if (this.meta?.[this.options.serverParams.paramsKey]) {
@@ -2729,8 +2721,7 @@ var SpinnerSupport = class extends base_plugin_default {
    */
   add() {
     const grid = this.grid, classes = grid.options.spinnerClass;
-    if (!classes)
-      return;
+    if (!classes) return;
     const cls = classes.split(" ").map((e) => `.${e}`).join(""), template = `
 <style id="dg-styles">
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
@@ -2750,6 +2741,140 @@ var SpinnerSupport = class extends base_plugin_default {
 };
 var spinner_support_default = SpinnerSupport;
 
+// src/plugins/save-state.js
+var SaveState = class extends base_plugin_default {
+  constructor(grid) {
+    super(grid);
+    this.cachedState = null;
+    this.isFilterSortSet = false;
+    this.isDataLoaded = false;
+    this.isScrolled = false;
+    this.log("Init");
+  }
+  connected() {
+    this.log("connected");
+    const grid = this.grid;
+    if (!grid.options.saveState) {
+      return;
+    }
+    this.log("enabled");
+    let cachedState = this._getState();
+    if (cachedState) {
+      this.log("hide columns");
+      cachedState.columns.forEach((col) => {
+        if (col.hidden) {
+          const hideCol = grid.options.columns.find((c) => c.field == col.field);
+          hideCol.hidden = true;
+        }
+      });
+      this.log("set: meta, pages");
+      grid.options.perPage = cachedState.perPage;
+      if (grid.options.server) {
+        grid.meta = cachedState.meta;
+        grid.pages = cachedState.pages;
+        grid.page = cachedState.page;
+      }
+    }
+    this.cachedState = cachedState;
+    const dgLoadData = grid.loadData;
+    grid.loadData = function() {
+      return new Promise((resolve, reject) => {
+        dgLoadData.apply(this, arguments).finally(() => {
+          const saveState = this.plugins.SaveState;
+          if (!grid.classList.contains("dg-initialized")) {
+            saveState.log("not init, loadData skipped");
+            return resolve();
+          }
+          saveState.log("loadData finished, set param controls");
+          if (saveState.cachedState && !saveState.isFilterSortSet) {
+            saveState.log("set sort and filters");
+            grid.querySelectorAll("thead tr.dg-head-columns th[aria-sort]").forEach((el) => {
+              el.setAttribute("aria-sort", "none");
+            });
+            grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)?.setAttribute("aria-sort", saveState.cachedState.sortDir);
+            grid.filterRow.querySelectorAll("[id^=dg-filter]").forEach((el) => {
+              el.value = saveState.cachedState.filters[el.dataset.name];
+            });
+            saveState.isFilterSortSet = true;
+          }
+          const newState = {
+            meta: grid.meta,
+            pages: grid.pages,
+            page: grid.page,
+            perPage: grid.options.perPage,
+            filters: {},
+            columns: grid.options.columns.map((col) => ({ field: col.field, hidden: col.hidden })),
+            sort: grid.getSort(),
+            sortDir: grid.getSortDir(),
+            scrollTo: window.scrollY
+          };
+          const filters = grid.getFilters();
+          Object.keys(filters).forEach((key) => {
+            newState.filters[key] = filters[key];
+          });
+          saveState.log("store new state");
+          saveState._setState(newState);
+          if (!grid.options.server && saveState.cachedState && !saveState.isDataLoaded) {
+            saveState.isDataLoaded = true;
+            grid.filterData();
+            grid.page = saveState.cachedState.page;
+            grid.pageChanged();
+          }
+          resolve();
+        });
+      });
+    };
+    const updateState = () => {
+      const saveState = grid.plugins.SaveState;
+      const state = saveState._getState();
+      if (!state) {
+        return;
+      }
+      state.columns = grid.options.columns.map((col) => ({ field: col.field, hidden: col.hidden }));
+      state.sort = grid.getSort();
+      state.sortDir = grid.getSortDir();
+      state.scrollTo = window.scrollY;
+      saveState._setState(state);
+    };
+    document.addEventListener("scrollend", updateState);
+    grid.addEventListener("headerRendered", updateState);
+    grid.addEventListener("bodyRendered", function(ev) {
+      if (!grid.classList.contains("dg-initialized") || grid.classList.contains("dg-loading")) {
+        return;
+      }
+      if (!grid.options.server) {
+        updateState();
+      }
+      const saveState = grid.plugins.SaveState;
+      if (!saveState.cachedState || !saveState.isFilterSortSet) {
+        return;
+      }
+      if (!saveState.isDataLoaded) {
+        saveState.isDataLoaded = true;
+        grid.reload();
+      } else if (!saveState.isScrolled) {
+        saveState.isScrolled = true;
+        window.scrollTo({ top: saveState.cachedState.scrollTo, left: 0, behavior: "instant" });
+      }
+    });
+  }
+  log(message) {
+    this.grid.log(`[Save-State] ${message}`);
+  }
+  _getState() {
+    let state;
+    try {
+      state = JSON.parse(sessionStorage.getItem(`gridSaveState_${this.grid.id}`));
+    } catch (_) {
+    }
+    return state;
+  }
+  _setState(state) {
+    sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
+  }
+};
+var save_state_default = SaveState;
+
 // data-grid.js
 data_grid_default.registerPlugins({
   ColumnResizer: column_resizer_default,
@@ -2762,7 +2887,8 @@ data_grid_default.registerPlugins({
   ResponsiveGrid: responsive_grid_default,
   RowActions: row_actions_default,
   EditableColumn: editable_column_default,
-  SpinnerSupport: spinner_support_default
+  SpinnerSupport: spinner_support_default,
+  SaveState: save_state_default
 });
 if (!customElements.get("data-grid")) {
   customElements.define("data-grid", data_grid_default);

@@ -139,7 +139,8 @@ regular attributes to avoid cluttering the node with a very large attribute.
 | responsiveHidden  | <code>Boolean</code>                         | hidden through responsive module (ResponsiveGrid module)                                                                                                                                                                                                               |
 | filterType        | <code>String</code>                          | defines a filter field type ("text" or "select" - defaults to "text")                                                                                                                                                                                                  |
 | filterList        | <code>Array</code>                           | defines a custom array to populate a filter select field in the format of ```[{value: "", text: ""},...]```.<br/>When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records. |
-| firstFilterOption | <code>Object</code>                          | defines an object for the first option element of the filter select field. defaults to ```{value: "", text: ""}```                                                                                                                                                           |
+| firstFilterOption | <code>Object</code>                          | defines an object for the first option element of the filter select field. defaults to ```{value: "", text: ""}
+| saveState         | <code>Boolean</code>                         | stores grid filter, sort, and paging ```                                                                                                                                                           |
 
 <a name="Action"></a>
 
