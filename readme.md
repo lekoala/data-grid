@@ -140,7 +140,6 @@ regular attributes to avoid cluttering the node with a very large attribute.
 | filterType        | <code>String</code>                          | defines a filter field type ("text" or "select" - defaults to "text")                                                                                                                                                                                                  |
 | filterList        | <code>Array</code>                           | defines a custom array to populate a filter select field in the format of ```[{value: "", text: ""},...]```.<br/>When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records. |
 | firstFilterOption | <code>Object</code>                          | defines an object for the first option element of the filter select field. defaults to ```{value: "", text: ""}
-| saveState         | <code>Boolean</code>                         | stores grid filter, sort, and paging                                                                                                                                                           |
 
 <a name="Action"></a>
 
@@ -176,6 +175,7 @@ find them in the `plugins` directory.
 | [ResponsiveGrid]   | [<code>ResponsiveGrid</code>](#ResponsiveGrid)     | hide/show column on the fly                               |
 | [RowActions]       | [<code>RowActions</code>](#RowActions)             | add action on rows                                        |
 | [SpinnerSupport]   | [<code>SpinnerSupport</code>](#SpinnerSupport)     | inserts a spinning icon element to indicate grid loading. |
+| [SaveState]        | [<code>SaveState</code>](#SaveState)               | stores grid filter, sort, and paging                      |                                                                                                                                                          |
 
 <a name="ServerParams"></a>
 
