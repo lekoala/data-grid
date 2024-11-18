@@ -34,111 +34,111 @@ import { dispatch, on, setAttribute } from "../utils/shortcuts.js";
  * Add action on rows
  */
 class RowActions extends BasePlugin {
-  /**
-   * @returns {Boolean}
-   */
-  hasActions() {
-    return this.grid.options.actions.length > 0;
-  }
-
-  /**
-   *
-   * @param {HTMLTableRowElement} tr
-   */
-  makeActionHeader(tr) {
-    let actionsTh = document.createElement("th");
-    setAttribute(actionsTh, "role", "columnheader button");
-    setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
-    actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
-    actionsTh.tabIndex = 0;
-    tr.appendChild(actionsTh);
-  }
-
-  /**
-   *
-   * @param {HTMLTableRowElement} tr
-   */
-  makeActionFilter(tr) {
-    let actionsTh = document.createElement("th");
-    actionsTh.setAttribute("role", "columnheader button");
-    actionsTh.setAttribute("aria-colindex", "" + this.grid.columnsLength(true));
-    actionsTh.classList.add(...["dg-actions", this.actionClass]);
-    actionsTh.tabIndex = 0;
-    tr.appendChild(actionsTh);
-  }
-
-  /**
-   * @param {HTMLTableRowElement} tr
-   * @param {Object} item
-   */
-  makeActionRow(tr, item) {
-    const labels = this.grid.labels;
-    const td = document.createElement("td");
-    setAttribute(td, "role", "gridcell");
-    setAttribute(td, "aria-colindex", this.grid.columnsLength(true));
-    td.classList.add(...["dg-actions", this.actionClass]);
-    td.tabIndex = 0;
-
-    // Add menu toggle
-    let actionsToggle = document.createElement("button");
-    actionsToggle.classList.add("dg-actions-toggle");
-    actionsToggle.innerHTML = "☰";
-    td.appendChild(actionsToggle);
-    on(actionsToggle, "click", (ev) => {
-      ev.stopPropagation();
-      ev.target.parentElement.classList.toggle("dg-actions-expand");
-    });
-
-    this.grid.options.actions.forEach((action) => {
-      let button = document.createElement("button");
-      if (action.html) {
-        button.innerHTML = action.html;
-      } else {
-        button.innerText = action.title ?? action.name;
-      }
-      if (action.title) {
-        button.title = action.title;
-      }
-      if (action.url) {
-        button.type = "submit";
-        button.formAction = interpolate(action.url, item);
-      }
-      if (action.class) {
-        button.classList.add(...action.class.split(" "));
-      }
-      const actionHandler = (ev) => {
-        ev.stopPropagation();
-        if (action.confirm) {
-          let c = confirm(labels.areYouSure);
-          if (!c) {
-            ev.preventDefault();
-            return;
-          }
-        }
-        dispatch(this.grid, "action", {
-          data: item,
-          action: action.name,
-        });
-      };
-      button.addEventListener("click", actionHandler);
-      td.appendChild(button);
-
-      // Row action
-      if (action.default) {
-        tr.classList.add("dg-actionable");
-        tr.addEventListener("click", actionHandler);
-      }
-    });
-
-    tr.appendChild(td);
-  }
-
-  get actionClass() {
-    if (this.grid.options.actions.length &lt; 3 &amp;&amp; !this.grid.options.collapseActions) {
-      return "dg-actions-" + this.grid.options.actions.length;
+    /**
+     * @returns {Boolean}
+     */
+    hasActions() {
+        return this.grid.options.actions.length > 0;
     }
-    return "dg-actions-more";
-  }
+
+    /**
+     *
+     * @param {HTMLTableRowElement} tr
+     */
+    makeActionHeader(tr) {
+        const actionsTh = document.createElement("th");
+        setAttribute(actionsTh, "role", "columnheader button");
+        setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
+        actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
+        actionsTh.tabIndex = 0;
+        tr.appendChild(actionsTh);
+    }
+
+    /**
+     *
+     * @param {HTMLTableRowElement} tr
+     */
+    makeActionFilter(tr) {
+        const actionsTh = document.createElement("th");
+        actionsTh.setAttribute("role", "columnheader button");
+        setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
+        actionsTh.classList.add(...["dg-actions", this.actionClass]);
+        actionsTh.tabIndex = 0;
+        tr.appendChild(actionsTh);
+    }
+
+    /**
+     * @param {HTMLTableRowElement} tr
+     * @param {Object} item
+     */
+    makeActionRow(tr, item) {
+        const labels = this.grid.labels;
+        const td = document.createElement("td");
+        setAttribute(td, "role", "gridcell");
+        setAttribute(td, "aria-colindex", this.grid.columnsLength(true));
+        td.classList.add(...["dg-actions", this.actionClass]);
+        td.tabIndex = 0;
+
+        // Add menu toggle
+        const actionsToggle = document.createElement("button");
+        actionsToggle.classList.add("dg-actions-toggle");
+        actionsToggle.innerHTML = "☰";
+        td.appendChild(actionsToggle);
+        on(actionsToggle, "click", (ev) => {
+            ev.stopPropagation();
+            ev.target.parentElement.classList.toggle("dg-actions-expand");
+        });
+
+        for (const action of this.grid.options.actions) {
+            const button = document.createElement("button");
+            if (action.html) {
+                button.innerHTML = action.html;
+            } else {
+                button.innerText = action.title ?? action.name;
+            }
+            if (action.title) {
+                button.title = action.title;
+            }
+            if (action.url) {
+                button.type = "submit";
+                button.formAction = interpolate(action.url, item);
+            }
+            if (action.class) {
+                button.classList.add(...action.class.split(" "));
+            }
+            const actionHandler = (ev) => {
+                ev.stopPropagation();
+                if (action.confirm) {
+                    const c = confirm(labels.areYouSure);
+                    if (!c) {
+                        ev.preventDefault();
+                        return;
+                    }
+                }
+                dispatch(this.grid, "action", {
+                    data: item,
+                    action: action.name,
+                });
+            };
+            button.addEventListener("click", actionHandler);
+            td.appendChild(button);
+
+            // Row action
+            if (action.default) {
+                tr.classList.add("dg-actionable");
+                tr.addEventListener("click", actionHandler);
+            }
+        }
+
+        tr.appendChild(td);
+    }
+
+    get actionClass() {
+        if (this.grid.options.actions.length &lt; 3 &amp;&amp; !this.grid.options.collapseActions) {
+            return `dg-actions-${this.grid.options.actions.length}`;
+        }
+        return "dg-actions-more";
+    }
 }
 
 export default RowActions;
@@ -152,13 +152,13 @@ export default RowActions;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#SpinnerSupport">SpinnerSupport</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Jul 19 2023 10:52:25 GMT+0200 (heure d’été d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Mon Nov 18 2024 12:57:05 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -235,7 +235,7 @@ class ResponsiveGrid extends BasePlugin {
     hasHiddenColumns() {
         let flag = false;
 
-        for (const col of this.grid.options.colmuns) {
+        for (const col of this.grid.options.columns) {
             if (col.responsiveHidden) {
                 flag = true;
             }

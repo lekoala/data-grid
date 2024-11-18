@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: utils/normalizeData.js</title>
+    <title>JSDoc: Source: plugins/spinner-support.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: utils/normalizeData.js</h1>
+    <h1 class="page-title">Source: plugins/spinner-support.js</h1>
 
     
 
@@ -26,43 +26,47 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>/**
- * Parse data attribute and return properly typed data
- * @param {String} v
- * @returns {any}
+            <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
+import { $ } from "../utils/shortcuts.js";
+
+/**
+ * Adds an element for showing a spinning icon on grid loading.
  */
-export default function normalizeData(v) {
-    // Bool
-    if (v === "true") {
-        return true;
-    }
-    if (v === "false") {
-        return false;
-    }
-    // Null or empty
-    if (v === "" || v === "null") {
-        return null;
-    }
-    // Numeric attributes
-    if (v === Number(v).toString()) {
-        return Number(v);
-    }
-    // Only attempt json parsing for array or objects
-    if (v &amp;&amp; ["[", "{"].includes(v.substring(0, 1))) {
-        try {
-            // In case we have only single quoted values, like ['one', 'two', 'three']
-            let val = v;
-            if (val.indexOf('"') === -1) {
-                val = val.replace(/'/g, '"');
-            }
-            return JSON.parse(decodeURIComponent(val));
-        } catch {
-            console.error(`Failed to parse ${v}`);
-            return {};
+class SpinnerSupport extends BasePlugin {
+    /**
+     * Adds a spinner element with its associated css styles.
+     */
+    add() {
+        const grid = this.grid;
+        const classes = grid.options.spinnerClass;
+        if (!classes) {
+            return;
         }
+        const cls = classes
+            .split(" ")
+            .map((e) => `.${e}`)
+            .join("");
+
+        const template = `
+&lt;style id="dg-styles">
+  data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
+  data-grid:not(.dg-loading) ${cls} { display: none; }
+  data-grid:not(.dg-initialized).dg-loading ${cls} { top: 0; }
+  @media only screen and (max-width: 767px) {
+    data-grid[responsive] ${cls} { top: 8rem; left: 42%; }
+  }
+&lt;/style>
+`;
+        if (!$("#dg-styles")) {
+            const styleParent = $("head") ?? $("body");
+            const position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
+            styleParent.insertAdjacentHTML(position, template);
+        }
+        !$(`i${cls}`, grid) &amp;&amp; grid.insertAdjacentHTML("afterbegin", `&lt;i class="${classes}">&lt;/i>`);
     }
-    return v;
 }
+
+export default SpinnerSupport;
 </code></pre>
         </article>
     </section>

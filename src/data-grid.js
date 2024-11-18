@@ -143,6 +143,7 @@ import {
  * @property {Boolean} filterOnEnter Toggles the ability to filter column data by pressing the Enter or Return key
  * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
  * @property {Number} filterKeypressDelay Sets a keypress delay time in milliseconds before triggering filter operation.
+ * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  */
 
 /**
@@ -431,6 +432,7 @@ class DataGrid extends BaseElement {
             filterOnEnter: true,
             filterKeypressDelay: 500,
             spinnerClass: "",
+            saveState: false,
         };
     }
 
@@ -1571,7 +1573,7 @@ class DataGrid extends BaseElement {
             this.plugins.ResponsiveGrid.createFilterCol(tr);
         }
 
-        for (const column of this.options.column) {
+        for (const column of this.options.columns) {
             if (column.attr) {
                 continue;
             }
@@ -1709,7 +1711,7 @@ class DataGrid extends BaseElement {
 
             idx = 0;
 
-            for (const column of this.options.colmun) {
+            for (const column of this.options.columns) {
                 if (!column) {
                     console.error("Empty column found!", this.options.columns);
                 }

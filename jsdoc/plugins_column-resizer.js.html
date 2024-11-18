@@ -29,138 +29,138 @@
             <pre class="prettyprint source linenums"><code>import BasePlugin from "../core/base-plugin.js";
 import elementOffset from "../utils/elementOffset.js";
 import {
-  addClass,
-  dispatch,
-  findAll,
-  getAttribute,
-  hasClass,
-  off,
-  on,
-  removeAttribute,
-  removeClass,
-  setAttribute,
+    addClass,
+    dispatch,
+    findAll,
+    getAttribute,
+    hasClass,
+    off,
+    on,
+    removeAttribute,
+    removeClass,
+    setAttribute,
 } from "../utils/shortcuts.js";
 
 /**
  * Allows to resize columns
  */
 class ColumnResizer extends BasePlugin {
-  constructor(grid) {
-    super(grid);
-    this.isResizing = false;
-  }
+    constructor(grid) {
+        super(grid);
+        this.isResizing = false;
+    }
 
-  /**
-   * @param {String} resizeLabel
-   */
-  renderResizer(resizeLabel) {
-    const grid = this.grid;
-    const table = grid.table;
-    const cols = findAll(grid, "thead tr.dg-head-columns th");
+    /**
+     * @param {String} resizeLabel
+     */
+    renderResizer(resizeLabel) {
+        const grid = this.grid;
+        const table = grid.table;
+        const cols = findAll(grid, "thead tr.dg-head-columns th");
 
-    cols.forEach((col) => {
-      if (hasClass(col, "dg-not-resizable")) {
-        return;
-      }
-      // Create a resizer element
-      const resizer = document.createElement("div");
-      addClass(resizer, "dg-resizer");
-      resizer.ariaLabel = resizeLabel;
+        for (const col of cols) {
+            if (hasClass(col, "dg-not-resizable")) {
+                continue;
+            }
+            // Create a resizer element
+            const resizer = document.createElement("div");
+            addClass(resizer, "dg-resizer");
+            resizer.ariaLabel = resizeLabel;
 
-      // Add a resizer element to the column
-      col.appendChild(resizer);
+            // Add a resizer element to the column
+            col.appendChild(resizer);
 
-      // Handle resizing
-      let startX = 0;
-      let startW = 0;
-      let remainingSpace = 0;
-      let max = 0;
+            // Handle resizing
+            let startX = 0;
+            let startW = 0;
+            let remainingSpace = 0;
+            let max = 0;
 
-      const mouseMoveHandler = (e) => {
-        if (e.clientX > max) {
-          return;
+            const mouseMoveHandler = (e) => {
+                if (e.clientX > max) {
+                    return;
+                }
+                const newWidth = startW + (e.clientX - startX);
+                if (col.dataset.minWidth &amp;&amp; newWidth > Number.parseInt(col.dataset.minWidth)) {
+                    setAttribute(col, "width", newWidth);
+                }
+            };
+
+            // When user releases the mouse, remove the existing event listeners
+            const mouseUpHandler = () => {
+                grid.log("resized column");
+
+                // Prevent accidental sorting if mouse is not over resize handler
+                setTimeout(() => {
+                    this.isResizing = false;
+                }, 0);
+
+                removeClass(resizer, "dg-resizer-active");
+                if (grid.options.reorder) {
+                    col.draggable = true;
+                }
+                col.style.overflow = "hidden";
+
+                // Remove handlers
+                off(document, "mousemove", mouseMoveHandler);
+                off(document, "mouseup", mouseUpHandler);
+
+                dispatch(grid, "columnResized", {
+                    col: getAttribute(col, "field"),
+                    width: getAttribute(col, "width"),
+                });
+            };
+
+            // Otherwise it could sort the col
+            on(resizer, "click", (e) => {
+                e.stopPropagation();
+            });
+
+            on(resizer, "mousedown", (e) => {
+                e.stopPropagation();
+
+                this.isResizing = true;
+
+                const target = e.target;
+                const currentCols = findAll(grid, "dg-head-columns th");
+                const visibleCols = currentCols.filter((col) => {
+                    return !col.hasAttribute("hidden");
+                });
+                const columnIndex = visibleCols.findIndex((column) => column === target.parentNode);
+                grid.log("resize column");
+
+                addClass(resizer, "dg-resizer-active");
+
+                // Make sure we don't drag it
+                removeAttribute(col, "draggable");
+
+                // Allow overflow when resizing
+                col.style.overflow = "visible";
+
+                // Show full column height (-1 to avoid scrollbar)
+                resizer.style.height = `${table.offsetHeight - 1}px`;
+
+                // Register initial data
+                startX = e.clientX;
+                startW = col.offsetWidth;
+
+                remainingSpace = (visibleCols.length - columnIndex) * 30;
+                max = elementOffset(target).left + grid.offsetWidth - remainingSpace;
+
+                // Remove width from next columns to allow auto layout
+                setAttribute(col, "width", startW);
+                for (let j = 0; j &lt; visibleCols.length; j++) {
+                    if (j > columnIndex) {
+                        removeAttribute(cols[j], "width");
+                    }
+                }
+
+                // Attach handlers
+                on(document, "mousemove", mouseMoveHandler);
+                on(document, "mouseup", mouseUpHandler);
+            });
         }
-        const newWidth = startW + (e.clientX - startX);
-        if (col.dataset.minWidth &amp;&amp; newWidth > parseInt(col.dataset.minWidth)) {
-          setAttribute(col, "width", newWidth);
-        }
-      };
-
-      // When user releases the mouse, remove the existing event listeners
-      const mouseUpHandler = () => {
-        grid.log("resized column");
-
-        // Prevent accidental sorting if mouse is not over resize handler
-        setTimeout(() => {
-          this.isResizing = false;
-        }, 0);
-
-        removeClass(resizer, "dg-resizer-active");
-        if (grid.options.reorder) {
-          col.draggable = true;
-        }
-        col.style.overflow = "hidden";
-
-        // Remove handlers
-        off(document, "mousemove", mouseMoveHandler);
-        off(document, "mouseup", mouseUpHandler);
-
-        dispatch(grid, "columnResized", {
-          col: getAttribute(col, "field"),
-          width: getAttribute(col, "width"),
-        });
-      };
-
-      // Otherwise it could sort the col
-      on(resizer, "click", (e) => {
-        e.stopPropagation();
-      });
-
-      on(resizer, "mousedown", (e) => {
-        e.stopPropagation();
-
-        this.isResizing = true;
-
-        const target = e.target;
-        const currentCols = findAll(grid, "dg-head-columns th");
-        const visibleCols = currentCols.filter((col) => {
-          return !col.hasAttribute("hidden");
-        });
-        const columnIndex = visibleCols.findIndex((column) => column == target.parentNode);
-        grid.log("resize column");
-
-        addClass(resizer, "dg-resizer-active");
-
-        // Make sure we don't drag it
-        removeAttribute(col, "draggable");
-
-        // Allow overflow when resizing
-        col.style.overflow = "visible";
-
-        // Show full column height (-1 to avoid scrollbar)
-        resizer.style.height = table.offsetHeight - 1 + "px";
-
-        // Register initial data
-        startX = e.clientX;
-        startW = col.offsetWidth;
-
-        remainingSpace = (visibleCols.length - columnIndex) * 30;
-        max = elementOffset(target).left + grid.offsetWidth - remainingSpace;
-
-        // Remove width from next columns to allow auto layout
-        setAttribute(col, "width", startW);
-        for (let j = 0; j &lt; visibleCols.length; j++) {
-          if (j > columnIndex) {
-            removeAttribute(cols[j], "width");
-          }
-        }
-
-        // Attach handlers
-        on(document, "mousemove", mouseMoveHandler);
-        on(document, "mouseup", mouseUpHandler);
-      });
-    });
-  }
+    }
 }
 
 export default ColumnResizer;
@@ -174,13 +174,13 @@ export default ColumnResizer;
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="global.html#AutosizeColumn">AutosizeColumn</a></li><li><a href="BaseElement.html">BaseElement</a></li><li><a href="BasePlugin.html">BasePlugin</a></li><li><a href="global.html#ColumnResizer">ColumnResizer</a></li><li><a href="global.html#ContextMenu">ContextMenu</a></li><li><a href="global.html#DataGrid">DataGrid</a></li><li><a href="global.html#DraggableHeaders">DraggableHeaders</a></li><li><a href="global.html#EditableColumn">EditableColumn</a></li><li><a href="global.html#FixedHeight">FixedHeight</a></li><li><a href="global.html#ResponsiveGrid">ResponsiveGrid</a></li><li><a href="global.html#RowActions">RowActions</a></li><li><a href="global.html#SelectableRows">SelectableRows</a></li><li><a href="global.html#SpinnerSupport">SpinnerSupport</a></li><li><a href="global.html#TouchSupport">TouchSupport</a></li></ul><h3>Global</h3><ul><li><a href="global.html#$">$</a></li><li><a href="global.html#$$">$$</a></li><li><a href="global.html#addClass">addClass</a></li><li><a href="global.html#applyColumnDefinition">applyColumnDefinition</a></li><li><a href="global.html#callback">callback</a></li><li><a href="global.html#ce">ce</a></li><li><a href="global.html#dispatch">dispatch</a></li><li><a href="global.html#el">el</a></li><li><a href="global.html#find">find</a></li><li><a href="global.html#findAll">findAll</a></li><li><a href="global.html#getAttribute">getAttribute</a></li><li><a href="global.html#hasAttribute">hasAttribute</a></li><li><a href="global.html#hasClass">hasClass</a></li><li><a href="global.html#insertAfter">insertAfter</a></li><li><a href="global.html#labels">labels</a></li><li><a href="global.html#off">off</a></li><li><a href="global.html#on">on</a></li><li><a href="global.html#one">one</a></li><li><a href="global.html#passiveOpts">passiveOpts</a></li><li><a href="global.html#plugins">plugins</a></li><li><a href="global.html#removeAttribute">removeAttribute</a></li><li><a href="global.html#removeClass">removeClass</a></li><li><a href="global.html#setAttribute">setAttribute</a></li><li><a href="global.html#sortByPriority">sortByPriority</a></li><li><a href="global.html#toggleClass">toggleClass</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.2</a> on Wed Jul 19 2023 10:52:25 GMT+0200 (heure d’été d’Europe centrale)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.3</a> on Mon Nov 18 2024 12:57:05 GMT+0100 (heure normale d’Europe centrale)
 </footer>
 
 <script> prettyPrint(); </script>

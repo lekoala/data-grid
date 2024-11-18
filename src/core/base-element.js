@@ -2,6 +2,8 @@ import camelize from "../utils/camelize.js";
 import normalizeData from "../utils/normalizeData.js";
 import { dispatch, getAttribute, setAttribute } from "../utils/shortcuts.js";
 
+/** @typedef {import('../data-grid').Options} Options */
+
 /**
  * Base element that does not contain any specific logic
  * related to this project but makes HTMLElemnt usable
@@ -12,6 +14,8 @@ class BaseElement extends HTMLElement {
      */
     constructor(options = {}) {
         super();
+
+        /** @type {Options} */
         this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
 
         this.log("constructor");

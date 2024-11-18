@@ -23,7 +23,7 @@ export default function getTextWidth(text, el = document.body, withPadding = fal
     }
 
     // re-use canvas object for better performance
-    if (canvas) {
+    if (!canvas) {
         canvas = document.createElement("canvas");
     }
     const context = canvas.getContext("2d");

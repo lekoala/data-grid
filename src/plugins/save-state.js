@@ -16,6 +16,7 @@ class SaveState extends BasePlugin {
         const grid = this.grid;
 
         if (!grid.options.saveState) {
+            this.log("disabled");
             return;
         }
 
