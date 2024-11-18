@@ -1,6 +1,6 @@
 {
   "name": "data-grid-component",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "description": "Standalone data grid web component",
   "type": "module",
   "main": "data-grid",
@@ -45,7 +45,7 @@
   "devDependencies": {
     "@happy-dom/global-registrator": "^10.11.2",
     "ava": "^5.3.1",
-    "esbuild": "^0.23.1",
+    "esbuild": "0.23.1",
     "jsdoc": "^4.0.3",
     "jsdoc-plugin-intersection": "^1.0.4",
     "jsdoc-to-markdown": "^8.0.3",
