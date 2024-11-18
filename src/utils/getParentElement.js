@@ -5,9 +5,9 @@
  * @returns {HTMLElement}
  */
 export default function getParentElement(el, type, prop = "nodeName") {
-  let parent = el;
-  while (parent[prop] != type) {
-    parent = parent.parentElement;
-  }
-  return parent;
+    let parent = el;
+    while (parent[prop] !== type) {
+        parent = parent.parentElement;
+    }
+    return parent;
 }

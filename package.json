@@ -25,7 +25,11 @@
     "update-deps": "npx npm-check-updates -u",
     "jsdoc": "jsdoc -c jsdoc.conf.json -d ./jsdoc -r src/",
     "jsdoc2md": "jsdoc2md -c jsdoc.conf.json src/data-grid.js",
-    "local-server": "php -S localhost:8002 -t ."
+    "local-server": "php -S localhost:8002 -t .",
+    "format-dry-run": "bunx biome format ./src",
+    "format": "bunx biome format --write ./src",
+    "lint-dry-run": "bunx biome lint ./src",
+    "lint": "bunx biome lint --write ./src"
   },
   "repository": {
     "type": "git",

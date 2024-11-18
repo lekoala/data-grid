@@ -25,7 +25,10 @@
         "enabled": true,
         "rules": {
             "recommended": true
-        }
+        },
+        "include": [
+            "./src/*.js"
+        ]
     },
     "javascript": {
         "formatter": {

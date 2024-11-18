@@ -37,28 +37,28 @@
  */
 
 class FlexibleEventListenerObject {
-  /**
-   * @param {FlexibleEvent} e
-   */
-  handleEvent(e) {}
+    /**
+     * @param {FlexibleEvent} e
+     */
+    handleEvent(e) {}
 }
 
 const supportedPassiveTypes = [
-  "scroll",
-  "wheel",
-  "touchstart",
-  "touchmove",
-  "touchenter",
-  "touchend",
-  "touchleave",
-  "mouseout",
-  "mouseleave",
-  "mouseup",
-  "mousedown",
-  "mousemove",
-  "mouseenter",
-  "mousewheel",
-  "mouseover",
+    "scroll",
+    "wheel",
+    "touchstart",
+    "touchmove",
+    "touchenter",
+    "touchend",
+    "touchleave",
+    "mouseout",
+    "mouseleave",
+    "mouseup",
+    "mousedown",
+    "mousemove",
+    "mouseenter",
+    "mousewheel",
+    "mouseover",
 ];
 
 /**
@@ -67,10 +67,10 @@ const supportedPassiveTypes = [
  * @returns {AddEventListenerOptions}
  */
 function passiveOpts(type) {
-  if (supportedPassiveTypes.includes(type)) {
-    return { passive: true };
-  }
-  return {};
+    if (supportedPassiveTypes.includes(type)) {
+        return { passive: true };
+    }
+    return {};
 }
 
 /**
@@ -79,7 +79,7 @@ function passiveOpts(type) {
  * @returns {any}
  */
 export function getAttribute(el, name) {
-  return el.getAttribute(name);
+    return el.getAttribute(name);
 }
 
 /**
@@ -88,7 +88,7 @@ export function getAttribute(el, name) {
  * @returns {Boolean}
  */
 export function hasAttribute(el, name) {
-  return el.hasAttribute(name);
+    return el.hasAttribute(name);
 }
 
 /**
@@ -98,8 +98,8 @@ export function hasAttribute(el, name) {
  * @param {Boolean} check Prevent setting if attribute is already there
  */
 export function setAttribute(el, name, v = "", check = false) {
-  if (check && hasAttribute(el, name)) return;
-  el.setAttribute(name, "" + v);
+    if (check && hasAttribute(el, name)) return;
+    el.setAttribute(name, `${v}`);
 }
 
 /**
@@ -107,9 +107,9 @@ export function setAttribute(el, name, v = "", check = false) {
  * @param {String} name
  */
 export function removeAttribute(el, name) {
-  if (hasAttribute(el, name)) {
-    el.removeAttribute(name);
-  }
+    if (hasAttribute(el, name)) {
+        el.removeAttribute(name);
+    }
 }
 
 /**
@@ -118,7 +118,7 @@ export function removeAttribute(el, name) {
  * @param {EventListenerObject|FlexibleListener} listener
  */
 export function on(el, type, listener) {
-  el.addEventListener(type, listener, passiveOpts(type));
+    el.addEventListener(type, listener, passiveOpts(type));
 }
 
 /**
@@ -127,7 +127,7 @@ export function on(el, type, listener) {
  * @param {EventListenerObject|FlexibleListener} listener
  */
 export function off(el, type, listener) {
-  el.removeEventListener(type, listener, passiveOpts(type));
+    el.removeEventListener(type, listener, passiveOpts(type));
 }
 
 /**
@@ -136,9 +136,9 @@ export function off(el, type, listener) {
  * @param {EventListenerObject|FlexibleListener} listener
  */
 export function one(el, type, listener) {
-  el.addEventListener(type, listener, {
-    once: true,
-  });
+    el.addEventListener(type, listener, {
+        once: true,
+    });
 }
 
 /**
@@ -148,14 +148,14 @@ export function one(el, type, listener) {
  * @param {Boolean} bubbles
  */
 export function dispatch(el, name, data = {}, bubbles = false) {
-  let opts = {};
-  if (bubbles) {
-    opts.bubbles = true;
-  }
-  if (data) {
-    opts.detail = data;
-  }
-  el.dispatchEvent(new CustomEvent(name, opts));
+    const opts = {};
+    if (bubbles) {
+        opts.bubbles = true;
+    }
+    if (data) {
+        opts.detail = data;
+    }
+    el.dispatchEvent(new CustomEvent(name, opts));
 }
 
 /**
@@ -164,7 +164,7 @@ export function dispatch(el, name, data = {}, bubbles = false) {
  * @returns {Boolean}
  */
 export function hasClass(el, name) {
-  return el.classList.contains(name);
+    return el.classList.contains(name);
 }
 
 /**
@@ -172,7 +172,7 @@ export function hasClass(el, name) {
  * @param {String} name
  */
 export function addClass(el, name) {
-  el.classList.add(...name.split(" "));
+    el.classList.add(...name.split(" "));
 }
 
 /**
@@ -180,7 +180,7 @@ export function addClass(el, name) {
  * @param {String} name
  */
 export function removeClass(el, name) {
-  el.classList.remove(...name.split(" "));
+    el.classList.remove(...name.split(" "));
 }
 
 /**
@@ -188,7 +188,7 @@ export function removeClass(el, name) {
  * @param {String} name
  */
 export function toggleClass(el, name) {
-  el.classList.toggle(name);
+    el.classList.toggle(name);
 }
 
 /**
@@ -197,10 +197,10 @@ export function toggleClass(el, name) {
  * @returns {FlexibleHTMLElement|null}
  */
 export function $(selector, base = document) {
-  if (selector instanceof HTMLElement) {
-    return selector;
-  }
-  return base.querySelector(selector);
+    if (selector instanceof HTMLElement) {
+        return selector;
+    }
+    return base.querySelector(selector);
 }
 
 /**
@@ -209,7 +209,7 @@ export function $(selector, base = document) {
  * @returns {Array<FlexibleHTMLElement>}
  */
 export function $$(selector, base = document) {
-  return Array.from(base.querySelectorAll(selector));
+    return Array.from(base.querySelectorAll(selector));
 }
 
 /**
@@ -220,7 +220,7 @@ export function $$(selector, base = document) {
  * @returns {FlexibleHTMLElement}
  */
 export function find(el, selector) {
-  return $(selector, el);
+    return $(selector, el);
 }
 
 /**
@@ -231,7 +231,7 @@ export function find(el, selector) {
  * @returns {Array<FlexibleHTMLElement>}
  */
 export function findAll(el, selector) {
-  return $$(selector, el);
+    return $$(selector, el);
 }
 
 /**
@@ -239,7 +239,7 @@ export function findAll(el, selector) {
  * @returns {FlexibleHTMLElement}
  */
 export function el(el) {
-  return el;
+    return el;
 }
 
 /**
@@ -249,11 +249,11 @@ export function el(el) {
  * @returns {HTMLElementTagNameMap[K]}
  */
 export function ce(tagName, parent = null) {
-  const el = document.createElement(tagName);
-  if (parent) {
-    parent.appendChild(el);
-  }
-  return el;
+    const el = document.createElement(tagName);
+    if (parent) {
+        parent.appendChild(el);
+    }
+    return el;
 }
 
 /**
@@ -261,5 +261,5 @@ export function ce(tagName, parent = null) {
  * @param {HTMLElement} existingNode
  */
 export function insertAfter(newNode, existingNode) {
-  existingNode.parentNode.insertBefore(newNode, existingNode.nextSibling);
+    existingNode.parentNode.insertBefore(newNode, existingNode.nextSibling);
 }
