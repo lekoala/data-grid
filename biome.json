@@ -26,6 +26,9 @@
         "rules": {
             "recommended": true
         },
+        "ignore": [
+            "noGlobalIsNan"
+        ],
         "include": [
             "./src/*.js"
         ]

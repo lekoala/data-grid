@@ -1277,7 +1277,7 @@ class DataGrid extends BaseElement {
             } else {
                 const field = col.getAttribute("field");
                 this.data.sort((a, b) => {
-                    if (!Number.isNaN(a[field]) && !Number.isNaN(b[field])) {
+                    if (!isNaN(a[field]) && !isNaN(b[field])) {
                         return sort === "ascending" ? a[field] - b[field] : b[field] - a[field];
                     }
                     const valA = sort === "ascending" ? a[field].toUpperCase() : b[field].toUpperCase();
@@ -1472,7 +1472,7 @@ class DataGrid extends BaseElement {
                     colAvailableWidth,
                 );
             } else {
-                w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
+                w = Math.max(parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
             }
 
             setAttribute(th, "width", w);

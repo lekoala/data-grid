@@ -1,6 +1,19 @@
 ﻿import BasePlugin from "../core/base-plugin.js";
 import { findAll } from "../utils/shortcuts.js";
 
+/**
+ * @typedef GridState
+ * @property {Object} meta
+ * @property {Number} pages
+ * @property {Number} page
+ * @property {Number} perPage
+ * @property {Object} filters
+ * @property {Array} columns
+ * @property {String} sort
+ * @property {String} sortDir
+ * @property {Number} scrollTo
+ */
+
 class SaveState extends BasePlugin {
     constructor(grid) {
         super(grid);
@@ -26,7 +39,7 @@ class SaveState extends BasePlugin {
         if (cachedState) {
             this.log("hide columns");
 
-            for (const col of cachedState.colmuns) {
+            for (const col of cachedState.columns) {
                 if (col.hidden) {
                     const hideCol = grid.options.columns.find((c) => c.field === col.field);
                     hideCol.hidden = true;
@@ -76,6 +89,7 @@ class SaveState extends BasePlugin {
                         saveState.isFilterSortSet = true;
                     }
 
+                    /** @type {GridState} */
                     const newState = {
                         meta: grid.meta,
                         pages: grid.pages,
@@ -153,6 +167,9 @@ class SaveState extends BasePlugin {
         this.grid.log(`[Save-State] ${message}`);
     }
 
+    /**
+     * @returns {GridState}
+     */
     _getState() {
         let state;
         try {
@@ -161,6 +178,9 @@ class SaveState extends BasePlugin {
         return state;
     }
 
+    /**
+     * @param {GridState} state
+     */
     _setState(state) {
         sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
     }
