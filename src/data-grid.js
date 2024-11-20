@@ -1472,7 +1472,7 @@ class DataGrid extends BaseElement {
                     colAvailableWidth,
                 );
             } else {
-                w = Math.max(parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
+                w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
             }
 
             setAttribute(th, "width", w);
