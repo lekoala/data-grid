@@ -17,7 +17,6 @@ import ResponsiveGrid from "./src/plugins/responsive-grid.js";
 import RowActions from "./src/plugins/row-actions.js";
 import EditableColumn from "./src/plugins/editable-column.js";
 import SpinnerSupport from "./src/plugins/spinner-support.js";
-
 import SaveState from "./src/plugins/save-state.js";
 
 // Using shorthand property names
