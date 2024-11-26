@@ -293,11 +293,6 @@ class DataGrid extends BaseElement {
                 setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
             }
         }
-
-        // Inserts spinner
-        if (this.options.spinnerClass && this.plugins.SpinnerSupport) {
-            this.plugins.SpinnerSupport.add();
-        }
     }
 
     static template() {

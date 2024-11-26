@@ -5,6 +5,13 @@ import { $ } from "../utils/shortcuts.js";
  * Adds an element for showing a spinning icon on grid loading.
  */
 class SpinnerSupport extends BasePlugin {
+    connected() {
+        // Inserts spinner
+        if (this.grid.options.spinnerClass && this.grid.plugins.SpinnerSupport) {
+            this.add();
+        }
+    }
+
     /**
      * Adds a spinner element with its associated css styles.
      */
