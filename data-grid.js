@@ -43,3 +43,6 @@ if (!customElements.get("data-grid")) {
 }
 
 export default DataGrid;
+
+const global = typeof globalThis !== "undefined" ? globalThis : self;
+global.DataGrid = DataGrid;

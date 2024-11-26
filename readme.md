@@ -45,11 +45,23 @@ Grid customizations are possible via attributes.
 </script>
 ```
 
-- using the constructor
+- using the constructor with import statement
 
 ```html
 <script type="module">
   import { DataGrid } from "./data-grid.js";
+  const grid = new DataGrid({
+    url: "data.json",
+  });
+  document.body.appendChild(grid);
+</script>
+```
+
+- using the constructor without import statement
+
+```html
+<script type="module" src="./data-grid.js"></script>
+<script type="module">
   const grid = new DataGrid({
     url: "data.json",
   });
