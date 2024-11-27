@@ -45,11 +45,23 @@ Grid customizations are possible via attributes.
 </script>
 ```
 
-- using the constructor
+- using the constructor with import statement
 
 ```html
 <script type="module">
   import { DataGrid } from "./data-grid.js";
+  const grid = new DataGrid({
+    url: "data.json",
+  });
+  document.body.appendChild(grid);
+</script>
+```
+
+- using the constructor without import statement
+
+```html
+<script type="module" src="./data-grid.js"></script>
+<script type="module">
   const grid = new DataGrid({
     url: "data.json",
   });
@@ -170,7 +182,7 @@ find them in the `plugins` directory.
 | [ColumnResizer]    | [<code>ColumnResizer</code>](#ColumnResizer)       | resize handlers in the headers                            |
 | [ContextMenu]      | [<code>ContextMenu</code>](#ContextMenu)           | menu to show/hide columns                                 |
 | [DraggableHeaders] | [<code>DraggableHeaders</code>](#DraggableHeaders) | draggable headers columns                                 |
-| [EditableColumn]   | [<code>EditableColumn</code>](#EditableColumn)     | draggable headers columns                                 |
+| [EditableColumn]   | [<code>EditableColumn</code>](#EditableColumn)     | editable headers columns                                 |
 | [TouchSupport]     | [<code>TouchSupport</code>](#TouchSupport)         | touch swipe                                               |
 | [SelectableRows]   | [<code>SelectableRows</code>](#SelectableRows)     | create a column with checkboxes to select rows            |
 | [FixedHeight]      | [<code>FixedHeight</code>](#FixedHeight)           | allows having fixed height tables                         |
@@ -321,6 +333,7 @@ You can check `demo-server.html` to get a sample usage with saving functionnalit
 | **sortAsc**      | sorts data by column name in ascending order                                                                 |
 | **sortDesc**     | sorts data by column name in descending order                                                                |
 | **sortNone**     | resets column sort state                                                                                     |
+| **urlChanged**   | Loads data and configures the grid.                                                                          |
 
 ## Events
 

@@ -293,11 +293,6 @@ class DataGrid extends BaseElement {
                 setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
             }
         }
-
-        // Inserts spinner
-        if (this.options.spinnerClass && this.plugins.SpinnerSupport) {
-            this.plugins.SpinnerSupport.add();
-        }
     }
 
     static template() {
@@ -437,6 +432,14 @@ class DataGrid extends BaseElement {
     }
 
     /**
+    * Determines if the grid is initialized.
+    * @returns {Boolean}
+    */
+    get isInit() {
+        return this.classList.contains("dg-initialized");
+    }
+
+    /**
      * @param {Plugins} list
      */
     static registerPlugins(list) {
@@ -534,10 +537,26 @@ class DataGrid extends BaseElement {
         setAttribute(this, "page", this.constrainPageValue(val));
     }
 
-    urlChanged() {
+    /**
+    * Loads data and configures the grid.
+    * @param {Boolean} initOnly
+    */
+    urlChanged(initOnly = false) {
+        if (initOnly && !this.isInit) return;
+        this.reconfig();
         this.loadData().then(() => {
             this.configureUi();
         });
+    }
+
+    /**
+    * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
+    */
+    reconfig() {
+        const cols = this.options.columns;
+        this.options.columns = [];
+        this.configureUi();
+        this.options.columns = cols;
     }
 
     constrainPageValue(v) {
@@ -714,12 +733,12 @@ class DataGrid extends BaseElement {
     }
 
     _disconnected() {
-        this.btnFirst.removeEventListener("click", this.getFirst);
-        this.btnPrev.removeEventListener("click", this.getPrev);
-        this.btnNext.removeEventListener("click", this.getNext);
-        this.btnLast.removeEventListener("click", this.getLast);
-        this.selectPerPage.removeEventListener("change", this.changePerPage);
-        this.inputPage.removeEventListener("input", this.gotoPage);
+        this.btnFirst?.removeEventListener("click", this.getFirst);
+        this.btnPrev?.removeEventListener("click", this.getPrev);
+        this.btnNext?.removeEventListener("click", this.getNext);
+        this.btnLast?.removeEventListener("click", this.getLast);
+        this.selectPerPage?.removeEventListener("change", this.changePerPage);
+        this.inputPage?.removeEventListener("input", this.gotoPage);
 
         for (const plugin of Object.values(this.plugins)) {
             plugin.disconnected();
@@ -863,6 +882,7 @@ class DataGrid extends BaseElement {
                 this.rowHeight = tr.offsetHeight;
             }
         }
+        this.fixPage();
     }
 
     filterChanged() {
@@ -1021,7 +1041,7 @@ class DataGrid extends BaseElement {
         const tbody = this.querySelector("tbody");
 
         // We already have some data
-        if (this.meta || this.originalData || this.classList.contains("dg-initialized")) {
+        if (this.meta || this.originalData || this.isInit) {
             // We don't use server side data
             if (!this.options.server || (this.options.server && !this.fireEvents)) {
                 this.log("skip loadData");

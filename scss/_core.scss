@@ -1,5 +1,5 @@
 /**
- * Data Grid Web component 
+ * Data Grid Web Component v2.0.10 
  * https://github.com/lekoala/data-grid
  */
 
@@ -138,6 +138,12 @@ data-grid {
       animation-fill-mode: forwards;
       animation-duration: 0.3s; // only triggers after 300ms
       pointer-events: none; // disable clicks while loading
+    }
+
+    &:not(:has(th)) { 
+      tfoot {
+        display: none;
+      }
     }
   }
 

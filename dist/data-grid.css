@@ -1,5 +1,5 @@
 /**
- * Data Grid Web component 
+ * Data Grid Web Component v2.0.10 
  * https://github.com/lekoala/data-grid
  */
 @keyframes dataGridShow {
@@ -108,6 +108,9 @@ data-grid.dg-loading tbody {
   animation-fill-mode: forwards;
   animation-duration: 0.3s;
   pointer-events: none;
+}
+data-grid.dg-loading:not(:has(th)) tfoot {
+  display: none;
 }
 data-grid tr {
   position: relative;
