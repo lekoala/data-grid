@@ -16,6 +16,7 @@ import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
 import debounce from "./utils/debounce.js";
 import {
+    $, $$,
     dispatch,
     find,
     findAll,
@@ -144,6 +145,7 @@ import {
  * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
  * @property {Number} filterKeypressDelay Sets a keypress delay time in milliseconds before triggering filter operation.
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
+ * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  */
 
 /**
@@ -428,6 +430,7 @@ class DataGrid extends BaseElement {
             filterKeypressDelay: 500,
             spinnerClass: "",
             saveState: false,
+            errorMessage: ""
         };
     }
 
@@ -437,6 +440,14 @@ class DataGrid extends BaseElement {
     */
     get isInit() {
         return this.classList.contains("dg-initialized");
+    }
+
+    /**
+     * Determines if data load has failed.
+     * @returns {Boolean}
+     */
+    get hasDataError() {
+        return this.classList.contains("dg-network-error");
     }
 
     /**
@@ -528,6 +539,18 @@ class DataGrid extends BaseElement {
             perPage: (v) => Number.parseInt(v),
         };
     }
+
+    /** @returns {HTMLTableElement} */ //@ts-ignore
+    get table() { return $("table"); }
+
+    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    get thead() { return $("thead"); }
+
+    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    get tbody() { return $("tbody"); }
+
+    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    get tfoot() { return $("tfoot"); }
 
     get page() {
         return Number.parseInt(this.getAttribute("page"));
@@ -660,10 +683,6 @@ class DataGrid extends BaseElement {
     }
 
     _connected() {
-        /**
-         * @type {HTMLTableElement}
-         */
-        this.table = this.querySelector("table");
         /**
          * @type {HTMLInputElement}
          */
@@ -865,14 +884,14 @@ class DataGrid extends BaseElement {
      * This should be called after your data has been loaded
      */
     configureUi() {
-        setAttribute(this.querySelector("table"), "aria-rowcount", this.data.length);
-
-        this.table.style.visibility = "hidden";
+        const table = this.table;
+        setAttribute(table, "aria-rowcount", this.data.length);
+        table.style.visibility = "hidden";
         this.renderTable();
         if (this.options.responsive && this.plugins.ResponsiveGrid) {
             // Let the observer make the table visible
         } else {
-            this.table.style.visibility = "visible";
+            table.style.visibility = "visible";
         }
 
         // Store row height for later usage
@@ -1024,6 +1043,7 @@ class DataGrid extends BaseElement {
         this.fixPage();
         // @ts-ignore
         this.loadData().finally(() => {
+            if (this.hasDataError) return;
             // If we load data from the server, we redraw the table body
             // Otherwise, we just need to paginate
             this.options.server || needRender ? this.renderBody() : this.paginate();
@@ -1038,7 +1058,7 @@ class DataGrid extends BaseElement {
      */
     loadData() {
         const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
-        const tbody = this.querySelector("tbody");
+        const tbody = this.tbody;
 
         // We already have some data
         if (this.meta || this.originalData || this.isInit) {
@@ -1093,16 +1113,16 @@ class DataGrid extends BaseElement {
                 })
                 .catch((err) => {
                     this.log(err);
-                    if (err.message) {
-                        tbody.setAttribute("data-empty", err.message.replace(/^\s+|\r\n|\n|\r$/g, ""));
-                    }
+                    tbody.setAttribute("data-empty",
+                        this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError);
                     this.classList.add("dg-empty", "dg-network-error");
+                    dispatch(this, "loadDataFailed", err);
                 })
                 // @ts-ignore
                 .finally(() => {
                     flagEmpty();
                     if (
-                        !this.classList.contains("dg-network-error") &&
+                        !this.hasDataError &&
                         tbody.getAttribute("data-empty") !== this.labels.noData
                     ) {
                         tbody.setAttribute("data-empty", this.labels.noData);
@@ -1359,10 +1379,14 @@ class DataGrid extends BaseElement {
         appendParamsToUrl(url, params);
 
         return fetch(url).then((response) => {
-            if (!response.ok) {
-                throw new Error(response.statusText || labels.networkError);
-            }
-            return response.json();
+            const newError = new Error(response.statusText || labels.networkError);
+            if (!response.ok) // @ts-ignore
+                throw newError.response = response, newError;
+            return response.clone().json()
+                .catch((error) => {
+                    if (!this.options.debug) error = newError;
+                    throw error.response = response, error;
+                });
         });
     }
 
@@ -1398,7 +1422,7 @@ class DataGrid extends BaseElement {
     renderHeader() {
         this.log("render header");
 
-        const thead = this.querySelector("thead");
+        const thead = this.thead;
         this.createColumnHeaders(thead);
         this.createColumnFilters(thead);
 
@@ -1412,7 +1436,7 @@ class DataGrid extends BaseElement {
     renderFooter() {
         this.log("render footer");
 
-        const tfoot = this.querySelector("tfoot");
+        const tfoot = this.tfoot;
         const td = tfoot.querySelector("td");
         tfoot.removeAttribute("hidden");
         setAttribute(td, "colspan", this.columnsLength(true));
@@ -1569,7 +1593,7 @@ class DataGrid extends BaseElement {
             sortableRow.addEventListener("click", () => this.sortData(sortableRow));
         }
 
-        setAttribute(this.querySelector("table"), "aria-colcount", this.columnsLength(true));
+        setAttribute(this.table, "aria-colcount", this.columnsLength(true));
     }
 
     createColumnFilters(thead) {
@@ -1815,9 +1839,9 @@ class DataGrid extends BaseElement {
         tbody.setAttribute("role", "rowgroup");
 
         // Keep data empty message
-        const prev = this.querySelector("tbody");
+        const prev = this.tbody;
         tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
-        this.querySelector("table").replaceChild(tbody, prev);
+        this.table.replaceChild(tbody, prev);
 
         if (this.plugins.FixedHeight) {
             this.plugins.FixedHeight.createFakeRow();
@@ -1837,14 +1861,15 @@ class DataGrid extends BaseElement {
     paginate() {
         this.log("paginate");
 
-        const total = this.totalRecords();
-        const p = this.page || 1;
+        const total = this.totalRecords(),
+            p = this.page || 1,
+            tbody = this.tbody,
+            tfoot = this.tfoot,
+            bodyRows = findAll(tbody, "tr");
 
-        let index;
-        let high = p * this.options.perPage;
-        let low = high - this.options.perPage + 1;
-        const tbody = this.querySelector("tbody");
-        const tfoot = this.querySelector("tfoot");
+        let index,
+            high = p * this.options.perPage,
+            low = high - this.options.perPage + 1;
 
         if (high > total) {
             high = total;
@@ -1856,7 +1881,6 @@ class DataGrid extends BaseElement {
         // Display all rows within the set indexes
         // For server side paginated grids, we display everything
         // since the server is taking care of actual pagination
-        const bodyRows = findAll(tbody, "tr");
         for (const tr of bodyRows) {
             if (this.options.server) {
                 removeAttribute(tr, "hidden");
