@@ -586,9 +586,9 @@ var DataGrid = class _DataGrid extends base_element_default {
     };
   }
   /**
-  * Determines if the grid is initialized.
-  * @returns {Boolean}
-  */
+   * Determines if the grid is initialized.
+   * @returns {Boolean}
+   */
   get isInit() {
     return this.classList.contains("dg-initialized");
   }
@@ -704,9 +704,9 @@ var DataGrid = class _DataGrid extends base_element_default {
     setAttribute(this, "page", this.constrainPageValue(val));
   }
   /**
-  * Loads data and configures the grid.
-  * @param {Boolean} initOnly
-  */
+   * Loads data and configures the grid.
+   * @param {Boolean} initOnly
+   */
   urlChanged(initOnly = false) {
     if (initOnly && !this.isInit) return;
     this.reconfig();
@@ -715,8 +715,8 @@ var DataGrid = class _DataGrid extends base_element_default {
     });
   }
   /**
-  * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
-  */
+   * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
+   */
   reconfig() {
     const cols = this.options.columns;
     this.options.columns = [];
@@ -1011,7 +1011,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (!Array.isArray(this.originalData)) {
       return;
     }
-    this.log("Add row");
+    this.log("add row");
     this.originalData.push(row);
     this.data = this.originalData.slice();
     this.sortData();
@@ -1032,7 +1032,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (v === null) {
       v = this.originalData[this.originalData.length - 1][k];
     }
-    this.log(`Removing ${k}:${v}`);
+    this.log(`remove row ${k}:${v}`);
     for (let i = 0; i < this.originalData.length; i++) {
       if (this.originalData[i][k] === v) {
         this.originalData.splice(i, 1);
@@ -1361,11 +1361,17 @@ var DataGrid = class _DataGrid extends base_element_default {
     appendParamsToUrl(url, params);
     return fetch(url).then((response) => {
       const newError = new Error(response.statusText || labels.networkError);
-      if (!response.ok)
-        throw newError.response = response, newError;
-      return response.clone().json().catch((error) => {
-        if (!this.options.debug) error = newError;
-        throw error.response = response, error;
+      if (!response.ok) {
+        newError.response = response;
+        throw newError;
+      }
+      return response.clone().json().catch((err) => {
+        let error = err;
+        if (!this.options.debug) {
+          error = newError;
+        }
+        error.response = response;
+        throw error;
       });
     });
   }
@@ -1739,8 +1745,15 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   paginate() {
     this.log("paginate");
-    const total = this.totalRecords(), p = this.page || 1, tbody = this.tbody, tfoot = this.tfoot, bodyRows = findAll(tbody, "tr");
-    let index, high = p * this.options.perPage, low = high - this.options.perPage + 1;
+    const total = this.totalRecords();
+    const p = this.page || 1;
+    const tbody = this.tbody;
+    const tfoot = this.tfoot;
+    const bodyRows = findAll(tbody, "tr");
+    this.pages = this.totalPages();
+    let index;
+    let high = p * this.options.perPage;
+    let low = high - this.options.perPage + 1;
     if (high > total) {
       high = total;
     }

@@ -16,7 +16,8 @@ import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
 import debounce from "./utils/debounce.js";
 import {
-    $, $$,
+    $,
+    $$,
     dispatch,
     find,
     findAll,
@@ -430,14 +431,14 @@ class DataGrid extends BaseElement {
             filterKeypressDelay: 500,
             spinnerClass: "",
             saveState: false,
-            errorMessage: ""
+            errorMessage: "",
         };
     }
 
     /**
-    * Determines if the grid is initialized.
-    * @returns {Boolean}
-    */
+     * Determines if the grid is initialized.
+     * @returns {Boolean}
+     */
     get isInit() {
         return this.classList.contains("dg-initialized");
     }
@@ -541,13 +542,19 @@ class DataGrid extends BaseElement {
     }
 
     /** @returns {HTMLTableSectionElement} */ //@ts-ignore
-    get thead() { return $("thead", this); }
+    get thead() {
+        return $("thead", this);
+    }
 
     /** @returns {HTMLTableSectionElement} */ //@ts-ignore
-    get tbody() { return $("tbody", this); }
+    get tbody() {
+        return $("tbody", this);
+    }
 
     /** @returns {HTMLTableSectionElement} */ //@ts-ignore
-    get tfoot() { return $("tfoot", this); }
+    get tfoot() {
+        return $("tfoot", this);
+    }
 
     get page() {
         return Number.parseInt(this.getAttribute("page"));
@@ -558,9 +565,9 @@ class DataGrid extends BaseElement {
     }
 
     /**
-    * Loads data and configures the grid.
-    * @param {Boolean} initOnly
-    */
+     * Loads data and configures the grid.
+     * @param {Boolean} initOnly
+     */
     urlChanged(initOnly = false) {
         if (initOnly && !this.isInit) return;
         this.reconfig();
@@ -570,8 +577,8 @@ class DataGrid extends BaseElement {
     }
 
     /**
-    * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
-    */
+     * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
+     */
     reconfig() {
         const cols = this.options.columns;
         this.options.columns = [];
@@ -955,7 +962,7 @@ class DataGrid extends BaseElement {
         if (!Array.isArray(this.originalData)) {
             return;
         }
-        this.log("Add row");
+        this.log("add row");
         this.originalData.push(row);
         this.data = this.originalData.slice();
         this.sortData();
@@ -978,7 +985,7 @@ class DataGrid extends BaseElement {
         if (v === null) {
             v = this.originalData[this.originalData.length - 1][k];
         }
-        this.log(`Removing ${k}:${v}`);
+        this.log(`remove row ${k}:${v}`);
         for (let i = 0; i < this.originalData.length; i++) {
             if (this.originalData[i][k] === v) {
                 this.originalData.splice(i, 1);
@@ -1112,18 +1119,19 @@ class DataGrid extends BaseElement {
                 })
                 .catch((err) => {
                     this.log(err);
-                    tbody.setAttribute("data-empty",
-                        this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError);
+                    tbody.setAttribute(
+                        "data-empty",
+                        this.options.errorMessage ||
+                            err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") ||
+                            labels.networkError,
+                    );
                     this.classList.add("dg-empty", "dg-network-error");
                     dispatch(this, "loadDataFailed", err);
                 })
                 // @ts-ignore
                 .finally(() => {
                     flagEmpty();
-                    if (
-                        !this.hasDataError &&
-                        tbody.getAttribute("data-empty") !== this.labels.noData
-                    ) {
+                    if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.labels.noData) {
                         tbody.setAttribute("data-empty", this.labels.noData);
                     }
                     this.classList.remove("dg-loading");
@@ -1380,12 +1388,21 @@ class DataGrid extends BaseElement {
 
         return fetch(url).then((response) => {
             const newError = new Error(response.statusText || labels.networkError);
-            if (!response.ok) // @ts-ignore
-                throw newError.response = response, newError;
-            return response.clone().json()
-                .catch((error) => {
-                    if (!this.options.debug) error = newError;
-                    throw error.response = response, error;
+            if (!response.ok) {
+                // @ts-ignore
+                newError.response = response;
+                throw newError;
+            }
+            return response
+                .clone()
+                .json()
+                .catch((err) => {
+                    let error = err;
+                    if (!this.options.debug) {
+                        error = newError;
+                    }
+                    error.response = response;
+                    throw error;
                 });
         });
     }
@@ -1861,15 +1878,18 @@ class DataGrid extends BaseElement {
     paginate() {
         this.log("paginate");
 
-        const total = this.totalRecords(),
-            p = this.page || 1,
-            tbody = this.tbody,
-            tfoot = this.tfoot,
-            bodyRows = findAll(tbody, "tr");
+        const total = this.totalRecords();
+        const p = this.page || 1;
+        const tbody = this.tbody;
+        const tfoot = this.tfoot;
+        const bodyRows = findAll(tbody, "tr");
 
-        let index,
-            high = p * this.options.perPage,
-            low = high - this.options.perPage + 1;
+        // Refresh page count in case we added/removed a page
+        this.pages = this.totalPages();
+
+        let index;
+        let high = p * this.options.perPage;
+        let low = high - this.options.perPage + 1;
 
         if (high > total) {
             high = total;
