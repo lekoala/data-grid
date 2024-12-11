@@ -540,17 +540,14 @@ class DataGrid extends BaseElement {
         };
     }
 
-    /** @returns {HTMLTableElement} */ //@ts-ignore
-    get table() { return $("table"); }
+    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    get thead() { return $("thead", this); }
 
     /** @returns {HTMLTableSectionElement} */ //@ts-ignore
-    get thead() { return $("thead"); }
+    get tbody() { return $("tbody", this); }
 
     /** @returns {HTMLTableSectionElement} */ //@ts-ignore
-    get tbody() { return $("tbody"); }
-
-    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
-    get tfoot() { return $("tfoot"); }
+    get tfoot() { return $("tfoot", this); }
 
     get page() {
         return Number.parseInt(this.getAttribute("page"));
@@ -683,6 +680,10 @@ class DataGrid extends BaseElement {
     }
 
     _connected() {
+        /**
+         * @type {HTMLTableElement}
+         */
+        this.table = this.querySelector("table");
         /**
          * @type {HTMLInputElement}
          */
@@ -884,14 +885,12 @@ class DataGrid extends BaseElement {
      * This should be called after your data has been loaded
      */
     configureUi() {
-        const table = this.table;
-        setAttribute(table, "aria-rowcount", this.data.length);
-        table.style.visibility = "hidden";
+        this.table.style.visibility = "hidden";
         this.renderTable();
         if (this.options.responsive && this.plugins.ResponsiveGrid) {
             // Let the observer make the table visible
         } else {
-            table.style.visibility = "visible";
+            this.table.style.visibility = "visible";
         }
 
         // Store row height for later usage
@@ -1128,6 +1127,7 @@ class DataGrid extends BaseElement {
                         tbody.setAttribute("data-empty", this.labels.noData);
                     }
                     this.classList.remove("dg-loading");
+                    setAttribute(this.table, "aria-rowcount", this.data.length);
                     this.loading = false;
                 })
         );

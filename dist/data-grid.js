@@ -682,25 +682,20 @@ var DataGrid = class _DataGrid extends base_element_default {
       perPage: (v) => Number.parseInt(v)
     };
   }
-  /** @returns {HTMLTableElement} */
-  //@ts-ignore
-  get table() {
-    return $("table");
-  }
   /** @returns {HTMLTableSectionElement} */
   //@ts-ignore
   get thead() {
-    return $("thead");
+    return $("thead", this);
   }
   /** @returns {HTMLTableSectionElement} */
   //@ts-ignore
   get tbody() {
-    return $("tbody");
+    return $("tbody", this);
   }
   /** @returns {HTMLTableSectionElement} */
   //@ts-ignore
   get tfoot() {
-    return $("tfoot");
+    return $("tfoot", this);
   }
   get page() {
     return Number.parseInt(this.getAttribute("page"));
@@ -810,6 +805,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     }
   }
   _connected() {
+    this.table = this.querySelector("table");
     this.btnFirst = this.querySelector(".dg-btn-first");
     this.btnPrev = this.querySelector(".dg-btn-prev");
     this.btnNext = this.querySelector(".dg-btn-next");
@@ -957,13 +953,11 @@ var DataGrid = class _DataGrid extends base_element_default {
    * This should be called after your data has been loaded
    */
   configureUi() {
-    const table = this.table;
-    setAttribute(table, "aria-rowcount", this.data.length);
-    table.style.visibility = "hidden";
+    this.table.style.visibility = "hidden";
     this.renderTable();
     if (this.options.responsive && this.plugins.ResponsiveGrid) {
     } else {
-      table.style.visibility = "visible";
+      this.table.style.visibility = "visible";
     }
     if (!this.rowHeight) {
       const tr = find(this, "tbody tr") || find(this, "table tr");
@@ -1158,6 +1152,7 @@ var DataGrid = class _DataGrid extends base_element_default {
         tbody.setAttribute("data-empty", this.labels.noData);
       }
       this.classList.remove("dg-loading");
+      setAttribute(this.table, "aria-rowcount", this.data.length);
       this.loading = false;
     });
   }
