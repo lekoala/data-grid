@@ -128,6 +128,7 @@ You can also pass them as a json string in data-config.
 | spinnerClass        | <code>String</code>                          | Sets a space-delimited string of css classes for a spinner                     |
 | filterKeypressDelay | <code>Number</code>                          | Sets a keypress delay time in milliseconds before triggering filter operation. |
 | saveState           | <code>Boolean</code>                         | Enable/disable save state plugin (SaveState module)                            |
+| errorMessage        | <code>String</code>                          | A generic text to be displayed in footer when error occurs.                    |
 
 <a name="Column"></a>
 
@@ -337,18 +338,19 @@ You can check `demo-server.html` to get a sample usage with saving functionnalit
 
 ## Events
 
-| Name                 | Trigger                                  |
-|----------------------|------------------------------------------|
-| **edit**             | A row is edited                          |
-| **action**           | An action is performed                   |
-| **connected**        | The grid is connected                    |
-| **disconnected**     | The grid is disconnected                 |
-| **columnResized**    | A column is resized                      |
-| **columnVisibility** | A column is hidden/shown                 |
-| **columnReordered**  | A column is dragged                      |
-| **rowsSelected**     | Any or all rows are selected             |
-| **headerRendered**   | Column header (thead) render is complete |
-| **bodyRendered**     | Table body (tbody) render is complete    |
+| Name                 | Trigger                                                    |
+|----------------------|------------------------------------------------------------|
+| **edit**             | A row is edited                                            |
+| **action**           | An action is performed                                     |
+| **connected**        | The grid is connected                                      |
+| **disconnected**     | The grid is disconnected                                   |
+| **columnResized**    | A column is resized                                        |
+| **columnVisibility** | A column is hidden/shown                                   |
+| **columnReordered**  | A column is dragged                                        |
+| **rowsSelected**     | Any or all rows are selected                               |
+| **headerRendered**   | Column header (thead) render is complete                   |
+| **bodyRendered**     | Table body (tbody) render is complete                      |
+| **loadDataFailed**   | loadData method catches error when options.server === true |
 
 ## Server
 
