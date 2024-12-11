@@ -1,4 +1,4 @@
-/*** Data Grid Web Component v2.0.10 * https://github.com/lekoala/data-grid ***/
+/*** Data Grid Web Component v2.0.11 * https://github.com/lekoala/data-grid ***/
 
 // src/utils/camelize.js
 function camelize(str) {
@@ -581,7 +581,8 @@ var DataGrid = class _DataGrid extends base_element_default {
       filterOnEnter: true,
       filterKeypressDelay: 500,
       spinnerClass: "",
-      saveState: false
+      saveState: false,
+      errorMessage: ""
     };
   }
   /**
@@ -590,6 +591,13 @@ var DataGrid = class _DataGrid extends base_element_default {
   */
   get isInit() {
     return this.classList.contains("dg-initialized");
+  }
+  /**
+   * Determines if data load has failed.
+   * @returns {Boolean}
+   */
+  get hasDataError() {
+    return this.classList.contains("dg-network-error");
   }
   /**
    * @param {Plugins} list
@@ -673,6 +681,21 @@ var DataGrid = class _DataGrid extends base_element_default {
       defaultPage: (v) => Number.parseInt(v),
       perPage: (v) => Number.parseInt(v)
     };
+  }
+  /** @returns {HTMLTableSectionElement} */
+  //@ts-ignore
+  get thead() {
+    return $("thead", this);
+  }
+  /** @returns {HTMLTableSectionElement} */
+  //@ts-ignore
+  get tbody() {
+    return $("tbody", this);
+  }
+  /** @returns {HTMLTableSectionElement} */
+  //@ts-ignore
+  get tfoot() {
+    return $("tfoot", this);
   }
   get page() {
     return Number.parseInt(this.getAttribute("page"));
@@ -930,7 +953,6 @@ var DataGrid = class _DataGrid extends base_element_default {
    * This should be called after your data has been loaded
    */
   configureUi() {
-    setAttribute(this.querySelector("table"), "aria-rowcount", this.data.length);
     this.table.style.visibility = "hidden";
     this.renderTable();
     if (this.options.responsive && this.plugins.ResponsiveGrid) {
@@ -1064,6 +1086,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     const needRender = !this.originalData?.length;
     this.fixPage();
     this.loadData().finally(() => {
+      if (this.hasDataError) return;
       this.options.server || needRender ? this.renderBody() : this.paginate();
       if (cb) {
         cb();
@@ -1075,7 +1098,7 @@ var DataGrid = class _DataGrid extends base_element_default {
    */
   loadData() {
     const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
-    const tbody = this.querySelector("tbody");
+    const tbody = this.tbody;
     if (this.meta || this.originalData || this.isInit) {
       if (!this.options.server || this.options.server && !this.fireEvents) {
         this.log("skip loadData");
@@ -1117,16 +1140,19 @@ var DataGrid = class _DataGrid extends base_element_default {
       }
     }).catch((err) => {
       this.log(err);
-      if (err.message) {
-        tbody.setAttribute("data-empty", err.message.replace(/^\s+|\r\n|\n|\r$/g, ""));
-      }
+      tbody.setAttribute(
+        "data-empty",
+        this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError
+      );
       this.classList.add("dg-empty", "dg-network-error");
+      dispatch(this, "loadDataFailed", err);
     }).finally(() => {
       flagEmpty();
-      if (!this.classList.contains("dg-network-error") && tbody.getAttribute("data-empty") !== this.labels.noData) {
+      if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.labels.noData) {
         tbody.setAttribute("data-empty", this.labels.noData);
       }
       this.classList.remove("dg-loading");
+      setAttribute(this.table, "aria-rowcount", this.data.length);
       this.loading = false;
     });
   }
@@ -1334,10 +1360,13 @@ var DataGrid = class _DataGrid extends base_element_default {
     }
     appendParamsToUrl(url, params);
     return fetch(url).then((response) => {
-      if (!response.ok) {
-        throw new Error(response.statusText || labels.networkError);
-      }
-      return response.json();
+      const newError = new Error(response.statusText || labels.networkError);
+      if (!response.ok)
+        throw newError.response = response, newError;
+      return response.clone().json().catch((error) => {
+        if (!this.options.debug) error = newError;
+        throw error.response = response, error;
+      });
     });
   }
   renderTable() {
@@ -1364,7 +1393,7 @@ var DataGrid = class _DataGrid extends base_element_default {
    */
   renderHeader() {
     this.log("render header");
-    const thead = this.querySelector("thead");
+    const thead = this.thead;
     this.createColumnHeaders(thead);
     this.createColumnFilters(thead);
     if (this.options.resizable && this.plugins.ColumnResizer) {
@@ -1374,7 +1403,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   renderFooter() {
     this.log("render footer");
-    const tfoot = this.querySelector("tfoot");
+    const tfoot = this.tfoot;
     const td = tfoot.querySelector("td");
     tfoot.removeAttribute("hidden");
     setAttribute(td, "colspan", this.columnsLength(true));
@@ -1498,7 +1527,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     for (const sortableRow of rowsWithSort) {
       sortableRow.addEventListener("click", () => this.sortData(sortableRow));
     }
-    setAttribute(this.querySelector("table"), "aria-colcount", this.columnsLength(true));
+    setAttribute(this.table, "aria-colcount", this.columnsLength(true));
   }
   createColumnFilters(thead) {
     let idx = 0;
@@ -1695,9 +1724,9 @@ var DataGrid = class _DataGrid extends base_element_default {
       tbody.appendChild(tr);
     });
     tbody.setAttribute("role", "rowgroup");
-    const prev = this.querySelector("tbody");
+    const prev = this.tbody;
     tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
-    this.querySelector("table").replaceChild(tbody, prev);
+    this.table.replaceChild(tbody, prev);
     if (this.plugins.FixedHeight) {
       this.plugins.FixedHeight.createFakeRow();
     }
@@ -1710,20 +1739,14 @@ var DataGrid = class _DataGrid extends base_element_default {
   }
   paginate() {
     this.log("paginate");
-    const total = this.totalRecords();
-    const p = this.page || 1;
-    let index;
-    let high = p * this.options.perPage;
-    let low = high - this.options.perPage + 1;
-    const tbody = this.querySelector("tbody");
-    const tfoot = this.querySelector("tfoot");
+    const total = this.totalRecords(), p = this.page || 1, tbody = this.tbody, tfoot = this.tfoot, bodyRows = findAll(tbody, "tr");
+    let index, high = p * this.options.perPage, low = high - this.options.perPage + 1;
     if (high > total) {
       high = total;
     }
     if (!total) {
       low = 0;
     }
-    const bodyRows = findAll(tbody, "tr");
     for (const tr of bodyRows) {
       if (this.options.server) {
         removeAttribute(tr, "hidden");
