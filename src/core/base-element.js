@@ -20,6 +20,7 @@ class BaseElement extends HTMLElement {
 
         this.log("constructor");
 
+        this.setup = false;
         this.fireEvents = true;
         this._ready();
 
@@ -105,6 +106,11 @@ class BaseElement extends HTMLElement {
     _connected() {}
 
     connectedCallback() {
+        // already connected
+        if (this.setup) {
+            return;
+        }
+        this.setup = true;
         // ensure whenDefined callbacks run first
         setTimeout(() => {
             this.log("connectedCallback");
@@ -127,11 +133,19 @@ class BaseElement extends HTMLElement {
      */
     _disconnected() {}
 
+    /**
+     * @link https://nolanlawson.com/2024/12/01/avoiding-unnecessary-cleanup-work-in-disconnectedcallback/
+     */
     disconnectedCallback() {
-        this.log("disconnectedCallback");
-        this._disconnected();
-        // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events
-        dispatch(this, "disconnected");
+        setTimeout(() => {
+            if (!this.isConnected && this.setup) {
+                this.log("disconnectedCallback");
+                this._disconnected();
+                // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events
+                dispatch(this, "disconnected");
+                this.setup = false;
+            }
+        }, 0);
     }
 
     /**

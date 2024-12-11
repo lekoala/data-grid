@@ -541,18 +541,21 @@ class DataGrid extends BaseElement {
         };
     }
 
-    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    /** @returns {HTMLTableSectionElement} */
     get thead() {
+        //@ts-ignore
         return $("thead", this);
     }
 
-    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    /** @returns {HTMLTableSectionElement} */
     get tbody() {
+        //@ts-ignore
         return $("tbody", this);
     }
 
-    /** @returns {HTMLTableSectionElement} */ //@ts-ignore
+    /** @returns {HTMLTableSectionElement} */
     get tfoot() {
+        //@ts-ignore
         return $("tfoot", this);
     }
 

@@ -1,5 +1,5 @@
 /**
- * Data Grid Web Component v2.0.11 
+ * Data Grid Web Component v2.0.11
  * https://github.com/lekoala/data-grid
  */
 
@@ -23,6 +23,8 @@ data-grid {
   --color: rgb(var(--color-rgb));
 
   --highlight-color: #fffcee;
+  --body-background: var(--bs-table-bg, #fff);
+  --striped-background: rgba(0, 0, 0, 0.05);
   --header-background: var(--bs-gray-200, #e9ecef);
   --header-color: var(--bs-dark, #212529);
   --input-background: var(--bs-body-bg, #ffffff);
@@ -114,7 +116,7 @@ data-grid {
     max-width: 100%;
     white-space: normal;
     // Background needs to be on the table, not on the component in case the table overflows the component
-    background: var(--header-background);
+    background: var(--body-background);
   }
 
   thead,
@@ -140,7 +142,7 @@ data-grid {
       pointer-events: none; // disable clicks while loading
     }
 
-    &:not(:has(th)) { 
+    &:not(:has(th)) {
       tfoot {
         display: none;
       }
@@ -346,7 +348,7 @@ data-grid {
     padding: 0 2px 0 0;
     background-color: transparent;
 
-    > * { 
+    > * {
       width: 100%;
       border-radius: 0;
       margin: 0;
@@ -440,10 +442,10 @@ data-grid {
     }
   }
 
-  // Zebra rows
+  // Zebra/striped rows
   tbody tr {
     &:nth-child(even) {
-      background-color: var(--bs-table-striped-bg, #f8f9fa);
+      background-color: var(--striped-background);
     }
 
     border-bottom: solid 1px var(--row-border-color);
@@ -565,14 +567,11 @@ data-grid {
 [data-bs-theme="dark"] data-grid {
   --scroller-color-lightness: 20%;
   --highlight-color: #43423e;
+  --body-background: #212529;
+  --striped-background: #2c3034;
   --header-background: var(--bs-gray-800, #34373b);
   --header-color: var(--bs-light, #e9ecef);
   --body-color: var(--bs-body-color, #494e53);
   --row-border-color: var(--bs-gray-900, #212325);
-
-  tbody tr {
-    &:nth-child(even) {
-      background-color: var(--bs-table-striped-bg, #2c3034);
-    }
-  }
 }
+

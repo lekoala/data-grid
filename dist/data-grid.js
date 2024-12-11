@@ -136,6 +136,7 @@ var BaseElement = class extends HTMLElement {
     super();
     this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
     this.log("constructor");
+    this.setup = false;
     this.fireEvents = true;
     this._ready();
     this.log("ready");
@@ -210,6 +211,10 @@ var BaseElement = class extends HTMLElement {
   _connected() {
   }
   connectedCallback() {
+    if (this.setup) {
+      return;
+    }
+    this.setup = true;
     setTimeout(() => {
       this.log("connectedCallback");
       const template = document.createElement("template");
@@ -224,10 +229,18 @@ var BaseElement = class extends HTMLElement {
    */
   _disconnected() {
   }
+  /**
+   * @link https://nolanlawson.com/2024/12/01/avoiding-unnecessary-cleanup-work-in-disconnectedcallback/
+   */
   disconnectedCallback() {
-    this.log("disconnectedCallback");
-    this._disconnected();
-    dispatch(this, "disconnected");
+    setTimeout(() => {
+      if (!this.isConnected && this.setup) {
+        this.log("disconnectedCallback");
+        this._disconnected();
+        dispatch(this, "disconnected");
+        this.setup = false;
+      }
+    }, 0);
   }
   /**
    * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#a-props-like-accessor
@@ -683,17 +696,14 @@ var DataGrid = class _DataGrid extends base_element_default {
     };
   }
   /** @returns {HTMLTableSectionElement} */
-  //@ts-ignore
   get thead() {
     return $("thead", this);
   }
   /** @returns {HTMLTableSectionElement} */
-  //@ts-ignore
   get tbody() {
     return $("tbody", this);
   }
   /** @returns {HTMLTableSectionElement} */
-  //@ts-ignore
   get tfoot() {
     return $("tfoot", this);
   }
