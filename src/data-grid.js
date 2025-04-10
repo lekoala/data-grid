@@ -742,24 +742,26 @@ class DataGrid extends BaseElement {
         this.dirChanged();
         this.perPageValuesChanged();
 
-        // @ts-ignore
-        this.loadData().finally(() => {
-            this.configureUi();
+        setTimeout(() => { //ensures all registered plugins are connected before loading data
+            // @ts-ignore
+            this.loadData().finally(() => {
+                this.configureUi();
 
-            this.sortChanged();
-            this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
+                this.sortChanged();
+                this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
 
-            this.filterChanged();
-            this.reorderChanged();
+                this.filterChanged();
+                this.reorderChanged();
 
-            this.dirChanged();
-            this.perPageValuesChanged();
-            this.pageChanged();
+                this.dirChanged();
+                this.perPageValuesChanged();
+                this.pageChanged();
 
-            this.fireEvents = true; // We can now fire attributeChangedCallback events
+                this.fireEvents = true; // We can now fire attributeChangedCallback events
 
-            this.log("initialized");
-        });
+                this.log("initialized");
+            });
+        }, 0);
     }
 
     _disconnected() {
@@ -1484,6 +1486,7 @@ class DataGrid extends BaseElement {
 
         // We need a real th from the dom to compute the size
         let sampleTh = thead.querySelector("tr.dg-head-columns th");
+        this.log("createColumnHeaders - sampleTh", sampleTh);
         if (!sampleTh) {
             sampleTh = ce("th");
             thead.querySelector("tr").appendChild(sampleTh);
@@ -1499,6 +1502,7 @@ class DataGrid extends BaseElement {
         // Create columns
         idx = 0;
         let totalWidth = 0;
+        this.log("createColumnHeaders - columns", this.options.columns);
 
         for (const column of this.options.columns) {
             if (column.attr) {
@@ -1637,6 +1641,7 @@ class DataGrid extends BaseElement {
             this.plugins.ResponsiveGrid.createFilterCol(tr);
         }
 
+        this.log("createColumnFilters - columns", this.options.columns);
         for (const column of this.options.columns) {
             if (column.attr) {
                 continue;
@@ -1854,6 +1859,8 @@ class DataGrid extends BaseElement {
             }
 
             tbody.appendChild(tr);
+
+            dispatch(this, "rowRendered", { rowData: item, tr });
         });
 
         tbody.setAttribute("role", "rowgroup");

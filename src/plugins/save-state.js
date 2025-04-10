@@ -1,4 +1,4 @@
-﻿import BasePlugin from "../core/base-plugin.js";
+import BasePlugin from "../core/base-plugin.js";
 import { findAll } from "../utils/shortcuts.js";
 
 /**
@@ -28,6 +28,8 @@ class SaveState extends BasePlugin {
         this.log("connected");
         const grid = this.grid;
 
+        this.log(grid.options);
+
         if (!grid.options.saveState) {
             this.log("disabled");
             return;
@@ -56,19 +58,21 @@ class SaveState extends BasePlugin {
         }
 
         this.cachedState = cachedState;
+        this.log("cachedState", this.cachedState);
 
-        const dgLoadData = grid.loadData;
-        grid.loadData = function (...args) {
-            return new Promise((resolve, reject) => {
-                dgLoadData.apply(this, args).finally(() => {
+        setTimeout(() => {
+            const dgLoadData = grid.loadData;
+            grid.loadData = function (...args) {
+                return dgLoadData.apply(this, args).finally(() => {
                     const saveState = this.plugins.SaveState;
+                    saveState.log("loadData", this.options.columns);
 
                     if (!grid.classList.contains("dg-initialized")) {
                         saveState.log("not init, loadData skipped");
-                        return resolve();
+                        return;
                     }
 
-                    saveState.log("loadData finished, set param controls");
+                    saveState.log("loadData finished, set param controls", this.options.columns);
 
                     if (saveState.cachedState && !saveState.isFilterSortSet) {
                         saveState.log("set sort and filters");
@@ -78,13 +82,15 @@ class SaveState extends BasePlugin {
                             el.setAttribute("aria-sort", "none");
                         }
 
-                        grid.querySelector(
-                            `thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`,
-                        )?.setAttribute("aria-sort", saveState.cachedState.sortDir);
+                        grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)
+                            ?.setAttribute("aria-sort", saveState.cachedState.sortDir);
 
                         const filters = findAll(grid.filterRow, "[id^=dg-filter]");
+                        saveState.log("filters", filters);
+
                         for (const el of filters) {
-                            el.value = saveState.cachedState.filters[el.dataset.name];
+                            el.value = saveState?.cachedState?.filters?.[el.dataset.name] ?? "";
+                            saveState.log({ name: el.dataset.name, val: el.value, saveState });
                         }
                         saveState.isFilterSortSet = true;
                     }
@@ -103,12 +109,14 @@ class SaveState extends BasePlugin {
                     };
 
                     const filters = grid.getFilters();
+                    saveState.log("filters", filters);
 
                     for (const key of Object.keys(filters)) {
-                        newState.filters[key] = filters[key];
+                        newState.filters[key] = filters[key] ?? "";
+                        saveState.log({ key, val: filters[key], newState, filters });
                     }
 
-                    saveState.log("store new state");
+                    saveState.log("store new state", newState);
                     saveState._setState(newState);
 
                     if (!grid.options.server && saveState.cachedState && !saveState.isDataLoaded) {
@@ -116,12 +124,11 @@ class SaveState extends BasePlugin {
                         grid.filterData();
                         grid.page = saveState.cachedState.page;
                         grid.pageChanged();
+                        saveState.log("data loaded");
                     }
-
-                    resolve();
                 });
-            });
-        };
+            };
+        }, 0);
 
         const updateState = () => {
             const saveState = grid.plugins.SaveState;
@@ -156,6 +163,7 @@ class SaveState extends BasePlugin {
             if (!saveState.isDataLoaded) {
                 saveState.isDataLoaded = true;
                 grid.reload();
+                saveState.log("***grid reloaded");
             } else if (!saveState.isScrolled) {
                 saveState.isScrolled = true;
                 window.scrollTo({ top: saveState.cachedState.scrollTo, left: 0, behavior: "instant" });
@@ -163,8 +171,8 @@ class SaveState extends BasePlugin {
         });
     }
 
-    log(message) {
-        this.grid.log(`[Save-State] ${message}`);
+    log(...data) {
+        this.grid.log("[Save-State] ", ...data);
     }
 
     /**
