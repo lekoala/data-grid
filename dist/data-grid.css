@@ -331,16 +331,10 @@ data-grid.dg-empty.dg-network-error tbody {
   height: auto;
 }
 data-grid.dg-empty.dg-network-error tbody:before {
-  font-size: 2rem;
-  top: auto;
-  transform: translate(-50%);
+  font-size: 1.2rem;
 }
 data-grid.dg-empty.dg-network-error tbody tr:not(.dg-fake-row) {
   display: none;
-}
-data-grid.dg-empty:not(.dg-network-error) tbody:before {
-  top: auto;
-  transform: translate(-50%, 30%);
 }
 data-grid tbody tr {
   border-bottom: solid 1px var(--row-border-color);
