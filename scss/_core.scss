@@ -197,6 +197,14 @@ data-grid {
     }
   }
 
+  .dg-selectable {
+    label {
+      display: flex;
+      align-items: center;
+      margin:0;
+    }
+  }
+
   .dg-clickable-cell {
     margin: 0;
     position: absolute;
@@ -313,6 +321,7 @@ data-grid {
   // Form elements
   input[type="checkbox"] {
     margin: 0;
+    padding: 0;
   }
 
   input:not([type="checkbox"]),

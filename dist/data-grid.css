@@ -152,6 +152,11 @@ data-grid .dg-expandable.dg-expanded td {
   white-space: normal;
   word-break: break-all;
 }
+data-grid .dg-selectable label {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
 data-grid .dg-clickable-cell {
   margin: 0;
   position: absolute;
