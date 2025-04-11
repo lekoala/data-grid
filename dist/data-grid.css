@@ -245,6 +245,7 @@ data-grid button:disabled:hover {
 }
 data-grid input[type=checkbox] {
   margin: 0;
+  padding: 0;
 }
 data-grid input:not([type=checkbox]),
 data-grid select {
