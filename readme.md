@@ -350,6 +350,7 @@ You can check `demo-server.html` to get a sample usage with saving functionnalit
 | **rowsSelected**     | Any or all rows are selected                               |
 | **headerRendered**   | Column header (thead) render is complete                   |
 | **bodyRendered**     | Table body (tbody) render is complete                      |
+| **rowRendered**      | Table row (tr) render is complete and added to tbody       |
 | **loadDataFailed**   | loadData method catches error when options.server === true |
 
 ## Server

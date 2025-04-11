@@ -1,5 +1,5 @@
 /**
- * Data Grid Web Component v2.0.11
+ * Data Grid Web Component v2.0.12
  * https://github.com/lekoala/data-grid
  */
 @keyframes dataGridShow {
@@ -365,7 +365,7 @@ data-grid tfoot td {
 data-grid tfoot .dg-page-nav {
   display: flex;
   align-items: center;
-  min-width: 160px;
+  /*min-width: 160px;*/
 }
 data-grid tfoot .dg-input-page {
   width: 4rem;
@@ -385,7 +385,7 @@ data-grid tfoot .dg-pagination button {
   width: 2rem;
 }
 data-grid tfoot .dg-meta {
-  min-width: 160px;
+  /*min-width: 160px;*/
   text-align: right;
 }
 data-grid tfoot.dg-footer-compact .dg-meta {
@@ -499,7 +499,7 @@ data-grid .dg-actions button {
   margin: 0;
 }
 data-grid .dg-actions button + button {
-  margin-left: 0.5rem;
+  margin-left: 0.25rem;
 }
 data-grid .dg-actions .dg-actions-toggle {
   display: none;

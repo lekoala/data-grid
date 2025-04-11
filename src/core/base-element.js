@@ -81,11 +81,11 @@ class BaseElement extends HTMLElement {
     _ready() {}
 
     /**
-     * @param {String|Error} message
+     * @param {any[]} data
      */
-    log(message) {
+    log(...data) {
         if (this.options.debug) {
-            console.log(`[${getAttribute(this, "id")}] ${message}`);
+            console.log(`[${getAttribute(this, "id")}] `, ...data);
         }
     }
 

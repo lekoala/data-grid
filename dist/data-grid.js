@@ -1,4 +1,4 @@
-/*** Data Grid Web Component v2.0.11 * https://github.com/lekoala/data-grid ***/
+/*** Data Grid Web Component v2.0.12 * https://github.com/lekoala/data-grid ***/
 
 // src/utils/camelize.js
 function camelize(str) {
@@ -188,11 +188,11 @@ var BaseElement = class extends HTMLElement {
   _ready() {
   }
   /**
-   * @param {String|Error} message
+   * @param {any[]} data
    */
-  log(message) {
+  log(...data) {
     if (this.options.debug) {
-      console.log(`[${getAttribute(this, "id")}] ${message}`);
+      console.log(`[${getAttribute(this, "id")}] `, ...data);
     }
   }
   /**
@@ -840,18 +840,20 @@ var DataGrid = class _DataGrid extends base_element_default {
     }
     this.dirChanged();
     this.perPageValuesChanged();
-    this.loadData().finally(() => {
-      this.configureUi();
-      this.sortChanged();
-      this.classList.add("dg-initialized");
-      this.filterChanged();
-      this.reorderChanged();
-      this.dirChanged();
-      this.perPageValuesChanged();
-      this.pageChanged();
-      this.fireEvents = true;
-      this.log("initialized");
-    });
+    setTimeout(() => {
+      this.loadData().finally(() => {
+        this.configureUi();
+        this.sortChanged();
+        this.classList.add("dg-initialized");
+        this.filterChanged();
+        this.reorderChanged();
+        this.dirChanged();
+        this.perPageValuesChanged();
+        this.pageChanged();
+        this.fireEvents = true;
+        this.log("initialized");
+      });
+    }, 0);
   }
   _disconnected() {
     this.btnFirst?.removeEventListener("click", this.getFirst);
@@ -1440,6 +1442,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     tr.setAttribute("aria-rowindex", "1");
     tr.setAttribute("class", "dg-head-columns");
     let sampleTh = thead.querySelector("tr.dg-head-columns th");
+    this.log("createColumnHeaders - sampleTh", sampleTh);
     if (!sampleTh) {
       sampleTh = ce("th");
       thead.querySelector("tr").appendChild(sampleTh);
@@ -1452,6 +1455,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     }
     idx = 0;
     let totalWidth = 0;
+    this.log("createColumnHeaders - columns", this.options.columns);
     for (const column of this.options.columns) {
       if (column.attr) {
         continue;
@@ -1562,6 +1566,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
       this.plugins.ResponsiveGrid.createFilterCol(tr);
     }
+    this.log("createColumnFilters - columns", this.options.columns);
     for (const column of this.options.columns) {
       if (column.attr) {
         continue;
@@ -1738,6 +1743,7 @@ var DataGrid = class _DataGrid extends base_element_default {
         this.plugins.RowActions.makeActionRow(tr, item);
       }
       tbody.appendChild(tr);
+      dispatch(this, "rowRendered", { rowData: item, tr });
     });
     tbody.setAttribute("role", "rowgroup");
     const prev = this.tbody;
@@ -2879,6 +2885,7 @@ var SaveState = class extends base_plugin_default {
   connected() {
     this.log("connected");
     const grid = this.grid;
+    this.log(grid.options);
     if (!grid.options.saveState) {
       this.log("disabled");
       return;
@@ -2902,28 +2909,30 @@ var SaveState = class extends base_plugin_default {
       }
     }
     this.cachedState = cachedState;
-    const dgLoadData = grid.loadData;
-    grid.loadData = function(...args) {
-      return new Promise((resolve, reject) => {
-        dgLoadData.apply(this, args).finally(() => {
+    this.log("cachedState", this.cachedState);
+    setTimeout(() => {
+      const dgLoadData = grid.loadData;
+      grid.loadData = function(...args) {
+        return dgLoadData.apply(this, args).finally(() => {
           const saveState = this.plugins.SaveState;
+          saveState.log("loadData", this.options.columns);
           if (!grid.classList.contains("dg-initialized")) {
             saveState.log("not init, loadData skipped");
-            return resolve();
+            return;
           }
-          saveState.log("loadData finished, set param controls");
+          saveState.log("loadData finished, set param controls", this.options.columns);
           if (saveState.cachedState && !saveState.isFilterSortSet) {
             saveState.log("set sort and filters");
             const sortableHeaders = findAll(grid, "thead tr.dg-head-columns th[aria-sort]");
             for (const el of sortableHeaders) {
               el.setAttribute("aria-sort", "none");
             }
-            grid.querySelector(
-              `thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`
-            )?.setAttribute("aria-sort", saveState.cachedState.sortDir);
+            grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)?.setAttribute("aria-sort", saveState.cachedState.sortDir);
             const filters2 = findAll(grid.filterRow, "[id^=dg-filter]");
+            saveState.log("filters", filters2);
             for (const el of filters2) {
-              el.value = saveState.cachedState.filters[el.dataset.name];
+              el.value = saveState?.cachedState?.filters?.[el.dataset.name] ?? "";
+              saveState.log({ name: el.dataset.name, val: el.value, saveState });
             }
             saveState.isFilterSortSet = true;
           }
@@ -2939,21 +2948,23 @@ var SaveState = class extends base_plugin_default {
             scrollTo: window.scrollY
           };
           const filters = grid.getFilters();
+          saveState.log("filters", filters);
           for (const key of Object.keys(filters)) {
-            newState.filters[key] = filters[key];
+            newState.filters[key] = filters[key] ?? "";
+            saveState.log({ key, val: filters[key], newState, filters });
           }
-          saveState.log("store new state");
+          saveState.log("store new state", newState);
           saveState._setState(newState);
           if (!grid.options.server && saveState.cachedState && !saveState.isDataLoaded) {
             saveState.isDataLoaded = true;
             grid.filterData();
             grid.page = saveState.cachedState.page;
             grid.pageChanged();
+            saveState.log("data loaded");
           }
-          resolve();
         });
-      });
-    };
+      };
+    }, 0);
     const updateState = () => {
       const saveState = grid.plugins.SaveState;
       const state = saveState._getState();
@@ -2982,14 +2993,15 @@ var SaveState = class extends base_plugin_default {
       if (!saveState.isDataLoaded) {
         saveState.isDataLoaded = true;
         grid.reload();
+        saveState.log("***grid reloaded");
       } else if (!saveState.isScrolled) {
         saveState.isScrolled = true;
         window.scrollTo({ top: saveState.cachedState.scrollTo, left: 0, behavior: "instant" });
       }
     });
   }
-  log(message) {
-    this.grid.log(`[Save-State] ${message}`);
+  log(...data) {
+    this.grid.log("[Save-State] ", ...data);
   }
   /**
    * @returns {GridState}

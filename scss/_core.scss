@@ -1,5 +1,5 @@
 /**
- * Data Grid Web Component v2.0.11
+ * Data Grid Web Component v2.0.12
  * https://github.com/lekoala/data-grid
  */
 
@@ -472,7 +472,7 @@ data-grid {
     .dg-page-nav {
       display: flex;
       align-items: center;
-      min-width: 160px;
+      /*min-width: 160px;*/
     }
 
     .dg-input-page {
@@ -499,7 +499,7 @@ data-grid {
 
     .dg-meta {
       // Prevent layout from jumping around
-      min-width: 160px;
+      /*min-width: 160px;*/
       text-align: right;
     }
 
