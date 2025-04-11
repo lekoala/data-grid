@@ -38,7 +38,7 @@
         .then(res => res.json())
         .then(res => console.log(res));
     }
-    
+
     document.getElementById("server-demo").addEventListener("edit", (ev) => {
       let grid = document.getElementById("server-demo");
       let sid = grid.meta.params.sid; // needed for session due to CORS
@@ -57,7 +57,7 @@
     <p><em>Standalone data grid web component</em></p>
   </header>
   <main>
-    <ul class="nav nav-pills">
+    <ul class="nav nav-pills mb-2">
       <li class="nav-item">
         <a class="nav-link" href="index.html">Default</a>
       </li>
@@ -86,10 +86,10 @@
     <p>To enable server mode, use <code>server=true</code></p>
     <p>To test this locally, use the built-in php server</p>
 
-    <data-grid 
-      id="server-demo" 
+    <data-grid
+      id="server-demo"
       sticky
-      data-url="demo-server.php" 
+      data-url="demo-server.php"
       data-filter="true"
       data-sort="true"
       data-debug="true"
@@ -99,10 +99,10 @@
 
     <p>Invalid url</p>
 
-    <data-grid 
-      id="invalid-demo" 
+    <data-grid
+      id="invalid-demo"
       sticky
-      data-url="invalid-server.php" 
+      data-url="invalid-server.php"
       data-filter="true"
       data-sort="true"
       data-debug="true"
