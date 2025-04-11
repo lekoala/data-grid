@@ -41,7 +41,7 @@ test("it can set labels", async (t) => {
   });
 
   let inst = makeInst();
-  document.appendChild(inst);
+  document.body.appendChild(inst);
 
   await new Promise((resolve) => {
     setTimeout(() => {

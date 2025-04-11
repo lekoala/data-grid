@@ -47,9 +47,9 @@
     ]
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^15.11.7",
+    "@happy-dom/global-registrator": "^17.4.4",
     "ava": "^6.2.0",
-    "esbuild": "^0.24.0",
+    "esbuild": "^0.25.2",
     "jsdoc": "^4.0.4",
     "jsdoc-plugin-intersection": "^1.0.4",
     "jsdoc-to-markdown": "^9.1.1",
@@ -58,9 +58,9 @@
   "author": "LeKoala",
   "license": "MIT",
   "dependencies": {
-    "autoprefixer": "^10.4.20",
-    "postcss": "^8.4.49",
-    "postcss-cli": "^11.0.0",
-    "sass": "^1.82.0"
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.3",
+    "postcss-cli": "^11.0.1",
+    "sass": "^1.86.3"
   }
 }
