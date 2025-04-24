@@ -409,6 +409,7 @@ function applyColumnDefinition(el, column) {
 }
 var DataGrid = class _DataGrid extends base_element_default {
   _filterSelector = "[id^=dg-filter]";
+  _excludedRowElementSelector = "a,button,input,select,textarea";
   _excludedKeys = [
     37,
     39,
@@ -1665,6 +1666,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
         on(tr, "click", (ev) => {
+          if (ev.target.matches(this._excludedRowElementSelector)) return;
           if (this.plugins.ResponsiveGrid) {
             this.plugins.ResponsiveGrid.blockObserver();
           }
