@@ -1283,7 +1283,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       const haveClasses = (c) => ["dg-selectable", "dg-actions", "dg-responsive-toggle"].includes(c);
       const headers = findAll(this, "thead tr:first-child th");
       for (const th of headers) {
-        if ([...th.classList].some(haveClasses)) {
+        if ([...th.classList].some(haveClasses) || !th.hasAttribute("aria-sort")) {
           continue;
         }
         if (th !== col) {

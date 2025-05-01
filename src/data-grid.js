@@ -1284,7 +1284,7 @@ class DataGrid extends BaseElement {
             const headers = findAll(this, "thead tr:first-child th");
             for (const th of headers) {
                 // @ts-ignore
-                if ([...th.classList].some(haveClasses)) {
+                if ([...th.classList].some(haveClasses) || !th.hasAttribute("aria-sort")) {
                     continue;
                 }
                 if (th !== col) {
