@@ -133,8 +133,9 @@ import {
  * @property {Action[]} actions Row actions (RowActions module)
  * @property {Boolean} collapseActions Group actions (RowActions module)
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
- * @property {Boolean} selectable Allow selecting rows with a checkbox (SelectableRows module)
+ * @property {Boolean} selectable Allow multi-selecting rows with a checkboxes (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
+ * @property {Boolean} singleSelect Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} autohidePager auto-hides the pager when number of records falls below the selected page size
@@ -274,6 +275,7 @@ class DataGrid extends BaseElement {
          * @type {Options}
          */
         this.options = this.options || this.defaultOptions;
+        if (this.options.singleSelect) this.options.selectable = true; // singleSelect implies selectable
 
         // Init values
         this.fireEvents = false;
@@ -390,7 +392,7 @@ class DataGrid extends BaseElement {
     get defaultOptions() {
         return {
             id: null,
-            url: null,
+            url: "",
             perPage: 10,
             debug: false,
             filter: false,
@@ -420,6 +422,7 @@ class DataGrid extends BaseElement {
             collapseActions: false,
             selectable: false,
             selectVisibleOnly: true,
+            singleSelect: false,
             defaultPage: 1,
             resizable: false,
             autosize: true,
@@ -527,6 +530,7 @@ class DataGrid extends BaseElement {
             "data-reorder",
             "data-menu",
             "data-selectable",
+            "data-single-select",
             "data-url",
             "data-per-page",
             "data-responsive",
@@ -602,6 +606,7 @@ class DataGrid extends BaseElement {
     }
 
     fixPage() {
+        if (!this.inputPage) return;
         this.pages = this.totalPages();
         this.page = this.constrainPageValue(this.page);
 
@@ -898,6 +903,7 @@ class DataGrid extends BaseElement {
      * This should be called after your data has been loaded
      */
     configureUi() {
+        if (!this.table) return;
         this.table.style.visibility = "hidden";
         this.renderTable();
         if (this.options.responsive && this.plugins.ResponsiveGrid) {
@@ -1017,11 +1023,13 @@ class DataGrid extends BaseElement {
         return this.originalData;
     }
 
-    clearData() {
+    clearData(force = false) {
         // Already empty
-        if (this.data.length === 0) {
+        if (!force && this.data.length === 0) {
             return;
         }
+        this.classList.remove("dg-empty", "dg-network-error");
+        this.tbody?.setAttribute("data-empty", labels.noData);
         this.data = this.originalData = [];
         this.renderBody();
     }
@@ -1460,6 +1468,7 @@ class DataGrid extends BaseElement {
         this.log("render footer");
 
         const tfoot = this.tfoot;
+        if (!tfoot) return;
         const td = tfoot.querySelector("td");
         tfoot.removeAttribute("hidden");
         setAttribute(td, "colspan", this.columnsLength(true));
@@ -1486,11 +1495,11 @@ class DataGrid extends BaseElement {
         tr.setAttribute("class", "dg-head-columns");
 
         // We need a real th from the dom to compute the size
-        let sampleTh = thead.querySelector("tr.dg-head-columns th");
+        let sampleTh = thead?.querySelector("tr.dg-head-columns th");
         this.log("createColumnHeaders - sampleTh", sampleTh);
         if (!sampleTh) {
             sampleTh = ce("th");
-            thead.querySelector("tr").appendChild(sampleTh);
+            thead?.querySelector("tr").appendChild(sampleTh);
         }
 
         if (this.options.selectable && this.plugins.SelectableRows) {
@@ -1574,10 +1583,10 @@ class DataGrid extends BaseElement {
             this.plugins.RowActions.makeActionHeader(tr);
         }
 
-        thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
+        thead?.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
 
         // Once columns are inserted, we have an actual dom to query
-        if (thead.offsetWidth > availableWidth) {
+        if (thead && thead.offsetWidth > availableWidth) {
             this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
             const scrollbarWidth = this.offsetWidth - this.clientWidth;
             let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
@@ -1618,7 +1627,7 @@ class DataGrid extends BaseElement {
             sortableRow.addEventListener("click", () => this.sortData(sortableRow));
         }
 
-        setAttribute(this.table, "aria-colcount", this.columnsLength(true));
+        this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
     }
 
     createColumnFilters(thead) {
@@ -1648,7 +1657,7 @@ class DataGrid extends BaseElement {
                 continue;
             }
             const colIdx = idx + this.startColIndex();
-            const relatedTh = thead.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
+            const relatedTh = thead?.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
             if (!relatedTh) {
                 console.warn("Related th not found", colIdx);
                 continue;
@@ -1677,7 +1686,7 @@ class DataGrid extends BaseElement {
             this.plugins.RowActions.makeActionFilter(tr);
         }
 
-        thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
+        thead?.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
 
         if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
             this.options.filterKeypressDelay = 0;
@@ -1869,8 +1878,8 @@ class DataGrid extends BaseElement {
 
         // Keep data empty message
         const prev = this.tbody;
-        tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
-        this.table.replaceChild(tbody, prev);
+        prev && tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
+        this.table?.replaceChild(tbody, prev);
 
         if (this.plugins.FixedHeight) {
             this.plugins.FixedHeight.createFakeRow();
@@ -1882,7 +1891,7 @@ class DataGrid extends BaseElement {
             this.plugins.SelectableRows.shouldSelectAll(tbody);
         }
 
-        this.data.length && this.classList.remove("dg-empty");
+        this.classList.toggle("dg-empty", !this.data.length);
 
         dispatch(this, "bodyRendered");
     }
@@ -1894,6 +1903,7 @@ class DataGrid extends BaseElement {
         const p = this.page || 1;
         const tbody = this.tbody;
         const tfoot = this.tfoot;
+        if (!tbody || !tfoot) return;
         const bodyRows = findAll(tbody, "tr");
 
         // Refresh page count in case we added/removed a page

@@ -28,7 +28,7 @@ class FixedHeight extends BasePlugin {
         setAttribute(tr, "hidden", "");
         tr.classList.add("dg-fake-row");
         tr.tabIndex = 0;
-        tbody.appendChild(tr);
+        tbody?.appendChild(tr);
     }
 
     get fakeRow() {

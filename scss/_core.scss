@@ -1,5 +1,5 @@
 /**
- * Data Grid Web Component v2.0.12
+ * Data Grid Web Component v2.0.13
  * https://github.com/lekoala/data-grid
  */
 
@@ -23,6 +23,7 @@ data-grid {
   --color: rgb(var(--color-rgb));
 
   --highlight-color: #fffcee;
+  --selected-bgcolor: var(--bs-primary-bg-subtle, #cfe2ff);
   --body-background: var(--bs-table-bg, #fff);
   --striped-background: rgba(0, 0, 0, 0.05);
   --header-background: var(--bs-gray-200, #e9ecef);
@@ -198,6 +199,7 @@ data-grid {
   }
 
   .dg-selectable {
+    font-size: 1em;
     label {
       display: flex;
       align-items: center;
@@ -324,7 +326,7 @@ data-grid {
     padding: 0;
   }
 
-  input:not([type="checkbox"]),
+  input:not([type="checkbox"],[type="radio"]),
   select {
     background-color: var(--input-background, "#fff");
     color: currentColor;
@@ -370,23 +372,29 @@ data-grid {
     }
   }
 
-  // Editable
-  tbody td.dg-editable-col {
-    padding: 0;
-    height: 0; // it needs a height for height 100%
-  }
+  tbody {
+    // Editable
+    td.dg-editable-col {
+      padding: 0;
+      height: 0; // it needs a height for height 100%
+    }
 
-  tbody td input.dg-editable {
-    width: 100%;
-    background: transparent;
-    border: 0;
-    border-radius: 0;
-    margin: 0;
-    box-shadow: none;
-    height: 100%;
+    td input.dg-editable {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+      margin: 0;
+      box-shadow: none;
+      height: 100%;
 
-    &:focus {
-      box-shadow: inset 0px 0px 0px 1px var(--color);
+      &:focus {
+        box-shadow: inset 0px 0px 0px 1px var(--color);
+      }
+    }
+
+    tr:has(.dg-selectable [type=radio]:checked) {
+      background-color: var(--selected-bgcolor);
     }
   }
 
@@ -565,6 +573,7 @@ data-grid {
 [data-bs-theme="dark"] data-grid {
   --scroller-color-lightness: 20%;
   --highlight-color: #43423e;
+  --selected-bgcolor: var(--bs-primary-bg-subtle, #031633);
   --body-background: #212529;
   --striped-background: #2c3034;
   --header-background: var(--bs-gray-800, #34373b);
