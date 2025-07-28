@@ -695,7 +695,7 @@ class DataGrid extends BaseElement {
         }
     }
 
-    _connected() {
+    async _connected() {
         /**
          * @type {HTMLTableElement}
          */
@@ -741,33 +741,14 @@ class DataGrid extends BaseElement {
         this.inputPage.addEventListener("input", this.gotoPage);
 
         for (const plugin of Object.values(this.plugins)) {
-            plugin.connected();
+            await plugin.connected();
         }
 
         // Display even if we don't have data
         this.dirChanged();
         this.perPageValuesChanged();
 
-        setTimeout(() => { //ensures all registered plugins are connected before loading data
-            // @ts-ignore
-            this.loadData().finally(() => {
-                this.configureUi();
-
-                this.sortChanged();
-                this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
-
-                this.filterChanged();
-                this.reorderChanged();
-
-                this.dirChanged();
-                this.perPageValuesChanged();
-                this.pageChanged();
-
-                this.fireEvents = true; // We can now fire attributeChangedCallback events
-
-                this.log("initialized");
-            });
-        }, 0);
+        await this.init();
     }
 
     _disconnected() {
@@ -781,6 +762,26 @@ class DataGrid extends BaseElement {
         for (const plugin of Object.values(this.plugins)) {
             plugin.disconnected();
         }
+    }
+
+    init() {
+        return this.loadData().finally(() => {
+            this.configureUi();
+
+            this.sortChanged();
+            this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
+
+            this.filterChanged();
+            this.reorderChanged();
+
+            this.dirChanged();
+            this.perPageValuesChanged();
+            this.pageChanged();
+
+            this.fireEvents = true; // We can now fire attributeChangedCallback events
+
+            this.log("initialized");
+        });
     }
 
     /**

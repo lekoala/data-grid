@@ -112,7 +112,7 @@ class BaseElement extends HTMLElement {
         }
         this.setup = true;
         // ensure whenDefined callbacks run first
-        setTimeout(() => {
+        setTimeout(async () => {
             this.log("connectedCallback");
 
             // Append only when labels had the opportunity to be set
@@ -122,7 +122,8 @@ class BaseElement extends HTMLElement {
             template.innerHTML = this.constructor.template();
             this.appendChild(template.content.cloneNode(true));
 
-            this._connected();
+            await this._connected();
+
             // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events
             dispatch(this, "connected");
         }, 0);
