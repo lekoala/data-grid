@@ -148,6 +148,7 @@ import {
  * @property {Number} filterKeypressDelay Sets a keypress delay time in milliseconds before triggering filter operation.
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
+ * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
  */
 
 /**
@@ -364,6 +365,20 @@ class DataGrid extends BaseElement {
         labels = Object.assign(labels, v);
     }
 
+    /** Gets the text to be displayed when no data is loaded. */
+    get noData() {
+        return this.options.noData || this.labels.noData;
+    }
+
+    /**
+     * @param {HTMLTableSectionElement} tbody
+     */
+    #setNoData(tbody) {
+        if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.noData) {
+            tbody.setAttribute("data-empty", this.noData);
+        }
+    }
+
     /**
      * @returns {Column}
      */
@@ -436,6 +451,7 @@ class DataGrid extends BaseElement {
             spinnerClass: "",
             saveState: false,
             errorMessage: "",
+            noData: ""
         };
     }
 
@@ -920,6 +936,7 @@ class DataGrid extends BaseElement {
                 this.rowHeight = tr.offsetHeight;
             }
         }
+        this.#setNoData(this.tbody);
         this.fixPage();
     }
 
@@ -1030,7 +1047,7 @@ class DataGrid extends BaseElement {
             return;
         }
         this.classList.remove("dg-empty", "dg-network-error");
-        this.tbody?.setAttribute("data-empty", labels.noData);
+        this.tbody?.setAttribute("data-empty", this.noData);
         this.data = this.originalData = [];
         this.renderBody();
     }
@@ -1146,9 +1163,7 @@ class DataGrid extends BaseElement {
                 // @ts-ignore
                 .finally(() => {
                     flagEmpty();
-                    if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.labels.noData) {
-                        tbody.setAttribute("data-empty", this.labels.noData);
-                    }
+                    this.#setNoData(tbody);
                     this.classList.remove("dg-loading");
                     setAttribute(this.table, "aria-rowcount", this.data.length);
                     this.loading = false;
