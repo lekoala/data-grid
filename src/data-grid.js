@@ -593,11 +593,9 @@ class DataGrid extends BaseElement {
      * @param {Boolean} initOnly
      */
     urlChanged(initOnly = false) {
-        if (initOnly && !this.isInit) return;
+        if (initOnly && !this.isInit) return this;
         this.reconfig();
-        this.loadData().then(() => {
-            this.configureUi();
-        });
+        return this.loadData().then(() => this.configureUi());
     }
 
     /**
@@ -607,7 +605,7 @@ class DataGrid extends BaseElement {
         const cols = this.options.columns;
         this.options.columns = [];
         this.configureUi();
-        this.options.columns = cols;
+        return this.options.columns = cols, this;
     }
 
     constrainPageValue(v) {
@@ -622,14 +620,14 @@ class DataGrid extends BaseElement {
     }
 
     fixPage() {
-        if (!this.inputPage) return;
+        if (!this.inputPage) return this;
         this.pages = this.totalPages();
         this.page = this.constrainPageValue(this.page);
 
         // Show current page in input
         setAttribute(this.inputPage, "max", this.pages);
         this.inputPage.value = `${this.page}`;
-        this.inputPage.disabled = this.pages < 2;
+        return this.inputPage.disabled = this.pages < 2, this;
     }
 
     pageChanged() {
@@ -920,7 +918,7 @@ class DataGrid extends BaseElement {
      * This should be called after your data has been loaded
      */
     configureUi() {
-        if (!this.table) return;
+        if (!this.table) return this;
         this.table.style.visibility = "hidden";
         this.renderTable();
         if (this.options.responsive && this.plugins.ResponsiveGrid) {
@@ -937,7 +935,7 @@ class DataGrid extends BaseElement {
             }
         }
         this.#setNoData(this.tbody);
-        this.fixPage();
+        return this.fixPage();
     }
 
     filterChanged() {
@@ -1068,27 +1066,39 @@ class DataGrid extends BaseElement {
         }
     }
 
-    refresh(cb = null) {
+    /**
+     * Clears and reloads data from url.
+     * @param {Function|String} callbackOrUrl
+     * @returns {DataGrid}
+     */
+    refresh(callbackOrUrl = null) {
         this.data = this.originalData = [];
-        return this.reload(cb);
+        return this.reload(callbackOrUrl);
     }
 
-    reload(cb = null) {
+    /**
+     * Reloads data from url.
+     * @param {Function|String} callbackOrUrl
+     * @returns {DataGrid}
+     */
+    reload(callbackOrUrl = null) {
         this.log("reload");
-
+        if (typeof callbackOrUrl === "string") {
+            this.options.url = callbackOrUrl;
+        }
         // If the data was cleared, we need to render again
         const needRender = !this.originalData?.length;
         this.fixPage();
         // @ts-ignore
-        this.loadData().finally(() => {
+        return this.loadData().finally(() => {
             if (this.hasDataError) return;
             // If we load data from the server, we redraw the table body
             // Otherwise, we just need to paginate
             this.options.server || needRender ? this.renderBody() : this.paginate();
-            if (cb) {
-                cb();
+            if (typeof callbackOrUrl === "function") {
+                callbackOrUrl();
             }
-        });
+        }).then(() => this);
     }
 
     /**
