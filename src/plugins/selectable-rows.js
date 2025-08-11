@@ -28,10 +28,13 @@ class SelectableRows extends BasePlugin {
     }
 
     /**
-     * @param {String} key Return a specific key (eg: id) instead of the whole row
-     * @returns {Array}
+     * Get selected rows or fields.
+     * Returns full rows, a single field's values, or objects with specified fields.
+     * In single select mode, returns a single item.
+     * @param {...string} keys Field names to select.
+     * @returns {Array|Object} Selected data.
      */
-    getSelection(key = null) {
+    getSelection(...keys) {
         const grid = this.grid;
         const selectedData = [];
 
@@ -42,11 +45,14 @@ class SelectableRows extends BasePlugin {
             const item = grid.data[idx - 1];
             if (!item) {
                 console.warn(`Item ${idx} not found`);
+                continue;
             }
-            if (key) {
-                selectedData.push(item[key]);
-            } else {
+            if (keys.length === 0) {
                 selectedData.push(item);
+            } else if (keys.length === 1) {
+                selectedData.push(item[keys[0]]);
+            } else {
+                selectedData.push(Object.fromEntries(keys.map(k => [k, item[k]])));
             }
         }
         return this.isSingleSelect ? selectedData[0] ?? {} : selectedData;

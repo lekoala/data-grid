@@ -1025,14 +1025,19 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * @param {String} key Return a specific key (eg: id) instead of the whole row
-     * @returns {Array}
+     * Get selected rows or specific fields from selected rows.
+     * If no keys are provided, returns the full row objects.
+     * If one key is provided, returns an array of values for that key.
+     * If multiple keys are provided, returns an array of objects with those keys and values.
+     * In single select mode, returns a single object or value.
+     * @param {...String} keys - Field names to select from each row.
+     * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
      */
-    getSelection(key = null) {
+    getSelection(...keys) {
         if (!this.plugins.SelectableRows) {
             return [];
         }
-        return this.plugins.SelectableRows.getSelection(key);
+        return this.plugins.SelectableRows.getSelection(...keys);
     }
 
     getData() {
