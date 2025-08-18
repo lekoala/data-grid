@@ -58,7 +58,7 @@ class BaseElement extends HTMLElement {
         const jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
         const data = { ...this.dataset };
         for (const key in data) {
-            if (key === "config") {
+            if (key === "config" || !data.hasOwnProperty(key) || typeof data[key] === "function") {
                 continue;
             }
             data[key] = normalizeData(data[key]);
