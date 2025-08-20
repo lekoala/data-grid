@@ -1,5 +1,5 @@
 /**
- * Data Grid Web Component v2.0.12
+ * Data Grid Web Component v2.0.13
  * https://github.com/lekoala/data-grid
  */
 @keyframes dataGridShow {
@@ -19,6 +19,7 @@ data-grid {
   --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
   --color: rgb(var(--color-rgb));
   --highlight-color: #fffcee;
+  --selected-bgcolor: var(--bs-primary-bg-subtle, #cfe2ff);
   --body-background: var(--bs-table-bg, #fff);
   --striped-background: rgba(0, 0, 0, 0.05);
   --header-background: var(--bs-gray-200, #e9ecef);
@@ -152,6 +153,9 @@ data-grid .dg-expandable.dg-expanded td {
   white-space: normal;
   word-break: break-all;
 }
+data-grid .dg-selectable {
+  font-size: 1em;
+}
 data-grid .dg-selectable label {
   display: flex;
   align-items: center;
@@ -252,7 +256,7 @@ data-grid input[type=checkbox] {
   margin: 0;
   padding: 0;
 }
-data-grid input:not([type=checkbox]),
+data-grid input:not([type=checkbox], [type=radio]),
 data-grid select {
   background-color: var(--input-background, "#fff");
   color: currentColor;
@@ -305,6 +309,9 @@ data-grid tbody td input.dg-editable {
 }
 data-grid tbody td input.dg-editable:focus {
   box-shadow: inset 0px 0px 0px 1px var(--color);
+}
+data-grid tbody tr:has(.dg-selectable [type=radio]:checked) {
+  background-color: var(--selected-bgcolor);
 }
 data-grid.dg-empty tbody {
   height: 4rem;
@@ -438,6 +445,7 @@ data-grid [aria-sort=descending]:after {
 [data-bs-theme=dark] data-grid {
   --scroller-color-lightness: 20%;
   --highlight-color: #43423e;
+  --selected-bgcolor: var(--bs-primary-bg-subtle, #031633);
   --body-background: #212529;
   --striped-background: #2c3034;
   --header-background: var(--bs-gray-800, #34373b);

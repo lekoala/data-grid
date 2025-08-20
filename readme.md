@@ -95,40 +95,42 @@ data-grid {
 These are the options accessibles through the components data attributes. Some options only work if the proper plugin is loaded.
 You can also pass them as a json string in data-config.
 
-| Name                | Type                                         | Description                                                                    |
-|---------------------|----------------------------------------------|--------------------------------------------------------------------------------|
-| id                  | <code>String</code>                          | Custom id for the grid                                                         |
-| url                 | <code>String</code>                          | An URL with data to display in JSON format                                     |
-| debug               | <code>Boolean</code>                         | Log actions in DevTools console                                                |
-| filter              | <code>Boolean</code>                         | Allows a filtering functionality                                               |
-| sort                | <code>Boolean</code>                         | Allows a sort by column functionality                                          |
-| defaultSort         | <code>String</code>                          | Default sort field if sorting is enabled                                       |
-| server              | <code>Boolean</code>                         | Is a server side powered grid                                                  |
-| serverParams        | [<code>ServerParams</code>](#ServerParams)   | Describe keys passed to the server backend                                     |
-| dir                 | <code>String</code>                          | Dir                                                                            |
-| perPageValues       | <code>Array</code>                           | Available per page options                                                     |
-| hidePerPage         | <code>Boolean</code>                         | Hides the page size select element                                             |
-| columns             | [<code>Array.&lt;Column&gt;</code>](#Column) | Available columns                                                              |
-| defaultPage         | <code>Number</code>                          | Starting page                                                                  |
-| perPage             | <code>Number</code>                          | Number of records displayed per page (page size)                               |
-| expand              | <code>Boolean</code>                         | Allow cell content to spawn over multiple lines                                |
-| actions             | [<code>Array.&lt;Action&gt;</code>](#Action) | Row actions (RowActions module)                                                |
-| collapseActions     | <code>Boolean</code>                         | Group actions (RowActions module)                                              |
-| resizable           | <code>Boolean</code>                         | Make columns resizable (ColumnResizer module)                                  |
-| selectable          | <code>Boolean</code>                         | Allow selecting rows with a checkbox (SelectableRows module)                   |
-| selectVisibleOnly   | <code>Boolean</code>                         | Select all only selects visible rows (SelectableRows module)                   |
-| autosize            | <code>Boolean</code>                         | Compute column sizes based on given data (Autosize module)                     |
-| autoheight          | <code>Boolean</code>                         | Adjust height so that it matches table size (FixedHeight module)               |
-| autohidePager       | <code>Boolean</code>                         | auto-hides the pager when number of records falls below the selected page size |
-| menu                | <code>Boolean</code>                         | Right click menu on column headers (ContextMenu module)                        |
-| reorder             | <code>Boolean</code>                         | Allows a column reordering functionality (DraggableHeaders module)             |
-| responsive          | <code>Boolean</code>                         | Change display mode on small screens (ResponsiveGrid module)                   |
-| responsiveToggle    | <code>Boolean</code>                         | Show toggle column (ResponsiveGrid module)                                     |
-| filterOnEnter       | <code>Boolean</code>                         | Toggles the ability to filter column data by pressing the Enter or Return key  |
-| spinnerClass        | <code>String</code>                          | Sets a space-delimited string of css classes for a spinner                     |
-| filterKeypressDelay | <code>Number</code>                          | Sets a keypress delay time in milliseconds before triggering filter operation. |
-| saveState           | <code>Boolean</code>                         | Enable/disable save state plugin (SaveState module)                            |
-| errorMessage        | <code>String</code>                          | A generic text to be displayed in footer when error occurs.                    |
+| Name                | Type                                         | Description                                                                                                                                       |
+|---------------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
+| id                  | <code>String</code>                          | Custom id for the grid                                                                                                                            |
+| url                 | <code>String</code>                          | An URL with data to display in JSON format                                                                                                        |
+| debug               | <code>Boolean</code>                         | Log actions in DevTools console                                                                                                                   |
+| filter              | <code>Boolean</code>                         | Allows a filtering functionality                                                                                                                  |
+| sort                | <code>Boolean</code>                         | Allows a sort by column functionality                                                                                                             |
+| defaultSort         | <code>String</code>                          | Default sort field if sorting is enabled                                                                                                          |
+| server              | <code>Boolean</code>                         | Is a server side powered grid                                                                                                                     |
+| serverParams        | [<code>ServerParams</code>](#ServerParams)   | Describe keys passed to the server backend                                                                                                        |
+| dir                 | <code>String</code>                          | Dir                                                                                                                                               |
+| perPageValues       | <code>Array</code>                           | Available per page options                                                                                                                        |
+| hidePerPage         | <code>Boolean</code>                         | Hides the page size select element                                                                                                                |
+| columns             | [<code>Array.&lt;Column&gt;</code>](#Column) | Available columns                                                                                                                                 |
+| defaultPage         | <code>Number</code>                          | Starting page                                                                                                                                     |
+| perPage             | <code>Number</code>                          | Number of records displayed per page (page size)                                                                                                  |
+| expand              | <code>Boolean</code>                         | Allow cell content to spawn over multiple lines                                                                                                   |
+| actions             | [<code>Array.&lt;Action&gt;</code>](#Action) | Row actions (RowActions module)                                                                                                                   |
+| collapseActions     | <code>Boolean</code>                         | Group actions (RowActions module)                                                                                                                 |
+| resizable           | <code>Boolean</code>                         | Make columns resizable (ColumnResizer module)                                                                                                     |
+| selectable          | <code>Boolean</code>                         | Allow multi-selecting rows with a checkboxes (SelectableRows module)                                                                              |
+| selectVisibleOnly   | <code>Boolean</code>                         | Select all only selects visible rows (SelectableRows module)                                                                                      |
+| singleSelect        | <code>Boolean</code>                         | Enables single row select with radio buttons - no need to set <code>selectable</code> (SelectableRows module)                                     |
+| autosize            | <code>Boolean</code>                         | Compute column sizes based on given data (Autosize module)                                                                                        |
+| autoheight          | <code>Boolean</code>                         | Adjust height so that it matches table size (FixedHeight module)                                                                                  |
+| autohidePager       | <code>Boolean</code>                         | auto-hides the pager when number of records falls below the selected page size                                                                    |
+| menu                | <code>Boolean</code>                         | Right click menu on column headers (ContextMenu module)                                                                                           |
+| reorder             | <code>Boolean</code>                         | Allows a column reordering functionality (DraggableHeaders module)                                                                                |
+| responsive          | <code>Boolean</code>                         | Change display mode on small screens (ResponsiveGrid module)                                                                                      |
+| responsiveToggle    | <code>Boolean</code>                         | Show toggle column (ResponsiveGrid module)                                                                                                        |
+| filterOnEnter       | <code>Boolean</code>                         | Toggles the ability to filter column data by pressing the Enter or Return key                                                                     |
+| spinnerClass        | <code>String</code>                          | Sets a space-delimited string of css classes for a spinner                                                                                        |
+| filterKeypressDelay | <code>Number</code>                          | Sets a keypress delay time in milliseconds before triggering filter operation.                                                                    |
+| saveState           | <code>Boolean</code>                         | Enable/disable save state plugin (SaveState module)                                                                                               |
+| errorMessage        | <code>String</code>                          | A generic text to be displayed in footer when error occurs.                                                                                       |
+| noData              | <code>String</code>                          | A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component. |                                                   |
 
 <a name="Column"></a>
 
@@ -325,8 +327,8 @@ You can check `demo-server.html` to get a sample usage with saving functionnalit
 | **getSelection** | gets selected data                                                                                           |
 | **clearData**    | clears loaded data                                                                                           |
 | **preload**      | preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. |
-| **refresh**      | clears and reloads data from url                                                                             |
-| **reload**       | reloads data from url                                                                                        |
+| **refresh**      | clears and reloads data from url that can be optionally specified as a parameter.                            |
+| **reload**       | reloads data from url that can be optionally specified as a parameter.                                       |
 | **clearFilter**  | clears current filters                                                                                       |
 | **addRow**       | adds a new row                                                                                               |
 | **removeRow**    | removes a row                                                                                                |

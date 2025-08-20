@@ -1,4 +1,4 @@
-/*** Data Grid Web Component v2.0.12 * https://github.com/lekoala/data-grid ***/
+/*** Data Grid Web Component v2.0.13 * https://github.com/lekoala/data-grid ***/
 
 // src/utils/camelize.js
 function camelize(str) {
@@ -19,7 +19,7 @@ function normalizeData(v) {
   if (v === Number(v).toString()) {
     return Number(v);
   }
-  if (v && ["[", "{"].includes(v.substring(0, 1))) {
+  if (v && typeof v.substring === "function" && ["[", "{"].includes(v.substring(0, 1))) {
     try {
       let val = v;
       if (val.indexOf('"') === -1) {
@@ -168,7 +168,7 @@ var BaseElement = class extends HTMLElement {
     const jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
     const data = { ...this.dataset };
     for (const key in data) {
-      if (key === "config") {
+      if (key === "config" || !data.hasOwnProperty(key) || typeof data[key] === "function") {
         continue;
       }
       data[key] = normalizeData(data[key]);
@@ -215,12 +215,12 @@ var BaseElement = class extends HTMLElement {
       return;
     }
     this.setup = true;
-    setTimeout(() => {
+    setTimeout(async () => {
       this.log("connectedCallback");
       const template = document.createElement("template");
       template.innerHTML = this.constructor.template();
       this.appendChild(template.content.cloneNode(true));
-      this._connected();
+      await this._connected();
       dispatch(this, "connected");
     }, 0);
   }
@@ -409,6 +409,7 @@ function applyColumnDefinition(el, column) {
 }
 var DataGrid = class _DataGrid extends base_element_default {
   _filterSelector = "[id^=dg-filter]";
+  _excludedRowElementSelector = "a,button,input,select,textarea";
   _excludedKeys = [
     37,
     39,
@@ -453,6 +454,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     this.data = [];
     this.originalData;
     this.options = this.options || this.defaultOptions;
+    if (this.options.singleSelect) this.options.selectable = true;
     this.fireEvents = false;
     this.page = this.options.defaultPage || 1;
     this.pages = 0;
@@ -526,6 +528,18 @@ var DataGrid = class _DataGrid extends base_element_default {
   static setLabels(v) {
     labels = Object.assign(labels, v);
   }
+  /** Gets the text to be displayed when no data is loaded. */
+  get noData() {
+    return this.options.noData || this.labels.noData;
+  }
+  /**
+   * @param {HTMLTableSectionElement} tbody
+   */
+  #setNoData(tbody) {
+    if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.noData) {
+      tbody.setAttribute("data-empty", this.noData);
+    }
+  }
   /**
    * @returns {Column}
    */
@@ -553,7 +567,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   get defaultOptions() {
     return {
       id: null,
-      url: null,
+      url: "",
       perPage: 10,
       debug: false,
       filter: false,
@@ -583,6 +597,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       collapseActions: false,
       selectable: false,
       selectVisibleOnly: true,
+      singleSelect: false,
       defaultPage: 1,
       resizable: false,
       autosize: true,
@@ -595,7 +610,8 @@ var DataGrid = class _DataGrid extends base_element_default {
       filterKeypressDelay: 500,
       spinnerClass: "",
       saveState: false,
-      errorMessage: ""
+      errorMessage: "",
+      noData: ""
     };
   }
   /**
@@ -682,6 +698,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       "data-reorder",
       "data-menu",
       "data-selectable",
+      "data-single-select",
       "data-url",
       "data-per-page",
       "data-responsive"
@@ -718,11 +735,9 @@ var DataGrid = class _DataGrid extends base_element_default {
    * @param {Boolean} initOnly
    */
   urlChanged(initOnly = false) {
-    if (initOnly && !this.isInit) return;
+    if (initOnly && !this.isInit) return this;
     this.reconfig();
-    this.loadData().then(() => {
-      this.configureUi();
-    });
+    return this.loadData().then(() => this.configureUi());
   }
   /**
    * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
@@ -731,7 +746,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     const cols = this.options.columns;
     this.options.columns = [];
     this.configureUi();
-    this.options.columns = cols;
+    return this.options.columns = cols, this;
   }
   constrainPageValue(v) {
     let pv = v;
@@ -744,11 +759,12 @@ var DataGrid = class _DataGrid extends base_element_default {
     return pv;
   }
   fixPage() {
+    if (!this.inputPage) return this;
     this.pages = this.totalPages();
     this.page = this.constrainPageValue(this.page);
     setAttribute(this.inputPage, "max", this.pages);
     this.inputPage.value = `${this.page}`;
-    this.inputPage.disabled = this.pages < 2;
+    return this.inputPage.disabled = this.pages < 2, this;
   }
   pageChanged() {
     this.reload();
@@ -814,7 +830,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       addSelectOption(this.selectPerPage, v, v, v === this.options.perPage);
     }
   }
-  _connected() {
+  async _connected() {
     this.table = this.querySelector("table");
     this.btnFirst = this.querySelector(".dg-btn-first");
     this.btnPrev = this.querySelector(".dg-btn-prev");
@@ -836,24 +852,11 @@ var DataGrid = class _DataGrid extends base_element_default {
     this.selectPerPage.toggleAttribute("hidden", this.options.hidePerPage);
     this.inputPage.addEventListener("input", this.gotoPage);
     for (const plugin of Object.values(this.plugins)) {
-      plugin.connected();
+      await plugin.connected();
     }
     this.dirChanged();
     this.perPageValuesChanged();
-    setTimeout(() => {
-      this.loadData().finally(() => {
-        this.configureUi();
-        this.sortChanged();
-        this.classList.add("dg-initialized");
-        this.filterChanged();
-        this.reorderChanged();
-        this.dirChanged();
-        this.perPageValuesChanged();
-        this.pageChanged();
-        this.fireEvents = true;
-        this.log("initialized");
-      });
-    }, 0);
+    await this.init();
   }
   _disconnected() {
     this.btnFirst?.removeEventListener("click", this.getFirst);
@@ -865,6 +868,20 @@ var DataGrid = class _DataGrid extends base_element_default {
     for (const plugin of Object.values(this.plugins)) {
       plugin.disconnected();
     }
+  }
+  init() {
+    return this.loadData().finally(() => {
+      this.configureUi();
+      this.sortChanged();
+      this.classList.add("dg-initialized");
+      this.filterChanged();
+      this.reorderChanged();
+      this.dirChanged();
+      this.perPageValuesChanged();
+      this.pageChanged();
+      this.fireEvents = true;
+      this.log("initialized");
+    });
   }
   /**
    * @param {string} field
@@ -965,6 +982,7 @@ var DataGrid = class _DataGrid extends base_element_default {
    * This should be called after your data has been loaded
    */
   configureUi() {
+    if (!this.table) return this;
     this.table.style.visibility = "hidden";
     this.renderTable();
     if (this.options.responsive && this.plugins.ResponsiveGrid) {
@@ -977,7 +995,8 @@ var DataGrid = class _DataGrid extends base_element_default {
         this.rowHeight = tr.offsetHeight;
       }
     }
-    this.fixPage();
+    this.#setNoData(this.tbody);
+    return this.fixPage();
   }
   filterChanged() {
     const row = this.querySelector("thead tr.dg-head-filters");
@@ -1055,22 +1074,29 @@ var DataGrid = class _DataGrid extends base_element_default {
     this.sortData();
   }
   /**
-   * @param {String} key Return a specific key (eg: id) instead of the whole row
-   * @returns {Array}
+   * Get selected rows or specific fields from selected rows.
+   * If no keys are provided, returns the full row objects.
+   * If one key is provided, returns an array of values for that key.
+   * If multiple keys are provided, returns an array of objects with those keys and values.
+   * In single select mode, returns a single object or value.
+   * @param {...String} keys - Field names to select from each row.
+   * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
    */
-  getSelection(key = null) {
+  getSelection(...keys) {
     if (!this.plugins.SelectableRows) {
       return [];
     }
-    return this.plugins.SelectableRows.getSelection(key);
+    return this.plugins.SelectableRows.getSelection(...keys);
   }
   getData() {
     return this.originalData;
   }
-  clearData() {
-    if (this.data.length === 0) {
+  clearData(force = false) {
+    if (!force && this.data.length === 0) {
       return;
     }
+    this.classList.remove("dg-empty", "dg-network-error");
+    this.tbody?.setAttribute("data-empty", this.noData);
     this.data = this.originalData = [];
     this.renderBody();
   }
@@ -1089,21 +1115,34 @@ var DataGrid = class _DataGrid extends base_element_default {
       this.data = this.originalData = data[dataKey];
     }
   }
-  refresh(cb = null) {
+  /**
+   * Clears and reloads data from url.
+   * @param {Function|String} callbackOrUrl
+   * @returns {DataGrid}
+   */
+  refresh(callbackOrUrl = null) {
     this.data = this.originalData = [];
-    return this.reload(cb);
+    return this.reload(callbackOrUrl);
   }
-  reload(cb = null) {
+  /**
+   * Reloads data from url.
+   * @param {Function|String} callbackOrUrl
+   * @returns {DataGrid}
+   */
+  reload(callbackOrUrl = null) {
     this.log("reload");
+    if (typeof callbackOrUrl === "string") {
+      this.options.url = callbackOrUrl;
+    }
     const needRender = !this.originalData?.length;
     this.fixPage();
-    this.loadData().finally(() => {
+    return this.loadData().finally(() => {
       if (this.hasDataError) return;
       this.options.server || needRender ? this.renderBody() : this.paginate();
-      if (cb) {
-        cb();
+      if (typeof callbackOrUrl === "function") {
+        callbackOrUrl();
       }
-    });
+    }).then(() => this);
   }
   /**
    * @returns {Promise}
@@ -1160,9 +1199,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       dispatch(this, "loadDataFailed", err);
     }).finally(() => {
       flagEmpty();
-      if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.labels.noData) {
-        tbody.setAttribute("data-empty", this.labels.noData);
-      }
+      this.#setNoData(tbody);
       this.classList.remove("dg-loading");
       setAttribute(this.table, "aria-rowcount", this.data.length);
       this.loading = false;
@@ -1282,7 +1319,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       const haveClasses = (c) => ["dg-selectable", "dg-actions", "dg-responsive-toggle"].includes(c);
       const headers = findAll(this, "thead tr:first-child th");
       for (const th of headers) {
-        if ([...th.classList].some(haveClasses)) {
+        if ([...th.classList].some(haveClasses) || !th.hasAttribute("aria-sort")) {
           continue;
         }
         if (th !== col) {
@@ -1422,6 +1459,7 @@ var DataGrid = class _DataGrid extends base_element_default {
   renderFooter() {
     this.log("render footer");
     const tfoot = this.tfoot;
+    if (!tfoot) return;
     const td = tfoot.querySelector("td");
     tfoot.removeAttribute("hidden");
     setAttribute(td, "colspan", this.columnsLength(true));
@@ -1441,11 +1479,11 @@ var DataGrid = class _DataGrid extends base_element_default {
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "1");
     tr.setAttribute("class", "dg-head-columns");
-    let sampleTh = thead.querySelector("tr.dg-head-columns th");
+    let sampleTh = thead?.querySelector("tr.dg-head-columns th");
     this.log("createColumnHeaders - sampleTh", sampleTh);
     if (!sampleTh) {
       sampleTh = ce("th");
-      thead.querySelector("tr").appendChild(sampleTh);
+      thead?.querySelector("tr").appendChild(sampleTh);
     }
     if (this.options.selectable && this.plugins.SelectableRows) {
       this.plugins.SelectableRows.createHeaderCol(tr);
@@ -1512,8 +1550,8 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.actions.length && this.plugins.RowActions) {
       this.plugins.RowActions.makeActionHeader(tr);
     }
-    thead.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
-    if (thead.offsetWidth > availableWidth) {
+    thead?.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
+    if (thead && thead.offsetWidth > availableWidth) {
       this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
       const scrollbarWidth = this.offsetWidth - this.clientWidth;
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
@@ -1547,7 +1585,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     for (const sortableRow of rowsWithSort) {
       sortableRow.addEventListener("click", () => this.sortData(sortableRow));
     }
-    setAttribute(this.table, "aria-colcount", this.columnsLength(true));
+    this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
   }
   createColumnFilters(thead) {
     let idx = 0;
@@ -1572,7 +1610,7 @@ var DataGrid = class _DataGrid extends base_element_default {
         continue;
       }
       const colIdx = idx + this.startColIndex();
-      const relatedTh = thead.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
+      const relatedTh = thead?.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
       if (!relatedTh) {
         console.warn("Related th not found", colIdx);
         continue;
@@ -1595,7 +1633,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.actions.length && this.plugins.RowActions) {
       this.plugins.RowActions.makeActionFilter(tr);
     }
-    thead.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
+    thead?.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
     if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
       this.options.filterKeypressDelay = 0;
     const filteredRows = findAll(tr, this._filterSelector);
@@ -1665,6 +1703,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
         on(tr, "click", (ev) => {
+          if (ev.target.matches(this._excludedRowElementSelector)) return;
           if (this.plugins.ResponsiveGrid) {
             this.plugins.ResponsiveGrid.blockObserver();
           }
@@ -1747,8 +1786,8 @@ var DataGrid = class _DataGrid extends base_element_default {
     });
     tbody.setAttribute("role", "rowgroup");
     const prev = this.tbody;
-    tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
-    this.table.replaceChild(tbody, prev);
+    prev && tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
+    this.table?.replaceChild(tbody, prev);
     if (this.plugins.FixedHeight) {
       this.plugins.FixedHeight.createFakeRow();
     }
@@ -1756,7 +1795,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.plugins.SelectableRows) {
       this.plugins.SelectableRows.shouldSelectAll(tbody);
     }
-    this.data.length && this.classList.remove("dg-empty");
+    this.classList.toggle("dg-empty", !this.data.length);
     dispatch(this, "bodyRendered");
   }
   paginate() {
@@ -1765,6 +1804,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     const p = this.page || 1;
     const tbody = this.tbody;
     const tfoot = this.tfoot;
+    if (!tbody || !tfoot) return;
     const bodyRows = findAll(tbody, "tr");
     this.pages = this.totalPages();
     let index;
@@ -2140,32 +2180,46 @@ var SELECTABLE_CLASS = "dg-selectable";
 var SELECT_ALL_CLASS = "dg-select-all";
 var CHECKBOX_CLASS = "form-check-input";
 var SelectableRows = class extends base_plugin_default {
+  #cbSelector = `tbody tr${this.visibleOnly ? ":not([hidden])" : ""} .${SELECTABLE_CLASS} input[type=checkbox]`;
+  #inputSelector = `tbody .${SELECTABLE_CLASS} input`;
   disconnected() {
     if (this.selectAll) {
       this.selectAll.removeEventListener("change", this);
     }
   }
+  get isSingleSelect() {
+    return this.grid.options.singleSelect;
+  }
+  get visibleOnly() {
+    return this.grid.options.selectVisibleOnly;
+  }
   /**
-   * @param {String} key Return a specific key (eg: id) instead of the whole row
-   * @returns {Array}
+   * Get selected rows or fields.
+   * Returns full rows, a single field's values, or objects with specified fields.
+   * In single select mode, returns a single item.
+   * @param {...string} keys Field names to select.
+   * @returns {Array|Object} Selected data.
    */
-  getSelection(key = null) {
+  getSelection(...keys) {
     const grid = this.grid;
     const selectedData = [];
-    const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input:checked`);
+    const inputs = findAll(grid, `${this.#inputSelector}:checked`);
     for (const checkbox of inputs) {
       const idx = Number.parseInt(checkbox.dataset.id);
       const item = grid.data[idx - 1];
       if (!item) {
         console.warn(`Item ${idx} not found`);
+        continue;
       }
-      if (key) {
-        selectedData.push(item[key]);
-      } else {
+      if (keys.length === 0) {
         selectedData.push(item);
+      } else if (keys.length === 1) {
+        selectedData.push(item[keys[0]]);
+      } else {
+        selectedData.push(Object.fromEntries(keys.map((k) => [k, item[k]])));
       }
     }
-    return selectedData;
+    return this.isSingleSelect ? selectedData[0] ?? {} : selectedData;
   }
   /**
    * Uncheck box if hidden and visible only
@@ -2179,6 +2233,9 @@ var SelectableRows = class extends base_plugin_default {
     const inputs = findAll(tbody, `tr[hidden] .${SELECTABLE_CLASS} input`);
     for (const input of inputs) {
       input.checked = false;
+      if (this.isSingleSelect) {
+        input.dataset.toggled = "false";
+      }
     }
     this.selectAll.checked = false;
   }
@@ -2201,6 +2258,7 @@ var SelectableRows = class extends base_plugin_default {
     this.selectAll.classList.add(CHECKBOX_CLASS);
     this.selectAll.addEventListener("change", this);
     const label = document.createElement("label");
+    label.hidden = this.isSingleSelect;
     label.appendChild(this.selectAll);
     th.appendChild(label);
     th.setAttribute("width", "40");
@@ -2238,13 +2296,17 @@ var SelectableRows = class extends base_plugin_default {
     setAttribute(td, "role", "gridcell button");
     setAttribute(td, "aria-colindex", this.colIndex());
     td.classList.add(SELECTABLE_CLASS);
-    const selectOne = document.createElement("input");
-    selectOne.dataset.id = tr.getAttribute("aria-rowindex");
-    selectOne.type = "checkbox";
-    selectOne.classList.add(CHECKBOX_CLASS);
+    const input = document.createElement("input");
+    input.dataset.id = tr.getAttribute("aria-rowindex");
+    input.type = this.isSingleSelect ? "radio" : "checkbox";
+    input.classList.add(CHECKBOX_CLASS);
+    if (this.isSingleSelect) {
+      input.name = "dg-row-select";
+      input.dataset.toggled = "false";
+    }
     const label = document.createElement("label");
     label.classList.add("dg-clickable-cell");
-    label.appendChild(selectOne);
+    label.appendChild(input);
     td.appendChild(label);
     label.addEventListener("click", this);
     tr.appendChild(td);
@@ -2253,36 +2315,33 @@ var SelectableRows = class extends base_plugin_default {
    * @param {Event} e
    */
   onclick(e) {
-    e.stopPropagation();
+    if (!this.isSingleSelect) return e.stopPropagation();
+    const el = e.target, unchecked = el.dataset.toggled !== "true";
+    unchecked && $$(`${this.#cbSelector.replace("checkbox", "radio")}`, this.grid)?.forEach((r) => {
+      if (r.name === el.name && r !== el) r.checked = r.dataset.toggled = false;
+    });
+    el.checked = el.dataset.toggled = unchecked;
+    !unchecked && this.onchange(e);
   }
   /**
    * Handle change event on select all or any select checkbox in the table body
    * @param {import("../utils/shortcuts.js").FlexibleEvent} e
    */
   onchange(e) {
-    const grid = this.grid;
+    const el = e.target, grid = this.grid;
     if (hasClass(e.target, SELECT_ALL_CLASS)) {
-      const visibleOnly = grid.options.selectVisibleOnly;
-      const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input`);
-      for (const cb of inputs) {
-        if (visibleOnly && !cb.offsetWidth) {
-          return;
-        }
-        cb.checked = this.selectAll.checked;
-      }
-      dispatch(grid, "rowsSelected", {
-        selection: this.getSelection()
+      findAll(grid, this.#inputSelector).forEach((cb) => {
+        if (!this.visibleOnly || cb.offsetWidth) cb.checked = this.selectAll.checked;
       });
-    } else {
-      if (!e.target.closest(`.${SELECTABLE_CLASS}`)) {
-        return;
-      }
-      const totalCheckboxes = findAll(grid, `tbody .${SELECTABLE_CLASS} input[type=checkbox]`);
-      const totalChecked = totalCheckboxes.filter((n) => n.checked);
-      this.selectAll.checked = totalChecked.length === totalCheckboxes.length;
-      dispatch(grid, "rowsSelected", {
+    } else if (el.matches(this.#cbSelector)) {
+      if (!el.closest(`.${SELECTABLE_CLASS}`)) return;
+      const totalCheckboxes = findAll(grid, this.#cbSelector);
+      this.selectAll.checked = totalCheckboxes.every((n) => n.checked);
+    }
+    if (el.matches(`.${SELECT_ALL_CLASS},${this.#inputSelector}`)) {
+      dispatch(el, "rowsSelected", {
         selection: grid.getSelection()
-      });
+      }, true);
     }
   }
 };
@@ -2308,7 +2367,7 @@ var FixedHeight = class extends base_plugin_default {
     setAttribute(tr, "hidden", "");
     tr.classList.add("dg-fake-row");
     tr.tabIndex = 0;
-    tbody.appendChild(tr);
+    tbody?.appendChild(tr);
   }
   get fakeRow() {
     return this.grid.querySelector(".dg-fake-row");
@@ -2882,7 +2941,7 @@ var SaveState = class extends base_plugin_default {
     this.isScrolled = false;
     this.log("Init");
   }
-  connected() {
+  async connected() {
     this.log("connected");
     const grid = this.grid;
     this.log(grid.options);
@@ -2893,78 +2952,88 @@ var SaveState = class extends base_plugin_default {
     this.log("enabled");
     const cachedState = this._getState();
     if (cachedState) {
-      this.log("hide columns");
-      for (const col of cachedState.columns) {
-        if (col.hidden) {
-          const hideCol = grid.options.columns.find((c) => c.field === col.field);
-          hideCol.hidden = true;
+      const waitForColumns = async () => {
+        if (!grid.options.server) return;
+        let timeout = 500, start = Date.now(), colAbsent;
+        while ((colAbsent = !grid.options.columns?.length) && Date.now() - start < timeout) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
         }
-      }
-      this.log("set: meta, pages");
-      grid.options.perPage = cachedState.perPage;
-      if (grid.options.server) {
-        grid.meta = cachedState.meta;
-        grid.pages = cachedState.pages;
-        grid.page = cachedState.page;
-      }
+        colAbsent && this.log("Timeout waiting for columns.");
+      };
+      const restoreState = async () => {
+        await waitForColumns();
+        this.log("hide columns");
+        for (const col of cachedState.columns) {
+          if (col.hidden) {
+            const hideCol = grid.options.columns.find((c) => c.field === col.field);
+            hideCol.hidden = true;
+          }
+        }
+        this.log("set: meta, pages");
+        grid.options.perPage = cachedState.perPage;
+        if (grid.options.server) {
+          grid.meta = cachedState.meta;
+          grid.pages = cachedState.pages;
+          grid.page = cachedState.page;
+        }
+      };
+      await restoreState();
     }
     this.cachedState = cachedState;
     this.log("cachedState", this.cachedState);
-    setTimeout(() => {
-      const dgLoadData = grid.loadData;
-      grid.loadData = function(...args) {
-        return dgLoadData.apply(this, args).finally(() => {
-          const saveState = this.plugins.SaveState;
-          saveState.log("loadData", this.options.columns);
-          if (!grid.classList.contains("dg-initialized")) {
-            saveState.log("not init, loadData skipped");
-            return;
+    const dgLoadData = grid.loadData;
+    grid.loadData = function(...args) {
+      return dgLoadData.apply(this, args).finally(() => {
+        const saveState = this.plugins.SaveState;
+        saveState.log("loadData", this.options.columns);
+        if (!grid.classList.contains("dg-initialized")) {
+          saveState.log("not init, loadData skipped");
+          return;
+        }
+        saveState.log("loadData finished, set param controls", this.options.columns);
+        if (saveState.cachedState && !saveState.isFilterSortSet) {
+          saveState.log("set sort and filters");
+          const sortableHeaders = findAll(grid, "thead tr.dg-head-columns th[aria-sort]");
+          for (const el of sortableHeaders) {
+            el.setAttribute("aria-sort", "none");
           }
-          saveState.log("loadData finished, set param controls", this.options.columns);
-          if (saveState.cachedState && !saveState.isFilterSortSet) {
-            saveState.log("set sort and filters");
-            const sortableHeaders = findAll(grid, "thead tr.dg-head-columns th[aria-sort]");
-            for (const el of sortableHeaders) {
-              el.setAttribute("aria-sort", "none");
-            }
-            grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)?.setAttribute("aria-sort", saveState.cachedState.sortDir);
-            const filters2 = findAll(grid.filterRow, "[id^=dg-filter]");
-            saveState.log("filters", filters2);
-            for (const el of filters2) {
-              el.value = saveState?.cachedState?.filters?.[el.dataset.name] ?? "";
-              saveState.log({ name: el.dataset.name, val: el.value, saveState });
-            }
-            saveState.isFilterSortSet = true;
+          grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)?.setAttribute("aria-sort", saveState.cachedState.sortDir);
+          const filters2 = findAll(grid.filterRow, "[id^=dg-filter]");
+          saveState.log("filters", filters2);
+          for (const el of filters2) {
+            el.value = saveState?.cachedState?.filters?.[el.dataset.name] ?? "";
+            saveState.log({ name: el.dataset.name, val: el.value, saveState });
           }
-          const newState = {
-            meta: grid.meta,
-            pages: grid.pages,
-            page: grid.page,
-            perPage: grid.options.perPage,
-            filters: {},
-            columns: grid.options.columns.map((col) => ({ field: col.field, hidden: col.hidden })),
-            sort: grid.getSort(),
-            sortDir: grid.getSortDir(),
-            scrollTo: window.scrollY
-          };
-          const filters = grid.getFilters();
-          saveState.log("filters", filters);
-          for (const key of Object.keys(filters)) {
-            newState.filters[key] = filters[key] ?? "";
-            saveState.log({ key, val: filters[key], newState, filters });
-          }
-          saveState.log("store new state", newState);
-          saveState._setState(newState);
-          if (!grid.options.server && saveState.cachedState && !saveState.isDataLoaded) {
-            saveState.isDataLoaded = true;
-            grid.filterData();
-            grid.page = saveState.cachedState.page;
-            grid.pageChanged();
-            saveState.log("data loaded");
-          }
-        });
-      };
-    }, 0);
+          saveState.isFilterSortSet = true;
+        }
+        const newState = {
+          meta: grid.meta,
+          pages: grid.pages,
+          page: grid.page,
+          perPage: grid.options.perPage,
+          filters: {},
+          columns: grid.options.columns.map((col) => ({ field: col.field, hidden: col.hidden })),
+          sort: grid.getSort(),
+          sortDir: grid.getSortDir(),
+          scrollTo: window.scrollY
+        };
+        const filters = grid.getFilters();
+        saveState.log("filters", filters);
+        for (const key of Object.keys(filters)) {
+          newState.filters[key] = filters[key] ?? "";
+          saveState.log({ key, val: filters[key], newState, filters });
+        }
+        saveState.log("store new state", newState);
+        saveState._setState(newState);
+        if (!grid.options.server && saveState.cachedState && !saveState.isDataLoaded) {
+          saveState.isDataLoaded = true;
+          grid.filterData();
+          grid.page = saveState.cachedState.page;
+          grid.pageChanged();
+          saveState.log("data loaded");
+        }
+      });
+    };
     const updateState = () => {
       const saveState = grid.plugins.SaveState;
       const state = saveState._getState();

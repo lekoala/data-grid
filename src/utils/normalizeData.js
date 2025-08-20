@@ -20,7 +20,7 @@ export default function normalizeData(v) {
         return Number(v);
     }
     // Only attempt json parsing for array or objects
-    if (v && ["[", "{"].includes(v.substring(0, 1))) {
+    if (v && typeof v.substring === "function" && ["[", "{"].includes(v.substring(0, 1))) {
         try {
             // In case we have only single quoted values, like ['one', 'two', 'three']
             let val = v;

@@ -1,5 +1,6 @@
+// @ts-nocheck
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
+import { dispatch, findAll, hasClass, setAttribute, $, $$ } from "../utils/shortcuts.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
@@ -9,35 +10,52 @@ const CHECKBOX_CLASS = "form-check-input"; //bs5
  * Allows to select rows
  */
 class SelectableRows extends BasePlugin {
+    #cbSelector = `tbody tr${this.visibleOnly ? ":not([hidden])" : ""} .${SELECTABLE_CLASS} input[type=checkbox]`;
+    #inputSelector = `tbody .${SELECTABLE_CLASS} input`;
+
     disconnected() {
         if (this.selectAll) {
             this.selectAll.removeEventListener("change", this);
         }
     }
 
+    get isSingleSelect() {
+        return this.grid.options.singleSelect;
+    }
+
+    get visibleOnly() {
+        return this.grid.options.selectVisibleOnly;
+    }
+
     /**
-     * @param {String} key Return a specific key (eg: id) instead of the whole row
-     * @returns {Array}
+     * Get selected rows or fields.
+     * Returns full rows, a single field's values, or objects with specified fields.
+     * In single select mode, returns a single item.
+     * @param {...string} keys Field names to select.
+     * @returns {Array|Object} Selected data.
      */
-    getSelection(key = null) {
+    getSelection(...keys) {
         const grid = this.grid;
         const selectedData = [];
 
-        const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input:checked`);
+        const inputs = findAll(grid, `${this.#inputSelector}:checked`);
 
         for (const checkbox of inputs) {
             const idx = Number.parseInt(checkbox.dataset.id);
             const item = grid.data[idx - 1];
             if (!item) {
                 console.warn(`Item ${idx} not found`);
+                continue;
             }
-            if (key) {
-                selectedData.push(item[key]);
-            } else {
+            if (keys.length === 0) {
                 selectedData.push(item);
+            } else if (keys.length === 1) {
+                selectedData.push(item[keys[0]]);
+            } else {
+                selectedData.push(Object.fromEntries(keys.map(k => [k, item[k]])));
             }
         }
-        return selectedData;
+        return this.isSingleSelect ? selectedData[0] ?? {} : selectedData;
     }
 
     /**
@@ -52,6 +70,9 @@ class SelectableRows extends BasePlugin {
         const inputs = findAll(tbody, `tr[hidden] .${SELECTABLE_CLASS} input`);
         for (const input of inputs) {
             input.checked = false;
+            if (this.isSingleSelect) {
+                input.dataset.toggled = "false"; // Reset toggled state for radio buttons
+            }
         }
         this.selectAll.checked = false;
     }
@@ -78,6 +99,7 @@ class SelectableRows extends BasePlugin {
         this.selectAll.addEventListener("change", this);
 
         const label = document.createElement("label");
+        label.hidden = this.isSingleSelect;
         label.appendChild(this.selectAll);
 
         th.appendChild(label);
@@ -126,15 +148,21 @@ class SelectableRows extends BasePlugin {
         td.classList.add(SELECTABLE_CLASS);
 
         // Create input
-        const selectOne = document.createElement("input");
+        const input = document.createElement("input");
         // Alias row id for easy retrieval in getSelection
-        selectOne.dataset.id = tr.getAttribute("aria-rowindex");
-        selectOne.type = "checkbox";
-        selectOne.classList.add(CHECKBOX_CLASS);
+        input.dataset.id = tr.getAttribute("aria-rowindex");
+        input.type = this.isSingleSelect ? "radio" : "checkbox";
+        input.classList.add(CHECKBOX_CLASS);
+        if (this.isSingleSelect) {
+            input.name = "dg-row-select";
+            input.dataset.toggled = "false";
+        }
+
         // Label need to take full space thanks to css to make the whole cell clickable
         const label = document.createElement("label");
         label.classList.add("dg-clickable-cell");
-        label.appendChild(selectOne);
+
+        label.appendChild(input);
         td.appendChild(label);
 
         // Prevent unwanted click behaviour on row
@@ -147,7 +175,17 @@ class SelectableRows extends BasePlugin {
      * @param {Event} e
      */
     onclick(e) {
-        e.stopPropagation();
+        if (!this.isSingleSelect) return e.stopPropagation();
+
+        // Implements radio button toggle behaviour for selecting and unselecting a row
+        const el = e.target,
+            unchecked = el.dataset.toggled !== "true";
+        unchecked && $$(`${this.#cbSelector.replace("checkbox", "radio")}`, this.grid)?.forEach(r => {
+            // Uncheck all other radios in the same group and reset their data-toggled
+            if (r.name === el.name && r !== el) r.checked = r.dataset.toggled = false;
+        });
+        el.checked = el.dataset.toggled = unchecked;
+        !unchecked && this.onchange(e); // Fires rowsSelected event
     }
 
     /**
@@ -155,31 +193,20 @@ class SelectableRows extends BasePlugin {
      * @param {import("../utils/shortcuts.js").FlexibleEvent} e
      */
     onchange(e) {
-        const grid = this.grid;
+        const el = e.target, grid = this.grid;
         if (hasClass(e.target, SELECT_ALL_CLASS)) {
-            const visibleOnly = grid.options.selectVisibleOnly;
-            const inputs = findAll(grid, `tbody .${SELECTABLE_CLASS} input`);
-            for (const cb of inputs) {
-                if (visibleOnly && !cb.offsetWidth) {
-                    return;
-                }
-                cb.checked = this.selectAll.checked;
-            }
-            dispatch(grid, "rowsSelected", {
-                selection: this.getSelection(),
+            findAll(grid, this.#inputSelector).forEach(cb => {
+                if (!this.visibleOnly || cb.offsetWidth) cb.checked = this.selectAll.checked;
             });
-        } else {
-            if (!e.target.closest(`.${SELECTABLE_CLASS}`)) {
-                return;
-            }
-            const totalCheckboxes = findAll(grid, `tbody .${SELECTABLE_CLASS} input[type=checkbox]`);
-            // @ts-ignore
-            const totalChecked = totalCheckboxes.filter((n) => n.checked);
-            this.selectAll.checked = totalChecked.length === totalCheckboxes.length;
-
-            dispatch(grid, "rowsSelected", {
-                selection: grid.getSelection(),
-            });
+        } else if (el.matches(this.#cbSelector)) {
+            if (!el.closest(`.${SELECTABLE_CLASS}`)) return;
+            const totalCheckboxes = findAll(grid, this.#cbSelector);
+            this.selectAll.checked = totalCheckboxes.every(n => n.checked);
+        }
+        if (el.matches(`.${SELECT_ALL_CLASS},${this.#inputSelector}`)) {
+            dispatch(el, "rowsSelected", {
+                selection: grid.getSelection()
+            }, true);
         }
     }
 }
