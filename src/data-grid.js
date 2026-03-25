@@ -1725,15 +1725,19 @@ class DataGrid extends BaseElement {
         // Filter content by field events
         const filteredRows = findAll(tr, this._filterSelector);
         for (const el of filteredRows) {
-            const eventName = /select/i.test(el.tagName) ? "change" : "keyup";
+            const isSelect = /select/i.test(el.tagName);
+            const eventName = isSelect ? "change" : "keyup";
             const eventHandler = debounce((e) => {
                 const key = e.keyCode || e.key;
                 const isKeyPressFilter = !this.options.filterOnEnter && !this._excludedKeys.some((k) => k === key);
-                if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change") {
+                if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change" || e.type === "paste") {
                     this.filterData.call(this);
                 }
             }, this.options.filterKeypressDelay);
             el.addEventListener(eventName, eventHandler);
+            if (!isSelect) { // Add paste event support for text input filters
+                el.addEventListener("paste", eventHandler);
+            }
         }
     }
 
