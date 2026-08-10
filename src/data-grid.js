@@ -210,6 +210,9 @@ function applyColumnDefinition(el, column) {
             addClass(el, "dg-responsive-hidden");
         }
     }
+    if (column.noSort && el.tagName === "TH") {
+        addClass(el, "dg-not-sortable");
+    }
 }
 
 /**
@@ -972,7 +975,7 @@ class DataGrid extends BaseElement {
                 th.classList.contains("dg-not-sortable") ||
                 (!this.fireEvents && fieldName === this.options.defaultSort)
             ) {
-                return;
+                continue;
             }
             if (this.options.sort && !this.getColProp(fieldName, "noSort")) {
                 setAttribute(th, "aria-sort", "none");
@@ -1555,7 +1558,7 @@ class DataGrid extends BaseElement {
             th.setAttribute("role", "columnheader button");
             th.setAttribute("aria-colindex", `${colIdx}`);
             th.setAttribute("id", randstr("dg-col-"));
-            if (this.options.sort) {
+            if (this.options.sort && !column.noSort) {
                 th.setAttribute("aria-sort", "none");
             }
             th.setAttribute("field", column.field);
