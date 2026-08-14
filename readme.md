@@ -329,7 +329,7 @@ You can check `demo-server.html` to get a sample usage with saving functionnalit
 | **preload**      | preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. |
 | **refresh**      | clears and reloads data from url that can be optionally specified as a parameter.                            |
 | **reload**       | reloads data from url that can be optionally specified as a parameter.                                       |
-| **clearFilter**  | clears current filters                                                                                       |
+| **clearFilters** | clears current filters                                                                                       |
 | **addRow**       | adds a new row                                                                                               |
 | **removeRow**    | removes a row                                                                                                |
 | **getData**      | gets data                                                                                                    |

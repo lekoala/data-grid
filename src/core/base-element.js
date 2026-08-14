@@ -21,6 +21,7 @@ class BaseElement extends HTMLElement {
         this.log("constructor");
 
         this.setup = false;
+        this.rendered = false;
         this.fireEvents = true;
         this._ready();
 
@@ -117,10 +118,14 @@ class BaseElement extends HTMLElement {
 
             // Append only when labels had the opportunity to be set
             // Don't use shadow dom as it makes theming super hard
-            const template = document.createElement("template");
-            // @ts-expect-error
-            template.innerHTML = this.constructor.template();
-            this.appendChild(template.content.cloneNode(true));
+            // Render the template only once, even when the element is reconnected
+            if (!this.rendered) {
+                const template = document.createElement("template");
+                // @ts-expect-error
+                template.innerHTML = this.constructor.template();
+                this.appendChild(template.content.cloneNode(true));
+                this.rendered = true;
+            }
 
             await this._connected();
 

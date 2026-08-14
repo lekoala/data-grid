@@ -1,4 +1,4 @@
-/*** Data Grid Web Component v2.0.13 * https://github.com/lekoala/data-grid ***/
+/*** Data Grid Web Component * https://github.com/lekoala/data-grid ***/
 
 // src/utils/camelize.js
 function camelize(str) {
@@ -137,6 +137,7 @@ var BaseElement = class extends HTMLElement {
     this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
     this.log("constructor");
     this.setup = false;
+    this.rendered = false;
     this.fireEvents = true;
     this._ready();
     this.log("ready");
@@ -217,9 +218,12 @@ var BaseElement = class extends HTMLElement {
     this.setup = true;
     setTimeout(async () => {
       this.log("connectedCallback");
-      const template = document.createElement("template");
-      template.innerHTML = this.constructor.template();
-      this.appendChild(template.content.cloneNode(true));
+      if (!this.rendered) {
+        const template = document.createElement("template");
+        template.innerHTML = this.constructor.template();
+        this.appendChild(template.content.cloneNode(true));
+        this.rendered = true;
+      }
       await this._connected();
       dispatch(this, "connected");
     }, 0);
@@ -1500,7 +1504,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       const colIdx = idx + this.startColIndex();
       const th = ce("th");
       th.setAttribute("scope", "col");
-      th.setAttribute("role", "columnheader button");
+      th.setAttribute("role", "columnheader");
       th.setAttribute("aria-colindex", `${colIdx}`);
       th.setAttribute("id", randstr("dg-col-"));
       if (this.options.sort && !column.noSort) {
@@ -1583,6 +1587,12 @@ var DataGrid = class _DataGrid extends base_element_default {
     const rowsWithSort = findAll(tr, "[aria-sort]");
     for (const sortableRow of rowsWithSort) {
       sortableRow.addEventListener("click", () => this.sortData(sortableRow));
+      sortableRow.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          this.sortData(sortableRow);
+        }
+      });
     }
     this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
   }
@@ -1733,7 +1743,7 @@ var DataGrid = class _DataGrid extends base_element_default {
         }
         td = ce("td");
         td.setAttribute("role", "gridcell");
-        td.setAttribute("aria-colindex", `${idx}${this.startColIndex()}`);
+        td.setAttribute("aria-colindex", `${idx + this.startColIndex()}`);
         applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
@@ -2258,7 +2268,7 @@ var SelectableRows = class extends base_plugin_default {
   createHeaderCol(tr) {
     const th = document.createElement("th");
     setAttribute(th, "scope", "col");
-    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "role", "columnheader");
     setAttribute(th, "aria-colindex", this.colIndex());
     th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
@@ -2279,7 +2289,7 @@ var SelectableRows = class extends base_plugin_default {
    */
   createFilterCol(tr) {
     const th = document.createElement("th");
-    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "role", "columnheader");
     setAttribute(th, "aria-colindex", this.colIndex());
     th.classList.add(SELECTABLE_CLASS);
     th.tabIndex = 0;
@@ -2303,7 +2313,7 @@ var SelectableRows = class extends base_plugin_default {
    */
   createDataCol(tr) {
     const td = document.createElement("td");
-    setAttribute(td, "role", "gridcell button");
+    setAttribute(td, "role", "gridcell");
     setAttribute(td, "aria-colindex", this.colIndex());
     td.classList.add(SELECTABLE_CLASS);
     const input = document.createElement("input");
@@ -2646,7 +2656,7 @@ var ResponsiveGrid = class extends base_plugin_default {
     }
     const th = ce("th", tr);
     setAttribute(th, "scope", "col");
-    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "role", "columnheader");
     setAttribute(th, "aria-colindex", this.colIndex());
     setAttribute(th, "width", "40");
     th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
@@ -2660,7 +2670,7 @@ var ResponsiveGrid = class extends base_plugin_default {
       return;
     }
     const th = ce("th", tr);
-    setAttribute(th, "role", "columnheader button");
+    setAttribute(th, "role", "columnheader");
     setAttribute(th, "aria-colindex", this.colIndex());
     th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
     th.tabIndex = 0;
@@ -2673,7 +2683,7 @@ var ResponsiveGrid = class extends base_plugin_default {
       return;
     }
     const td = document.createElement("td");
-    setAttribute(td, "role", "gridcell button");
+    setAttribute(td, "role", "gridcell");
     setAttribute(td, "aria-colindex", this.colIndex());
     td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
     td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
@@ -2771,7 +2781,7 @@ var RowActions = class extends base_plugin_default {
    */
   makeActionHeader(tr) {
     const actionsTh = document.createElement("th");
-    setAttribute(actionsTh, "role", "columnheader button");
+    setAttribute(actionsTh, "role", "columnheader");
     setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
     actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
     actionsTh.tabIndex = 0;
@@ -2783,7 +2793,7 @@ var RowActions = class extends base_plugin_default {
    */
   makeActionFilter(tr) {
     const actionsTh = document.createElement("th");
-    actionsTh.setAttribute("role", "columnheader button");
+    actionsTh.setAttribute("role", "columnheader");
     setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
     actionsTh.classList.add(...["dg-actions", this.actionClass]);
     actionsTh.tabIndex = 0;
@@ -3132,6 +3142,7 @@ var data_grid_default2 = data_grid_default;
 var global = typeof globalThis !== "undefined" ? globalThis : self;
 global.DataGrid = data_grid_default;
 export {
+  data_grid_default as DataGrid,
   data_grid_default2 as default
 };
 /**

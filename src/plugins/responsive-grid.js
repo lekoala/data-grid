@@ -256,7 +256,7 @@ class ResponsiveGrid extends BasePlugin {
         }
         const th = ce("th", tr);
         setAttribute(th, "scope", "col");
-        setAttribute(th, "role", "columnheader button");
+        setAttribute(th, "role", "columnheader");
         setAttribute(th, "aria-colindex", this.colIndex());
         setAttribute(th, "width", "40");
         th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
@@ -271,7 +271,7 @@ class ResponsiveGrid extends BasePlugin {
             return;
         }
         const th = ce("th", tr);
-        setAttribute(th, "role", "columnheader button");
+        setAttribute(th, "role", "columnheader");
         setAttribute(th, "aria-colindex", this.colIndex());
         th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
         th.tabIndex = 0;
@@ -286,7 +286,7 @@ class ResponsiveGrid extends BasePlugin {
         }
         // Create col
         const td = document.createElement("td");
-        setAttribute(td, "role", "gridcell button");
+        setAttribute(td, "role", "gridcell");
         setAttribute(td, "aria-colindex", this.colIndex());
         td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
 

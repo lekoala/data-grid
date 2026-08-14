@@ -19,7 +19,7 @@ class RowActions extends BasePlugin {
      */
     makeActionHeader(tr) {
         const actionsTh = document.createElement("th");
-        setAttribute(actionsTh, "role", "columnheader button");
+        setAttribute(actionsTh, "role", "columnheader");
         setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
         actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
         actionsTh.tabIndex = 0;
@@ -32,7 +32,7 @@ class RowActions extends BasePlugin {
      */
     makeActionFilter(tr) {
         const actionsTh = document.createElement("th");
-        actionsTh.setAttribute("role", "columnheader button");
+        actionsTh.setAttribute("role", "columnheader");
         setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
         actionsTh.classList.add(...["dg-actions", this.actionClass]);
         actionsTh.tabIndex = 0;

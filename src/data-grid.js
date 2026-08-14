@@ -1559,7 +1559,7 @@ class DataGrid extends BaseElement {
             const colIdx = idx + this.startColIndex();
             const th = ce("th");
             th.setAttribute("scope", "col");
-            th.setAttribute("role", "columnheader button");
+            th.setAttribute("role", "columnheader");
             th.setAttribute("aria-colindex", `${colIdx}`);
             th.setAttribute("id", randstr("dg-col-"));
             if (this.options.sort && !column.noSort) {
@@ -1659,10 +1659,16 @@ class DataGrid extends BaseElement {
             this.plugins.ContextMenu.attachContextMenu();
         }
 
-        // Sort col on click
+        // Sort col on click and on Enter/Space for keyboard users
         const rowsWithSort = findAll(tr, "[aria-sort]");
         for (const sortableRow of rowsWithSort) {
             sortableRow.addEventListener("click", () => this.sortData(sortableRow));
+            sortableRow.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    this.sortData(sortableRow);
+                }
+            });
         }
 
         this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
@@ -1848,7 +1854,7 @@ class DataGrid extends BaseElement {
                 }
                 td = ce("td");
                 td.setAttribute("role", "gridcell");
-                td.setAttribute("aria-colindex", `${idx}${this.startColIndex()}`);
+                td.setAttribute("aria-colindex", `${idx + this.startColIndex()}`);
                 applyColumnDefinition(td, column);
                 // This is required for pure css responsive layout
                 td.setAttribute("data-name", column.title);
@@ -2015,4 +2021,5 @@ class DataGrid extends BaseElement {
     }
 }
 
+export { DataGrid };
 export default DataGrid;

@@ -1,5 +1,5 @@
 /**
- * Data Grid Web Component v2.0.13
+ * Data Grid Web Component
  * https://github.com/lekoala/data-grid
  */
 @keyframes dataGridShow {
@@ -302,10 +302,10 @@ data-grid input[type="checkbox"] {
 
 data-grid input:not([type="checkbox"], [type="radio"]),
 data-grid select {
-  background-color: var(--input-background, "#fff");
+  background-color: var(--input-background, #fff);
   color: currentColor;
   box-sizing: border-box;
-  border: 1px solid var(--input-border-color, "#f0f0f0");
+  border: 1px solid var(--input-border-color, #f0f0f0);
   border-radius: var(--border-radius);
   height: 2rem;
   margin: 0 0.2rem;

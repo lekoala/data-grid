@@ -87,7 +87,7 @@ class SelectableRows extends BasePlugin {
     createHeaderCol(tr) {
         const th = document.createElement("th");
         setAttribute(th, "scope", "col");
-        setAttribute(th, "role", "columnheader button");
+        setAttribute(th, "role", "columnheader");
         setAttribute(th, "aria-colindex", this.colIndex());
         th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
         th.tabIndex = 0;
@@ -113,7 +113,7 @@ class SelectableRows extends BasePlugin {
      */
     createFilterCol(tr) {
         const th = document.createElement("th");
-        setAttribute(th, "role", "columnheader button");
+        setAttribute(th, "role", "columnheader");
         setAttribute(th, "aria-colindex", this.colIndex());
         th.classList.add(SELECTABLE_CLASS);
         th.tabIndex = 0;
@@ -143,7 +143,7 @@ class SelectableRows extends BasePlugin {
     createDataCol(tr) {
         // Create col
         const td = document.createElement("td");
-        setAttribute(td, "role", "gridcell button");
+        setAttribute(td, "role", "gridcell");
         setAttribute(td, "aria-colindex", this.colIndex());
         td.classList.add(SELECTABLE_CLASS);
 
