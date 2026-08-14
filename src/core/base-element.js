@@ -58,7 +58,7 @@ class BaseElement extends HTMLElement {
         const jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
         const data = { ...this.dataset };
         for (const key in data) {
-            if (key === "config" || !data.hasOwnProperty(key) || typeof data[key] === "function") {
+            if (key === "config" || !Object.hasOwn(data, key) || typeof data[key] === "function") {
                 continue;
             }
             data[key] = normalizeData(data[key]);
@@ -118,7 +118,7 @@ class BaseElement extends HTMLElement {
             // Append only when labels had the opportunity to be set
             // Don't use shadow dom as it makes theming super hard
             const template = document.createElement("template");
-            // @ts-ignore
+            // @ts-expect-error
             template.innerHTML = this.constructor.template();
             this.appendChild(template.content.cloneNode(true));
 

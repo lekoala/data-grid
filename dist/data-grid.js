@@ -107,14 +107,14 @@ function $(selector, base = document) {
   }
   return base.querySelector(selector);
 }
-function $$(selector, base = document) {
+function $$2(selector, base = document) {
   return Array.from(base.querySelectorAll(selector));
 }
 function find(el, selector) {
   return $(selector, el);
 }
 function findAll(el, selector) {
-  return $$(selector, el);
+  return $$2(selector, el);
 }
 function ce(tagName, parent = null) {
   const el = document.createElement(tagName);
@@ -168,7 +168,7 @@ var BaseElement = class extends HTMLElement {
     const jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
     const data = { ...this.dataset };
     for (const key in data) {
-      if (key === "config" || !data.hasOwnProperty(key) || typeof data[key] === "function") {
+      if (key === "config" || !Object.hasOwn(data, key) || typeof data[key] === "function") {
         continue;
       }
       data[key] = normalizeData(data[key]);
@@ -323,14 +323,6 @@ function convertArray(v) {
     return [];
   }
   return v;
-}
-
-// src/utils/elementOffset.js
-function elementOffset(el) {
-  const rect = el.getBoundingClientRect();
-  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
-  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-  return { top: rect.top + scrollTop, left: rect.left + scrollLeft };
 }
 
 // src/utils/interpolate.js
@@ -749,7 +741,8 @@ var DataGrid = class _DataGrid extends base_element_default {
     const cols = this.options.columns;
     this.options.columns = [];
     this.configureUi();
-    return this.options.columns = cols, this;
+    this.options.columns = cols;
+    return this;
   }
   constrainPageValue(v) {
     let pv = v;
@@ -767,7 +760,8 @@ var DataGrid = class _DataGrid extends base_element_default {
     this.page = this.constrainPageValue(this.page);
     setAttribute(this.inputPage, "max", this.pages);
     this.inputPage.value = `${this.page}`;
-    return this.inputPage.disabled = this.pages < 2, this;
+    this.inputPage.disabled = this.pages < 2;
+    return this;
   }
   pageChanged() {
     this.reload();
@@ -807,7 +801,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       this.page = updatePage;
     } else {
       this.reload(() => {
-        if (!this.plugins.FixedHeight || !this.plugins.FixedHeight.hasFixedHeight) {
+        if (!this.plugins.FixedHeight?.hasFixedHeight) {
           this.selectPerPage.scrollIntoView();
         }
       });
@@ -944,7 +938,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.selectable && this.plugins.SelectableRows) {
       start++;
     }
-    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
       start++;
     }
     return start;
@@ -975,7 +969,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.actions.length && this.plugins.RowActions) {
       len++;
     }
-    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
       len++;
     }
     return len;
@@ -1373,6 +1367,8 @@ var DataGrid = class _DataGrid extends base_element_default {
               return -1;
             case valA === valB:
               return 0;
+            default:
+              return 0;
           }
         });
       }
@@ -1491,7 +1487,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.selectable && this.plugins.SelectableRows) {
       this.plugins.SelectableRows.createHeaderCol(tr);
     }
-    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
       this.plugins.ResponsiveGrid.createHeaderCol(tr);
     }
     idx = 0;
@@ -1604,7 +1600,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     if (this.options.selectable && this.plugins.SelectableRows) {
       this.plugins.SelectableRows.createFilterCol(tr);
     }
-    if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
       this.plugins.ResponsiveGrid.createFilterCol(tr);
     }
     this.log("createColumnFilters - columns", this.options.columns);
@@ -1704,7 +1700,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       if (this.options.selectable && this.plugins.SelectableRows) {
         this.plugins.SelectableRows.createDataCol(tr);
       }
-      if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+      if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
         this.plugins.ResponsiveGrid.createDataCol(tr);
       }
       if (this.options.expand) {
@@ -1764,7 +1760,7 @@ var DataGrid = class _DataGrid extends base_element_default {
             }
             if (typeof column.format === "string" && tv) {
               td.innerHTML = interpolate(
-                // @ts-ignore
+                // @ts-expect-error
                 column.format,
                 Object.assign(
                   {
@@ -1895,6 +1891,14 @@ var BasePlugin = class {
 };
 var base_plugin_default = BasePlugin;
 
+// src/utils/elementOffset.js
+function elementOffset(el) {
+  const rect = el.getBoundingClientRect();
+  const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
+  const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+  return { top: rect.top + scrollTop, left: rect.left + scrollLeft };
+}
+
 // src/plugins/column-resizer.js
 var ColumnResizer = class extends base_plugin_default {
   constructor(grid) {
@@ -1957,7 +1961,7 @@ var ColumnResizer = class extends base_plugin_default {
         const visibleCols = currentCols.filter((col2) => {
           return !col2.hasAttribute("hidden");
         });
-        const columnIndex = visibleCols.findIndex((column) => column === target.parentNode);
+        const columnIndex = visibleCols.indexOf(target.parentNode);
         grid.log("resize column");
         addClass(resizer, "dg-resizer-active");
         removeAttribute(col, "draggable");
@@ -2345,9 +2349,14 @@ var SelectableRows = class extends base_plugin_default {
       this.selectAll.checked = totalCheckboxes.every((n) => n.checked);
     }
     if (el.matches(`.${SELECT_ALL_CLASS},${this.#inputSelector}`)) {
-      dispatch(el, "rowsSelected", {
-        selection: grid.getSelection()
-      }, true);
+      dispatch(
+        el,
+        "rowsSelected",
+        {
+          selection: grid.getSelection()
+        },
+        true
+      );
     }
   }
 };
@@ -2960,10 +2969,11 @@ var SaveState = class extends base_plugin_default {
     if (cachedState) {
       const waitForColumns = async () => {
         if (!grid.options.server) return;
-        let timeout = 500, start = Date.now(), colAbsent;
-        while ((colAbsent = !grid.options.columns?.length) && Date.now() - start < timeout) {
+        const timeout = 500, start = Date.now();
+        while (!grid.options.columns?.length && Date.now() - start < timeout) {
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
+        const colAbsent = !grid.options.columns?.length;
         colAbsent && this.log("Timeout waiting for columns.");
       };
       const restoreState = async () => {
@@ -3003,7 +3013,9 @@ var SaveState = class extends base_plugin_default {
           for (const el of sortableHeaders) {
             el.setAttribute("aria-sort", "none");
           }
-          grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)?.setAttribute("aria-sort", saveState.cachedState.sortDir);
+          grid.querySelector(
+            `thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`
+          )?.setAttribute("aria-sort", saveState.cachedState.sortDir);
           const filters2 = findAll(grid.filterRow, "[id^=dg-filter]");
           saveState.log("filters", filters2);
           for (const el of filters2) {

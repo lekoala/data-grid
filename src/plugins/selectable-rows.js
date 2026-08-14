@@ -1,6 +1,6 @@
 // @ts-nocheck
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, hasClass, setAttribute, $, $$ } from "../utils/shortcuts.js";
+import { dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
@@ -52,10 +52,10 @@ class SelectableRows extends BasePlugin {
             } else if (keys.length === 1) {
                 selectedData.push(item[keys[0]]);
             } else {
-                selectedData.push(Object.fromEntries(keys.map(k => [k, item[k]])));
+                selectedData.push(Object.fromEntries(keys.map((k) => [k, item[k]])));
             }
         }
-        return this.isSingleSelect ? selectedData[0] ?? {} : selectedData;
+        return this.isSingleSelect ? (selectedData[0] ?? {}) : selectedData;
     }
 
     /**
@@ -180,10 +180,11 @@ class SelectableRows extends BasePlugin {
         // Implements radio button toggle behaviour for selecting and unselecting a row
         const el = e.target,
             unchecked = el.dataset.toggled !== "true";
-        unchecked && $$(`${this.#cbSelector.replace("checkbox", "radio")}`, this.grid)?.forEach(r => {
-            // Uncheck all other radios in the same group and reset their data-toggled
-            if (r.name === el.name && r !== el) r.checked = r.dataset.toggled = false;
-        });
+        unchecked &&
+            $$(`${this.#cbSelector.replace("checkbox", "radio")}`, this.grid)?.forEach((r) => {
+                // Uncheck all other radios in the same group and reset their data-toggled
+                if (r.name === el.name && r !== el) r.checked = r.dataset.toggled = false;
+            });
         el.checked = el.dataset.toggled = unchecked;
         !unchecked && this.onchange(e); // Fires rowsSelected event
     }
@@ -193,20 +194,26 @@ class SelectableRows extends BasePlugin {
      * @param {import("../utils/shortcuts.js").FlexibleEvent} e
      */
     onchange(e) {
-        const el = e.target, grid = this.grid;
+        const el = e.target,
+            grid = this.grid;
         if (hasClass(e.target, SELECT_ALL_CLASS)) {
-            findAll(grid, this.#inputSelector).forEach(cb => {
+            findAll(grid, this.#inputSelector).forEach((cb) => {
                 if (!this.visibleOnly || cb.offsetWidth) cb.checked = this.selectAll.checked;
             });
         } else if (el.matches(this.#cbSelector)) {
             if (!el.closest(`.${SELECTABLE_CLASS}`)) return;
             const totalCheckboxes = findAll(grid, this.#cbSelector);
-            this.selectAll.checked = totalCheckboxes.every(n => n.checked);
+            this.selectAll.checked = totalCheckboxes.every((n) => n.checked);
         }
         if (el.matches(`.${SELECT_ALL_CLASS},${this.#inputSelector}`)) {
-            dispatch(el, "rowsSelected", {
-                selection: grid.getSelection()
-            }, true);
+            dispatch(
+                el,
+                "rowsSelected",
+                {
+                    selection: grid.getSelection(),
+                },
+                true,
+            );
         }
     }
 }

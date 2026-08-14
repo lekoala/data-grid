@@ -36,6 +36,7 @@
  * @param {FlexibleEvent} event
  */
 
+// biome-ignore lint/correctness/noUnusedVariables: kept as documentation reference
 class FlexibleEventListenerObject {
     /**
      * @param {FlexibleEvent} e

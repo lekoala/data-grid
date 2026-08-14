@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import getParentElement from "../utils/getParentElement.js";
-import { find, off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
+import { off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Create a right click menu on the headers

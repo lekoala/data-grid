@@ -12,9 +12,7 @@
 - From terminal or command line console, run the following commands.
 
 ```
-npm install esbuild
-npm install sass
-npm install postcss autoprefixer postcss-cli
+npm install
 ```
 
 
@@ -36,10 +34,12 @@ npm run build
 ```
 
 
-### Compile from scss to css
+### Compile the css
 
 - From terminal or command line console, run the following command.
 
 ```
 npm run build-css
 ```
+
+The source files are plain CSS in `css/` (bundled and minified with esbuild).

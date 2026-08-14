@@ -1,0 +1,61 @@
+data-grid .dg-actions {
+  text-overflow: initial;
+  width: 100px;
+  text-align: right;
+  white-space: nowrap !important;
+}
+
+data-grid .dg-actions button {
+  margin: 0;
+}
+
+data-grid .dg-actions button + button {
+  margin-left: 0.25rem;
+}
+
+data-grid .dg-actions .dg-actions-toggle {
+  display: none;
+  width: calc(100px - var(--padding-x) * 2);
+}
+
+data-grid .dg-actions.dg-actions-1 {
+  width: 100%;
+}
+
+data-grid .dg-actions.dg-actions-2 button {
+  width: calc(50% - 0.25rem);
+}
+
+data-grid .dg-actions.dg-actions-more button {
+  display: none;
+}
+
+data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
+  display: inline-block;
+}
+
+data-grid .dg-actions.dg-actions-expand {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+}
+
+data-grid .dg-actions.dg-actions-expand.dg-actions-more {
+  width: 100%;
+}
+
+data-grid .dg-actions.dg-actions-expand.dg-actions-more button {
+  display: inline-block;
+}
+
+data-grid tr.dg-actionable {
+  cursor: pointer;
+}
+
+data-grid tr.dg-actionable:hover td {
+  background-color: var(--highlight-color);
+}

@@ -10,14 +10,12 @@ import addSelectOption from "./utils/addSelectOption.js";
 import appendParamsToUrl from "./utils/appendParamsToUrl.js";
 import camelize from "./utils/camelize.js";
 import convertArray from "./utils/convertArray.js";
-import elementOffset from "./utils/elementOffset.js";
 import interpolate from "./utils/interpolate.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
 import debounce from "./utils/debounce.js";
 import {
     $,
-    $$,
     dispatch,
     find,
     findAll,
@@ -292,7 +290,7 @@ class DataGrid extends BaseElement {
         this.plugins = {};
         // Init plugins
         for (const [pluginName, pluginClass] of Object.entries(plugins)) {
-            // @ts-ignore until we can set typeof import ...
+            // @ts-expect-error until we can set typeof import ...
             this.plugins[pluginName] = new pluginClass(this);
         }
 
@@ -454,7 +452,7 @@ class DataGrid extends BaseElement {
             spinnerClass: "",
             saveState: false,
             errorMessage: "",
-            noData: ""
+            noData: "",
         };
     }
 
@@ -567,19 +565,19 @@ class DataGrid extends BaseElement {
 
     /** @returns {HTMLTableSectionElement} */
     get thead() {
-        //@ts-ignore
+        //@ts-expect-error
         return $("thead", this);
     }
 
     /** @returns {HTMLTableSectionElement} */
     get tbody() {
-        //@ts-ignore
+        //@ts-expect-error
         return $("tbody", this);
     }
 
     /** @returns {HTMLTableSectionElement} */
     get tfoot() {
-        //@ts-ignore
+        //@ts-expect-error
         return $("tfoot", this);
     }
 
@@ -608,7 +606,8 @@ class DataGrid extends BaseElement {
         const cols = this.options.columns;
         this.options.columns = [];
         this.configureUi();
-        return this.options.columns = cols, this;
+        this.options.columns = cols;
+        return this;
     }
 
     constrainPageValue(v) {
@@ -630,7 +629,8 @@ class DataGrid extends BaseElement {
         // Show current page in input
         setAttribute(this.inputPage, "max", this.pages);
         this.inputPage.value = `${this.page}`;
-        return this.inputPage.disabled = this.pages < 2, this;
+        this.inputPage.disabled = this.pages < 2;
+        return this;
     }
 
     pageChanged() {
@@ -682,7 +682,7 @@ class DataGrid extends BaseElement {
             // Simply reload current page
             this.reload(() => {
                 // Preserve distance between top of page and select control if no fixed height
-                if (!this.plugins.FixedHeight || !this.plugins.FixedHeight.hasFixedHeight) {
+                if (!this.plugins.FixedHeight?.hasFixedHeight) {
                     this.selectPerPage.scrollIntoView();
                 }
             });
@@ -873,7 +873,7 @@ class DataGrid extends BaseElement {
         if (this.options.selectable && this.plugins.SelectableRows) {
             start++;
         }
-        if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
             start++;
         }
         return start;
@@ -910,7 +910,7 @@ class DataGrid extends BaseElement {
             len++;
         }
         // Add one col for the responsive toggle
-        if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
             len++;
         }
         return len;
@@ -1097,16 +1097,18 @@ class DataGrid extends BaseElement {
         // If the data was cleared, we need to render again
         const needRender = !this.originalData?.length;
         this.fixPage();
-        // @ts-ignore
-        return this.loadData().finally(() => {
-            if (this.hasDataError) return;
-            // If we load data from the server, we redraw the table body
-            // Otherwise, we just need to paginate
-            this.options.server || needRender ? this.renderBody() : this.paginate();
-            if (typeof callbackOrUrl === "function") {
-                callbackOrUrl();
-            }
-        }).then(() => this);
+        // @ts-expect-error
+        return this.loadData()
+            .finally(() => {
+                if (this.hasDataError) return;
+                // If we load data from the server, we redraw the table body
+                // Otherwise, we just need to paginate
+                this.options.server || needRender ? this.renderBody() : this.paginate();
+                if (typeof callbackOrUrl === "function") {
+                    callbackOrUrl();
+                }
+            })
+            .then(() => this);
     }
 
     /**
@@ -1178,7 +1180,7 @@ class DataGrid extends BaseElement {
                     this.classList.add("dg-empty", "dg-network-error");
                     dispatch(this, "loadDataFailed", err);
                 })
-                // @ts-ignore
+                // @ts-expect-error
                 .finally(() => {
                     flagEmpty();
                     this.#setNoData(tbody);
@@ -1325,7 +1327,7 @@ class DataGrid extends BaseElement {
 
             const headers = findAll(this, "thead tr:first-child th");
             for (const th of headers) {
-                // @ts-ignore
+                // @ts-expect-error
                 if ([...th.classList].some(haveClasses) || !th.hasAttribute("aria-sort")) {
                     continue;
                 }
@@ -1386,6 +1388,8 @@ class DataGrid extends BaseElement {
                             return -1;
                         case valA === valB:
                             return 0;
+                        default:
+                            return 0;
                     }
                 });
             }
@@ -1437,7 +1441,7 @@ class DataGrid extends BaseElement {
         return fetch(url).then((response) => {
             const newError = new Error(response.statusText || labels.networkError);
             if (!response.ok) {
-                // @ts-ignore
+                // @ts-expect-error
                 newError.response = response;
                 throw newError;
             }
@@ -1539,7 +1543,7 @@ class DataGrid extends BaseElement {
         if (this.options.selectable && this.plugins.SelectableRows) {
             this.plugins.SelectableRows.createHeaderCol(tr);
         }
-        if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
             this.plugins.ResponsiveGrid.createHeaderCol(tr);
         }
 
@@ -1681,7 +1685,7 @@ class DataGrid extends BaseElement {
         if (this.options.selectable && this.plugins.SelectableRows) {
             this.plugins.SelectableRows.createFilterCol(tr);
         }
-        if (this.options.responsive && this.plugins.ResponsiveGrid && this.plugins.ResponsiveGrid.hasHiddenColumns()) {
+        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
             this.plugins.ResponsiveGrid.createFilterCol(tr);
         }
 
@@ -1738,7 +1742,8 @@ class DataGrid extends BaseElement {
                 }
             }, this.options.filterKeypressDelay);
             el.addEventListener(eventName, eventHandler);
-            if (!isSelect) { // Add paste event support for text input filters
+            if (!isSelect) {
+                // Add paste event support for text input filters
                 el.addEventListener("paste", eventHandler);
             }
         }
@@ -1768,7 +1773,7 @@ class DataGrid extends BaseElement {
                 }
             }
         } else {
-            //@ts-ignore
+            //@ts-expect-error
             filter.type = "text";
             filter.inputMode = "search";
             filter.autocomplete = "off";
@@ -1803,11 +1808,7 @@ class DataGrid extends BaseElement {
             if (this.options.selectable && this.plugins.SelectableRows) {
                 this.plugins.SelectableRows.createDataCol(tr);
             }
-            if (
-                this.options.responsive &&
-                this.plugins.ResponsiveGrid &&
-                this.plugins.ResponsiveGrid.hasHiddenColumns()
-            ) {
+            if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
                 this.plugins.ResponsiveGrid.createDataCol(tr);
             }
 
@@ -1880,7 +1881,7 @@ class DataGrid extends BaseElement {
                         }
                         if (typeof column.format === "string" && tv) {
                             td.innerHTML = interpolate(
-                                // @ts-ignore
+                                // @ts-expect-error
                                 column.format,
                                 Object.assign(
                                     {

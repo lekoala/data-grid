@@ -1,0 +1,33 @@
+data-grid .dg-resizer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  z-index: 2;
+  cursor: col-resize;
+  user-select: none;
+}
+
+data-grid .dg-resizer:before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: var(--padding-y-header);
+  height: 1.5rem;
+  right: 0;
+  width: 2px;
+  background: var(--body-color);
+  opacity: 0.2;
+}
+
+data-grid .dg-resizer:hover:before {
+  opacity: 0.6;
+}
+
+data-grid .dg-resizer.dg-resizer-active {
+  border-right: 1px dashed var(--color);
+}
+
+data-grid .dg-resizer.dg-resizer-active:before {
+  opacity: 0.6;
+}

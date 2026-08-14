@@ -1,5 +1,5 @@
 {
-    "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+    "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
     "vcs": {
         "enabled": false,
         "clientKind": "git",
@@ -7,10 +7,7 @@
     },
     "files": {
         "ignoreUnknown": false,
-        "ignore": [
-            "dist/*.js",
-            "*.d.ts"
-        ]
+        "includes": ["**", "!**/dist/**/*.js", "!**/*.d.ts"]
     },
     "formatter": {
         "enabled": true,
@@ -18,20 +15,20 @@
         "indentWidth": 4,
         "lineWidth": 120
     },
-    "organizeImports": {
-        "enabled": true
-    },
+    "assist": { "actions": { "source": { "organizeImports": "on" } } },
     "linter": {
         "enabled": true,
         "rules": {
-            "recommended": true,
+            "preset": "recommended",
+            "correctness": {
+                "useParseIntRadix": "off",
+                "noUnusedFunctionParameters": "off"
+            },
             "suspicious": {
                 "noGlobalIsNan": "off"
             }
         },
-        "include": [
-            "./src/*.js"
-        ]
+        "includes": ["src/**/*.js"]
     },
     "javascript": {
         "formatter": {

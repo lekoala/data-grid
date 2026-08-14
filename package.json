@@ -11,25 +11,19 @@
     "build": "npm run build-min && npm run build-dev",
     "start": "npm run build-dev -- --servedir=.",
     "watch": "npm run build-dev -- --watch",
-    "compile-css-min": "sass data-grid.scss:dist/data-grid.min.css --style compressed",
-    "compile-css-dev": "sass data-grid.scss dist/data-grid.css --embed-sources",
-    "watch-css": "npm run compile-css-dev -- --watch --poll",
-    "prefix-css-min": "postcss dist/data-grid.min.css --replace --use autoprefixer",
-    "prefix-css-dev": "postcss dist/data-grid.css --replace --use autoprefixer --map",
-    "build-css-min": "npm run compile-css-min && npm run prefix-css-min",
-    "build-css-dev": "npm run compile-css-dev && npm run prefix-css-dev",
+    "build-css-min": "esbuild css/data-grid.css --bundle --minify --outfile=dist/data-grid.min.css",
+    "build-css-dev": "esbuild css/data-grid.css --bundle --sourcemap --outfile=dist/data-grid.css --banner:css=\"/*** Data Grid Web Component v2.0.13 * https://github.com/lekoala/data-grid ***/\"",
+    "watch-css": "esbuild css/data-grid.css --bundle --sourcemap --outfile=dist/data-grid.css --watch",
     "build-css": "npm run build-css-min && npm run build-css-dev",
     "build-all-locally": "npm run build && npm run build-css",
     "build-all": "npm run build-all-locally && git add -A && git commit -m \"build files\"",
     "bump": "npm run build-all && npm version patch",
     "update-deps": "npx npm-check-updates -u",
-    "jsdoc": "jsdoc -c jsdoc.conf.json -d ./jsdoc -r src/",
-    "jsdoc2md": "jsdoc2md -c jsdoc.conf.json src/data-grid.js",
     "local-server": "php -S localhost:8002 -t .",
-    "format-dry-run": "bunx biome format ./src",
-    "format": "bunx biome format --write ./src",
-    "lint-dry-run": "bunx biome lint ./src",
-    "lint": "bunx biome lint --write ./src"
+    "format-dry-run": "biome format ./src",
+    "format": "biome format --write ./src",
+    "lint-dry-run": "biome lint ./src",
+    "lint": "biome lint --write ./src"
   },
   "repository": {
     "type": "git",
@@ -47,20 +41,11 @@
     ]
   },
   "devDependencies": {
-    "@happy-dom/global-registrator": "^20.8.7",
-    "ava": "^6.2.0",
-    "esbuild": "*",
-    "jsdoc": "^4.0.4",
-    "jsdoc-plugin-intersection": "^1.0.4",
-    "jsdoc-to-markdown": "^9.1.1",
-    "jsdoc-tsimport-plugin": "^1.0.5"
+    "@biomejs/biome": "^2.5.8",
+    "@happy-dom/global-registrator": "^20.11.2",
+    "ava": "^6.4.1",
+    "esbuild": "^0.28.2"
   },
   "author": "LeKoala",
-  "license": "MIT",
-  "dependencies": {
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.3",
-    "postcss-cli": "^11.0.1",
-    "sass": "^1.86.3"
-  }
+  "license": "MIT"
 }

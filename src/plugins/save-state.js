@@ -39,16 +39,19 @@ class SaveState extends BasePlugin {
 
         const cachedState = this._getState();
         if (cachedState) {
-            const waitForColumns = async () => { // Use async/await to wait for columns to be available
+            const waitForColumns = async () => {
+                // Use async/await to wait for columns to be available
                 if (!grid.options.server) return;
-                let timeout = 500, // Timeout (in millisecond) to wait for columns to be set
-                    start = Date.now(), colAbsent;
-                while ((colAbsent = !grid.options.columns?.length) && Date.now() - start < timeout) {
-                    await new Promise(resolve => requestAnimationFrame(resolve));
+                const timeout = 500, // Timeout (in millisecond) to wait for columns to be set
+                    start = Date.now();
+                while (!grid.options.columns?.length && Date.now() - start < timeout) {
+                    await new Promise((resolve) => requestAnimationFrame(resolve));
                 }
+                const colAbsent = !grid.options.columns?.length;
                 colAbsent && this.log("Timeout waiting for columns.");
             };
-            const restoreState = async () => { // Ensures columns are loaded before state restoration
+            const restoreState = async () => {
+                // Ensures columns are loaded before state restoration
                 await waitForColumns();
 
                 this.log("hide columns");
@@ -95,8 +98,9 @@ class SaveState extends BasePlugin {
                         el.setAttribute("aria-sort", "none");
                     }
 
-                    grid.querySelector(`thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`)
-                        ?.setAttribute("aria-sort", saveState.cachedState.sortDir);
+                    grid.querySelector(
+                        `thead tr.dg-head-columns th[field='${saveState.cachedState.sort}']`,
+                    )?.setAttribute("aria-sort", saveState.cachedState.sortDir);
 
                     const filters = findAll(grid.filterRow, "[id^=dg-filter]");
                     saveState.log("filters", filters);

@@ -31,13 +31,13 @@ function sortByPriority(list) {
 /**
  * @type {ResizeObserverCallback}
  */
-//@ts-ignore
+//@ts-expect-error
 const callback = debounce((entries) => {
     for (const entry of entries) {
         /**
          * @type {import("../data-grid").default}
          */
-        // @ts-ignore
+        // @ts-expect-error
         const grid = entry.target;
         const table = grid.table;
         if (grid.plugins.ResponsiveGrid.observerBlocked) {
@@ -340,7 +340,7 @@ class ResponsiveGrid extends BasePlugin {
         /**
          * @type {HTMLTableRowElement}
          */
-        //@ts-ignore
+        //@ts-expect-error
         const td = ev.currentTarget;
         const tr = td.parentElement;
         const open = find(td, `.${RESPONSIVE_CLASS}-open`);
