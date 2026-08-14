@@ -43,7 +43,6 @@ class ContextMenu extends BasePlugin {
 
     oncontextmenu(e) {
         e.preventDefault();
-        const grid = this.grid;
         const target = getParentElement(e.target, "THEAD");
         const menu = this.menu;
         const rect = target.getBoundingClientRect();

@@ -406,6 +406,9 @@ function applyColumnDefinition(el, column) {
       addClass(el, "dg-responsive-hidden");
     }
   }
+  if (column.noSort && el.tagName === "TH") {
+    addClass(el, "dg-not-sortable");
+  }
 }
 var DataGrid = class _DataGrid extends base_element_default {
   _filterSelector = "[id^=dg-filter]";
@@ -1026,7 +1029,7 @@ var DataGrid = class _DataGrid extends base_element_default {
     for (const th of headers) {
       const fieldName = th.getAttribute("field");
       if (th.classList.contains("dg-not-sortable") || !this.fireEvents && fieldName === this.options.defaultSort) {
-        return;
+        continue;
       }
       if (this.options.sort && !this.getColProp(fieldName, "noSort")) {
         setAttribute(th, "aria-sort", "none");
@@ -1504,7 +1507,7 @@ var DataGrid = class _DataGrid extends base_element_default {
       th.setAttribute("role", "columnheader button");
       th.setAttribute("aria-colindex", `${colIdx}`);
       th.setAttribute("id", randstr("dg-col-"));
-      if (this.options.sort) {
+      if (this.options.sort && !column.noSort) {
         th.setAttribute("aria-sort", "none");
       }
       th.setAttribute("field", column.field);
@@ -1638,15 +1641,19 @@ var DataGrid = class _DataGrid extends base_element_default {
       this.options.filterKeypressDelay = 0;
     const filteredRows = findAll(tr, this._filterSelector);
     for (const el of filteredRows) {
-      const eventName = /select/i.test(el.tagName) ? "change" : "keyup";
+      const isSelect = /select/i.test(el.tagName);
+      const eventName = isSelect ? "change" : "keyup";
       const eventHandler = debounce((e) => {
         const key = e.keyCode || e.key;
         const isKeyPressFilter = !this.options.filterOnEnter && !this._excludedKeys.some((k) => k === key);
-        if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change") {
+        if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change" || e.type === "paste") {
           this.filterData.call(this);
         }
       }, this.options.filterKeypressDelay);
       el.addEventListener(eventName, eventHandler);
+      if (!isSelect) {
+        el.addEventListener("paste", eventHandler);
+      }
     }
   }
   createFilterElement(column, relatedTh) {
@@ -2014,7 +2021,6 @@ var ContextMenu = class extends base_plugin_default {
   }
   oncontextmenu(e) {
     e.preventDefault();
-    const grid = this.grid;
     const target = getParentElement(e.target, "THEAD");
     const menu = this.menu;
     const rect = target.getBoundingClientRect();
