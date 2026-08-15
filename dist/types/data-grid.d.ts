@@ -303,6 +303,10 @@ export type Options = {
      */
     rowKey?: string | Function | undefined;
     /**
+     * Field name or (row, index) => string resolving the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
+     */
+    rowLabel?: string | Function | null | undefined;
+    /**
      * Bulk actions applied to the current selection (BulkActions module)
      */
     bulkActions?: BulkAction[] | undefined;
@@ -359,6 +363,10 @@ export type Options = {
      */
     noData: string | null;
     /**
+     * A table caption, providing the accessible name of the table (falls back to aria-labelledby, then aria-label)
+     */
+    caption: string | null;
+    /**
      * Initial runtime query state
      */
     initialQuery?: import("./data-source.js").QueryState | null | undefined;
@@ -384,8 +392,10 @@ export type Labels = {
     of: string;
     items: string;
     selected: string;
+    selectAll: string;
     resizeColumn: string;
     noData: string;
+    loading: string;
     areYouSure: string;
     networkError: string;
 };
@@ -737,6 +747,16 @@ export class DataGrid extends BaseElement {
      */
     resolveRowKey(row: Record<string, any>, index?: number): string;
     /**
+     * Human-readable label of a row, used for accessible control names.
+     * Resolved from `options.rowLabel` (field or function), falling back to
+     * the row key, then the row index.
+     * @public
+     * @param {Record<string, any>} row
+     * @param {Number} [index]
+     * @returns {String}
+     */
+    public getRowLabel(row: Record<string, any>, index?: number): string;
+    /**
      * Whether a row is part of the current selection.
      * @public
      * @param {Record<string, any>} row
@@ -833,6 +853,11 @@ export class DataGrid extends BaseElement {
      */
     filterData(): Promise<void>;
     renderTable(): void;
+    /**
+     * Give the table an accessible name: a real <caption> when options.caption
+     * is set, otherwise propagate the host aria-labelledby / aria-label.
+     */
+    updateTableLabel(): void;
     /**
      * Create table header
      * - One row for the column headers

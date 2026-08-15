@@ -7,14 +7,14 @@ decoupled: register them once, the core instantiates one per grid.
 
 Any object exposing one of these methods is a plugin (duck typing):
 
-| Hook                 | Called when                                   |
-|----------------------|-----------------------------------------------|
-| `connected()`        | the grid connects (`_connected`)              |
-| `disconnected()`     | the grid disconnects                          |
-| `extendColumns(columns)` | before a render, to inject/configure columns  |
-| `beforeRender()`     | before a render cycle                         |
-| `afterRender(context)`  | after a render (`"table"` or `"body"`)       |
-| `responsiveChanged(enabled)` | the `responsive` option changes         |
+| Hook                         | Called when                                  |
+|------------------------------|----------------------------------------------|
+| `connected()`                | the grid connects (`_connected`)             |
+| `disconnected()`             | the grid disconnects                         |
+| `extendColumns(columns)`     | before a render, to inject/configure columns |
+| `beforeRender()`             | before a render cycle                        |
+| `afterRender(context)`       | after a render (`"table"` or `"body"`)       |
+| `responsiveChanged(enabled)` | the `responsive` option changes              |
 
 ```js
 import { DataGrid } from "data-grid-component";
@@ -54,25 +54,25 @@ extendColumns(columns) {
 ```
 
 The core creates the `<th>`/`<td>` and their structural attributes
-(`data-column-id`, `aria-colindex`); renderers only fill them.
+(`data-column-id`, `scope`); renderers only fill them.
 
 ## Built-in plugins
 
-| Plugin             | Option                 | What it does                              |
-|--------------------|------------------------|-------------------------------------------|
-| `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column      |
-| `BulkActions`      | `bulkActions`          | bulk action bar for the selection         |
-| `RowActions`       | `actions`              | row actions column                        |
-| `ResponsiveGrid`   | `responsive`           | hide/show columns on small screens        |
-| `ColumnResizer`    | `resizable`            | drag-to-resize column handlers            |
-| `DraggableHeaders` | `reorder`              | drag-and-drop column reordering           |
-| `ContextMenu`      | `menu`                 | right-click menu to toggle columns        |
-| `EditableColumn`   | `editable` columns     | inline editing (see `docs/editing.md`)    |
-| `FixedHeight`      | `autoheight`           | fills the table height on the last page   |
-| `AutosizeColumn`   | `autosize`             | computes column widths from the data      |
-| `SpinnerSupport`   | `spinnerClass`         | shows a spinner while loading             |
-| `SaveState`        | `saveState`            | persists query + column state             |
-| `TouchSupport`     | -                      | swipe to change page                      |
+| Plugin             | Option                        | What it does                            |
+|--------------------|-------------------------------|-----------------------------------------|
+| `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column         |
+| `BulkActions`      | `bulkActions`                 | bulk action bar for the selection       |
+| `RowActions`       | `actions`                     | row actions column                      |
+| `ResponsiveGrid`   | `responsive`                  | hide/show columns on small screens      |
+| `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers          |
+| `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering         |
+| `ContextMenu`      | `menu`                        | right-click menu to toggle columns      |
+| `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)  |
+| `FixedHeight`      | `autoheight`                  | fills the table height on the last page |
+| `AutosizeColumn`   | `autosize`                    | computes column widths from the data    |
+| `SpinnerSupport`   | `spinnerClass`                | shows a spinner while loading           |
+| `SaveState`        | `saveState`                   | persists query + column state           |
+| `TouchSupport`     | -                             | swipe to change page                    |
 
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.

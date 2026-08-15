@@ -53,6 +53,7 @@ class EditableColumn extends BasePlugin {
         input.spellcheck = false;
         input.classList.add("dg-editable");
         input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
+        input.setAttribute("aria-label", column.title ?? field);
         input.value = item[field];
         input.dataset.field = field;
 

@@ -114,6 +114,7 @@ class RowActions extends BasePlugin {
             if (content === null || content === undefined) {
                 if (action.html) {
                     el.innerHTML = action.html;
+                    el.setAttribute("aria-label", action.label ?? action.name);
                 } else {
                     el.textContent = action.label ?? action.title ?? action.name;
                 }

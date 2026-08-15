@@ -141,6 +141,7 @@ import {
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} singleSelect Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
  * @property {String | Function} [rowKey] The field name or a function resolving a stable row key (defaults to "id")
+ * @property {String | Function | null} [rowLabel] Field name or (row, index) => string resolving the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
  * @property {BulkAction[]} [bulkActions] Bulk actions applied to the current selection (BulkActions module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
@@ -155,6 +156,7 @@ import {
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
+ * @property {?String} caption A table caption, providing the accessible name of the table (falls back to aria-labelledby, then aria-label)
  * @property {?QueryState} [initialQuery] Initial runtime query state
  * @property {?PageResult} [initialResult] Initial result to display without loading the data source
  * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
@@ -172,8 +174,10 @@ import {
  * @property {String} of
  * @property {String} items
  * @property {String} selected
+ * @property {String} selectAll
  * @property {String} resizeColumn
  * @property {String} noData
+ * @property {String} loading
  * @property {String} areYouSure
  * @property {String} networkError
  */
@@ -197,8 +201,10 @@ let labels = {
     of: "of",
     items: "items",
     selected: "selected",
+    selectAll: "Select all rows",
     resizeColumn: "Resize column",
     noData: "No data",
+    loading: "Loading…",
     areYouSure: "Are you sure?",
     networkError: "Network response error",
 };
@@ -548,6 +554,7 @@ class DataGrid extends BaseElement {
         </tr>
     </tfoot>
 </table>
+<div class="dg-status" role="status" aria-atomic="true"></div>
 <ul class="dg-menu" hidden></ul>
 `;
     }
@@ -588,6 +595,17 @@ class DataGrid extends BaseElement {
     #setNoData(tbody) {
         if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
             tbody.setAttribute("data-empty-message", this.noData);
+        }
+    }
+
+    /**
+     * Update the persistent status live region.
+     * @param {String} text
+     */
+    #updateStatus(text) {
+        const status = this.querySelector(".dg-status");
+        if (status) {
+            status.textContent = text;
         }
     }
 
@@ -637,6 +655,7 @@ class DataGrid extends BaseElement {
             selectVisibleOnly: true,
             singleSelect: false,
             rowKey: "id",
+            rowLabel: null,
             bulkActions: [],
             resizable: false,
             autosize: true,
@@ -651,6 +670,7 @@ class DataGrid extends BaseElement {
             saveState: false,
             errorMessage: "",
             noData: "",
+            caption: "",
             initialQuery: null,
             initialResult: null,
             dataSource: null,
@@ -927,6 +947,7 @@ class DataGrid extends BaseElement {
         this.error = null;
         setAttribute(this, "data-loading", "");
         removeAttribute(this, "data-error");
+        this.#updateStatus(labels.loading);
 
         try {
             let result;
@@ -942,16 +963,18 @@ class DataGrid extends BaseElement {
             }
             if (requestId !== this._requestSeq) return;
             this.applyResult(result);
+            this.#updateStatus(this.rows.length ? `${this.total} ${labels.items}` : this.noData);
         } catch (err) {
             if (requestId !== this._requestSeq) return;
             const e = /** @type {any} */ (err);
             if (e?.name === "AbortError" || controller.signal.aborted) return;
+            const message =
+                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError;
             this.error = e;
             setAttribute(this, "data-error", "");
-            this.tbody?.setAttribute(
-                "data-empty-message",
-                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
-            );
+            this.tbody?.setAttribute("data-empty-message", message);
+            this.#updateStatus(message);
+            this.renderBody();
             dispatch(this, "loadError", e);
         } finally {
             if (requestId === this._requestSeq) {
@@ -1241,6 +1264,29 @@ class DataGrid extends BaseElement {
             key = row[rowKey];
         }
         return key === undefined || key === null ? String(index) : String(key);
+    }
+
+    /**
+     * Human-readable label of a row, used for accessible control names.
+     * Resolved from `options.rowLabel` (field or function), falling back to
+     * the row key, then the row index.
+     * @public
+     * @param {Record<string, any>} row
+     * @param {Number} [index]
+     * @returns {String}
+     */
+    getRowLabel(row, index = 0) {
+        const resolver = this.options.rowLabel;
+        if (typeof resolver === "function") {
+            return String(resolver(row, index));
+        }
+        if (typeof resolver === "string" && resolver) {
+            const v = row?.[resolver];
+            if (v !== undefined && v !== null && v !== "") {
+                return String(v);
+            }
+        }
+        return this.resolveRowKey(row, index);
     }
 
     /**
@@ -1613,9 +1659,46 @@ class DataGrid extends BaseElement {
         this._columns = this.buildColumns();
         this.runPlugins("beforeRender");
         this._renderContext = "table";
+        this.updateTableLabel();
         this.renderHeader();
         this.renderFooter();
         this.runPlugins("afterRender", this._renderContext);
+    }
+
+    /**
+     * Give the table an accessible name: a real <caption> when options.caption
+     * is set, otherwise propagate the host aria-labelledby / aria-label.
+     */
+    updateTableLabel() {
+        const table = this.table;
+        if (!table) {
+            return;
+        }
+        const caption = this.options.caption;
+        let cap = table.querySelector("caption");
+        if (caption) {
+            if (!cap) {
+                cap = ce("caption");
+                table.insertBefore(cap, table.firstChild);
+            }
+            cap.textContent = caption;
+            table.removeAttribute("aria-labelledby");
+            table.removeAttribute("aria-label");
+        } else {
+            cap?.remove();
+            const labelledby = this.getAttribute("aria-labelledby");
+            const ariaLabel = this.getAttribute("aria-label");
+            if (labelledby) {
+                table.setAttribute("aria-labelledby", labelledby);
+                table.removeAttribute("aria-label");
+            } else if (ariaLabel) {
+                table.setAttribute("aria-label", ariaLabel);
+                table.removeAttribute("aria-labelledby");
+            } else {
+                table.removeAttribute("aria-labelledby");
+                table.removeAttribute("aria-label");
+            }
+        }
     }
 
     /**
@@ -1962,6 +2045,8 @@ class DataGrid extends BaseElement {
         this._renderContext = "body";
 
         const tbody = ce("tbody");
+        const prev = this.tbody;
+        const message = prev?.getAttribute("data-empty-message") ?? "";
 
         let i = 0;
         for (const item of this.rows) {
@@ -2022,10 +2107,29 @@ class DataGrid extends BaseElement {
             i++;
         }
 
+        // Real rows for the empty/error states: no CSS-generated content.
+        const colspan = Math.max(1, this.columnsLength(true));
+        if (this.hasDataError) {
+            const tr = ce("tr");
+            tr.classList.add("dg-error-row");
+            const td = ce("td");
+            td.colSpan = colspan;
+            td.textContent = message || labels.networkError;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        } else if (this.rows.length === 0) {
+            const tr = ce("tr");
+            tr.classList.add("dg-empty-row");
+            const td = ce("td");
+            td.colSpan = colspan;
+            td.textContent = this.noData;
+            tr.appendChild(td);
+            tbody.appendChild(tr);
+        }
+
         // Keep data empty message
-        const prev = this.tbody;
         if (prev) {
-            tbody.setAttribute("data-empty-message", prev.getAttribute("data-empty-message") ?? "");
+            tbody.setAttribute("data-empty-message", message);
             this.table?.replaceChild(tbody, prev);
         }
 
@@ -2033,7 +2137,7 @@ class DataGrid extends BaseElement {
 
         this.runPlugins("afterRender", this._renderContext);
 
-        if (this.rows.length) {
+        if (this.hasDataError || this.rows.length) {
             removeAttribute(this, "data-empty");
         } else {
             setAttribute(this, "data-empty", "");

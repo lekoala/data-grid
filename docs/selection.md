@@ -21,6 +21,23 @@ pages only needs the keys of the rows you want to exclude.
 Row keys come from the `rowKey` option (`"id"` by default), either a field name
 or a function `(row) => key`.
 
+## Accessible names
+
+Every row control (checkbox or radio) is labelled `Select <row label>`, and the
+header control is labelled with the `selectAll` label. The row label comes from
+the `rowLabel` option, a field name or a function `(row, index) => string`,
+falling back to the row key, then the row index:
+
+```js
+const grid = new DataGrid({
+    selectable: true,
+    rowLabel: "name", // -> "Select Alice Smith"
+    // rowLabel: (row) => `${row.first} ${row.last}`,
+});
+```
+
+`getRowLabel(row, index)` exposes the resolver publicly.
+
 ## API
 
 ```js

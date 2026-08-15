@@ -526,8 +526,10 @@ var labels = {
   of: "of",
   items: "items",
   selected: "selected",
+  selectAll: "Select all rows",
   resizeColumn: "Resize column",
   noData: "No data",
+  loading: "Loading…",
   areYouSure: "Are you sure?",
   networkError: "Network response error"
 };
@@ -729,6 +731,7 @@ class DataGrid extends base_element_default {
         </tr>
     </tfoot>
 </table>
+<div class="dg-status" role="status" aria-atomic="true"></div>
 <ul class="dg-menu" hidden></ul>
 `;
   }
@@ -747,6 +750,12 @@ class DataGrid extends base_element_default {
   #setNoData(tbody) {
     if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
       tbody.setAttribute("data-empty-message", this.noData);
+    }
+  }
+  #updateStatus(text) {
+    const status = this.querySelector(".dg-status");
+    if (status) {
+      status.textContent = text;
     }
   }
   get defaultColumn() {
@@ -788,6 +797,7 @@ class DataGrid extends base_element_default {
       selectVisibleOnly: true,
       singleSelect: false,
       rowKey: "id",
+      rowLabel: null,
       bulkActions: [],
       resizable: false,
       autosize: true,
@@ -802,6 +812,7 @@ class DataGrid extends base_element_default {
       saveState: false,
       errorMessage: "",
       noData: "",
+      caption: "",
       initialQuery: null,
       initialResult: null,
       dataSource: null
@@ -972,6 +983,7 @@ class DataGrid extends base_element_default {
     this.error = null;
     setAttribute(this, "data-loading", "");
     removeAttribute(this, "data-error");
+    this.#updateStatus(labels.loading);
     try {
       let result;
       if (this._initialResult) {
@@ -987,15 +999,19 @@ class DataGrid extends base_element_default {
       if (requestId !== this._requestSeq)
         return;
       this.applyResult(result);
+      this.#updateStatus(this.rows.length ? `${this.total} ${labels.items}` : this.noData);
     } catch (err) {
       if (requestId !== this._requestSeq)
         return;
       const e = err;
       if (e?.name === "AbortError" || controller.signal.aborted)
         return;
+      const message = this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError;
       this.error = e;
       setAttribute(this, "data-error", "");
-      this.tbody?.setAttribute("data-empty-message", this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError);
+      this.tbody?.setAttribute("data-empty-message", message);
+      this.#updateStatus(message);
+      this.renderBody();
       dispatch(this, "loadError", e);
     } finally {
       if (requestId === this._requestSeq) {
@@ -1192,6 +1208,19 @@ class DataGrid extends base_element_default {
       key = row[rowKey];
     }
     return key === undefined || key === null ? String(index) : String(key);
+  }
+  getRowLabel(row, index = 0) {
+    const resolver = this.options.rowLabel;
+    if (typeof resolver === "function") {
+      return String(resolver(row, index));
+    }
+    if (typeof resolver === "string" && resolver) {
+      const v = row?.[resolver];
+      if (v !== undefined && v !== null && v !== "") {
+        return String(v);
+      }
+    }
+    return this.resolveRowKey(row, index);
   }
   isRowSelected(row, index = 0) {
     const key = this.resolveRowKey(row, index);
@@ -1422,9 +1451,41 @@ class DataGrid extends base_element_default {
     this._columns = this.buildColumns();
     this.runPlugins("beforeRender");
     this._renderContext = "table";
+    this.updateTableLabel();
     this.renderHeader();
     this.renderFooter();
     this.runPlugins("afterRender", this._renderContext);
+  }
+  updateTableLabel() {
+    const table = this.table;
+    if (!table) {
+      return;
+    }
+    const caption = this.options.caption;
+    let cap = table.querySelector("caption");
+    if (caption) {
+      if (!cap) {
+        cap = ce("caption");
+        table.insertBefore(cap, table.firstChild);
+      }
+      cap.textContent = caption;
+      table.removeAttribute("aria-labelledby");
+      table.removeAttribute("aria-label");
+    } else {
+      cap?.remove();
+      const labelledby = this.getAttribute("aria-labelledby");
+      const ariaLabel = this.getAttribute("aria-label");
+      if (labelledby) {
+        table.setAttribute("aria-labelledby", labelledby);
+        table.removeAttribute("aria-label");
+      } else if (ariaLabel) {
+        table.setAttribute("aria-label", ariaLabel);
+        table.removeAttribute("aria-labelledby");
+      } else {
+        table.removeAttribute("aria-labelledby");
+        table.removeAttribute("aria-label");
+      }
+    }
   }
   renderHeader() {
     this.log("render header");
@@ -1670,6 +1731,8 @@ class DataGrid extends base_element_default {
     this.runPlugins("beforeRender");
     this._renderContext = "body";
     const tbody = ce("tbody");
+    const prev = this.tbody;
+    const message = prev?.getAttribute("data-empty-message") ?? "";
     let i = 0;
     for (const item of this.rows) {
       const tr = ce("tr");
@@ -1717,14 +1780,31 @@ class DataGrid extends base_element_default {
       dispatch(this, "rowRendered", { rowData: item, tr });
       i++;
     }
-    const prev = this.tbody;
+    const colspan = Math.max(1, this.columnsLength(true));
+    if (this.hasDataError) {
+      const tr = ce("tr");
+      tr.classList.add("dg-error-row");
+      const td = ce("td");
+      td.colSpan = colspan;
+      td.textContent = message || labels.networkError;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    } else if (this.rows.length === 0) {
+      const tr = ce("tr");
+      tr.classList.add("dg-empty-row");
+      const td = ce("td");
+      td.colSpan = colspan;
+      td.textContent = this.noData;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
     if (prev) {
-      tbody.setAttribute("data-empty-message", prev.getAttribute("data-empty-message") ?? "");
+      tbody.setAttribute("data-empty-message", message);
       this.table?.replaceChild(tbody, prev);
     }
     this.paginate();
     this.runPlugins("afterRender", this._renderContext);
-    if (this.rows.length) {
+    if (this.hasDataError || this.rows.length) {
       removeAttribute(this, "data-empty");
     } else {
       setAttribute(this, "data-empty", "");
@@ -2270,6 +2350,7 @@ class SelectableRows extends base_plugin_default {
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
     this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
+    this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
     this.selectAll.addEventListener("change", () => {
       if (this.selectAll?.checked) {
         this.grid.selectAll();
@@ -2290,6 +2371,7 @@ class SelectableRows extends base_plugin_default {
     input.type = this.isSingleSelect ? "radio" : "checkbox";
     input.classList.add(CHECKBOX_CLASS);
     input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
+    input.setAttribute("aria-label", `Select ${grid.getRowLabel(row ?? {}, rowIndex ?? 0)}`);
     if (this.isSingleSelect) {
       input.name = "dg-row-select";
     }
@@ -2869,6 +2951,7 @@ class RowActions extends base_plugin_default {
       if (content === null || content === undefined) {
         if (action.html) {
           el.innerHTML = action.html;
+          el.setAttribute("aria-label", action.label ?? action.name);
         } else {
           el.textContent = action.label ?? action.title ?? action.name;
         }
@@ -2966,6 +3049,7 @@ class EditableColumn extends base_plugin_default {
     input.spellcheck = false;
     input.classList.add("dg-editable");
     input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
+    input.setAttribute("aria-label", column.title ?? field);
     input.value = item[field];
     input.dataset.field = field;
     const previous = () => item[field];
@@ -3164,4 +3248,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=B68F444324EE406964756E2164756E21
+//# debugId=A9AA9EEFC7D40DE364756E2164756E21

@@ -140,6 +140,11 @@
             },
             {
               "kind": "method",
+              "name": "getRowLabel",
+              "description": "Human-readable label of a row, used for accessible control names. Resolved from `options.rowLabel` (field or function), falling back to the row key, then the row index."
+            },
+            {
+              "kind": "method",
               "name": "isRowSelected",
               "description": "Whether a row is part of the current selection."
             },

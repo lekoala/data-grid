@@ -134,6 +134,7 @@ class SelectableRows extends BasePlugin {
         this.selectAll = document.createElement("input");
         this.selectAll.type = "checkbox";
         this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
+        this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
         this.selectAll.addEventListener("change", () => {
             if (this.selectAll?.checked) {
                 this.grid.selectAll();
@@ -163,6 +164,7 @@ class SelectableRows extends BasePlugin {
         input.type = this.isSingleSelect ? "radio" : "checkbox";
         input.classList.add(CHECKBOX_CLASS);
         input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
+        input.setAttribute("aria-label", `Select ${grid.getRowLabel(row ?? {}, rowIndex ?? 0)}`);
         if (this.isSingleSelect) {
             input.name = "dg-row-select";
         }
