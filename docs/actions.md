@@ -35,20 +35,21 @@ grid.addEventListener("action", (ev) => {
 
 ## Action properties
 
-| Property   | Type                                 | Description                                                                      |
-|------------|--------------------------------------|----------------------------------------------------------------------------------|
-| `name`     | `String`                             | the action name (set as `button[data-action]`)                                   |
-| `label`    | `String`                             | the button label; also the accessible name when the button is icon-only (`html`) |
-| `intent`   | `"default"\|"primary"\|"danger"`     | sets `data-intent` (styled via `dg-intent-*`)                                    |
-| `href`     | `String \| Function`                 | renders an `<a>`; interpolate `{field}` or return a url                          |
-| `visible`  | `(row) => Boolean`                   | hide the action for a given row                                                  |
-| `disabled` | `(row) => Boolean`                   | disable the action for a given row                                               |
-| `render`   | `({ action, row, grid }) => content` | replace the button content (Node, string or `{ html }`)                          |
-| `confirm`  | `Boolean`                            | ask for confirmation before dispatching                                          |
-| `default`  | `Boolean`                            | clicking anywhere on the row triggers the action                                 |
+| Property   | Type                                 | Description                                      |
+|------------|--------------------------------------|--------------------------------------------------|
+| `name`     | `String`                             | the action name (`button[data-action]`)          |
+| `label`    | `String`                             | the button label; accessible name when icon-only |
+| `intent`   | `"default"\|"primary"\|"danger"`     | sets `data-intent` (styled via `dg-intent-*`)    |
+| `href`     | `String \| Function`                 | renders an `<a>` link                            |
+| `visible`  | `(row) => Boolean`                   | hide the action for a given row                  |
+| `disabled` | `(row) => Boolean`                   | disable the action for a given row               |
+| `render`   | `({ action, row, grid }) => content` | replace the button content                       |
+| `confirm`  | `Boolean`                            | ask for confirmation before dispatching          |
+| `default`  | `Boolean`                            | clicking anywhere on the row triggers the action |
 
 `grid.actionRenderer` applies a global renderer to every action that has no
-`render`.
+`render`. Renderer content may be a `Node`, a string, or `{ html }`. An `href`
+supports `{field}` interpolation or a `(row) => url` function.
 
 ## Styling
 
