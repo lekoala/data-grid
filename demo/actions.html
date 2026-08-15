@@ -8,20 +8,10 @@
   <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
   <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
 
-  <script type="module" src="../dist/data-grid.js"></script>
-
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
-  <!-- include bootstrap just to make sure it doesn't conflict with our styles -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
   <link rel="stylesheet" href="../dist/data-grid.css" />
-  <link rel="stylesheet" href="../themes/bootstrap.css" />
   <link rel="stylesheet" href="demo.css" />
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/js/bootstrap.min.js"></script>
-  <link href="https://cdn.jsdelivr.net/gh/lekoala/bs-companion/bs-companion.min.css" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/gh/lekoala/bs-companion/bs-companion.min.js" type="module"></script>
 
   <script type="module">
     import { createStaticGrid } from "./demo.js";
@@ -94,8 +84,6 @@
     actionDemo.addEventListener("edit", (ev) => {
       let z = document.getElementById("debug-zone");
       z.innerText = JSON.stringify(ev.detail);
-
-      Toasts.success("element edited")
     });
 
     const action3Demo = await createStaticGrid(
@@ -142,25 +130,13 @@
     <p><em>Standalone data grid web component</em></p>
   </header>
   <main>
-    <ul class="nav nav-pills">
-      <li class="nav-item">
-        <a class="nav-link" href="index.html">Default</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="responsive.html">Responsive</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="server.html">Server</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link active" aria-current="page" href="#">Actions</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="api.html">API</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="i18n.html">i18n</a>
-      </li>
+    <ul class="demo-nav">
+      <li><a class="demo-nav-link" href="index.html">Default</a></li>
+      <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+      <li><a class="demo-nav-link" href="server.html">Server</a></li>
+      <li><a class="demo-nav-link active" aria-current="page" href="#">Actions</a></li>
+      <li><a class="demo-nav-link" href="api.html">API</a></li>
+      <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
     </ul>
     <h2>Actions</h2>
     <p>
@@ -169,7 +145,7 @@
     <ul>
       <li>Note the <code>dg-wrap</code> class being assigned on firstname column</li>
     </ul>
-    <div class="container g-0 mb-4 mw-100">
+    <div class="demo-grid">
       <div class="resize-me">
         <div id="action-demo"></div>
       </div>
@@ -178,18 +154,17 @@
     <textarea name="" id="debug-zone" cols="30" rows="10" style="width: 100%"></textarea>
 
     <p>Multiple actions (> 2) will collapse. This can be forced with <code>collapseActions=true</code></p>
-    <div class="container g-0 mb-4 mw-100">
+    <div class="demo-grid">
       <div id="action2-demo"></div>
     </div>
 
-    <h3>Modern contract</h3>
+    <h3>Action contract</h3>
     <p>
-      Actions now use <code>label</code>, <code>intent</code>, <code>href</code>,
+      Actions use <code>label</code>, <code>intent</code>, <code>href</code>,
       <code>visible</code>, <code>disabled</code> and an optional <code>render</code>
-      function - no more <code>class</code>/<code>html</code> design-system coupling.
-      The legacy syntax (see grids above) is still supported.
+      function, plus <code>class</code> for styling hooks.
     </p>
-    <div class="container g-0 mb-4 mw-100">
+    <div class="demo-grid">
       <div id="action3-demo"></div>
     </div>
   </main>

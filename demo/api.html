@@ -7,19 +7,13 @@
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
     <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
 
-    <script type="module" src="../dist/data-grid.min.js"></script>
-
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
-    <!-- include bootstrap just to make sure it doesn't conflict with our styles -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
-    <link rel="stylesheet" href="../dist/data-grid.min.css" />
-    <link rel="stylesheet" href="../themes/bootstrap.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
     <link rel="stylesheet" href="demo.css" />
 
     <script type="module">
-      import { ArrayDataSource, DataGrid } from "../dist/data-grid.min.js";
+      import { ArrayDataSource, DataGrid } from "../data-grid.js";
       import { createStaticGrid } from "./demo.js";
 
       const toggleAttr = (grid, name) => {
@@ -144,25 +138,13 @@
       <p><em>Standalone data grid web component</em></p>
     </header>
     <main>
-      <ul class="nav nav-pills mb-2">
-        <li class="nav-item">
-          <a class="nav-link" href="index.html">Default</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="responsive.html">Responsive</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="server.html">Server</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="actions.html">Actions</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="#">API</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="i18n.html">i18n</a>
-        </li>
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Default</a></li>
+        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="#">API</a></li>
+        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
       </ul>
 
       <h2>API</h2>
@@ -170,38 +152,39 @@
       <p>Configuration lives in <code>options</code> (or attributes), runtime state in <code>query</code>, and result in <code>rows</code>/<code>total</code>/<code>meta</code>.</p>
       <p>Toggle boolean attributes (<code>sortable</code>, <code>filterable</code>, <code>selectable</code>) at runtime to reflect them.</p>
 
-      <div class="container g-0 mb-4 mw-100">
-        <button id="toggle">Toggle filter on/off</button>
-        <button id="clear-filter">Clear filter</button>
-        <button id="more-toggle-selectable">Toggle selectable</button>
-        <button id="more-toggle-sort">Toggle sort</button>
+      <div class="demo-grid">
+        <button id="toggle" class="demo-button">Toggle filter on/off</button>
+        <button id="clear-filter" class="demo-button">Clear filter</button>
+        <button id="more-toggle-selectable" class="demo-button">Toggle selectable</button>
+        <button id="more-toggle-sort" class="demo-button">Toggle sort</button>
 
         <div id="demo2-grid"></div>
       </div>
 
       <h2>Empty grid</h2>
 
-      <div class="container g-0 mb-4 mw-100">
-        <button id="load">Load grid data</button> <button id="reload">Reload data</button> <button id="clear">Clear data</button>
+      <div class="demo-grid">
+        <button id="load" class="demo-button">Load grid data</button> <button id="reload" class="demo-button">Reload data</button>
+        <button id="clear" class="demo-button">Clear data</button>
         <div id="demo3-grid"></div>
       </div>
 
       <h2>Grid manipulation</h2>
 
-      <div class="container g-0 mb-4 mw-100">
-        <button id="add-row">Add row</button>
-        <button id="remove-row">Remove row</button>
+      <div class="demo-grid">
+        <button id="add-row" class="demo-button">Add row</button>
+        <button id="remove-row" class="demo-button">Remove row</button>
 
         <div id="demo4-grid"></div>
       </div>
 
       <h2>Dom api</h2>
 
-      <div class="container g-0 mw-100">
-        <button id="invalid-create-grid">Invalid Create grid</button>
-        <button id="create-grid">Create grid</button>
-        <button id="destroy-grid" disabled>Destroy grid</button>
-        <button id="dom-toggle-selectable">Toggle selectable</button>
+      <div class="demo-grid">
+        <button id="invalid-create-grid" class="demo-button">Invalid Create grid</button>
+        <button id="create-grid" class="demo-button">Create grid</button>
+        <button id="destroy-grid" class="demo-button" disabled>Destroy grid</button>
+        <button id="dom-toggle-selectable" class="demo-button">Toggle selectable</button>
       </div>
     </main>
     <footer>

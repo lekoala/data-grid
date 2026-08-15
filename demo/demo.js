@@ -1,4 +1,4 @@
-import { ArrayDataSource, DataGrid } from "../dist/data-grid.js";
+import { ArrayDataSource, DataGrid } from "../data-grid.js";
 
 /**
  * Build a client-side grid from a static JSON file.

@@ -7,15 +7,9 @@
     <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
     <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
 
-    <script type="module" src="../dist/data-grid.min.js"></script>
-
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
-    <!-- include bootstrap just to make sure it doesn't conflict with our styles -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
-    <link rel="stylesheet" href="../dist/data-grid.min.css" />
-    <link rel="stylesheet" href="../themes/bootstrap.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
     <link rel="stylesheet" href="demo.css" />
 
     <script type="module">
@@ -69,25 +63,13 @@
       <p><em>Standalone data grid web component</em></p>
     </header>
     <main>
-      <ul class="nav nav-pills mb-2">
-        <li class="nav-item">
-          <a class="nav-link" href="index.html">Default</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" aria-current="page" href="#">Responsive</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="server.html">Server</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="actions.html">Actions</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="api.html">API</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="i18n.html">i18n</a>
-        </li>
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Default</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="#">Responsive</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+        <li><a class="demo-nav-link" href="api.html">API</a></li>
+        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
       </ul>
 
       <h2>Responsive</h2>
@@ -102,7 +84,7 @@
       </p>
       <p>On small size, a compact footer is used.</p>
 
-      <div class="container g-0 mb-4 mw-100">
+      <div class="demo-grid">
         <div class="resize-me">
           <div id="responsive-demo"></div>
         </div>

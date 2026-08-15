@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid — bundle smoke</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.min.css" />
+    <link rel="stylesheet" href="demo.css" />
+
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+    <script type="module" src="../dist/data-grid.min.js"></script>
+    <script type="module">
+      import { ArrayDataSource, DataGrid } from "../dist/data-grid.min.js";
+
+      const data = await (await fetch("demo-simple.json")).json();
+      const grid = new DataGrid({
+        columns: data.options.columns,
+        dataSource: new ArrayDataSource(data.data),
+        selectable: true,
+        filterable: true,
+        sortable: true,
+        initialQuery: { pageSize: 10 },
+      });
+      document.getElementById("bundle-demo").replaceChildren(grid);
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Bundle smoke — dist/data-grid.min.js</em></p>
+    </header>
+    <main>
+      <p>
+        This page loads the minified bundle directly and never imports
+        <code>demo.js</code>, so the grid and the registered custom element share
+        the same class.
+      </p>
+
+      <div class="demo-grid">
+        <div id="bundle-demo"></div>
+      </div>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>
