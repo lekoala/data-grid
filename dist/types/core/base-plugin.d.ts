@@ -1,34 +1,20 @@
-export default BasePlugin;
+/** @typedef {import("../data-grid.js").default} DataGrid */
+/** @typedef {import("../data-grid.js").Column} Column */
 export type DataGrid = import("../data-grid.js").default;
 export type Column = import("../data-grid.js").Column;
 export type RenderContext = "table" | "body";
-/**
- * A plugin hooks into the grid lifecycle. Duck typed: any object exposing one
- * of these methods can be used as a plugin.
- */
 export type Plugin = {
-    connected?: (() => void) | undefined;
-    disconnected?: (() => void) | undefined;
-    extendColumns?: ((columns: Column[]) => void) | undefined;
-    beforeRender?: (() => void) | undefined;
-    afterRender?: ((context: RenderContext) => void) | undefined;
-    updateLabels?: (() => void) | undefined;
-    responsiveChanged?: ((enabled: boolean) => void) | undefined;
+    connected?: () => void;
+    disconnected?: () => void;
+    extendColumns?: (columns: Column[]) => void;
+    beforeRender?: () => void;
+    afterRender?: (context: RenderContext) => void;
+    updateLabels?: () => void;
+    responsiveChanged?: (enabled: boolean) => void;
 };
-/**
- * A plugin constructor: a class (or duck-typed factory) taking the grid.
- */
 export type PluginConstructor = new (grid: DataGrid) => Plugin;
-/**
- * Registered plugins keyed by registration name. Values are constructors.
- */
 export type PluginRegistry = Record<string, PluginConstructor>;
-/**
- * Instantiated plugins keyed by registration name. Values are instances.
- */
 export type PluginInstances = Record<string, Plugin>;
-/** @typedef {import("../data-grid.js").default} DataGrid */
-/** @typedef {import("../data-grid.js").Column} Column */
 /**
  * @typedef {"table"|"body"} RenderContext
  */
@@ -57,11 +43,11 @@ export type PluginInstances = Record<string, Plugin>;
  * @typedef {Record<string, Plugin>} PluginInstances
  */
 declare class BasePlugin {
+    grid: import("../data-grid.js").DataGrid;
     /**
      * @param {DataGrid} grid
      */
     constructor(grid: DataGrid);
-    grid: import("../data-grid.js").DataGrid;
     connected(): void;
     disconnected(): void;
     /**
@@ -95,4 +81,5 @@ declare class BasePlugin {
      */
     handleEvent(event: Event): void;
 }
+export default BasePlugin;
 //# sourceMappingURL=base-plugin.d.ts.map

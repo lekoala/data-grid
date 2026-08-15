@@ -1,4 +1,4 @@
-export default FixedHeight;
+import BasePlugin from "../core/base-plugin.js";
 /**
  * Support for fixed table height
  *
@@ -6,6 +6,14 @@ export default FixedHeight;
  */
 declare class FixedHeight extends BasePlugin {
     hasFixedHeight: boolean;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid: import("../data-grid.js").default);
+    /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context: import("../core/base-plugin.js").RenderContext): void;
     /**
      */
     createFakeRow(): void;
@@ -15,5 +23,5 @@ declare class FixedHeight extends BasePlugin {
      */
     updateFakeRow(): void;
 }
-import BasePlugin from "../core/base-plugin.js";
+export default FixedHeight;
 //# sourceMappingURL=fixed-height.d.ts.map

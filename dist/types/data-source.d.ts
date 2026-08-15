@@ -6,6 +6,42 @@
  *
  *   dataSource.load(query, { signal }) -> Promise<PageResult>
  */
+export type SortState = {
+    field: string;
+    direction: "asc" | "desc";
+};
+export type FilterOperator = "eq" | "neq" | "contains" | "startsWith" | "endsWith" | * "lt" | "lte" | "gt" | "gte" | "between" | "in" | "empty" | "notEmpty";
+export type FilterState = {
+    operator: FilterOperator;
+    value?: any;
+};
+export type FilterInput = FilterState | String | Number | Boolean;
+export type QueryState = {
+    page: number;
+    pageSize: number;
+    sort: SortState[];
+    filters: Record<string, FilterInput>;
+};
+export type PageResult = {
+    rows: Array<Record<string, any>>;
+    /**
+     * Number of rows matching the current query (used for pagination)
+     */
+    total: number;
+    /**
+     * Additional information (ex: total unfiltered)
+     */
+    meta?: Record<string, any>;
+};
+export type FilterOption = {
+    value: string | number | boolean;
+    text: string;
+};
+export type DataSource = {
+    load: (query: QueryState, options: {
+        signal?: AbortSignal;
+    }) => Promise<PageResult>;
+};
 /**
  * Sort state
  * @typedef {Object} SortState
@@ -69,7 +105,7 @@
  * @param {URLSearchParams} out
  * @returns {URLSearchParams}
  */
-export function encodeSearchParams(value: any, prefix?: string, out?: URLSearchParams): URLSearchParams;
+export declare function encodeSearchParams(value: any, prefix?: string, out?: URLSearchParams): URLSearchParams;
 /**
  * Apply structured filters to an array.
  * Semantics:
@@ -84,14 +120,14 @@ export function encodeSearchParams(value: any, prefix?: string, out?: URLSearchP
  * @param {Record<string, FilterInput>} [filters]
  * @returns {Array<Record<string, any>>}
  */
-export function applyFilters(rows: Array<Record<string, any>>, filters?: Record<string, FilterInput>): Array<Record<string, any>>;
+export declare function applyFilters(rows: Array<Record<string, any>>, filters?: Record<string, FilterInput>): Array<Record<string, any>>;
 /**
  * Apply the first sort state to an array (single sort for now).
  * @param {Array<Record<string, any>>} rows
  * @param {SortState[]} [sort]
  * @returns {Array<Record<string, any>>}
  */
-export function applySort(rows: Array<Record<string, any>>, sort?: SortState[]): Array<Record<string, any>>;
+export declare function applySort(rows: Array<Record<string, any>>, sort?: SortState[]): Array<Record<string, any>>;
 /**
  * Slice a sorted/filtered array to the requested page.
  * @param {Array<Record<string, any>>} rows
@@ -99,18 +135,22 @@ export function applySort(rows: Array<Record<string, any>>, sort?: SortState[]):
  * @param {Number} pageSize
  * @returns {Array<Record<string, any>>}
  */
-export function paginate(rows: Array<Record<string, any>>, page: number, pageSize: number): Array<Record<string, any>>;
+export declare function paginate(rows: Array<Record<string, any>>, page: number, pageSize: number): Array<Record<string, any>>;
 /**
  * Parse a raw response into a PageResult.
  * @param {any} json
  * @returns {PageResult}
  */
-export function parseResult(json: any): PageResult;
+export declare function parseResult(json: any): PageResult;
 /**
  * Server-side data source (the assumed default path).
  * Each query is serialized and sent to the server.
  */
-export class FetchDataSource {
+export declare class FetchDataSource {
+    url: string;
+    params: Record<string, any>;
+    serializeQuery: ((query: QueryState) => any) | undefined;
+    parseResponse: ((response: any) => PageResult) | undefined;
     /**
      * @param {String} url
      * @param {Object} [options]
@@ -119,14 +159,10 @@ export class FetchDataSource {
      * @param {(response: any) => PageResult} [options.parseResponse] Defaults to parseResult
      */
     constructor(url: string, { params, serializeQuery, parseResponse }?: {
-        params?: Record<string, any> | undefined;
-        serializeQuery?: ((query: QueryState) => any) | undefined;
-        parseResponse?: ((response: any) => PageResult) | undefined;
+        params?: Record<string, any>;
+        serializeQuery?: (query: QueryState) => any;
+        parseResponse?: (response: any) => PageResult;
     });
-    url: string;
-    params: Record<string, any>;
-    serializeQuery: ((query: QueryState) => any) | undefined;
-    parseResponse: ((response: any) => PageResult) | undefined;
     /**
      * @param {QueryState} query
      * @returns {URL}
@@ -145,7 +181,12 @@ export class FetchDataSource {
  * Client-side data source. The whole collection is owned in the browser and
  * QueryStates are applied locally.
  */
-export class ArrayDataSource {
+export declare class ArrayDataSource {
+    rows: Record<string, any>[];
+    /**
+     * @param {Array<Record<string, any>>} [rows]
+     */
+    constructor(rows?: Array<Record<string, any>>);
     /**
      * Create a local data source by fetching a static file once.
      * @param {String} url
@@ -153,11 +194,6 @@ export class ArrayDataSource {
      * @returns {Promise<ArrayDataSource>}
      */
     static fromUrl(url: string, parseResponse?: (response: any) => PageResult): Promise<ArrayDataSource>;
-    /**
-     * @param {Array<Record<string, any>>} [rows]
-     */
-    constructor(rows?: Array<Record<string, any>>);
-    rows: Record<string, any>[];
     /**
      * @param {QueryState} query
      * @returns {Promise<PageResult>}
@@ -173,66 +209,4 @@ export class ArrayDataSource {
      */
     remove(value: any, key?: string): void;
 }
-/**
- * Sort state
- */
-export type SortState = {
-    field: string;
-    direction: "asc" | "desc";
-};
-/**
- * Supported filter operators
- */
-export type FilterOperator = "eq" | "neq" | "contains" | "startsWith" | "endsWith" | "lt" | "lte" | "gt" | "gte" | "between" | "in" | "empty" | "notEmpty";
-/**
- * Filter state
- */
-export type FilterState = {
-    operator: FilterOperator;
-    value?: any;
-};
-/**
- * Accepted public filter values. A scalar is a shorthand for
- * `{ operator: "contains", value }`; the structured form allows choosing
- * the operator (`empty`/`notEmpty` have no value).
- */
-export type FilterInput = FilterState | string | number | boolean;
-/**
- * Runtime query state. Single source of truth for pagination, sort and filters.
- */
-export type QueryState = {
-    page: number;
-    pageSize: number;
-    sort: SortState[];
-    filters: Record<string, FilterInput>;
-};
-/**
- * Result of a data source load
- */
-export type PageResult = {
-    rows: Array<Record<string, any>>;
-    /**
-     * Number of rows matching the current query (used for pagination)
-     */
-    total: number;
-    /**
-     * Additional information (ex: total unfiltered)
-     */
-    meta?: Record<string, any> | undefined;
-};
-/**
- * A selectable value for a select filter, as provided by meta.filters
- */
-export type FilterOption = {
-    value: string | number | boolean;
-    text: string;
-};
-/**
- * Data source contract (duck typing, no abstract class)
- */
-export type DataSource = {
-    load: (query: QueryState, options: {
-        signal?: AbortSignal;
-    }) => Promise<PageResult>;
-};
 //# sourceMappingURL=data-source.d.ts.map

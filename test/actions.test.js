@@ -244,7 +244,10 @@ test("more than two actions collapse into a popover menu", async () => {
     const menu = inst.querySelector(".dg-actions-menu");
     expect(menu.classList.contains("dg-actions-open")).toBe(true);
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(menu.querySelectorAll("button[data-action]").length).toBe(3);
+    const items = menu.querySelectorAll("button[data-action]");
+    expect(items.length).toBe(3);
+    // The menu shows the label next to the (icon-only) custom content
+    expect(Array.from(items).map((b) => b.textContent)).toEqual(["One", "Two", "Three"]);
 
     // Selecting an action dispatches it and closes the menu
     let detail = null;
@@ -255,6 +258,31 @@ test("more than two actions collapse into a popover menu", async () => {
     expect(detail.action).toBe("two");
     expect(menu.classList.contains("dg-actions-open")).toBe(false);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    document.body.removeChild(inst);
+});
+
+test("icon-only render keeps its label visible in the menu", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "edit", label: "Edit", render: () => ({ html: "<i class='x'></i>" }) },
+                { name: "delete", label: "Delete", render: () => ({ html: "<i class='y'></i>" }) },
+            ],
+        },
+        [{ name: "a" }],
+        { RowActions },
+    );
+    const toggle = inst.tbody.querySelector('td[data-column-id="$actions"] button.dg-actions-toggle');
+    toggle.click();
+    const menu = inst.querySelector(".dg-actions-menu");
+    const items = menu.querySelectorAll("button[data-action]");
+    expect(items.length).toBe(2);
+    for (const item of items) {
+        expect(item.querySelector("i")).toBeTruthy();
+        expect(item.querySelector(".dg-action-label")?.textContent).toBeTruthy();
+    }
+    expect(Array.from(items).map((b) => b.querySelector(".dg-action-label")?.textContent)).toEqual(["Edit", "Delete"]);
     document.body.removeChild(inst);
 });
 

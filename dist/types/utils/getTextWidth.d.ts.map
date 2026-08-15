@@ -1,1 +1,1 @@
-{"version":3,"file":"getTextWidth.d.ts","sourceRoot":"","sources":["../../../src/utils/getTextWidth.js"],"names":[],"mappings":"AAGA;;;;;;;;GAQG;AACH,wDAJW,OAAO,iCAyBjB"}
+{"version":3,"file":"getTextWidth.d.ts","sourceRoot":"","sources":["../../../src/utils/getTextWidth.js"],"names":[],"mappings":"AAGA;;;;;;;;GAQG;AACH,MAAM,CAAC,OAAO,UAAU,YAAY,CAAC,IAAI,QAAA,EAAE,EAAE,GAJlC,OAIkD,EAAE,WAAW,UAAQ,UAqBjF"}

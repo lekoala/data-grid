@@ -131,6 +131,13 @@ data-grid .dg-actions-menu a:hover {
   background-color: var(--dg-row-hover-bg);
 }
 
+data-grid .dg-action-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 data-grid .dg-actions-menu button[data-intent="primary"],
 data-grid .dg-actions-menu a[data-intent="primary"] {
   background-color: transparent;

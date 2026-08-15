@@ -1,1 +1,1 @@
-{"version":3,"file":"draggable-headers.d.ts","sourceRoot":"","sources":["../../../src/plugins/draggable-headers.js"],"names":[],"mappings":";AAIA;;GAEG;AACH;IAcI;;OAEG;IACH,wBAFW,WAAW,QA6DrB;CACJ;uBApFsB,wBAAwB"}
+{"version":3,"file":"draggable-headers.d.ts","sourceRoot":"","sources":["../../../src/plugins/draggable-headers.js"],"names":[],"mappings":"AAAA,OAAO,UAAU,MAAM,wBAAwB,CAAC;AAIhD;;GAEG;AACH,cAAM,gBAAiB,SAAQ,UAAU;IACrC;;OAEG;IACH,WAAW,CAAC,OAAO,EAFR,OAAO,wBAAwB,EAAE,aAEzB,QAQlB;IAED;;OAEG;IACH,mBAAmB,CAAC,EAAE,EAFX,WAEW,QA2DrB;CACJ;eAEc,gBAAgB"}

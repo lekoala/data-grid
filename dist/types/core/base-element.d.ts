@@ -1,11 +1,23 @@
-export default BaseElement;
-export type Options = import("../data-grid.js").Options;
+export type Options = import('../data-grid.js').Options;
 /** @typedef {import('../data-grid.js').Options} Options */
 /**
  * Base element that does not contain any specific logic
  * related to this project but makes HTMLElement usable
  */
 declare class BaseElement extends HTMLElement {
+    /** @type {Options} */
+    options: Options;
+    setup: boolean;
+    rendered: boolean;
+    fireEvents: boolean;
+    /**
+     * @param {Object} options
+     */
+    constructor(options?: Object);
+    /**
+     * @returns {Object}
+     */
+    get defaultOptions(): Object;
     /**
      * @returns {Array<any>}
      */
@@ -14,19 +26,6 @@ declare class BaseElement extends HTMLElement {
      * @returns {String}
      */
     static template(): string;
-    /**
-     * @param {Object} options
-     */
-    constructor(options?: Object);
-    /** @type {Options} */
-    options: Options;
-    setup: boolean;
-    rendered: boolean;
-    fireEvents: boolean;
-    /**
-     * @returns {Object}
-     */
-    get defaultOptions(): Object;
     /**
      * This is called at the end of constructor. Extend in subclass if needed.
      */
@@ -68,4 +67,5 @@ declare class BaseElement extends HTMLElement {
      */
     attributeChangedCallback(attributeName: string, oldValue: string, newValue: string): void;
 }
+export default BaseElement;
 //# sourceMappingURL=base-element.d.ts.map

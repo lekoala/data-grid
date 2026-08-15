@@ -864,6 +864,13 @@ data-grid .dg-actions-menu button:hover, data-grid .dg-actions-menu a:hover {
   background-color: var(--dg-row-hover-bg);
 }
 
+data-grid .dg-action-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
 data-grid .dg-actions-menu button[data-intent="primary"], data-grid .dg-actions-menu a[data-intent="primary"] {
   color: var(--dg-accent);
   background-color: #0000;

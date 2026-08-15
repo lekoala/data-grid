@@ -1,120 +1,114 @@
-export default DataGrid;
+/**
+ * Data Grid Web component
+ * https://github.com/lekoala/data-grid
+ */
+import BaseElement from "./core/base-element.js";
 export type DataSource = import("./data-source.js").DataSource;
 export type QueryState = import("./data-source.js").QueryState;
 export type PageResult = import("./data-source.js").PageResult;
 export type FilterState = import("./data-source.js").FilterState;
 export type FilterOption = import("./data-source.js").FilterOption;
-/**
- * Column definition
- */
 export type Column = {
     /**
      * - the key in the data
      */
-    field?: string | undefined;
+    field?: string;
     /**
      * - stable identifier (defaults to field). Plugin columns use "$..." ids.
      */
-    id?: string | undefined;
+    id?: string;
     /**
      * - injected by a plugin
      */
-    virtual?: boolean | undefined;
+    virtual?: boolean;
     /**
      * - order group for plugin columns
      */
-    position?: "end" | "start" | undefined;
+    position?: "start" | "end";
     /**
      * - the title to display in the header (defaults to "field" if not set)
      */
-    title?: string | undefined;
+    title?: string;
     /**
      * - the width of the column (auto otherwise)
      */
-    width?: number | undefined;
+    width?: number;
     /**
      * - class to set on the column (target body or header with th.class or td.class)
      */
-    class?: string | undefined;
+    class?: string;
     /**
      * - don't render the column and set a matching attribute on the row with the value of the field
      */
-    attr?: string | undefined;
+    attr?: string;
     /**
      * - hide the column
      */
-    hidden?: boolean | undefined;
+    hidden?: boolean;
     /**
      * - allow disabling sort for a given column
      */
-    noSort?: boolean | undefined;
+    noSort?: boolean;
     /**
      * - custom value transformation
      */
-    transform?: string | undefined;
+    transform?: string;
     /**
      * - replace with input (EditableColumn module)
      */
-    editable?: boolean | undefined;
+    editable?: boolean;
     /**
      * - type of input (EditableColumn module)
      */
-    editableType?: string | undefined;
+    editableType?: string;
     /**
      * - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
      */
-    validate?: ((value: any, ctx: Object) => (boolean | string)) | undefined;
+    validate?: (value: any, ctx: Object) => (boolean | string);
     /**
      * - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
      */
-    responsive?: number | undefined;
+    responsive?: number;
     /**
      * - hidden through responsive module (ResponsiveGrid module)
      */
-    responsiveHidden?: boolean | undefined;
+    responsiveHidden?: boolean;
     /**
      * - defines a filter field type ("text" or "select" - defaults to "text")
      */
-    filterType?: string | undefined;
+    filterType?: string;
     /**
      * - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
      */
-    filterList?: any[] | undefined;
+    filterList?: Array<any>;
     /**
      * - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
      */
-    firstFilterOption?: import("./data-source.js").FilterOption | undefined;
+    firstFilterOption?: FilterOption;
     /**
      * - optional custom header cell renderer (the core creates the <th>)
      */
-    renderHeaderCell?: ((th: HTMLTableCellElement, ctx: Object) => void) | undefined;
+    renderHeaderCell?: (th: HTMLTableCellElement, ctx: Object) => void;
     /**
      * - optional custom filter cell renderer (the core creates the <th>)
      */
-    renderFilterCell?: ((th: HTMLTableCellElement, ctx: Object) => void) | undefined;
+    renderFilterCell?: (th: HTMLTableCellElement, ctx: Object) => void;
     /**
      * - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
      */
-    renderCell?: ((ctx: Object) => (any)) | undefined;
+    renderCell?: (ctx: Object) => (any);
 };
-/**
- * Render context passed to header/filter/cell renderers. Only `grid` and
- * `column` are always present.
- */
 export type CellContext = {
     grid: DataGrid;
     column: Column;
-    row?: Record<string, any> | undefined;
-    rowIndex?: number | undefined;
+    row?: Record<string, any>;
+    rowIndex?: number;
     value?: any;
-    tr?: HTMLTableRowElement | undefined;
-    sampleTh?: HTMLTableCellElement | undefined;
-    availableWidth?: number | undefined;
-    colMaxWidth?: number | undefined;
+    tr?: HTMLTableRowElement;
+    sampleTh?: HTMLTableCellElement;
+    availableWidth?: number;
+    colMaxWidth?: number;
 };
-/**
- * Row action
- */
 export type Action = {
     /**
      * - the name of the action (button[data-action])
@@ -123,43 +117,40 @@ export type Action = {
     /**
      * - the button label and accessible name
      */
-    label?: string | undefined;
+    label?: string;
     /**
      * - "default" | "primary" | "danger" (defaults to "default")
      */
-    intent?: string | undefined;
+    intent?: string;
     /**
      * - link for the action (string with {field} interpolation or (row) => string)
      */
-    href?: string | Function | undefined;
+    href?: string | Function;
     /**
      * - (row) => Boolean, hides the action when falsy
      */
-    visible?: Function | undefined;
+    visible?: Function;
     /**
      * - (row) => Boolean, disables the button when truthy
      */
-    disabled?: Function | undefined;
+    disabled?: Function;
     /**
      * - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
      */
-    render?: Function | undefined;
+    render?: Function;
     /**
      * - needs confirmation
      */
-    confirm?: boolean | undefined;
+    confirm?: boolean;
     /**
      * - is the default row action
      */
-    default?: boolean | undefined;
+    default?: boolean;
     /**
      * - the class for the button
      */
-    class?: string | undefined;
+    class?: string;
 };
-/**
- * Bulk action applied to the whole selection, server-first.
- */
 export type BulkAction = {
     /**
      * - the name of the action
@@ -172,13 +163,8 @@ export type BulkAction = {
     /**
      * - "default" | "primary" | "danger" (defaults to "default")
      */
-    intent?: string | undefined;
+    intent?: string;
 };
-/**
- * Row selection state. Single source of truth, lives in the core.
- * - "explicit": the selected row keys are in `ids`
- * - "all": every matching row is selected except the ones in `except` (server-first)
- */
 export type SelectionState = {
     mode: "explicit" | "all";
     /**
@@ -194,9 +180,6 @@ export type Plugin = import("./core/base-plugin.js").Plugin;
 export type PluginConstructor = import("./core/base-plugin.js").PluginConstructor;
 export type PluginRegistry = import("./core/base-plugin.js").PluginRegistry;
 export type PluginInstances = import("./core/base-plugin.js").PluginInstances;
-/**
- * Available data grid options, plugins included
- */
 export type Options = {
     /**
      * Custom id for the grid
@@ -213,7 +196,7 @@ export type Options = {
     /**
      * Custom data source (defaults to FetchDataSource or ArrayDataSource)
      */
-    dataSource?: import("./data-source.js").DataSource | null | undefined;
+    dataSource?: DataSource | null;
     /**
      * Log actions in DevTools console
      */
@@ -233,7 +216,7 @@ export type Options = {
     /**
      * Row density (maps to --dg-padding-* tokens)
      */
-    density?: "default" | "compact" | "comfortable" | undefined;
+    density?: "compact" | "default" | "comfortable";
     /**
      * Available page size options
      */
@@ -253,7 +236,7 @@ export type Options = {
     /**
      * - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
      */
-    actionRenderer?: Function | undefined;
+    actionRenderer?: Function;
     /**
      * Group actions (RowActions module)
      */
@@ -281,15 +264,15 @@ export type Options = {
     /**
      * The field name or a function resolving a stable row key (defaults to "id")
      */
-    rowKey?: string | Function | undefined;
+    rowKey?: string | Function;
     /**
      * Field name or (row, index) => string resolving the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
      */
-    rowLabel?: string | Function | null | undefined;
+    rowLabel?: string | Function | null;
     /**
      * Bulk actions applied to the current selection (BulkActions module)
      */
-    bulkActions?: BulkAction[] | undefined;
+    bulkActions?: BulkAction[];
     /**
      * Compute column sizes based on given data (Autosize module)
      */
@@ -349,19 +332,16 @@ export type Options = {
     /**
      * Initial runtime query state
      */
-    initialQuery?: import("./data-source.js").QueryState | null | undefined;
+    initialQuery?: QueryState | null;
     /**
      * Initial result to display without loading the data source
      */
-    initialResult?: import("./data-source.js").PageResult | null | undefined;
+    initialResult?: PageResult | null;
     /**
      * Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
      */
-    validate?: ((value: any, ctx: Object) => (boolean | string)) | undefined;
+    validate?: (value: any, ctx: Object) => (boolean | string);
 };
-/**
- * Available labels that can be translated
- */
 export type Labels = {
     itemsPerPage: string;
     gotoPage: string;
@@ -383,40 +363,8 @@ export type Labels = {
 };
 /**
  */
-export class DataGrid extends BaseElement {
-    /**
-     * @public
-     * @returns {Labels}
-     */
-    public static getLabels(): Labels;
-    /**
-     * @public
-     * @param {Partial<Labels>} v
-     */
-    public static setLabels(v: Partial<Labels>): void;
-    /**
-     * @public
-     * @param {String} url
-     * @returns {Promise<Partial<Labels>>}
-     */
-    public static loadLabels(url: string): Promise<Partial<Labels>>;
-    /**
-     * Register plugin constructors, keyed by name. The core instantiates them
-     * on each DataGrid construction. Names are not limited to built-in plugins.
-     * @public
-     * @param {PluginRegistry} list
-     */
-    public static registerPlugins(list: PluginRegistry): void;
-    /**
-     * @public
-     * @param {?String} [plugin]
-     */
-    public static unregisterPlugins(plugin?: string | null): void;
-    /**
-     * @public
-     * @returns {PluginRegistry}
-     */
-    public static registeredPlugins(): PluginRegistry;
+declare class DataGrid extends BaseElement {
+    #private;
     _filterSelector: string;
     _excludedRowElementSelector: string;
     _excludedKeys: (string | number)[];
@@ -520,16 +468,34 @@ export class DataGrid extends BaseElement {
      * @type {import("./core/base-plugin.js").RenderContext|null}
      */
     _renderContext: import("./core/base-plugin.js").RenderContext | null;
+    _ready(): void;
     /**
      * Instantiate the registered plugin constructors.
      * @returns {PluginInstances}
      */
     _initPlugins(): PluginInstances;
+    static template(): string;
     /**
      * @public
      * @returns {Labels}
      */
-    public get labels(): Labels;
+    get labels(): Labels;
+    /**
+     * @public
+     * @returns {Labels}
+     */
+    static getLabels(): Labels;
+    /**
+     * @public
+     * @param {Partial<Labels>} v
+     */
+    static setLabels(v: Partial<Labels>): void;
+    /**
+     * @public
+     * @param {String} url
+     * @returns {Promise<Partial<Labels>>}
+     */
+    static loadLabels(url: string): Promise<Partial<Labels>>;
     /**
      * @param {string} template
      * @param {Record<string, string | number>} values
@@ -538,7 +504,7 @@ export class DataGrid extends BaseElement {
     formatLabel(template: string, values: Record<string, string | number>): string;
     /** Gets the text to be displayed when no data is loaded.
      * @public */
-    public get noData(): string;
+    get noData(): string;
     updateLabels(): void;
     updateMetaLabel(): void;
     /**
@@ -564,13 +530,30 @@ export class DataGrid extends BaseElement {
      * @public
      * @returns {QueryState}
      */
-    public get query(): QueryState;
+    get query(): QueryState;
     /**
      * Convenience read-only accessor for the current page.
      * @public
      * @returns {Number}
      */
-    public get page(): number;
+    get page(): number;
+    /**
+     * Register plugin constructors, keyed by name. The core instantiates them
+     * on each DataGrid construction. Names are not limited to built-in plugins.
+     * @public
+     * @param {PluginRegistry} list
+     */
+    static registerPlugins(list: PluginRegistry): void;
+    /**
+     * @public
+     * @param {?String} [plugin]
+     */
+    static unregisterPlugins(plugin?: string | null): void;
+    /**
+     * @public
+     * @returns {PluginRegistry}
+     */
+    static registeredPlugins(): PluginRegistry;
     /**
      * Run a lifecycle hook on all registered plugins, in registration order.
      * @param {String} hook
@@ -587,12 +570,17 @@ export class DataGrid extends BaseElement {
      * @public
      * @returns {Column[]}
      */
-    public getColumns(): Column[];
+    getColumns(): Column[];
     /**
      * @param {Record<string, any>|Array<any>} columns
      * @returns {Column[]}
      */
     convertColumns(columns: Record<string, any> | Array<any>): Column[];
+    /**
+     * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
+     * @returns {Array<any>}
+     */
+    static get observedAttributes(): Array<any>;
     /** @returns {HTMLTableSectionElement} */
     get thead(): HTMLTableSectionElement;
     /** @returns {HTMLTableSectionElement} */
@@ -615,26 +603,26 @@ export class DataGrid extends BaseElement {
      * @param {Partial<QueryState>} patch
      * @returns {Promise<void>}
      */
-    public setQuery(patch: Partial<QueryState>): Promise<void>;
+    setQuery(patch: Partial<QueryState>): Promise<void>;
     /**
      * Reset the query to its initial state and reload.
      * @public
      * @returns {Promise<void>}
      */
-    public resetQuery(): Promise<void>;
+    resetQuery(): Promise<void>;
     /**
      * Reload the result matching the current query.
      * @public
      * @returns {Promise<void>}
      */
-    public refresh(): Promise<void>;
+    refresh(): Promise<void>;
     /**
      * Single load path: abort previous request, load the current query,
      * protect against stale responses, then render.
      * @public
      * @returns {Promise<void>}
      */
-    public load(): Promise<void>;
+    load(): Promise<void>;
     /**
      * Apply a PageResult and render.
      * @param {PageResult} result
@@ -657,36 +645,7 @@ export class DataGrid extends BaseElement {
      */
     populatePageSizes(): void;
     _connected(): Promise<void>;
-    /**
-     * @public
-     * @returns {Promise<void>|undefined}
-     */
-    public getFirst(): Promise<void> | undefined;
-    /**
-     * @public
-     * @returns {Promise<void>|undefined}
-     */
-    public getPrev(): Promise<void> | undefined;
-    /**
-     * @public
-     * @returns {Promise<void>|undefined}
-     */
-    public getNext(): Promise<void> | undefined;
-    /**
-     * @public
-     * @returns {Promise<void>|undefined}
-     */
-    public getLast(): Promise<void> | undefined;
-    /**
-     * This is the callback for the select control
-     * @returns {Promise<void>|undefined}
-     */
-    changePerPage(): Promise<void> | undefined;
-    /**
-     * @param {Event|KeyboardEvent} event
-     * @returns {Promise<void>|undefined}
-     */
-    gotoPage(event: Event | KeyboardEvent): Promise<void> | undefined;
+    _disconnected(): void;
     init(): Promise<void>;
     /**
      * @param {String} field
@@ -708,17 +667,25 @@ export class DataGrid extends BaseElement {
     visibleColumns(): Column[];
     hiddenColumns(): Column[];
     /**
-     * @public
-     * @param {String} field
-     * @param {Boolean} [render]
+     * Reconcile the rendered cells (header, filters and body) with the current
+     * column visibility without rebuilding the DOM. Used whenever only the
+     * visibility changed: showColumn/hideColumn and ResponsiveGrid adaptations.
+     * The column list is rebuilt so plugin columns (ex: the responsive toggle)
+     * reflect their fresh hidden state.
      */
-    public showColumn(field: string, render?: boolean): void;
+    _syncColumnVisibility(): void;
     /**
      * @public
      * @param {String} field
      * @param {Boolean} [render]
      */
-    public hideColumn(field: string, render?: boolean): void;
+    showColumn(field: string, render?: boolean): void;
+    /**
+     * @public
+     * @param {String} field
+     * @param {Boolean} [render]
+     */
+    hideColumn(field: string, render?: boolean): void;
     /**
      * Number of rendered columns of the current column list.
      * @param {Boolean} visibleOnly
@@ -746,7 +713,7 @@ export class DataGrid extends BaseElement {
      * @param {Number} [index]
      * @returns {String}
      */
-    public getRowLabel(row: Record<string, any>, index?: number): string;
+    getRowLabel(row: Record<string, any>, index?: number): string;
     /**
      * Whether a row is part of the current selection.
      * @public
@@ -754,44 +721,44 @@ export class DataGrid extends BaseElement {
      * @param {Number} [index]
      * @returns {Boolean}
      */
-    public isRowSelected(row: Record<string, any>, index?: number): boolean;
+    isRowSelected(row: Record<string, any>, index?: number): boolean;
     /**
      * Snapshot of the current selection state.
      * @public
      * @returns {SelectionState}
      */
-    public getSelectionState(): SelectionState;
+    getSelectionState(): SelectionState;
     /**
      * Select a row (single select keeps at most one key).
      * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      */
-    public selectRow(row: Record<string, any>, index?: number): void;
+    selectRow(row: Record<string, any>, index?: number): void;
     /**
      * Deselect a row.
      * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      */
-    public deselectRow(row: Record<string, any>, index?: number): void;
+    deselectRow(row: Record<string, any>, index?: number): void;
     /**
      * Toggle the selection state of a row.
      * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      */
-    public toggleRow(row: Record<string, any>, index?: number): void;
+    toggleRow(row: Record<string, any>, index?: number): void;
     /**
      * Select all visible rows (or everything when selectVisibleOnly is false).
      * @public
      */
-    public selectAll(): void;
+    selectAll(): void;
     /**
      * Reset the selection and refresh the UI.
      * @public
      */
-    public clearSelection(): void;
+    clearSelection(): void;
     /**
      * Get selected rows or specific fields from selected rows.
      * Only reflects the currently loaded page.
@@ -804,12 +771,42 @@ export class DataGrid extends BaseElement {
      * @param {...String} keys - Field names to select from each row.
      * @returns {Array<any>|Object} Selected rows, values, or objects depending on selection and keys.
      */
-    public getSelection(...keys: string[]): Array<any> | Object;
+    getSelection(...keys: string[]): Array<any> | Object;
     /**
      * Reflect the selection on the DOM and notify listeners.
      * The core owns the tr[data-selected] state attribute.
      */
     _selectionChanged(): void;
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
+    getFirst(): Promise<void> | undefined;
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
+    getLast(): Promise<void> | undefined;
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
+    getPrev(): Promise<void> | undefined;
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
+    getNext(): Promise<void> | undefined;
+    /**
+     * @param {Event|KeyboardEvent} event
+     * @returns {Promise<void>|undefined}
+     */
+    gotoPage(event: Event | KeyboardEvent): Promise<void> | undefined;
+    /**
+     * This is the callback for the select control
+     * @returns {Promise<void>|undefined}
+     */
+    changePerPage(): Promise<void> | undefined;
     /**
      * Sort direction of a column based on the current query.
      * @param {String} field
@@ -829,16 +826,16 @@ export class DataGrid extends BaseElement {
      */
     _sort(columnName: string, direction: "asc" | "desc" | "none"): Promise<void>;
     /** @public @param {String} columnName */
-    public sortAsc: (columnName: string) => Promise<void>;
+    sortAsc: (columnName: string) => Promise<void>;
     /** @public @param {String} columnName */
-    public sortDesc: (columnName: string) => Promise<void>;
+    sortDesc: (columnName: string) => Promise<void>;
     /** @public @param {String} columnName */
-    public sortNone: (columnName: string) => Promise<void>;
+    sortNone: (columnName: string) => Promise<void>;
     /**
      * @public
      * @returns {Promise<void>}
      */
-    public clearFilters(): Promise<void>;
+    clearFilters(): Promise<void>;
     /**
      * Collect current filter inputs into the query and reload.
      */
@@ -894,7 +891,7 @@ export class DataGrid extends BaseElement {
      * @param {Column} column
      * @returns {Array<import("./data-source.js").FilterOption>}
      */
-    public getFilterOptions(column: Column): Array<import("./data-source.js").FilterOption>;
+    getFilterOptions(column: Column): Array<import("./data-source.js").FilterOption>;
     /**
      * Render the rows of the current page into tbody
      * It will call paginate() at the end
@@ -912,12 +909,12 @@ export class DataGrid extends BaseElement {
      * @public
      * @returns {number}
      */
-    public totalPages(): number;
+    totalPages(): number;
     /**
      * Make sure the current page is still valid
      */
     fixPage(): this;
-    #private;
 }
-import BaseElement from "./core/base-element.js";
+export { DataGrid };
+export default DataGrid;
 //# sourceMappingURL=data-grid.d.ts.map

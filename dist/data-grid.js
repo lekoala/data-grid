@@ -3007,7 +3007,7 @@ class RowActions extends base_plugin_default {
         continue;
       }
       const li = document.createElement("li");
-      const { el } = this.createActionElement(action, row, grid, labels2);
+      const { el } = this.createActionElement(action, row, grid, labels2, true);
       li.appendChild(el);
       menu.appendChild(li);
     }
@@ -3078,7 +3078,6 @@ class RowActions extends base_plugin_default {
     actionsToggle.textContent = "⋯";
     actionsToggle.setAttribute("aria-label", labels2.toggleActions);
     actionsToggle.setAttribute("aria-expanded", "false");
-    actionsToggle.setAttribute("aria-haspopup", "menu");
     actionsToggle.title = labels2.toggleActions;
     on(actionsToggle, "click", (ev) => {
       ev.stopPropagation();
@@ -3101,7 +3100,7 @@ class RowActions extends base_plugin_default {
     }
     return fragment;
   }
-  createActionElement(action, row, grid, labels2) {
+  createActionElement(action, row, grid, labels2, menu = false) {
     const href = action.href ? typeof action.href === "function" ? action.href(row) : interpolate(action.href, row) : null;
     const render = action.render ?? grid.options.actionRenderer;
     const content = render ? render({ action, row, grid }) : null;
@@ -3118,7 +3117,12 @@ class RowActions extends base_plugin_default {
         el.textContent = action.label ?? action.name;
       } else {
         this.applyContent(el, content);
-        if (content instanceof Node || typeof content === "object" && content.html !== undefined) {
+        if (menu) {
+          const label = document.createElement("span");
+          label.className = "dg-action-label";
+          label.textContent = action.label ?? action.name;
+          el.append(label);
+        } else if (content instanceof Node || typeof content === "object" && content.html !== undefined) {
           el.setAttribute("aria-label", action.label ?? action.name);
         }
       }
@@ -3406,4 +3410,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=5A9C985C3D2A7AA364756E2164756E21
+//# debugId=F0B3123960B6F64664756E2164756E21

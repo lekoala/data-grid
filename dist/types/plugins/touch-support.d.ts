@@ -1,11 +1,17 @@
-export default TouchSupport;
+import BasePlugin from "../core/base-plugin.js";
 /**
  * Allows to paginate with horizontal swipe motions
  */
 declare class TouchSupport extends BasePlugin {
     touch: Touch | null;
-    ontouchstart(e: TouchEvent): void;
-    ontouchmove(e: TouchEvent): void;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid: import("../data-grid.js").default);
+    connected(): void;
+    disconnected(): void;
+    ontouchstart(/** @type {TouchEvent} */ e: TouchEvent): void;
+    ontouchmove(/** @type {TouchEvent} */ e: TouchEvent): void;
 }
-import BasePlugin from "../core/base-plugin.js";
+export default TouchSupport;
 //# sourceMappingURL=touch-support.d.ts.map

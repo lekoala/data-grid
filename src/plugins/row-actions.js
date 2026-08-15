@@ -99,7 +99,7 @@ class RowActions extends BasePlugin {
                 continue;
             }
             const li = document.createElement("li");
-            const { el } = this.createActionElement(action, row, grid, labels);
+            const { el } = this.createActionElement(action, row, grid, labels, true);
             li.appendChild(el);
             menu.appendChild(li);
         }
@@ -189,7 +189,6 @@ class RowActions extends BasePlugin {
         actionsToggle.textContent = "⋯";
         actionsToggle.setAttribute("aria-label", labels.toggleActions);
         actionsToggle.setAttribute("aria-expanded", "false");
-        actionsToggle.setAttribute("aria-haspopup", "menu");
         actionsToggle.title = labels.toggleActions;
         on(actionsToggle, "click", (/** @type {MouseEvent} */ ev) => {
             ev.stopPropagation();
@@ -223,9 +222,11 @@ class RowActions extends BasePlugin {
      * @param {Record<string, any>} row
      * @param {import("../data-grid.js").default} grid
      * @param {import("../data-grid.js").Labels} labels
+     * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
+     * add a visible label next to it.
      * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
      */
-    createActionElement(action, row, grid, labels) {
+    createActionElement(action, row, grid, labels, menu = false) {
         const href = action.href
             ? typeof action.href === "function"
                 ? action.href(row)
@@ -250,9 +251,16 @@ class RowActions extends BasePlugin {
                 el.textContent = action.label ?? action.name;
             } else {
                 this.applyContent(el, content);
-                // Custom content (Node or { html }) may be icon-only: keep the
-                // label as the accessible name of the element RowActions creates.
-                if (content instanceof Node || (typeof content === "object" && content.html !== undefined)) {
+                if (menu) {
+                    // In the collapsed menu the custom content (often an icon)
+                    // is kept, with the label shown next to it.
+                    const label = document.createElement("span");
+                    label.className = "dg-action-label";
+                    label.textContent = action.label ?? action.name;
+                    el.append(label);
+                } else if (content instanceof Node || (typeof content === "object" && content.html !== undefined)) {
+                    // Custom content (Node or { html }) may be icon-only: keep the
+                    // label as the accessible name of the element RowActions creates.
                     el.setAttribute("aria-label", action.label ?? action.name);
                 }
             }

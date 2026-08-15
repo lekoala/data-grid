@@ -1,4 +1,4 @@
-export default SaveState;
+import BasePlugin from "../core/base-plugin.js";
 export type CachedGridState = {
     query: import("../data-source.js").QueryState;
     columns: Array<{
@@ -15,6 +15,10 @@ export type CachedGridState = {
  */
 declare class SaveState extends BasePlugin {
     cachedState: CachedGridState | null;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid: import("../data-grid.js").default);
     connected(): Promise<void>;
     /**
      * Persist the current query, columns and scroll position.
@@ -33,5 +37,5 @@ declare class SaveState extends BasePlugin {
      */
     _setState(state: CachedGridState): void;
 }
-import BasePlugin from "../core/base-plugin.js";
+export default SaveState;
 //# sourceMappingURL=save-state.d.ts.map

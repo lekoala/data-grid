@@ -1,10 +1,14 @@
-export default EditableColumn;
+import BasePlugin from "../core/base-plugin.js";
 /**
  * Make editable inputs in rows.
  * Editing lifecycle: start (focus) -> edit -> validate -> commit/reject.
  * Commit dispatches a cancelable "edit" event; preventDefault() rejects.
  */
 declare class EditableColumn extends BasePlugin {
+    /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context: import("../core/base-plugin.js").RenderContext): void;
     /**
      * @param {HTMLElement} td
      * @param {import("../data-grid.js").Column} column
@@ -21,5 +25,5 @@ declare class EditableColumn extends BasePlugin {
      */
     validate(column: import("../data-grid.js").Column, value: any, row: Object): string | null;
 }
-import BasePlugin from "../core/base-plugin.js";
+export default EditableColumn;
 //# sourceMappingURL=editable-column.d.ts.map

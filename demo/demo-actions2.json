@@ -29,13 +29,11 @@
       },
       {
         "field": "company",
-        "title": "Company",
-        "class": "highlight-col"
+        "title": "Company"
       },
       {
         "field": "job_title",
         "title": "Job Title",
-        "class": "highlight-col",
         "hidden": true
       }
     ]

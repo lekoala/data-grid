@@ -1,17 +1,55 @@
-export default RowActions;
+import BasePlugin from "../core/base-plugin.js";
 /**
  * Add actions on rows
  */
 declare class RowActions extends BasePlugin {
+    menu: HTMLUListElement | undefined;
+    openCell: HTMLElement | null | undefined;
+    _boundDocumentClick: ((ev: MouseEvent) => void) | null | undefined;
+    _boundKeydown: ((ev: KeyboardEvent) => void) | null | undefined;
     /**
      * @returns {Boolean}
      */
     hasActions(): boolean;
     /**
+     * Inject the actions column at the end.
+     * @param {import("../data-grid.js").Column[]} columns
+     */
+    extendColumns(columns: import("../data-grid.js").Column[]): void;
+    /**
      * @param {HTMLTableCellElement} th
      */
     createHeaderCell(th: HTMLTableCellElement): void;
     createFilterCell(): void;
+    updateLabels(): void;
+    /**
+     * Close the popover on any full table render.
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context: import("../core/base-plugin.js").RenderContext): void;
+    /**
+     * Toggle the popover menu for a collapsed actions cell.
+     * @param {HTMLElement} cell
+     * @param {Record<string, any>} row
+     */
+    toggleActionMenu(cell: HTMLElement, row: Record<string, any>): void;
+    /**
+     * Open (and fill) the popover menu anchored to the given actions cell.
+     * @param {HTMLElement} cell
+     * @param {Record<string, any>} row
+     */
+    openActionMenu(cell: HTMLElement, row: Record<string, any>): void;
+    /**
+     * Position the menu inside the grid, flipping up or to the left when the
+     * cell sits close to an edge. The menu stays inside the grid bounds so the
+     * grid scroll container never clips it.
+     * @param {HTMLElement} cell
+     */
+    positionActionMenu(cell: HTMLElement): void;
+    /**
+     * Close and reset the popover menu.
+     */
+    closeActionMenu(): void;
     /**
      * Build the actions cell content: a toggle button plus one element per action.
      * @param {import("../data-grid.js").CellContext} ctx
@@ -24,9 +62,11 @@ declare class RowActions extends BasePlugin {
      * @param {Record<string, any>} row
      * @param {import("../data-grid.js").default} grid
      * @param {import("../data-grid.js").Labels} labels
+     * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
+     * add a visible label next to it.
      * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
      */
-    createActionElement(action: import("../data-grid.js").Action, row: Record<string, any>, grid: import("../data-grid.js").default, labels: import("../data-grid.js").Labels): {
+    createActionElement(action: import("../data-grid.js").Action, row: Record<string, any>, grid: import("../data-grid.js").default, labels: import("../data-grid.js").Labels, menu?: boolean): {
         el: HTMLElement;
         dispatchAction: (ev: Event) => void;
     };
@@ -38,5 +78,5 @@ declare class RowActions extends BasePlugin {
     applyContent(el: HTMLElement, content: any): void;
     get actionClass(): string;
 }
-import BasePlugin from "../core/base-plugin.js";
+export default RowActions;
 //# sourceMappingURL=row-actions.d.ts.map

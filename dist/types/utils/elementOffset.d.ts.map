@@ -1,1 +1,1 @@
-{"version":3,"file":"elementOffset.d.ts","sourceRoot":"","sources":["../../../src/utils/elementOffset.js"],"names":[],"mappings":"AAAA;;;GAGG;AACH,0CAHW,WAAW,GACT;IAAE,GAAG,EAAE,MAAM,CAAC;IAAC,IAAI,EAAE,MAAM,CAAA;CAAE,CAOzC"}
+{"version":3,"file":"elementOffset.d.ts","sourceRoot":"","sources":["../../../src/utils/elementOffset.js"],"names":[],"mappings":"AAAA;;;GAGG;AACH,MAAM,CAAC,OAAO,UAAU,aAAa,CAAC,EAAE,EAH7B,WAG6B,GAF3B;IAAE,GAAG,EAAE,MAAM,CAAC;IAAC,IAAI,EAAE,MAAM,CAAA;CAAE,CAOzC"}
