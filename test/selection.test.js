@@ -155,6 +155,23 @@ test("single select keeps at most one selected row and allows toggling off", asy
     document.body.removeChild(inst);
 });
 
+test("toggling selectable at runtime updates header and body", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }] });
+
+    const selector = 'th[data-column-id="$selection"]';
+    expect(inst.querySelector(`thead ${selector}`)).toBeNull();
+    expect(inst.querySelector('tbody td[data-column-id="$selection"]')).toBeNull();
+
+    inst.setAttribute("selectable", "");
+    expect(inst.querySelector(`thead ${selector}`)).toBeTruthy();
+    expect(inst.querySelector('tbody td[data-column-id="$selection"] input')).toBeTruthy();
+
+    inst.removeAttribute("selectable");
+    expect(inst.querySelector(`thead ${selector}`)).toBeNull();
+    expect(inst.querySelector('tbody td[data-column-id="$selection"]')).toBeNull();
+    document.body.removeChild(inst);
+});
+
 test("header and body checkboxes share the same centering box", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
 

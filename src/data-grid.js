@@ -1132,6 +1132,7 @@ class DataGrid extends BaseElement {
 
     selectableChanged() {
         this.renderTable();
+        this.renderBody();
     }
 
     reorderChanged() {

@@ -1119,6 +1119,7 @@ class DataGrid extends base_element_default {
   }
   selectableChanged() {
     this.renderTable();
+    this.renderBody();
   }
   reorderChanged() {
     this.renderTable();
@@ -3410,4 +3411,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=F0B3123960B6F64664756E2164756E21
+//# debugId=BAACB66A928DB6CE64756E2164756E21
