@@ -4,10 +4,12 @@
   0% {
     opacity: 1;
   }
+
   100% {
-    opacity: 0.5;
+    opacity: .5;
   }
 }
+
 data-grid {
   --dg-bg: #fff;
   --dg-color: #212529;
@@ -16,7 +18,7 @@ data-grid {
   --dg-accent-soft: #cfe2ff;
   --dg-header-bg: #e9ecef;
   --dg-header-color: #212529;
-  --dg-row-stripe-bg: rgba(0, 0, 0, 0.05);
+  --dg-row-stripe-bg: #0000000d;
   --dg-row-hover-bg: #fffcee;
   --dg-row-selected-bg: #cfe2ff;
   --dg-row-border-color: #f2f2f2;
@@ -26,440 +28,524 @@ data-grid {
   --dg-danger-bg: #f8d7da;
   --dg-danger-color: #842029;
   --dg-danger-border-color: #f5c2c7;
-  --dg-padding-x: 0.75rem;
-  --dg-padding-y: 0.5rem;
-  --dg-header-padding-y: 0.75rem;
-  --dg-radius: 0.25rem;
+  --dg-padding-x: .75rem;
+  --dg-padding-y: .5rem;
+  --dg-header-padding-y: .75rem;
+  --dg-radius: .25rem;
   --dg-padding-half: calc(var(--dg-padding-y) / 2);
   --dg-icon-scale: 1;
   --dg-responsive-width: 60%;
   display: block;
-  min-height: 6rem;
   position: relative;
+  min-height: 6rem;
 }
-data-grid[density=compact] {
-  --dg-padding-y: 0.25rem;
-  --dg-padding-x: 0.5rem;
-  --dg-header-padding-y: 0.375rem;
+
+data-grid[density="compact"] {
+  --dg-padding-y: .25rem;
+  --dg-padding-x: .5rem;
+  --dg-header-padding-y: .375rem;
 }
-data-grid[density=comfortable] {
-  --dg-padding-y: 0.75rem;
+
+data-grid[density="comfortable"] {
+  --dg-padding-y: .75rem;
   --dg-padding-x: 1rem;
   --dg-header-padding-y: 1rem;
 }
+
 data-grid {
   --dg-scroller-color: 0, 0%;
   --dg-scroller-color-lightness: 80%;
-  --dg-scroller-hover-factor: 0.8;
+  --dg-scroller-hover-factor: .8;
   --dg-scroller-thumb: hsl(var(--dg-scroller-color), var(--dg-scroller-color-lightness));
   --dg-scroller-thumb-hover: hsl(var(--dg-scroller-color), calc(var(--dg-scroller-color-lightness) * var(--dg-scroller-hover-factor)));
   --dg-scroller-background: transparent;
   scrollbar-color: var(--dg-scroller-thumb) var(--dg-scroller-background);
   scrollbar-width: thin;
 }
+
 data-grid::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 data-grid::-webkit-scrollbar-track {
-  background: transparent;
+  background: none;
 }
+
 data-grid::-webkit-scrollbar-thumb {
   background: var(--dg-scroller-thumb);
 }
+
 data-grid::-webkit-scrollbar-thumb:hover {
   background: var(--dg-scroller-thumb-hover);
 }
-data-grid > table tr.dg-head-columns:is(:empty, :has(> :first-child:not([scope=col]))) {
+
+data-grid > table tr.dg-head-columns:-webkit-any(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
-data-grid img {
-  border: none;
-  height: auto;
-  max-width: 100%;
-  vertical-align: middle;
+
+data-grid > table tr.dg-head-columns:-moz-any(:empty, :has( > :first-child:not([scope="col"]))) {
+  display: none;
 }
+
+data-grid > table tr.dg-head-columns:is(:empty, :has( > :first-child:not([scope="col"]))) {
+  display: none;
+}
+
+data-grid img {
+  vertical-align: middle;
+  border: none;
+  max-width: 100%;
+  height: auto;
+}
+
 data-grid [hidden] {
   display: none;
 }
+
 data-grid table {
   display: table;
   table-layout: fixed;
-  width: 100%;
-  max-width: 100%;
   white-space: normal;
   background: var(--dg-bg);
+  width: 100%;
+  max-width: 100%;
 }
-data-grid thead,
-data-grid tfoot {
+
+data-grid thead, data-grid tfoot {
   background-color: var(--dg-header-bg);
   color: var(--dg-header-color);
 }
-data-grid[data-loading]:not(.dg-initialized) thead,
-data-grid[data-loading]:not(.dg-initialized) tfoot {
+
+data-grid[data-loading]:not(.dg-initialized) thead, data-grid[data-loading]:not(.dg-initialized) tfoot {
   background: none;
 }
+
 data-grid[data-loading] tbody {
   animation-name: dataGridShow;
   animation-timing-function: ease-in;
   animation-fill-mode: forwards;
-  animation-duration: 0.3s;
+  animation-duration: .3s;
   pointer-events: none;
 }
+
 data-grid[data-loading]:not(:has(th)) tfoot {
   display: none;
 }
+
 data-grid tr {
   position: relative;
 }
-data-grid th,
-data-grid td {
+
+data-grid th, data-grid td {
   empty-cells: show;
   padding: var(--dg-padding-y) var(--dg-padding-x);
   text-align: left;
 }
-data-grid th[tabindex],
-data-grid td[tabindex] {
+
+data-grid th[tabindex], data-grid td[tabindex] {
   outline: none;
   word-break: normal;
 }
+
 data-grid th {
-  font-weight: bold;
   padding: var(--dg-header-padding-y) var(--dg-padding-x);
+  font-weight: bold;
 }
-data-grid th,
-data-grid td {
+
+data-grid th, data-grid td {
   position: relative;
   overflow: hidden;
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-data-grid th.dg-wrap,
-data-grid td.dg-wrap {
+
+data-grid th.dg-wrap, data-grid td.dg-wrap {
   white-space: normal;
   word-break: break-all;
 }
+
 data-grid .dg-expandable {
   cursor: pointer;
 }
+
 data-grid .dg-expandable.dg-expanded td {
   white-space: normal;
   word-break: break-all;
 }
+
 data-grid .dg-selectable {
   font-size: 1em;
 }
+
 data-grid .dg-bulk-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.5rem 0;
+  align-items:  center;
+  gap: .5rem;
+  padding: .5rem 0;
 }
+
 data-grid .dg-bulk-actions[hidden] {
   display: none;
 }
+
 data-grid .dg-bulk-count {
   margin-right: auto;
   font-weight: 600;
 }
+
 data-grid .dg-selectable label {
   display: flex;
-  align-items: center;
+  align-items:  center;
   margin: 0;
 }
+
 data-grid .dg-clickable-cell {
-  margin: 0;
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
   cursor: pointer;
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items:  center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  top: 0;
+  left: 0;
 }
-data-grid[sticky] table thead,
-data-grid[sticky] table tfoot {
+
+data-grid[sticky] table thead, data-grid[sticky] table tfoot {
   z-index: 2;
   position: sticky;
-  margin: 0;
   border: 0;
+  margin: 0;
 }
+
 data-grid[sticky] table thead {
-  inset-block-start: -1px;
+  top: -1px;
 }
+
 data-grid[sticky] table tfoot {
-  inset-block-end: -1px;
+  bottom: -1px;
 }
-data-grid .dg-nav-icon,
-data-grid .dg-skip-icon {
-  width: 22px;
-  height: 22px;
+
+data-grid .dg-nav-icon, data-grid .dg-skip-icon {
   box-sizing: border-box;
   position: absolute;
   display: block;
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
+  width: 22px;
+  height: 22px;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
 }
-data-grid .dg-nav-icon:before,
-data-grid .dg-nav-icon:after,
-data-grid .dg-skip-icon:before,
-data-grid .dg-skip-icon:after {
+
+data-grid .dg-nav-icon:before, data-grid .dg-nav-icon:after, data-grid .dg-skip-icon:before, data-grid .dg-skip-icon:after {
   content: "";
   display: block;
   box-sizing: border-box;
   position: absolute;
 }
-data-grid .dg-nav-icon::before {
+
+data-grid .dg-nav-icon:before {
+  border-top: 5px solid #0000;
+  border-bottom: 5px solid #0000;
+  border-left: 6px solid;
   width: 0;
   height: 10px;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 6px solid;
   top: 6px;
   left: 9px;
 }
-data-grid .dg-skip-icon::before {
+
+data-grid .dg-skip-icon:before {
+  background: currentColor;
   width: 3px;
   height: 10px;
-  background: currentColor;
   top: 6px;
   left: 14px;
 }
-data-grid .dg-skip-icon::after {
+
+data-grid .dg-skip-icon:after {
+  border-top: 5px solid #0000;
+  border-bottom: 5px solid #0000;
+  border-left: 6px solid;
   width: 0;
   height: 10px;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 6px solid;
   top: 6px;
   left: 7px;
 }
+
 data-grid .dg-rotate {
   transform: rotate(-180deg);
 }
+
 data-grid button {
   background-color: var(--dg-control-bg);
   border: solid 1px var(--dg-control-border-color);
   border-radius: var(--dg-radius);
   color: var(--dg-control-color);
-  height: 2rem;
-  margin: 0 0.2rem;
-  padding: 0 0.5rem;
   pointer-events: all;
   text-align: center;
   cursor: pointer;
+  height: 2rem;
+  margin: 0 .2rem;
+  padding: 0 .5rem;
 }
+
 data-grid button:hover {
-  opacity: 0.7;
+  opacity: .7;
 }
+
 data-grid button:disabled:hover {
   background-color: inherit;
   border-color: inherit;
 }
-data-grid input[type=checkbox] {
+
+data-grid input[type="checkbox"] {
   margin: 0;
   padding: 0;
 }
-data-grid input:not([type=checkbox], [type=radio]),
-data-grid select {
+
+data-grid input:not(:-webkit-any([type="checkbox"], [type="radio"])), data-grid select {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
   border: 1px solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
-  height: 2rem;
-  margin: 0 0.2rem;
   padding: 0 var(--dg-padding-y);
   max-width: none;
+  height: 2rem;
+  margin: 0 .2rem;
 }
-data-grid input:not([type=checkbox]):focus,
-data-grid select:focus,
-data-grid button:focus {
+
+data-grid input:not(:-moz-any([type="checkbox"], [type="radio"])), data-grid select {
+  background-color: var(--dg-control-bg);
+  color: currentColor;
+  box-sizing: border-box;
+  border: 1px solid var(--dg-control-border-color);
+  border-radius: var(--dg-radius);
+  padding: 0 var(--dg-padding-y);
+  max-width: none;
+  height: 2rem;
+  margin: 0 .2rem;
+}
+
+data-grid input:not(:is([type="checkbox"], [type="radio"])), data-grid select {
+  background-color: var(--dg-control-bg);
+  color: currentColor;
+  box-sizing: border-box;
+  border: 1px solid var(--dg-control-border-color);
+  border-radius: var(--dg-radius);
+  padding: 0 var(--dg-padding-y);
+  max-width: none;
+  height: 2rem;
+  margin: 0 .2rem;
+}
+
+data-grid input:not([type="checkbox"]):focus, data-grid select:focus, data-grid button:focus {
   box-shadow: 0 0 0 var(--dg-padding-half) var(--dg-accent-soft);
   outline: 0;
 }
-data-grid input:not([type=checkbox])[disabled],
-data-grid input:not([type=checkbox]):disabled,
-data-grid select[disabled],
-data-grid select:disabled,
-data-grid button[disabled],
-data-grid button:disabled {
-  opacity: 0.35;
+
+data-grid input:not([type="checkbox"])[disabled], data-grid input:not([type="checkbox"]):disabled, data-grid select[disabled], data-grid select:disabled, data-grid button[disabled], data-grid button:disabled {
+  opacity: .35;
   pointer-events: none;
 }
+
 data-grid thead tr:nth-child(2) th {
+  background-color: #0000;
   padding: 0 2px 0 0;
-  background-color: transparent;
 }
+
 data-grid thead tr:nth-child(2) th > * {
-  width: 100%;
   border-radius: 0;
+  width: 100%;
   margin: 0;
 }
+
 data-grid thead tr:nth-child(2) th input:focus {
   box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
 }
+
 data-grid tbody td.dg-editable-col {
-  padding: 0;
   height: 0;
+  padding: 0;
 }
+
 data-grid tbody td input.dg-editable {
-  width: 100%;
-  background: transparent;
+  box-shadow: none;
+  background: none;
   border: 0;
   border-radius: 0;
-  margin: 0;
-  box-shadow: none;
+  width: 100%;
   height: 100%;
+  margin: 0;
 }
+
 data-grid tbody td input.dg-editable:focus {
   box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
 }
+
 data-grid tbody td.dg-editable-col[data-editing] {
   background-color: var(--dg-accent-soft);
 }
+
 data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
   box-shadow: inset 0px 0px 0px 1px var(--dg-danger-color);
 }
+
 data-grid tbody tr[data-selected] {
   background-color: var(--dg-row-selected-bg);
 }
-data-grid[data-empty] tbody,
-data-grid[data-error] tbody {
-  height: 4rem;
+
+data-grid[data-empty] tbody, data-grid[data-error] tbody {
   position: relative;
+  height: 4rem;
 }
-data-grid[data-empty] tbody:before,
-data-grid[data-error] tbody:before {
+
+data-grid[data-empty] tbody:before, data-grid[data-error] tbody:before {
   position: absolute;
-  top: 50%;
-  left: 50%;
   content: attr(data-empty-message);
-  transform: translate(-50%, -50%);
-  opacity: 0.5;
-  font-size: 1.5rem;
+  opacity: .5;
   text-align: center;
   white-space: nowrap;
   text-overflow: ellipsis;
   overflow: hidden;
   width: 90%;
+  font-size: 1.5rem;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
+
 data-grid[data-empty] tr.dg-fake-row {
-  height: 4rem;
   border: none;
+  height: 4rem;
 }
+
 data-grid[data-error] table {
   color: var(--dg-danger-color);
   background-color: var(--dg-danger-bg);
   border: 1px solid var(--dg-danger-border-color);
 }
+
 data-grid[data-error] tbody {
   height: auto;
 }
+
 data-grid[data-error] tbody:before {
   font-size: 1.2rem;
 }
+
 data-grid[data-error] tbody tr:not(.dg-fake-row) {
   display: none;
 }
+
 data-grid tbody tr {
   border-bottom: solid 1px var(--dg-row-border-color);
 }
-data-grid tbody tr:nth-child(even) {
+
+data-grid tbody tr:nth-child(2n) {
   background-color: var(--dg-row-stripe-bg);
 }
+
 data-grid tbody tr:hover {
   background-color: var(--dg-row-hover-bg) !important;
 }
+
 data-grid tbody tr:focus {
+  outline: none;
   background-color: var(--dg-row-hover-bg) !important;
   border-bottom-color: var(--dg-row-hover-bg) !important;
-  outline: none;
 }
+
 data-grid tfoot {
   min-width: 280px;
 }
+
 data-grid tfoot td {
   padding: var(--dg-header-padding-y) var(--dg-padding-x);
 }
+
 data-grid tfoot .dg-page-nav {
   display: flex;
-  align-items: center;
+  align-items:  center;
 }
+
 data-grid tfoot .dg-input-page {
   width: 4rem;
 }
+
 data-grid tfoot .dg-footer {
   display: flex;
-  align-items: center;
   flex-direction: row;
   justify-content: space-between;
+  align-items:  center;
 }
+
 data-grid tfoot .dg-pagination {
   display: flex;
   text-align: center;
 }
+
 data-grid tfoot .dg-pagination button {
   position: relative;
   width: 2rem;
 }
+
 data-grid tfoot .dg-meta {
   text-align: right;
 }
-data-grid tfoot.dg-footer-compact .dg-meta {
+
+data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .dg-input-page {
   display: none;
 }
-data-grid tfoot.dg-footer-compact .dg-input-page {
-  display: none;
-}
+
 data-grid th.dg-sortable {
   cursor: pointer;
   padding-right: 1.5rem;
 }
-data-grid [aria-sort=ascending]:before,
-data-grid [aria-sort=descending]:after {
-  right: 0.5rem;
-  top: calc(50% - 0.5rem);
-  border: solid transparent;
+
+data-grid [aria-sort="ascending"]:before, data-grid [aria-sort="descending"]:after {
   content: " ";
-  height: 0;
-  width: 0;
   position: absolute;
-  border-color: rgba(0, 0, 0, 0);
-  border-width: 0.25rem;
-  margin-left: -0.25rem;
+  border: .25rem solid #0000;
+  width: 0;
+  height: 0;
+  margin-left: -.25rem;
+  top: calc(50% - .5rem);
+  right: .5rem;
 }
-data-grid [aria-sort=ascending]:before {
+
+data-grid [aria-sort="ascending"]:before {
   border-bottom-color: var(--dg-color);
-  opacity: 0.75;
+  opacity: .75;
 }
-data-grid [aria-sort=descending]:after {
+
+data-grid [aria-sort="descending"]:after {
   border-top-color: var(--dg-color);
-  opacity: 0.75;
-  bottom: calc(50% - 0.5rem);
+  opacity: .75;
   top: auto;
+  bottom: calc(50% - .5rem);
 }
 
 /* css/_rtl.css */
-data-grid[dir=rtl] th,
-data-grid[dir=rtl] td {
+data-grid[dir="rtl"] th, data-grid[dir="rtl"] td {
   text-align: right;
 }
-data-grid[dir=rtl] th.dg-sortable {
+
+data-grid[dir="rtl"] th.dg-sortable {
   padding-left: 1rem;
-  padding-right: 0.5rem;
+  padding-right: .5rem;
 }
-data-grid[dir=rtl] [aria-sort=ascending]:before,
-data-grid[dir=rtl] [aria-sort=descending]:after {
-  left: 0.75rem;
+
+data-grid[dir="rtl"] [aria-sort="ascending"]:before, data-grid[dir="rtl"] [aria-sort="descending"]:after {
+  left: .75rem;
   right: auto;
 }
-data-grid[dir=rtl] tfoot .dg-meta {
+
+data-grid[dir="rtl"] tfoot .dg-meta {
   text-align: left;
 }
 
@@ -469,105 +555,115 @@ data-grid .dg-menu {
   z-index: 3;
   background: var(--dg-bg);
   list-style: none;
+  padding: var(--dg-padding-y);
+  border-radius: var(--dg-radius);
   max-width: 150px;
   margin: 0;
-  padding: var(--dg-padding-y);
-  box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
-  border-radius: var(--dg-radius);
+  box-shadow: 0 0 1rem #00000040;
 }
+
 data-grid .dg-menu li {
   margin: 0;
   padding: 0;
 }
+
 data-grid .dg-menu label {
   display: flex;
-  align-items: center;
-  margin-bottom: 0.25em;
+  align-items:  center;
+  margin-bottom: .25em;
 }
+
 data-grid .dg-menu input {
-  margin-right: 0.5em;
+  margin-right: .5em;
 }
 
 /* css/_actions.css */
 data-grid .dg-actions {
   text-overflow: initial;
-  width: 100px;
   text-align: right;
+  width: 100px;
   white-space: nowrap !important;
 }
-data-grid .dg-actions button,
-data-grid .dg-actions a {
+
+data-grid .dg-actions button, data-grid .dg-actions a {
   margin: 0;
 }
+
 data-grid .dg-actions a {
   display: inline-flex;
-  align-items: center;
-  height: 2rem;
-  padding: 0 0.5rem;
   background-color: var(--dg-control-bg);
   border: solid 1px var(--dg-control-border-color);
   border-radius: var(--dg-radius);
   color: var(--dg-control-color);
   text-decoration: none;
+  align-items:  center;
+  height: 2rem;
+  padding: 0 .5rem;
 }
+
 data-grid .dg-actions a:hover {
-  opacity: 0.7;
+  opacity: .7;
 }
-data-grid .dg-actions button + button,
-data-grid .dg-actions button + a,
-data-grid .dg-actions a + button,
-data-grid .dg-actions a + a {
-  margin-left: 0.25rem;
+
+data-grid .dg-actions button + button, data-grid .dg-actions button + a, data-grid .dg-actions a + button, data-grid .dg-actions a + a {
+  margin-left: .25rem;
 }
+
 data-grid .dg-actions .dg-actions-toggle {
   display: none;
   width: calc(100px - var(--dg-padding-x) * 2);
 }
+
 data-grid .dg-actions.dg-actions-1 {
   width: 100%;
 }
-data-grid .dg-actions.dg-actions-2 button,
-data-grid .dg-actions.dg-actions-2 a {
-  width: calc(50% - 0.25rem);
+
+data-grid .dg-actions.dg-actions-2 button, data-grid .dg-actions.dg-actions-2 a {
+  width: calc(50% - .25rem);
 }
-data-grid .dg-actions.dg-actions-more button,
-data-grid .dg-actions.dg-actions-more a {
+
+data-grid .dg-actions.dg-actions-more button, data-grid .dg-actions.dg-actions-more a {
   display: none;
 }
+
 data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
   display: inline-block;
 }
+
 data-grid .dg-actions.dg-actions-expand {
   position: absolute;
-  right: 0;
   display: flex;
-  align-items: center;
   justify-content: flex-end;
+  align-items:  center;
   width: 100%;
   height: 100%;
+  right: 0;
 }
+
 data-grid .dg-actions.dg-actions-expand.dg-actions-more {
   width: 100%;
 }
-data-grid .dg-actions.dg-actions-expand.dg-actions-more button,
-data-grid .dg-actions.dg-actions-expand.dg-actions-more a {
+
+data-grid .dg-actions.dg-actions-expand.dg-actions-more button, data-grid .dg-actions.dg-actions-expand.dg-actions-more a {
   display: inline-block;
 }
-data-grid button[data-intent=danger],
-data-grid a[data-intent=danger] {
+
+data-grid button[data-intent="danger"], data-grid a[data-intent="danger"] {
   background-color: var(--dg-danger-bg);
   border-color: var(--dg-danger-border-color);
   color: var(--dg-danger-color);
 }
-data-grid button[data-intent=primary],
-data-grid a[data-intent=primary] {
+
+data-grid button[data-intent="primary"], data-grid a[data-intent="primary"] {
   background-color: var(--dg-accent);
   border-color: var(--dg-accent);
   color: var(--dg-bg);
 }
+
 data-grid tr.dg-actionable {
   cursor: pointer;
 }
+
 data-grid tr.dg-actionable:hover td {
   background-color: var(--dg-row-hover-bg);
 }
@@ -575,162 +671,186 @@ data-grid tr.dg-actionable:hover td {
 /* css/_resizer.css */
 data-grid .dg-resizer {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 6px;
   z-index: 2;
   cursor: col-resize;
   user-select: none;
+  width: 6px;
+  top: 0;
+  right: 0;
 }
+
 data-grid .dg-resizer:before {
   content: "";
   display: block;
   position: absolute;
   top: var(--dg-header-padding-y);
+  background: var(--dg-color);
+  opacity: .2;
+  width: 2px;
   height: 1.5rem;
   right: 0;
-  width: 2px;
-  background: var(--dg-color);
-  opacity: 0.2;
 }
+
 data-grid .dg-resizer:hover:before {
-  opacity: 0.6;
+  opacity: .6;
 }
+
 data-grid .dg-resizer.dg-resizer-active {
   border-right: 1px dashed var(--dg-accent);
 }
+
 data-grid .dg-resizer.dg-resizer-active:before {
-  opacity: 0.6;
+  opacity: .6;
 }
 
 /* css/_responsive.css */
 data-grid .dg-responsive-toggle {
-  padding: 0;
   text-align: center;
+  padding: 0;
 }
+
 data-grid .dg-responsive-child-row > td {
   padding: 0;
 }
+
 data-grid .dg-responsive-table {
   table-layout: auto;
   border: 0;
 }
-data-grid .dg-responsive-table td,
-data-grid .dg-responsive-table th {
+
+data-grid .dg-responsive-table td, data-grid .dg-responsive-table th {
   white-space: normal;
 }
+
 data-grid .dg-responsive-table th {
   max-width: 40%;
 }
+
 @media only screen and (max-width: 767px) {
-  data-grid[responsive] .dg-resizer {
+  data-grid[responsive] .dg-resizer, data-grid[responsive] .dg-meta, data-grid[responsive] .dg-input-page {
     display: none;
   }
-  data-grid[responsive] .dg-meta {
-    display: none;
-  }
-  data-grid[responsive] .dg-input-page {
-    display: none;
-  }
-  data-grid[responsive] table,
-  data-grid[responsive] tbody,
-  data-grid[responsive] tfoot,
-  data-grid[responsive] th,
-  data-grid[responsive] td,
-  data-grid[responsive] tr:not([hidden]) {
+
+  data-grid[responsive] table, data-grid[responsive] tbody, data-grid[responsive] tfoot, data-grid[responsive] th, data-grid[responsive] td, data-grid[responsive] tr:not([hidden]) {
     display: block;
   }
+
   data-grid[responsive] thead {
     display: flex;
     border-bottom: 2px solid var(--dg-header-bg);
   }
+
   data-grid[responsive] thead > tr {
     flex-grow: 1;
   }
+
   data-grid[responsive] thead th {
     width: auto;
   }
+
   data-grid[responsive] tbody tr {
-    padding: 0;
     border: 1px solid var(--dg-header-bg);
+    padding: 0;
   }
+
   data-grid[responsive] tbody td {
     border: none;
     border-bottom: 1px solid var(--dg-row-border-color);
     position: relative;
-    padding-left: calc(100% - var(--dg-responsive-width) - var(--dg-padding-y) * 2);
+    padding-left: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 2);
   }
+
   data-grid[responsive] tbody td:last-child {
     border: 0;
   }
+
   data-grid[responsive] tbody td:before {
     position: absolute;
-    top: 0;
-    left: 0;
     padding: var(--dg-padding-y);
-    width: calc(100% - var(--dg-responsive-width) - var(--dg-padding-y) * 4);
+    width: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4);
     content: attr(data-name);
     display: block;
-    font-weight: bold;
     background-color: var(--dg-header-bg);
+    font-weight: bold;
+    top: 0;
+    left: 0;
   }
+
   data-grid[responsive] tbody td {
-    padding-left: calc(100% - var(--dg-responsive-width) - var(--dg-padding-y) * 4 + 0.5rem);
+    padding-left: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4 + .5rem);
   }
+
   data-grid[responsive] .dg-selectable {
     height: 28px;
-    margin: 2px 1px 2px;
+    margin: 2px 1px;
   }
-  data-grid[responsive] td.dg-selectable::before,
-  data-grid[responsive] td.dg-actions::before {
+
+  data-grid[responsive] td.dg-selectable:before, data-grid[responsive] td.dg-actions:before {
     padding: 0;
   }
+
   data-grid[responsive] td.dg-selectable label {
     padding: 5px;
   }
+
   data-grid[responsive] td {
-    min-height: 35px;
     width: auto;
+    min-height: 35px;
   }
-  data-grid[responsive] td[data-name]::before {
+
+  data-grid[responsive] td[data-name]:before {
     height: 100%;
   }
+
   data-grid[responsive] td.dg-actions {
     padding-left: inherit;
     width: inherit;
   }
+
   data-grid[responsive] .dg-actions button {
     width: inherit !important;
   }
+
   data-grid[responsive] tr.dg-head-columns {
+    width: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4);
     padding: 0;
-    width: calc(100% - var(--dg-responsive-width) - var(--dg-padding-y) * 4);
   }
+
   data-grid[responsive] tr.dg-head-columns th.dg-sortable {
-    padding: 0.36em 1.3em 0.36em 0.75em;
+    padding: .36em 1.3em .36em .75em;
   }
+
   data-grid[responsive] tr.dg-head-filters {
-    background: transparent;
     vertical-align: top;
+    width: calc(100% - (100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4));
+    background: none;
     padding: 0;
-    width: calc(100% - (100% - var(--dg-responsive-width) - var(--dg-padding-y) * 4));
   }
-  data-grid[responsive] .dg-head-filters th input:not([type=checkbox], [type=radio]) {
+
+  data-grid[responsive] .dg-head-filters th input:not(:-webkit-any([type="checkbox"], [type="radio"])) {
     height: 2.25em;
   }
-  data-grid[responsive] .dg-head-filters th.dg-selectable {
-    background: transparent;
+
+  data-grid[responsive] .dg-head-filters th input:not(:-moz-any([type="checkbox"], [type="radio"])) {
+    height: 2.25em;
   }
-  data-grid[responsive] .dg-head-filters th.dg-selectable label::before {
+
+  data-grid[responsive] .dg-head-filters th input:not(:is([type="checkbox"], [type="radio"])) {
+    height: 2.25em;
+  }
+
+  data-grid[responsive] .dg-head-filters th.dg-selectable {
+    background: none;
+  }
+
+  data-grid[responsive] .dg-head-filters th.dg-selectable label:before {
     content: "Column Filters";
   }
-  data-grid[responsive] tfoot .dg-page-nav {
-    min-width: revert;
-  }
-  data-grid[data-responsive=true] tfoot .dg-page-nav {
+
+  data-grid[responsive] tfoot .dg-page-nav, data-grid[data-responsive="true"] tfoot .dg-page-nav {
     min-width: revert;
   }
 }
 
 /* css/data-grid.css */
-/*# sourceMappingURL=data-grid.css.map */
+

@@ -378,7 +378,7 @@ validation fails, or when Escape is pressed, the edit is rejected and the
 original value is restored (`td[data-invalid]` is set on error). A grid-level
 `validate` option is used as a fallback for columns without one.
 
-You can check `demo-server.html` to get a sample usage with saving functionnality
+You can check `demo/server.html` to get a sample usage with saving functionality
 
 ## Api
 
@@ -432,7 +432,7 @@ Server parameters are sent as query string and are `start`, `length` and `search
 To enable server mode, use `server=true`. These can be changed to your own server
 settings with the `serverParams` option object.
 
-You can check `demo/server.html` and `demo-server.php` for an example.
+You can check `demo/server.html` and `demo/server.js` for an example (`bun demo/server.js`).
 
 ## Demo
 

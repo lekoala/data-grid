@@ -54,16 +54,15 @@
 
     const serverDemo = new DataGrid({
       columns,
-      src: "demo-server.php",
+      src: "api/users",
       filterable: true,
       sortable: true,
       debug: true
     });
     serverDemo.setAttribute("sticky", "");
     serverDemo.setAttribute("density", "compact");
-    serverDemo.setAttribute("sticky", "");
     serverDemo.addEventListener("edit", (ev) => {
-      postJson("demo-server.php?action=edit", ev.detail);
+      postJson("api/users?action=edit", ev.detail);
       toastLiveExample.querySelector(".toast-body").innerHTML = "Row was updated";
       toast.show();
     });
@@ -71,7 +70,7 @@
 
     const invalidDemo = new DataGrid({
       columns,
-      src: "invalid-server.php",
+      src: "api/errors",
       filterable: true,
       sortable: true,
       debug: true
@@ -115,7 +114,7 @@
     </ul>
     <p>Server parameters are sent as query string and are <code>page</code>, <code>pageSize</code>, <code>sort</code> and <code>filters</code> (configurable through <code>serializeQuery</code> on <code>FetchDataSource</code> if needed).</p>
     <p>Use <code>src</code> to enable a server-side data source.</p>
-    <p>To test this locally, use the built-in php server</p>
+    <p>To test this locally, run <code>bun demo/server.js</code></p>
 
     <div id="server-demo"></div>
 

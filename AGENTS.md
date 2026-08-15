@@ -9,10 +9,9 @@ runtime requirement (no Bun/Node APIs in `src/`).
 
 ## Toolchain
 
-- Bun: install, test, build, dev server
+- Bun: install, test, build (`scripts/build.js` via `Bun.build`), dev server (`demo/server.js`)
 - Biome: lint + format (single `bun run check`)
 - tsc: typecheck from JSDoc (`checkJs`), `strict` off for now
-- esbuild: bundling (kept during the refactor, replaced later)
 
 ## Architecture rules
 

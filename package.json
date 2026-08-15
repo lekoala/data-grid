@@ -5,17 +5,12 @@
   "type": "module",
   "main": "data-grid",
   "scripts": {
-    "dev": "esbuild --bundle --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=dist/data-grid.js --servedir=.",
-    "build": "bun run build-dev && bun run build-min && bun run build-css-dev && bun run build-css-min",
-    "build-dev": "esbuild --bundle --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=dist/data-grid.js --banner:js=\"/*** Data Grid Web Component * https://github.com/lekoala/data-grid ***/\"",
-    "build-min": "esbuild --bundle --minify --loader:.css=text --loader:.html=text --sourcemap --format=esm data-grid.js --outfile=dist/data-grid.min.js",
-    "build-css-dev": "esbuild css/data-grid.css --bundle --sourcemap --outfile=dist/data-grid.css --banner:css=\"/*** Data Grid Web Component * https://github.com/lekoala/data-grid ***/\"",
-    "build-css-min": "esbuild css/data-grid.css --bundle --minify --outfile=dist/data-grid.min.css",
+    "dev": "bun run build && bun demo/server.js",
+    "build": "bun scripts/build.js",
     "test": "bun test",
     "check": "biome check .",
     "typecheck": "tsc -p jsconfig.json",
-    "ci": "bun run check && bun run typecheck && bun test && bun run build",
-    "local-server": "php -S localhost:8002 -t ."
+    "ci": "bun run check && bun run typecheck && bun test && bun run build"
   },
   "repository": {
     "type": "git",
@@ -30,7 +25,6 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.8",
     "@happy-dom/global-registrator": "^20.11.2",
-    "esbuild": "^0.28.2",
     "typescript": "^5"
   },
   "author": "LeKoala",

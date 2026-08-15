@@ -1,5 +1,9 @@
 import { GlobalRegistrator } from "@happy-dom/global-registrator";
 
+// happy-dom replaces the native Response/fetch. Keep a reference for tests
+// that need a real HTTP round-trip (ex: demo/server.js served by Bun.serve).
+globalThis.NativeResponse = globalThis.Response;
+
 GlobalRegistrator.register();
 
 // happy-dom does not implement the 2d canvas context, which the grid uses to

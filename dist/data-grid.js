@@ -1,5 +1,4 @@
 /*** Data Grid Web Component * https://github.com/lekoala/data-grid ***/
-
 // src/utils/camelize.js
 function camelize(str) {
   return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
@@ -65,7 +64,8 @@ function hasAttribute(el, name) {
   return el.hasAttribute(name);
 }
 function setAttribute(el, name, v = "", check = false) {
-  if (check && hasAttribute(el, name)) return;
+  if (check && hasAttribute(el, name))
+    return;
   el.setAttribute(name, `${v}`);
 }
 function removeAttribute(el, name) {
@@ -128,14 +128,10 @@ function insertAfter(newNode, existingNode) {
 }
 
 // src/core/base-element.js
-var BaseElement = class extends HTMLElement {
-  /**
-   * @param {Object} options
-   */
+class BaseElement extends HTMLElement {
   constructor(options = {}) {
     super();
-    this.options = /** @type {Options} */
-    Object.assign({}, this.defaultOptions, options);
+    this.options = Object.assign({}, this.defaultOptions, options);
     this.log("constructor");
     this.setup = false;
     this.rendered = false;
@@ -143,52 +139,23 @@ var BaseElement = class extends HTMLElement {
     this._ready();
     this.log("ready");
   }
-  /**
-   * @returns {Object}
-   */
   get defaultOptions() {
     return {};
   }
-  /**
-   * @returns {Array}
-   */
   static get observedAttributes() {
     return [];
   }
-  /**
-   * @returns {String}
-   */
   static template() {
     return "";
   }
-  /**
-   * This is called at the end of constructor. Extend in subclass if needed.
-   */
-  _ready() {
-  }
-  /**
-   * This is called when connected. Extend in subclass if needed.
-   */
-  _connected() {
-  }
-  /**
-   * This is called when disconnected. Extend in subclass if needed.
-   */
-  _disconnected() {
-  }
-  /**
-   * @param {any[]} data
-   */
+  _ready() {}
+  _connected() {}
+  _disconnected() {}
   log(...data) {
     if (this.options.debug) {
       console.log(`[${getAttribute(this, "id")}] `, ...data);
     }
   }
-  /**
-   * Handle events within the component
-   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
-   * @param {Event} event
-   */
   handleEvent(event) {
     if (this[`on${event.type}`]) {
       this[`on${event.type}`](event);
@@ -211,9 +178,6 @@ var BaseElement = class extends HTMLElement {
       dispatch(this, "connected");
     }, 0);
   }
-  /**
-   * @link https://nolanlawson.com/2024/12/01/avoiding-unnecessary-cleanup-work-in-disconnectedcallback/
-   */
   disconnectedCallback() {
     setTimeout(() => {
       if (!this.isConnected && this.setup) {
@@ -224,20 +188,9 @@ var BaseElement = class extends HTMLElement {
       }
     }, 0);
   }
-  /**
-   * Custom transformers per attribute name.
-   * @returns {Object}
-   */
   get transformAttributes() {
     return {};
   }
-  /**
-   * Observed attributes map to options (kebab-case -> camelCase).
-   * An attribute without a value means "true".
-   * @param {String} attributeName
-   * @param {String} oldValue
-   * @param {String} newValue
-   */
   attributeChangedCallback(attributeName, oldValue, newValue) {
     if (oldValue === newValue) {
       return;
@@ -251,16 +204,16 @@ var BaseElement = class extends HTMLElement {
       this[`${attr}Changed`]();
     }
   }
-};
+}
 var base_element_default = BaseElement;
 
 // src/data-source.js
-function encodeSearchParams(value, prefix = "", out = new URLSearchParams()) {
-  if (value === null || value === void 0) {
+function encodeSearchParams(value, prefix = "", out = new URLSearchParams) {
+  if (value === null || value === undefined) {
     return out;
   }
   if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
+    for (let i = 0;i < value.length; i++) {
       encodeSearchParams(value[i], `${prefix}[${i}]`, out);
     }
     return out;
@@ -279,7 +232,7 @@ function encodeSearchParams(value, prefix = "", out = new URLSearchParams()) {
   return out;
 }
 function isNumericValue(value) {
-  if (value === "" || value === null || value === void 0 || typeof value === "boolean") {
+  if (value === "" || value === null || value === undefined || typeof value === "boolean") {
     return false;
   }
   return Number.isFinite(Number(value));
@@ -294,34 +247,38 @@ function applyFilters(rows, filters) {
       const value = filter?.value;
       const cell = item[field];
       if (operator === "empty") {
-        if (cell !== "" && cell !== null && cell !== void 0) {
+        if (cell !== "" && cell !== null && cell !== undefined) {
           return false;
         }
         continue;
       }
       if (operator === "notEmpty") {
-        if (cell === "" || cell === null || cell === void 0) {
+        if (cell === "" || cell === null || cell === undefined) {
           return false;
         }
         continue;
       }
-      if (value === null || value === void 0 || value === "") {
+      if (value === null || value === undefined || value === "") {
         continue;
       }
       const cellLower = `${cell ?? ""}`.toLowerCase();
       const valueLower = String(value).toLowerCase();
       switch (operator) {
         case "eq":
-          if (`${cell}` !== String(value)) return false;
+          if (`${cell}` !== String(value))
+            return false;
           break;
         case "neq":
-          if (`${cell}` === String(value)) return false;
+          if (`${cell}` === String(value))
+            return false;
           break;
         case "startsWith":
-          if (!cellLower.startsWith(valueLower)) return false;
+          if (!cellLower.startsWith(valueLower))
+            return false;
           break;
         case "endsWith":
-          if (!cellLower.endsWith(valueLower)) return false;
+          if (!cellLower.endsWith(valueLower))
+            return false;
           break;
         case "lt":
         case "lte":
@@ -330,16 +287,24 @@ function applyFilters(rows, filters) {
           if (isNumericValue(cell) && isNumericValue(value)) {
             const a = Number(cell);
             const b = Number(value);
-            if (operator === "lt" && a >= b) return false;
-            if (operator === "lte" && a > b) return false;
-            if (operator === "gt" && a <= b) return false;
-            if (operator === "gte" && a < b) return false;
+            if (operator === "lt" && a >= b)
+              return false;
+            if (operator === "lte" && a > b)
+              return false;
+            if (operator === "gt" && a <= b)
+              return false;
+            if (operator === "gte" && a < b)
+              return false;
           } else {
-            const cmp = `${cell ?? ""}`.localeCompare(String(value), void 0, { sensitivity: "base" });
-            if (operator === "lt" && cmp >= 0) return false;
-            if (operator === "lte" && cmp > 0) return false;
-            if (operator === "gt" && cmp <= 0) return false;
-            if (operator === "gte" && cmp < 0) return false;
+            const cmp = `${cell ?? ""}`.localeCompare(String(value), undefined, { sensitivity: "base" });
+            if (operator === "lt" && cmp >= 0)
+              return false;
+            if (operator === "lte" && cmp > 0)
+              return false;
+            if (operator === "gt" && cmp <= 0)
+              return false;
+            if (operator === "gte" && cmp < 0)
+              return false;
           }
           break;
         case "between": {
@@ -349,11 +314,13 @@ function applyFilters(rows, filters) {
           const [min, max] = value;
           if (isNumericValue(cell) && isNumericValue(min) && isNumericValue(max)) {
             const v = Number(cell);
-            if (v < Number(min) || v > Number(max)) return false;
+            if (v < Number(min) || v > Number(max))
+              return false;
           } else {
-            const cmpMin = `${cell ?? ""}`.localeCompare(String(min), void 0, { sensitivity: "base" });
-            const cmpMax = `${cell ?? ""}`.localeCompare(String(max), void 0, { sensitivity: "base" });
-            if (cmpMin < 0 || cmpMax > 0) return false;
+            const cmpMin = `${cell ?? ""}`.localeCompare(String(min), undefined, { sensitivity: "base" });
+            const cmpMax = `${cell ?? ""}`.localeCompare(String(max), undefined, { sensitivity: "base" });
+            if (cmpMin < 0 || cmpMax > 0)
+              return false;
           }
           break;
         }
@@ -361,10 +328,12 @@ function applyFilters(rows, filters) {
           if (!Array.isArray(value)) {
             continue;
           }
-          if (!value.some((v) => `${v}` === `${cell}`)) return false;
+          if (!value.some((v) => `${v}` === `${cell}`))
+            return false;
           break;
         default:
-          if (!cellLower.includes(valueLower)) return false;
+          if (!cellLower.includes(valueLower))
+            return false;
       }
     }
     return true;
@@ -382,8 +351,10 @@ function applySort(rows, sort) {
     }
     const valA = `${a[field] ?? ""}`.toUpperCase();
     const valB = `${b[field] ?? ""}`.toUpperCase();
-    if (valA > valB) return dir;
-    if (valA < valB) return -dir;
+    if (valA > valB)
+      return dir;
+    if (valA < valB)
+      return -dir;
     return 0;
   });
 }
@@ -399,24 +370,14 @@ function parseResult(json) {
   const meta = json?.meta ?? {};
   return { rows, total: meta.filtered ?? rows.length, meta };
 }
-var FetchDataSource = class {
-  /**
-   * @param {String} url
-   * @param {Object} [options]
-   * @param {Object} [options.params] Extra constant HTTP params appended to each request
-   * @param {(query: QueryState) => any} [options.serializeQuery] Defaults to identity (QueryState preserved)
-   * @param {(response: any) => PageResult} [options.parseResponse] Defaults to parseResult
-   */
+
+class FetchDataSource {
   constructor(url, { params = {}, serializeQuery = null, parseResponse = null } = {}) {
     this.url = url;
     this.params = params;
     this.serializeQuery = serializeQuery;
     this.parseResponse = parseResponse;
   }
-  /**
-   * @param {QueryState} query
-   * @returns {URL}
-   */
   buildUrl(query) {
     let base = window.location.href;
     if (!base || base === "about:blank") {
@@ -431,11 +392,6 @@ var FetchDataSource = class {
     encodeSearchParams(merged, "", url.searchParams);
     return url;
   }
-  /**
-   * @param {QueryState} query
-   * @param {{signal?: AbortSignal}} [options]
-   * @returns {Promise<PageResult>}
-   */
   async load(query, { signal } = {}) {
     const url = this.buildUrl(query);
     let response;
@@ -448,30 +404,19 @@ var FetchDataSource = class {
       throw new Error("Network response error");
     }
     if (!response.ok) {
-      const error = (
-        /** @type {any} */
-        new Error(response.statusText || "Network response error")
-      );
+      const error = new Error(response.statusText || "Network response error");
       error.response = response;
       throw error;
     }
     const json = await response.json();
     return this.parseResponse ? this.parseResponse(json) : parseResult(json);
   }
-};
-var ArrayDataSource = class _ArrayDataSource {
-  /**
-   * @param {Array<Record<string, any>>} [rows]
-   */
+}
+
+class ArrayDataSource {
   constructor(rows = []) {
     this.rows = Array.isArray(rows) ? rows : [];
   }
-  /**
-   * Create a local data source by fetching a static file once.
-   * @param {String} url
-   * @param {(response: any) => PageResult} [parseResponse]
-   * @returns {Promise<ArrayDataSource>}
-   */
   static async fromUrl(url, parseResponse = null) {
     const response = await fetch(url);
     if (!response.ok) {
@@ -479,12 +424,8 @@ var ArrayDataSource = class _ArrayDataSource {
     }
     const json = await response.json();
     const result = parseResponse ? parseResponse(json) : parseResult(json);
-    return new _ArrayDataSource(result.rows);
+    return new ArrayDataSource(result.rows);
   }
-  /**
-   * @param {QueryState} query
-   * @returns {Promise<PageResult>}
-   */
   async load(query) {
     let rows = applyFilters(this.rows, query.filters);
     rows = applySort(rows, query.sort);
@@ -495,19 +436,12 @@ var ArrayDataSource = class _ArrayDataSource {
       meta: { total: this.rows.length }
     };
   }
-  /**
-   * @param {Record<string, any>} row
-   */
   add(row) {
     this.rows.push(row);
   }
-  /**
-   * @param {any} value
-   * @param {String} [key] Field to match. Defaults to the first field.
-   */
   remove(value, key = null) {
     const k = key ?? (this.rows[0] && Object.keys(this.rows[0])[0]);
-    if (k === void 0) {
+    if (k === undefined) {
       return;
     }
     const idx = this.rows.findIndex((row) => row[k] === value);
@@ -515,7 +449,7 @@ var ArrayDataSource = class _ArrayDataSource {
       this.rows.splice(idx, 1);
     }
   }
-};
+}
 
 // src/utils/addSelectOption.js
 function addSelectOption(el, value, label, checked = false) {
@@ -590,23 +524,17 @@ var labels = {
   networkError: "Network response error"
 };
 function normalizeQuery(query) {
-  const q = (
-    /** @type {QueryState} */
-    query || {}
-  );
+  const q = query || {};
   const page = Math.floor(Number(q.page)) || 1;
   const pageSize = Math.floor(Number(q.pageSize)) || 10;
   const sort = Array.isArray(q.sort) ? q.sort.filter((s) => s?.field).map((s) => ({
     field: String(s.field),
-    direction: (
-      /** @type {"asc"|"desc"} */
-      s.direction === "desc" ? "desc" : "asc"
-    )
+    direction: s.direction === "desc" ? "desc" : "asc"
   })) : [];
   const filters = {};
   if (q.filters && typeof q.filters === "object") {
     for (const [key, filter] of Object.entries(q.filters)) {
-      if (filter === null || filter === void 0) {
+      if (filter === null || filter === undefined) {
         continue;
       }
       let operator;
@@ -618,10 +546,9 @@ function normalizeQuery(query) {
         operator = "contains";
         value = filter;
       }
-      const hasValue = value !== void 0 && value !== null && value !== "";
+      const hasValue = value !== undefined && value !== null && value !== "";
       if (hasValue || operator === "empty" || operator === "notEmpty") {
-        filters[key] = /** @type {FilterState} */
-        hasValue ? { operator, value } : { operator };
+        filters[key] = hasValue ? { operator, value } : { operator };
       }
     }
   }
@@ -643,14 +570,14 @@ function orderColumns(columns) {
   return [...start.reverse(), ...middle, ...end];
 }
 function applyCellContent(el, content) {
-  if (content === void 0 || content === null) {
+  if (content === undefined || content === null) {
     return;
   }
   if (content instanceof Node) {
     el.appendChild(content);
     return;
   }
-  if (typeof content === "object" && content.html !== void 0) {
+  if (typeof content === "object" && content.html !== undefined) {
     el.innerHTML = content.html;
     return;
   }
@@ -673,7 +600,8 @@ function applyColumnDefinition(el, column) {
     addClass(el, "dg-not-sortable");
   }
 }
-var DataGrid = class extends base_element_default {
+
+class DataGrid extends base_element_default {
   _filterSelector = "[id^=dg-filter]";
   _excludedRowElementSelector = "a,button,input,select,textarea";
   _excludedKeys = [
@@ -718,7 +646,8 @@ var DataGrid = class extends base_element_default {
   _ready() {
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
     this.options = this.options || this.defaultOptions;
-    if (this.options.singleSelect) this.options.selectable = true;
+    if (this.options.singleSelect)
+      this.options.selectable = true;
     this.fireEvents = false;
     this.plugins = {};
     for (const [pluginName, pluginClass] of Object.entries(plugins)) {
@@ -726,7 +655,7 @@ var DataGrid = class extends base_element_default {
     }
     this._initialQuery = normalizeQuery(this.options.initialQuery);
     this._query = normalizeQuery(this._initialQuery);
-    this._selection = { mode: "explicit", ids: /* @__PURE__ */ new Set(), except: /* @__PURE__ */ new Set() };
+    this._selection = { mode: "explicit", ids: new Set, except: new Set };
     this._requestSeq = 0;
     this._controller = null;
     this.initialResult = null;
@@ -781,39 +710,23 @@ var DataGrid = class extends base_element_default {
 <ul class="dg-menu" hidden></ul>
 `;
   }
-  /**
-   * @returns {Labels}
-   */
   get labels() {
     return labels;
   }
-  /**
-   * @returns {Labels}
-   */
   static getLabels() {
     return labels;
   }
-  /**
-   * @param {Object} v
-   */
   static setLabels(v) {
     labels = Object.assign(labels, v);
   }
-  /** Gets the text to be displayed when no data is loaded. */
   get noData() {
     return this.options.noData || this.labels.noData;
   }
-  /**
-   * @param {HTMLTableSectionElement} tbody
-   */
   #setNoData(tbody) {
     if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
       tbody.setAttribute("data-empty-message", this.noData);
     }
   }
-  /**
-   * @returns {Column}
-   */
   get defaultColumn() {
     return {
       field: "",
@@ -832,9 +745,6 @@ var DataGrid = class extends base_element_default {
       firstFilterOption: { value: "", text: "" }
     };
   }
-  /**
-   * @returns {Options}
-   */
   get defaultOptions() {
     return {
       id: null,
@@ -875,43 +785,21 @@ var DataGrid = class extends base_element_default {
       dataSource: null
     };
   }
-  /**
-   * Determines if the grid is initialized.
-   * @returns {Boolean}
-   */
   get isInit() {
     return this.classList.contains("dg-initialized");
   }
-  /**
-   * Determines if data load has failed.
-   * @returns {Boolean}
-   */
   get hasDataError() {
     return Boolean(this.error);
   }
-  /**
-   * Snapshot of the current query state.
-   * @returns {QueryState}
-   */
   get query() {
     return normalizeQuery(this._query);
   }
-  /**
-   * Convenience read-only accessor for the current page.
-   * @returns {Number}
-   */
   get page() {
     return this._query.page;
   }
-  /**
-   * @param {Plugins} list
-   */
   static registerPlugins(list) {
     plugins = list;
   }
-  /**
-   * @param {String} plugin
-   */
   static unregisterPlugins(plugin = null) {
     if (plugin === null) {
       plugins = {};
@@ -919,42 +807,22 @@ var DataGrid = class extends base_element_default {
       delete plugins[plugin];
     }
   }
-  /**
-   * @returns {Plugins}
-   */
   static registeredPlugins() {
     return plugins;
   }
-  /**
-   * Run a lifecycle hook on all registered plugins, in registration order.
-   * @param {String} hook
-   * @param {...any} args
-   */
   runPlugins(hook, ...args) {
     for (const plugin of Object.values(this.plugins)) {
       plugin[hook]?.(...args);
     }
   }
-  /**
-   * Build the normalized column list: base columns + plugin columns, ordered.
-   * @returns {Column[]}
-   */
   buildColumns() {
     const columns = this.convertColumns(this.options.columns);
     this.runPlugins("extendColumns", columns);
     return orderColumns(columns);
   }
-  /**
-   * The normalized column list of the current render cycle.
-   * @returns {Column[]}
-   */
   getColumns() {
     return this._columns;
   }
-  /**
-   * @param {Object|Array} columns
-   * @returns {Column[]}
-   */
   convertColumns(columns) {
     const cols = [];
     if (typeof columns === "object" && !Array.isArray(columns)) {
@@ -986,10 +854,6 @@ var DataGrid = class extends base_element_default {
     }
     return cols;
   }
-  /**
-   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
-   * @returns {Array}
-   */
   static get observedAttributes() {
     return [
       "src",
@@ -1011,21 +875,15 @@ var DataGrid = class extends base_element_default {
       "density"
     ];
   }
-  /** @returns {HTMLTableSectionElement} */
   get thead() {
     return $("thead", this);
   }
-  /** @returns {HTMLTableSectionElement} */
   get tbody() {
     return $("tbody", this);
   }
-  /** @returns {HTMLTableSectionElement} */
   get tfoot() {
     return $("tfoot", this);
   }
-  /**
-   * Pick the data source based on configuration.
-   */
   setupDataSource() {
     if (this.options.dataSource) {
       this.dataSource = this.options.dataSource;
@@ -1035,9 +893,6 @@ var DataGrid = class extends base_element_default {
       this.dataSource = new ArrayDataSource([]);
     }
   }
-  /**
-   * Seed the initial query from optional page / page-size attributes.
-   */
   setupInitialState() {
     if (!this._initialResult) {
       this._initialResult = this.options.initialResult || this.initialResult || null;
@@ -1060,48 +915,33 @@ var DataGrid = class extends base_element_default {
       }
     }
   }
-  /**
-   * Merge a patch into the query state and reload.
-   * Changing filters, sort or pageSize resets the page to 1 unless an explicit
-   * page is provided in the patch.
-   * @param {Object} patch
-   * @returns {Promise}
-   */
   setQuery(patch) {
     const next = normalizeQuery(this._query);
-    const touchesPopulation = patch.filters !== void 0 || patch.sort !== void 0 || patch.pageSize !== void 0;
-    if (patch.pageSize !== void 0) next.pageSize = patch.pageSize;
-    if (patch.sort !== void 0) next.sort = patch.sort;
-    if (patch.filters !== void 0) next.filters = patch.filters;
-    if (touchesPopulation && patch.page === void 0) next.page = 1;
-    if (patch.page !== void 0) next.page = patch.page;
+    const touchesPopulation = patch.filters !== undefined || patch.sort !== undefined || patch.pageSize !== undefined;
+    if (patch.pageSize !== undefined)
+      next.pageSize = patch.pageSize;
+    if (patch.sort !== undefined)
+      next.sort = patch.sort;
+    if (patch.filters !== undefined)
+      next.filters = patch.filters;
+    if (touchesPopulation && patch.page === undefined)
+      next.page = 1;
+    if (patch.page !== undefined)
+      next.page = patch.page;
     this._query = normalizeQuery(next);
     return this.refresh();
   }
-  /**
-   * Reset the query to its initial state and reload.
-   * @returns {Promise}
-   */
   resetQuery() {
     this._query = normalizeQuery(this._initialQuery);
     return this.refresh();
   }
-  /**
-   * Reload the result matching the current query.
-   * @returns {Promise}
-   */
   refresh() {
     return this.load();
   }
-  /**
-   * Single load path: abort previous request, load the current query,
-   * protect against stale responses, then render.
-   * @returns {Promise}
-   */
   async load() {
     const requestId = ++this._requestSeq;
     this._controller?.abort();
-    const controller = new AbortController();
+    const controller = new AbortController;
     this._controller = controller;
     this.loading = true;
     this.error = null;
@@ -1115,17 +955,17 @@ var DataGrid = class extends base_element_default {
       } else {
         result = await this.dataSource.load(this.query, { signal: controller.signal });
       }
-      if (requestId !== this._requestSeq) return;
+      if (requestId !== this._requestSeq)
+        return;
       this.applyResult(result);
     } catch (err) {
-      if (requestId !== this._requestSeq) return;
-      if (err?.name === "AbortError" || controller.signal.aborted) return;
+      if (requestId !== this._requestSeq)
+        return;
+      if (err?.name === "AbortError" || controller.signal.aborted)
+        return;
       this.error = err;
       setAttribute(this, "data-error", "");
-      this.tbody?.setAttribute(
-        "data-empty-message",
-        this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError
-      );
+      this.tbody?.setAttribute("data-empty-message", this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError);
       dispatch(this, "loadError", err);
     } finally {
       if (requestId === this._requestSeq) {
@@ -1134,10 +974,6 @@ var DataGrid = class extends base_element_default {
       }
     }
   }
-  /**
-   * Apply a PageResult and render.
-   * @param {PageResult|Array} result
-   */
   applyResult(result) {
     const page = Array.isArray(result) ? { rows: result, total: result.length, meta: {} } : result;
     this.rows = page.rows || [];
@@ -1151,9 +987,6 @@ var DataGrid = class extends base_element_default {
     this.fixPage();
     this.renderBody();
   }
-  /**
-   * Pick the data source based on configuration.
-   */
   srcChanged() {
     this.setupDataSource();
     return this.refresh();
@@ -1183,9 +1016,6 @@ var DataGrid = class extends base_element_default {
   filterableChanged() {
     this.renderTable();
   }
-  /**
-   * Populate the page size select according to options
-   */
   populatePageSizes() {
     if (!this.selectPerPage) {
       return;
@@ -1247,10 +1077,6 @@ var DataGrid = class extends base_element_default {
       this.log("initialized");
     });
   }
-  /**
-   * @param {string} field
-   * @returns {Column}
-   */
   getCol(field) {
     let found = null;
     for (const col of this.options.columns) {
@@ -1282,7 +1108,8 @@ var DataGrid = class extends base_element_default {
   }
   showColumn(field, render = true) {
     this.setColProp(field, "hidden", false);
-    if (render) this.renderTable();
+    if (render)
+      this.renderTable();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "visible"
@@ -1290,17 +1117,13 @@ var DataGrid = class extends base_element_default {
   }
   hideColumn(field, render = true) {
     this.setColProp(field, "hidden", true);
-    if (render) this.renderTable();
+    if (render)
+      this.renderTable();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "hidden"
     });
   }
-  /**
-   * Number of rendered columns of the current column list.
-   * @param {Boolean} visibleOnly
-   * @returns {Number}
-   */
   columnsLength(visibleOnly = false) {
     let len = 0;
     for (const col of this.getColumns()) {
@@ -1313,12 +1136,9 @@ var DataGrid = class extends base_element_default {
     }
     return len;
   }
-  /**
-   * Global configuration and renderTable
-   * This should be called after your data has been loaded
-   */
   configureUi() {
-    if (!this.table) return this;
+    if (!this.table)
+      return this;
     this.table.style.visibility = "hidden";
     this.renderTable();
     if (!this.options.responsive) {
@@ -1333,12 +1153,6 @@ var DataGrid = class extends base_element_default {
     this.#setNoData(this.tbody);
     return this.fixPage();
   }
-  /**
-   * Resolve the stable key of a row.
-   * @param {Record<string, any>} row
-   * @param {Number} [index] Fallback index (current page) when the row has no key
-   * @returns {String}
-   */
   resolveRowKey(row, index = 0) {
     const rowKey = this.options.rowKey;
     let key;
@@ -1347,23 +1161,13 @@ var DataGrid = class extends base_element_default {
     } else if (rowKey) {
       key = row[rowKey];
     }
-    return key === void 0 || key === null ? String(index) : String(key);
+    return key === undefined || key === null ? String(index) : String(key);
   }
-  /**
-   * Whether a row is part of the current selection.
-   * @param {Record<string, any>} row
-   * @param {Number} [index]
-   * @returns {Boolean}
-   */
   isRowSelected(row, index = 0) {
     const key = this.resolveRowKey(row, index);
     const sel = this._selection;
     return sel.mode === "all" ? !sel.except.has(key) : sel.ids.has(key);
   }
-  /**
-   * Snapshot of the current selection state.
-   * @returns {SelectionState}
-   */
   getSelectionState() {
     return {
       mode: this._selection.mode,
@@ -1371,11 +1175,6 @@ var DataGrid = class extends base_element_default {
       except: new Set(this._selection.except)
     };
   }
-  /**
-   * Select a row (single select keeps at most one key).
-   * @param {Record<string, any>} row
-   * @param {Number} [index]
-   */
   selectRow(row, index = 0) {
     const key = this.resolveRowKey(row, index);
     const sel = this._selection;
@@ -1391,11 +1190,6 @@ var DataGrid = class extends base_element_default {
     }
     this._selectionChanged();
   }
-  /**
-   * Deselect a row.
-   * @param {Record<string, any>} row
-   * @param {Number} [index]
-   */
   deselectRow(row, index = 0) {
     const key = this.resolveRowKey(row, index);
     const sel = this._selection;
@@ -1406,11 +1200,6 @@ var DataGrid = class extends base_element_default {
     }
     this._selectionChanged();
   }
-  /**
-   * Toggle the selection state of a row.
-   * @param {Record<string, any>} row
-   * @param {Number} [index]
-   */
   toggleRow(row, index = 0) {
     if (this.isRowSelected(row, index)) {
       this.deselectRow(row, index);
@@ -1418,39 +1207,22 @@ var DataGrid = class extends base_element_default {
       this.selectRow(row, index);
     }
   }
-  /**
-   * Select all visible rows (or everything when selectVisibleOnly is false).
-   */
   selectAll() {
     if (this.options.selectVisibleOnly) {
       const ids = new Set(this.rows.map((row, i) => this.resolveRowKey(row, i)));
-      this._selection = { mode: "explicit", ids, except: /* @__PURE__ */ new Set() };
+      this._selection = { mode: "explicit", ids, except: new Set };
     } else {
-      this._selection = { mode: "all", ids: /* @__PURE__ */ new Set(), except: /* @__PURE__ */ new Set() };
+      this._selection = { mode: "all", ids: new Set, except: new Set };
     }
     this._selectionChanged();
   }
-  /**
-   * Reset the selection and refresh the UI.
-   */
   clearSelection() {
-    this._selection = { mode: "explicit", ids: /* @__PURE__ */ new Set(), except: /* @__PURE__ */ new Set() };
+    this._selection = { mode: "explicit", ids: new Set, except: new Set };
     this._selectionChanged();
   }
-  /**
-   * Get selected rows or specific fields from selected rows.
-   * Only reflects the currently loaded page (compat). For a server-side
-   * selection spanning pages, use getSelectionState().
-   * If no keys are provided, returns the full row objects.
-   * If one key is provided, returns an array of values for that key.
-   * If multiple keys are provided, returns an array of objects with those keys and values.
-   * In single select mode, returns a single object or value.
-   * @param {...String} keys - Field names to select from each row.
-   * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
-   */
   getSelection(...keys) {
     const selected = [];
-    for (let i = 0; i < this.rows.length; i++) {
+    for (let i = 0;i < this.rows.length; i++) {
       const row = this.rows[i];
       if (!this.isRowSelected(row, i)) {
         continue;
@@ -1465,15 +1237,11 @@ var DataGrid = class extends base_element_default {
     }
     return this.options.singleSelect ? selected[0] ?? {} : selected;
   }
-  /**
-   * Reflect the selection on the DOM and notify listeners.
-   * The core owns the tr[data-selected] state attribute.
-   */
   _selectionChanged() {
     const tbody = this.tbody;
     if (tbody) {
       const trs = Array.from(tbody.querySelectorAll("tr"));
-      for (let i = 0; i < this.rows.length; i++) {
+      for (let i = 0;i < this.rows.length; i++) {
         const tr = trs[i];
         if (!tr || tr.classList.contains("dg-fake-row")) {
           continue;
@@ -1525,26 +1293,14 @@ var DataGrid = class extends base_element_default {
       return this.setQuery({ page });
     }
   }
-  /**
-   * This is the callback for the select control
-   */
   changePerPage() {
     const pageSize = Number.parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value);
     return this.setQuery({ pageSize });
   }
-  /**
-   * Sort direction of a column based on the current query.
-   * @param {String} field
-   * @returns {"asc"|"desc"|null}
-   */
   getColumnSortDirection(field) {
     const s = (this._query.sort || []).find((x) => x.field === field);
     return s?.direction ?? null;
   }
-  /**
-   * Trigger sort based on the current header state.
-   * @param {Element} baseCol The column that was clicked or null to use current sort
-   */
   sortData(baseCol = null) {
     this.log("sort data");
     let col = baseCol;
@@ -1598,9 +1354,6 @@ var DataGrid = class extends base_element_default {
     }
     return this.filterData();
   }
-  /**
-   * Collect current filter inputs into the query and reload.
-   */
   filterData() {
     this.log("filter data");
     const filters = {};
@@ -1626,11 +1379,6 @@ var DataGrid = class extends base_element_default {
     this.renderFooter();
     this.runPlugins("afterRender", this._renderContext);
   }
-  /**
-   * Create table header
-   * - One row for the column headers
-   * - One row for the filters
-   */
   renderHeader() {
     this.log("render header");
     const thead = this.thead;
@@ -1641,18 +1389,13 @@ var DataGrid = class extends base_element_default {
   renderFooter() {
     this.log("render footer");
     const tfoot = this.tfoot;
-    if (!tfoot) return;
+    if (!tfoot)
+      return;
     const td = tfoot.querySelector("td");
     tfoot.removeAttribute("hidden");
     setAttribute(td, "colspan", this.columnsLength(true));
     tfoot.style.display = "";
   }
-  /**
-   * Create the column headers based on the normalized column list.
-   * The core creates the <th> and its structural attributes, then a column
-   * renderHeaderCell (or the default renderer) fills it.
-   * @param {HTMLTableSectionElement} thead
-   */
   createColumnHeaders(thead) {
     const availableWidth = this.clientWidth;
     const colMaxWidth = Math.round(availableWidth / this.columnsLength(true) * 2);
@@ -1732,11 +1475,6 @@ var DataGrid = class extends base_element_default {
       }
     }
   }
-  /**
-   * Default header cell renderer for base columns.
-   * @param {HTMLTableCellElement} th
-   * @param {Object} ctx
-   */
   renderDefaultHeaderCell(th, ctx) {
     const { column, sampleTh } = ctx;
     const sortable = this.options.sortable && !column.noSort;
@@ -1820,12 +1558,6 @@ var DataGrid = class extends base_element_default {
       }
     }
   }
-  /**
-   * Default filter cell renderer for base columns.
-   * @param {HTMLTableCellElement} th
-   * @param {Column} column
-   * @param {HTMLTableCellElement} relatedTh
-   */
   renderDefaultFilterCell(th, column, relatedTh) {
     const filter = this.createFilterElement(column, relatedTh);
     const filterState = this._query.filters?.[column.field];
@@ -1857,13 +1589,6 @@ var DataGrid = class extends base_element_default {
     filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
     return filter;
   }
-  /**
-   * Resolve the options of a select filter, directly consumable by the
-   * <select>. Never derives from the currently loaded page: for a server
-   * grid the options must come from meta.filters or an explicit list.
-   * @param {Column} column
-   * @returns {Array<import("./data-source.js").FilterOption>}
-   */
   getFilterOptions(column) {
     const firstFilterOption = column.firstFilterOption || this.defaultColumn.firstFilterOption;
     if (Array.isArray(column.filterList)) {
@@ -1874,15 +1599,11 @@ var DataGrid = class extends base_element_default {
       return [firstFilterOption, ...metaOptions];
     }
     if (this.dataSource instanceof ArrayDataSource) {
-      const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => e[column.field]))].filter((v) => v !== void 0 && v !== null && v !== "").sort();
+      const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => e[column.field]))].filter((v) => v !== undefined && v !== null && v !== "").sort();
       return [firstFilterOption, ...uniqueValues.map((e) => ({ value: e, text: e }))];
     }
     return [firstFilterOption];
   }
-  /**
-   * Render the rows of the current page into tbody
-   * It will call paginate() at the end
-   */
   renderBody() {
     this.log("render body");
     this._columns = this.buildColumns();
@@ -1895,7 +1616,8 @@ var DataGrid = class extends base_element_default {
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
         on(tr, "click", (ev) => {
-          if (ev.target.matches(this._excludedRowElementSelector)) return;
+          if (ev.target.matches(this._excludedRowElementSelector))
+            return;
           toggleClass(ev.currentTarget, "dg-expanded");
         });
       }
@@ -1945,12 +1667,6 @@ var DataGrid = class extends base_element_default {
     }
     dispatch(this, "bodyRendered");
   }
-  /**
-   * Default cell renderer for base columns (transform / format).
-   * Editable cells are marked for the EditableColumn plugin.
-   * @param {HTMLTableCellElement} td
-   * @param {Object} ctx
-   */
   renderDefaultCell(td, ctx) {
     const { column, row: item, rowIndex: i } = ctx;
     if (column.editable) {
@@ -1972,20 +1688,14 @@ var DataGrid = class extends base_element_default {
         break;
     }
     if (column.format) {
-      if (column.defaultFormatValue !== void 0 && (tv === "" || tv === null)) {
+      if (column.defaultFormatValue !== undefined && (tv === "" || tv === null)) {
         tv = `${column.defaultFormatValue}`;
       }
       if (typeof column.format === "string" && tv) {
-        td.innerHTML = interpolate(
-          column.format,
-          Object.assign(
-            {
-              _v: v,
-              _tv: tv
-            },
-            item
-          )
-        );
+        td.innerHTML = interpolate(column.format, Object.assign({
+          _v: v,
+          _tv: tv
+        }, item));
       } else if (column.format instanceof Function) {
         const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr: td.parentElement });
         td.innerHTML = val || tv || v;
@@ -1999,7 +1709,8 @@ var DataGrid = class extends base_element_default {
     const total = this.total;
     const p = this._query.page || 1;
     const tfoot = this.tfoot;
-    if (!tfoot) return;
+    if (!tfoot)
+      return;
     this.pages = this.totalPages();
     let high = p * this._query.pageSize;
     let low = high - this._query.pageSize + 1;
@@ -2020,17 +1731,12 @@ var DataGrid = class extends base_element_default {
     tfoot.querySelector(".dg-total").textContent = `${this.total}`;
     tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
   }
-  /**
-   * @returns {number}
-   */
   totalPages() {
     return Math.ceil(this.total / (this._query.pageSize || 1));
   }
-  /**
-   * Make sure the current page is still valid
-   */
   fixPage() {
-    if (!this.inputPage) return this;
+    if (!this.inputPage)
+      return this;
     this.pages = this.totalPages();
     if (this._query.page > this.pages) {
       this._query.page = Math.max(1, this.pages);
@@ -2043,56 +1749,26 @@ var DataGrid = class extends base_element_default {
     this.inputPage.disabled = this.pages < 2;
     return this;
   }
-};
+}
 var data_grid_default = DataGrid;
 
 // src/core/base-plugin.js
-var BasePlugin = class {
-  /**
-   * @param {DataGrid} grid
-   */
+class BasePlugin {
   constructor(grid) {
     this.grid = grid;
   }
-  connected() {
-  }
-  disconnected() {
-  }
-  /**
-   * Inject or configure normalized columns. Transform columns in place.
-   * @param {Column[]} columns
-   */
-  extendColumns(columns) {
-  }
-  /**
-   * Called before a render cycle.
-   */
-  beforeRender() {
-  }
-  /**
-   * Called after a render cycle. The context is "table" for the header/footer
-   * render and "body" for the rows render.
-   * @param {("table"|"body")} context
-   */
-  afterRender(context) {
-  }
-  /**
-   * Called when the responsive option changes.
-   * @param {Boolean} enabled
-   */
-  responsiveChanged(enabled) {
-  }
-  /**
-   * Handle events within the plugin
-   * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
-   * @param {Event} event
-   */
+  connected() {}
+  disconnected() {}
+  extendColumns(columns) {}
+  beforeRender() {}
+  afterRender(context) {}
+  responsiveChanged(enabled) {}
   handleEvent(event) {
     if (this[`on${event.type}`]) {
       this[`on${event.type}`](event);
     }
   }
-};
+}
 var base_plugin_default = BasePlugin;
 
 // src/utils/elementOffset.js
@@ -2104,23 +1780,17 @@ function elementOffset(el) {
 }
 
 // src/plugins/column-resizer.js
-var ColumnResizer = class extends base_plugin_default {
+class ColumnResizer extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.isResizing = false;
   }
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
   afterRender(context) {
     if (context !== "table") {
       return;
     }
     this.renderResizer(this.grid.labels.resizeColumn);
   }
-  /**
-   * @param {String} resizeLabel
-   */
   renderResizer(resizeLabel) {
     const grid = this.grid;
     const table = grid.table;
@@ -2187,7 +1857,7 @@ var ColumnResizer = class extends base_plugin_default {
         remainingSpace = (visibleCols.length - columnIndex) * 30;
         max = elementOffset(target).left + grid.offsetWidth - remainingSpace;
         setAttribute(col, "width", startW);
-        for (let j = 0; j < visibleCols.length; j++) {
+        for (let j = 0;j < visibleCols.length; j++) {
           if (j > columnIndex) {
             removeAttribute(cols[j], "width");
           }
@@ -2197,7 +1867,7 @@ var ColumnResizer = class extends base_plugin_default {
       });
     }
   }
-};
+}
 var column_resizer_default = ColumnResizer;
 
 // src/utils/getParentElement.js
@@ -2210,7 +1880,7 @@ function getParentElement(el, type, prop = "nodeName") {
 }
 
 // src/plugins/context-menu.js
-var ContextMenu = class extends base_plugin_default {
+class ContextMenu extends base_plugin_default {
   connected() {
     this.menu = this.grid.querySelector(".dg-menu");
   }
@@ -2219,9 +1889,6 @@ var ContextMenu = class extends base_plugin_default {
       off(this.grid.headerRow, "contextmenu", this);
     }
   }
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
   afterRender(context) {
     if (context !== "table") {
       return;
@@ -2296,14 +1963,11 @@ var ContextMenu = class extends base_plugin_default {
       menu.appendChild(li);
     }
   }
-};
+}
 var context_menu_default = ContextMenu;
 
 // src/plugins/draggable-headers.js
-var DraggableHeaders = class extends base_plugin_default {
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
+class DraggableHeaders extends base_plugin_default {
   afterRender(context) {
     if (context !== "table") {
       return;
@@ -2313,9 +1977,6 @@ var DraggableHeaders = class extends base_plugin_default {
       this.makeHeaderDraggable(th);
     }
   }
-  /**
-   * @param {HTMLElement} th
-   */
   makeHeaderDraggable(th) {
     const grid = this.grid;
     th.draggable = true;
@@ -2366,11 +2027,11 @@ var DraggableHeaders = class extends base_plugin_default {
       return false;
     });
   }
-};
+}
 var draggable_headers_default = DraggableHeaders;
 
 // src/plugins/touch-support.js
-var TouchSupport = class extends base_plugin_default {
+class TouchSupport extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.touch = null;
@@ -2404,14 +2065,15 @@ var TouchSupport = class extends base_plugin_default {
     }
     this.touch = null;
   }
-};
+}
 var touch_support_default = TouchSupport;
 
 // src/plugins/selectable-rows.js
 var SELECTABLE_CLASS = "dg-selectable";
 var SELECT_ALL_CLASS = "dg-select-all";
 var CHECKBOX_CLASS = "form-check-input";
-var SelectableRows = class extends base_plugin_default {
+
+class SelectableRows extends base_plugin_default {
   get isSingleSelect() {
     return this.grid.options.singleSelect;
   }
@@ -2424,18 +2086,11 @@ var SelectableRows = class extends base_plugin_default {
   disconnected() {
     this.grid.removeEventListener("selectionChange", this);
   }
-  /**
-   * @param {Event} event
-   */
   handleEvent(event) {
     if (event.type === "selectionChange") {
       this.syncSelection();
     }
   }
-  /**
-   * Inject the selection column at the start.
-   * @param {import("../data-grid.js").Column[]} columns
-   */
   extendColumns(columns) {
     if (!this.grid.options.selectable) {
       return;
@@ -2452,10 +2107,6 @@ var SelectableRows = class extends base_plugin_default {
       renderCell: (ctx) => this.createDataCell(ctx)
     });
   }
-  /**
-   * After a render cycle, reflect the selection state on the checkboxes.
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
   afterRender(context) {
     if (context === "body") {
       this.syncSelection();
@@ -2463,9 +2114,6 @@ var SelectableRows = class extends base_plugin_default {
       this.syncSelectAll();
     }
   }
-  /**
-   * Reflect the current selection state on the body checkboxes.
-   */
   syncSelection() {
     const grid = this.grid;
     if (!grid.options.selectable) {
@@ -2484,16 +2132,13 @@ var SelectableRows = class extends base_plugin_default {
       }
       const index = trs.indexOf(tr);
       const row = grid.rows[index];
-      if (row === void 0) {
+      if (row === undefined) {
         continue;
       }
       input.checked = grid.isRowSelected(row, index);
     }
     this.syncSelectAll();
   }
-  /**
-   * Keep the header select-all checkbox in sync with the body.
-   */
   syncSelectAll() {
     const grid = this.grid;
     if (!this.selectAll || !grid.options.selectable) {
@@ -2514,9 +2159,6 @@ var SelectableRows = class extends base_plugin_default {
     this.selectAll.indeterminate = checked > 0 && checked < visible.length;
     this.selectAll.checked = visible.length > 0 && checked === visible.length;
   }
-  /**
-   * @param {HTMLTableCellElement} th
-   */
   createHeaderCell(th) {
     setAttribute(th, "width", "40");
     th.classList.add("dg-not-resizable", "dg-not-sortable");
@@ -2536,15 +2178,7 @@ var SelectableRows = class extends base_plugin_default {
     th.appendChild(label);
     this.syncSelectAll();
   }
-  /**
-   * @param {HTMLTableCellElement} th
-   */
-  createFilterCell() {
-  }
-  /**
-   * @param {Object} ctx
-   * @returns {HTMLElement}
-   */
+  createFilterCell() {}
   createDataCell({ row, rowIndex }) {
     const grid = this.grid;
     const input = document.createElement("input");
@@ -2576,11 +2210,11 @@ var SelectableRows = class extends base_plugin_default {
     }
     return label;
   }
-};
+}
 var selectable_rows_default = SelectableRows;
 
 // src/plugins/bulk-actions.js
-var BulkActions = class extends base_plugin_default {
+class BulkActions extends base_plugin_default {
   connected() {
     const grid = this.grid;
     this.bar = document.createElement("div");
@@ -2599,25 +2233,16 @@ var BulkActions = class extends base_plugin_default {
     this.grid.removeEventListener("selectionChange", this);
     this.bar?.remove();
   }
-  /**
-   * @param {Event} event
-   */
   handleEvent(event) {
     if (event.type === "selectionChange") {
       this.render();
     }
   }
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
   afterRender(context) {
     if (context === "body") {
       this.render();
     }
   }
-  /**
-   * Render the bulk action bar reflecting the current selection.
-   */
   render() {
     const grid = this.grid;
     if (!this.bar || !grid.options.bulkActions.length) {
@@ -2656,11 +2281,11 @@ var BulkActions = class extends base_plugin_default {
       this.bar.appendChild(button);
     }
   }
-};
+}
 var bulk_actions_default = BulkActions;
 
 // src/plugins/fixed-height.js
-var FixedHeight = class extends base_plugin_default {
+class FixedHeight extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.hasFixedHeight = false;
@@ -2669,9 +2294,6 @@ var FixedHeight = class extends base_plugin_default {
       this.hasFixedHeight = true;
     }
   }
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
   afterRender(context) {
     if (context !== "body") {
       return;
@@ -2679,8 +2301,6 @@ var FixedHeight = class extends base_plugin_default {
     this.createFakeRow();
     this.updateFakeRow();
   }
-  /**
-   */
   createFakeRow() {
     const grid = this.grid;
     const tbody = grid.querySelector("tbody");
@@ -2692,9 +2312,6 @@ var FixedHeight = class extends base_plugin_default {
   get fakeRow() {
     return this.grid.querySelector(".dg-fake-row");
   }
-  /**
-   * On last page, use a fake row to push footer down
-   */
   updateFakeRow() {
     const grid = this.grid;
     const fakeRow = this.fakeRow;
@@ -2720,14 +2337,11 @@ var FixedHeight = class extends base_plugin_default {
       fakeRow.removeAttribute("height");
     }
   }
-};
+}
 var fixed_height_default = FixedHeight;
 
 // src/plugins/autosize-column.js
-var AutosizeColumn = class extends base_plugin_default {
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
+class AutosizeColumn extends base_plugin_default {
   afterRender(context) {
     if (context !== "table") {
       return;
@@ -2746,24 +2360,10 @@ var AutosizeColumn = class extends base_plugin_default {
         continue;
       }
       const colAvailableWidth = Math.min(availableWidth - totalWidth, colMaxWidth);
-      const w = this.computeSize(
-        /** @type {HTMLTableCellElement} */
-        th,
-        column,
-        Number.parseInt(th.dataset.minWidth),
-        colAvailableWidth
-      );
+      const w = this.computeSize(th, column, Number.parseInt(th.dataset.minWidth), colAvailableWidth);
       totalWidth += Number(w) || 0;
     }
   }
-  /**
-   * Autosize col based on column data
-   * @param {HTMLTableCellElement} th
-   * @param {import("../data-grid").Column} column
-   * @param {Number} min
-   * @param {Number} max
-   * @returns {Number}
-   */
   computeSize(th, column, min, max) {
     const grid = this.grid;
     if (hasAttribute(th, "width")) {
@@ -2796,7 +2396,7 @@ var AutosizeColumn = class extends base_plugin_default {
     setAttribute(th, "width", width);
     return width;
   }
-};
+}
 var autosize_column_default = AutosizeColumn;
 
 // src/plugins/responsive-grid.js
@@ -2808,15 +2408,15 @@ function sortByPriority(list) {
     return v2 - v1;
   });
 }
-var ResponsiveGrid = class extends base_plugin_default {
+
+class ResponsiveGrid extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.observerBlocked = false;
     this.prevAction = null;
     this.unblockTimeout = null;
     this._lastEntry = null;
-    this._scheduleResize = /** @type {() => void} */
-    debounce(() => this.resize(), 100);
+    this._scheduleResize = debounce(() => this.resize(), 100);
     this.observer = new ResizeObserver((entries) => {
       this._lastEntry = entries[entries.length - 1];
       this._scheduleResize();
@@ -2830,9 +2430,6 @@ var ResponsiveGrid = class extends base_plugin_default {
   disconnected() {
     this.unobserve();
   }
-  /**
-   * @param {Boolean} enabled
-   */
   responsiveChanged(enabled) {
     if (enabled) {
       this.observe();
@@ -2853,10 +2450,6 @@ var ResponsiveGrid = class extends base_plugin_default {
     this.grid.style.display = "unset";
     this.grid.style.overflowX = "unset";
   }
-  /**
-   * Inject the responsive toggle column when columns are hidden.
-   * @param {import("../data-grid.js").Column[]} columns
-   */
   extendColumns(columns) {
     if (!this.grid.options.responsiveToggle || !this.hasHiddenColumns()) {
       return;
@@ -2884,9 +2477,6 @@ var ResponsiveGrid = class extends base_plugin_default {
       this.observerBlocked = false;
     }, 200);
   }
-  /**
-   * @returns {Boolean}
-   */
   hasHiddenColumns() {
     let flag = false;
     for (const col of this.grid.options.columns) {
@@ -2896,18 +2486,11 @@ var ResponsiveGrid = class extends base_plugin_default {
     }
     return flag;
   }
-  /**
-   * @param {HTMLTableCellElement} th
-   */
   createHeaderCell(th) {
     setAttribute(th, "width", "40");
     th.classList.add("dg-not-resizable", "dg-not-sortable");
   }
-  createFilterCell() {
-  }
-  /**
-   * @returns {HTMLElement}
-   */
+  createFilterCell() {}
   createDataCell() {
     const cell = document.createElement("div");
     cell.classList.add("dg-clickable-cell");
@@ -2922,9 +2505,6 @@ var ResponsiveGrid = class extends base_plugin_default {
     cell.addEventListener("mousedown", this);
     return cell;
   }
-  /**
-   * Apply responsive hide/show based on the last observed size.
-   */
   resize() {
     const grid = this.grid;
     const table = grid.table;
@@ -2944,11 +2524,9 @@ var ResponsiveGrid = class extends base_plugin_default {
     const diff = (realTableWidth || tableWidth) - size - 1;
     const minWidth = 50;
     const prevAction = this.prevAction;
-    const headerCols = sortByPriority(
-      findAll(grid.headerRow, "th[field]").reverse().filter((col) => {
-        return col.dataset.responsive !== "0";
-      })
-    );
+    const headerCols = sortByPriority(findAll(grid.headerRow, "th[field]").reverse().filter((col) => {
+      return col.dataset.responsive !== "0";
+    }));
     let changed = false;
     grid.log(`table is ${tableWidth}/${realTableWidth} and available size is ${size}. Diff: ${diff}`);
     if (diff > 0) {
@@ -3034,7 +2612,7 @@ var ResponsiveGrid = class extends base_plugin_default {
     }
     this.unblockTimeout = setTimeout(() => {
       this.prevAction = null;
-    }, 1e3);
+    }, 1000);
     grid.table.style.visibility = "visible";
   }
   computeLabelWidth() {
@@ -3048,15 +2626,9 @@ var ResponsiveGrid = class extends base_plugin_default {
     }
     return idealWidth;
   }
-  /**
-   * @param {Event} ev
-   */
   onmousedown(ev) {
     ev.preventDefault();
   }
-  /**
-   * @param {Event} ev
-   */
   onclick(ev) {
     ev.stopPropagation();
     const cell = ev.currentTarget;
@@ -3101,21 +2673,14 @@ var ResponsiveGrid = class extends base_plugin_default {
     }
     this.unblockObserver();
   }
-};
+}
 var responsive_grid_default = ResponsiveGrid;
 
 // src/plugins/row-actions.js
-var RowActions = class extends base_plugin_default {
-  /**
-   * @returns {Boolean}
-   */
+class RowActions extends base_plugin_default {
   hasActions() {
     return this.grid.options.actions.length > 0;
   }
-  /**
-   * Inject the actions column at the end.
-   * @param {import("../data-grid.js").Column[]} columns
-   */
   extendColumns(columns) {
     if (!this.grid.options.actions.length) {
       return;
@@ -3132,26 +2697,17 @@ var RowActions = class extends base_plugin_default {
       renderCell: (ctx) => this.makeActionRow(ctx)
     });
   }
-  /**
-   * @param {HTMLTableCellElement} th
-   */
   createHeaderCell(th) {
     th.classList.add("dg-not-sortable", "dg-not-resizable");
   }
-  createFilterCell() {
-  }
-  /**
-   * Build the actions cell content: a toggle button plus one element per action.
-   * @param {Object} ctx
-   * @returns {DocumentFragment}
-   */
+  createFilterCell() {}
   makeActionRow({ row, tr, grid }) {
     const labels2 = grid.labels;
     const fragment = document.createDocumentFragment();
     const actionsToggle = document.createElement("button");
     actionsToggle.type = "button";
     actionsToggle.classList.add("dg-actions-toggle");
-    actionsToggle.innerHTML = "\u2630";
+    actionsToggle.innerHTML = "☰";
     on(actionsToggle, "click", (ev) => {
       ev.stopPropagation();
       ev.target.parentElement.classList.toggle("dg-actions-expand");
@@ -3170,14 +2726,6 @@ var RowActions = class extends base_plugin_default {
     }
     return fragment;
   }
-  /**
-   * Create the button (or link) for a single action.
-   * @param {import("../data-grid.js").Action} action
-   * @param {Object} row
-   * @param {import("../data-grid.js").default} grid
-   * @param {Object} labels
-   * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
-   */
   createActionElement(action, row, grid, labels2) {
     const href = action.href ? typeof action.href === "function" ? action.href(row) : interpolate(action.href, row) : null;
     const render = action.render ?? grid.options.actionRenderer;
@@ -3191,7 +2739,7 @@ var RowActions = class extends base_plugin_default {
       if (!isLink) {
         el.type = "button";
       }
-      if (content === null || content === void 0) {
+      if (content === null || content === undefined) {
         if (action.html) {
           el.innerHTML = action.html;
         } else {
@@ -3235,15 +2783,10 @@ var RowActions = class extends base_plugin_default {
     el.addEventListener("click", dispatchAction);
     return { el, dispatchAction };
   }
-  /**
-   * Apply renderer content to an element (same contract as renderCell).
-   * @param {HTMLElement} el
-   * @param {*} content
-   */
   applyContent(el, content) {
     if (content instanceof Node) {
       el.appendChild(content);
-    } else if (typeof content === "object" && content.html !== void 0) {
+    } else if (typeof content === "object" && content.html !== undefined) {
       el.innerHTML = content.html;
     } else {
       el.textContent = content;
@@ -3255,14 +2798,11 @@ var RowActions = class extends base_plugin_default {
     }
     return "dg-actions-more";
   }
-};
+}
 var row_actions_default = RowActions;
 
 // src/plugins/editable-column.js
-var EditableColumn = class extends base_plugin_default {
-  /**
-   * @param {import("../core/base-plugin.js").RenderContext} context
-   */
+class EditableColumn extends base_plugin_default {
   afterRender(context) {
     if (context !== "body") {
       return;
@@ -3279,12 +2819,6 @@ var EditableColumn = class extends base_plugin_default {
       this.makeEditableInput(td, column, item, rowIndex);
     }
   }
-  /**
-   * @param {HTMLElement} td
-   * @param {import("../data-grid").Column} column
-   * @param {Object} item
-   * @param {number} i
-   */
   makeEditableInput(td, column, item, i) {
     const grid = this.grid;
     const gridId = grid.getAttribute("id");
@@ -3357,13 +2891,6 @@ var EditableColumn = class extends base_plugin_default {
     input.addEventListener("blur", commit);
     td.replaceChildren(input);
   }
-  /**
-   * Run the column validator, then the grid-level one.
-   * @param {import("../data-grid").Column} column
-   * @param {*} value
-   * @param {Object} row
-   * @returns {?String} error message or null when valid
-   */
   validate(column, value, row) {
     const ctx = { row, column, grid: this.grid };
     const res = column.validate?.(value, ctx) ?? this.grid.options.validate?.(value, ctx);
@@ -3372,19 +2899,16 @@ var EditableColumn = class extends base_plugin_default {
     }
     return res === false ? "Invalid value" : null;
   }
-};
+}
 var editable_column_default = EditableColumn;
 
 // src/plugins/spinner-support.js
-var SpinnerSupport = class extends base_plugin_default {
+class SpinnerSupport extends base_plugin_default {
   connected() {
     if (this.grid.options.spinnerClass) {
       this.add();
     }
   }
-  /**
-   * Adds a spinner element with its associated css styles.
-   */
   add() {
     const grid = this.grid;
     const classes = grid.options.spinnerClass;
@@ -3409,11 +2933,11 @@ var SpinnerSupport = class extends base_plugin_default {
     }
     !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
   }
-};
+}
 var spinner_support_default = SpinnerSupport;
 
 // src/plugins/save-state.js
-var SaveState = class extends base_plugin_default {
+class SaveState extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.cachedState = null;
@@ -3446,9 +2970,6 @@ var SaveState = class extends base_plugin_default {
     grid.addEventListener("bodyRendered", () => this._update());
     document.addEventListener("scrollend", () => this._update());
   }
-  /**
-   * Persist the current query, columns and scroll position.
-   */
   _update() {
     const grid = this.grid;
     if (!grid.options.saveState || !grid.classList.contains("dg-initialized")) {
@@ -3463,24 +2984,17 @@ var SaveState = class extends base_plugin_default {
   log(...data) {
     this.grid.log("[Save-State] ", ...data);
   }
-  /**
-   * @returns {CachedGridState}
-   */
   _getState() {
     let state;
     try {
       state = JSON.parse(sessionStorage.getItem(`gridSaveState_${this.grid.id}`));
-    } catch (_) {
-    }
+    } catch (_) {}
     return state;
   }
-  /**
-   * @param {CachedGridState} state
-   */
   _setState(state) {
     sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
   }
-};
+}
 var save_state_default = SaveState;
 
 // data-grid.js
@@ -3508,14 +3022,10 @@ global.DataGrid = data_grid_default;
 global.ArrayDataSource = ArrayDataSource;
 global.FetchDataSource = FetchDataSource;
 export {
-  ArrayDataSource,
-  data_grid_default as DataGrid,
+  data_grid_default2 as default,
   FetchDataSource,
-  data_grid_default2 as default
+  data_grid_default as DataGrid,
+  ArrayDataSource
 };
-/**
- * Data Grid custom element
- * https://github.com/lekoala/data-grid/
- * @license MIT
- */
-//# sourceMappingURL=data-grid.js.map
+
+//# debugId=F7E44A3A1B7566A664756E2164756E21
