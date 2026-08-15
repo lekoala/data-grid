@@ -11,6 +11,7 @@ const labels = {
     resultCount: "العناصر: {count}",
     selectedCount: "المحدد: {count}",
     selectAll: "تحديد كل الصفوف",
+    selectRow: "تحديد {row}",
     toggleActions: "إظهار إجراءات الصف",
     resizeColumn: "تغيير حجم العمود",
     noData: "لا توجد بيانات",

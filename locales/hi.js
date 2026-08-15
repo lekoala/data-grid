@@ -11,6 +11,7 @@ const labels = {
     resultCount: "आइटम: {count}",
     selectedCount: "चयनित: {count}",
     selectAll: "सभी पंक्तियाँ चुनें",
+    selectRow: "{row} चुनें",
     toggleActions: "पंक्ति क्रियाएँ दिखाएँ",
     resizeColumn: "कॉलम का आकार बदलें",
     noData: "कोई डेटा नहीं",

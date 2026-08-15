@@ -11,6 +11,7 @@ const labels = {
     resultCount: "Элементы: {count}",
     selectedCount: "Выбрано: {count}",
     selectAll: "Выбрать все строки",
+    selectRow: "Выбрать {row}",
     toggleActions: "Показать действия строки",
     resizeColumn: "Изменить ширину столбца",
     noData: "Нет данных",

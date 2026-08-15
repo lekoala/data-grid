@@ -11,6 +11,7 @@ const labels = {
     resultCount: "Elementy: {count}",
     selectedCount: "Wybrano: {count}",
     selectAll: "Zaznacz wszystkie wiersze",
+    selectRow: "Wybierz {row}",
     toggleActions: "Pokaż akcje wiersza",
     resizeColumn: "Zmień szerokość kolumny",
     noData: "Brak danych",

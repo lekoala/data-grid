@@ -11,6 +11,7 @@ const labels = {
     resultCount: "Itens: {count}",
     selectedCount: "Selecionados: {count}",
     selectAll: "Selecionar todas as linhas",
+    selectRow: "Selecionar {row}",
     toggleActions: "Mostrar ações da linha",
     resizeColumn: "Redimensionar coluna",
     noData: "Sem dados",

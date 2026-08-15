@@ -524,6 +524,7 @@ var labels = {
   resultCount: "{count} items",
   selectedCount: "{count} selected",
   selectAll: "Select all rows",
+  selectRow: "Select {row}",
   toggleActions: "Toggle row actions",
   resizeColumn: "Resize column",
   noData: "No data",
@@ -2396,7 +2397,7 @@ class SelectableRows extends base_plugin_default {
     const input = document.createElement("input");
     input.type = this.isSingleSelect ? "radio" : "checkbox";
     input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
-    input.setAttribute("aria-label", `Select ${grid.getRowLabel(row ?? {}, rowIndex ?? 0)}`);
+    input.setAttribute("aria-label", grid.formatLabel(grid.labels.selectRow, { row: grid.getRowLabel(row ?? {}, rowIndex ?? 0) }));
     if (this.isSingleSelect) {
       input.name = "dg-row-select";
     }
@@ -3288,4 +3289,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=26BD5A3AB4C8510064756E2164756E21
+//# debugId=33B5C35CDCE0639D64756E2164756E21

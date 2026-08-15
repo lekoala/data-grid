@@ -11,6 +11,7 @@ const labels = {
     resultCount: "항목: {count}",
     selectedCount: "선택됨: {count}",
     selectAll: "모든 행 선택",
+    selectRow: "{row} 선택",
     toggleActions: "행 작업 표시",
     resizeColumn: "열 너비 조정",
     noData: "데이터 없음",

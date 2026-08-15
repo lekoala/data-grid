@@ -11,6 +11,7 @@ const labels = {
     resultCount: "{count} 件",
     selectedCount: "選択中: {count} 件",
     selectAll: "すべての行を選択",
+    selectRow: "{row} を選択",
     toggleActions: "行のアクションを表示",
     resizeColumn: "列の幅を変更",
     noData: "データがありません",

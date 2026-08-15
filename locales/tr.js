@@ -11,6 +11,7 @@ const labels = {
     resultCount: "Öğeler: {count}",
     selectedCount: "Seçilen: {count}",
     selectAll: "Tüm satırları seç",
+    selectRow: "{row} seç",
     toggleActions: "Satır eylemlerini göster",
     resizeColumn: "Sütunu yeniden boyutlandır",
     noData: "Veri yok",

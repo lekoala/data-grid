@@ -21,16 +21,27 @@
       bulkActions: [{ name: "export", label: "Export" }],
       initialQuery: { pageSize: 10 },
     });
+
+    const connected = new Promise((resolve) => {
+      grid.addEventListener("connected", resolve, { once: true });
+    });
+
     document.getElementById("i18n-demo").replaceChildren(grid);
+    await connected;
 
     const select = document.getElementById("locale");
 
     select.addEventListener("change", async () => {
       const locale = select.value;
-      const { default: labels } = await import(`../locales/${locale}.js`);
-      DataGrid.setLabels(labels);
-      document.documentElement.lang = locale;
-      grid.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+
+      try {
+        const { default: labels } = await import(`../locales/${locale}.js`);
+        DataGrid.setLabels(labels);
+        document.documentElement.lang = locale;
+        grid.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+      } catch (error) {
+        console.error(`Unable to load locale "${locale}"`, error);
+      }
     });
   </script>
 </head>

@@ -11,6 +11,7 @@ const labels = {
     resultCount: "{count} items",
     selectedCount: "{count} selected",
     selectAll: "Select all rows",
+    selectRow: "Select {row}",
     toggleActions: "Toggle row actions",
     resizeColumn: "Resize column",
     noData: "No data",

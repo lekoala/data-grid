@@ -373,6 +373,7 @@ export type Labels = {
     resultCount: string;
     selectedCount: string;
     selectAll: string;
+    selectRow: string;
     toggleActions: string;
     resizeColumn: string;
     noData: string;

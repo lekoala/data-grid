@@ -169,6 +169,7 @@ import {
  * @property {String} resultCount
  * @property {String} selectedCount
  * @property {String} selectAll
+ * @property {String} selectRow
  * @property {String} toggleActions
  * @property {String} resizeColumn
  * @property {String} noData
@@ -203,6 +204,7 @@ let labels = {
     resultCount: "{count} items",
     selectedCount: "{count} selected",
     selectAll: "Select all rows",
+    selectRow: "Select {row}",
     toggleActions: "Toggle row actions",
     resizeColumn: "Resize column",
     noData: "No data",

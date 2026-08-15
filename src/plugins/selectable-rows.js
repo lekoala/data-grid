@@ -168,7 +168,10 @@ class SelectableRows extends BasePlugin {
         const input = document.createElement("input");
         input.type = this.isSingleSelect ? "radio" : "checkbox";
         input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
-        input.setAttribute("aria-label", `Select ${grid.getRowLabel(row ?? {}, rowIndex ?? 0)}`);
+        input.setAttribute(
+            "aria-label",
+            grid.formatLabel(grid.labels.selectRow, { row: grid.getRowLabel(row ?? {}, rowIndex ?? 0) }),
+        );
         if (this.isSingleSelect) {
             input.name = "dg-row-select";
         }

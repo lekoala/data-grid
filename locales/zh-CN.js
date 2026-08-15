@@ -11,6 +11,7 @@ const labels = {
     resultCount: "共 {count} 条",
     selectedCount: "已选 {count} 项",
     selectAll: "全选所有行",
+    selectRow: "选择 {row}",
     toggleActions: "显示行操作",
     resizeColumn: "调整列宽",
     noData: "暂无数据",

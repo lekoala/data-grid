@@ -11,6 +11,7 @@ const labels = {
     resultCount: "Items: {count}",
     selectedCount: "Geselecteerd: {count}",
     selectAll: "Alle rijen selecteren",
+    selectRow: "{row} selecteren",
     toggleActions: "Rijacties weergeven",
     resizeColumn: "Kolom aanpassen",
     noData: "Geen gegevens",

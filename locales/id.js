@@ -11,6 +11,7 @@ const labels = {
     resultCount: "Item: {count}",
     selectedCount: "Dipilih: {count}",
     selectAll: "Pilih semua baris",
+    selectRow: "Pilih {row}",
     toggleActions: "Tampilkan aksi baris",
     resizeColumn: "Ubah ukuran kolom",
     noData: "Tidak ada data",
