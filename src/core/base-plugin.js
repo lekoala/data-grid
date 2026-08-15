@@ -1,4 +1,21 @@
 /** @typedef {import("../data-grid").default} DataGrid */
+/** @typedef {import("../data-grid").Column} Column */
+
+/**
+ * @typedef {"table"|"body"} RenderContext
+ */
+
+/**
+ * A plugin hooks into the grid lifecycle. Duck typed: any object exposing one
+ * of these methods can be used as a plugin.
+ * @typedef {Object} Plugin
+ * @property {() => void} [connected]
+ * @property {() => void} [disconnected]
+ * @property {(columns: Column[]) => void} [extendColumns]
+ * @property {() => void} [beforeRender]
+ * @property {(context: RenderContext) => void} [afterRender]
+ * @property {(enabled: boolean) => void} [responsiveChanged]
+ */
 
 class BasePlugin {
     /**
@@ -11,6 +28,30 @@ class BasePlugin {
     connected() {}
 
     disconnected() {}
+
+    /**
+     * Inject or configure normalized columns. Transform columns in place.
+     * @param {Column[]} columns
+     */
+    extendColumns(columns) {}
+
+    /**
+     * Called before a render cycle.
+     */
+    beforeRender() {}
+
+    /**
+     * Called after a render cycle. The context is "table" for the header/footer
+     * render and "body" for the rows render.
+     * @param {("table"|"body")} context
+     */
+    afterRender(context) {}
+
+    /**
+     * Called when the responsive option changes.
+     * @param {Boolean} enabled
+     */
+    responsiveChanged(enabled) {}
 
     /**
      * Handle events within the plugin

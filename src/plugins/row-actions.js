@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import interpolate from "../utils/interpolate.js";
-import { dispatch, on, setAttribute } from "../utils/shortcuts.js";
+import { dispatch, on } from "../utils/shortcuts.js";
 
 /**
  * Add action on rows
@@ -14,40 +14,49 @@ class RowActions extends BasePlugin {
     }
 
     /**
-     *
-     * @param {HTMLTableRowElement} tr
+     * Inject the actions column at the end.
+     * @param {import("../data-grid.js").Column[]} columns
      */
-    makeActionHeader(tr) {
-        const actionsTh = document.createElement("th");
-        setAttribute(actionsTh, "role", "columnheader");
-        setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
-        actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
-        actionsTh.tabIndex = 0;
-        tr.appendChild(actionsTh);
+    extendColumns(columns) {
+        if (!this.grid.options.actions.length) {
+            return;
+        }
+        columns.push({
+            id: "$actions",
+            virtual: true,
+            position: "end",
+            noSort: true,
+            title: "",
+            renderHeaderCell: (th) => this.createHeaderCell(th),
+            renderFilterCell: (th) => this.createFilterCell(th),
+            renderCell: (td, ctx) => this.makeActionRow(td, ctx),
+        });
     }
 
     /**
-     *
-     * @param {HTMLTableRowElement} tr
+     * @param {HTMLTableCellElement} th
      */
-    makeActionFilter(tr) {
-        const actionsTh = document.createElement("th");
-        actionsTh.setAttribute("role", "columnheader");
-        setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
-        actionsTh.classList.add(...["dg-actions", this.actionClass]);
-        actionsTh.tabIndex = 0;
-        tr.appendChild(actionsTh);
+    createHeaderCell(th) {
+        th.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
+        th.tabIndex = 0;
     }
 
     /**
-     * @param {HTMLTableRowElement} tr
-     * @param {Object} item
+     * @param {HTMLTableCellElement} th
      */
-    makeActionRow(tr, item) {
+    createFilterCell(th) {
+        th.classList.add(...["dg-actions", this.actionClass]);
+        th.tabIndex = 0;
+    }
+
+    /**
+     * @param {HTMLTableCellElement} td
+     * @param {Object} ctx
+     */
+    makeActionRow(td, ctx) {
+        const grid = this.grid;
+        const item = ctx.row;
         const labels = this.grid.labels;
-        const td = document.createElement("td");
-        setAttribute(td, "role", "gridcell");
-        setAttribute(td, "aria-colindex", this.grid.columnsLength(true));
         td.classList.add(...["dg-actions", this.actionClass]);
         td.tabIndex = 0;
 
@@ -61,7 +70,7 @@ class RowActions extends BasePlugin {
             ev.target.parentElement.classList.toggle("dg-actions-expand");
         });
 
-        for (const action of this.grid.options.actions) {
+        for (const action of grid.options.actions) {
             const button = document.createElement("button");
             if (action.html) {
                 button.innerHTML = action.html;
@@ -87,7 +96,7 @@ class RowActions extends BasePlugin {
                         return;
                     }
                 }
-                dispatch(this.grid, "action", {
+                dispatch(grid, "action", {
                     data: item,
                     action: action.name,
                 });
@@ -97,12 +106,11 @@ class RowActions extends BasePlugin {
 
             // Row action
             if (action.default) {
+                const tr = td.parentElement;
                 tr.classList.add("dg-actionable");
                 tr.addEventListener("click", actionHandler);
             }
         }
-
-        tr.appendChild(td);
     }
 
     get actionClass() {

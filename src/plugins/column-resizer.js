@@ -23,6 +23,16 @@ class ColumnResizer extends BasePlugin {
     }
 
     /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context !== "table") {
+            return;
+        }
+        this.renderResizer(this.grid.labels.resizeColumn);
+    }
+
+    /**
      * @param {String} resizeLabel
      */
     renderResizer(resizeLabel) {
@@ -65,6 +75,7 @@ class ColumnResizer extends BasePlugin {
                 // Prevent accidental sorting if mouse is not over resize handler
                 setTimeout(() => {
                     this.isResizing = false;
+                    grid._isResizing = false;
                 }, 0);
 
                 removeClass(resizer, "dg-resizer-active");
@@ -92,6 +103,7 @@ class ColumnResizer extends BasePlugin {
                 e.stopPropagation();
 
                 this.isResizing = true;
+                grid._isResizing = true;
 
                 const target = e.target;
                 const currentCols = findAll(grid, "dg-head-columns th");

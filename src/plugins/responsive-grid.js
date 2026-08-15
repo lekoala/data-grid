@@ -14,8 +14,6 @@ import {
 
 const RESPONSIVE_CLASS = "dg-responsive";
 
-let obsTo;
-
 /**
  * @param {Array<HTMLElement>} list
  * @returns {Array<HTMLElement>}
@@ -29,17 +27,154 @@ function sortByPriority(list) {
 }
 
 /**
- * @type {ResizeObserverCallback}
+ * Responsive data grid
  */
-//@ts-expect-error
-const callback = debounce((entries) => {
-    for (const entry of entries) {
-        /**
-         * @type {import("../data-grid").default}
-         */
-        const grid = entry.target;
+class ResponsiveGrid extends BasePlugin {
+    constructor(grid) {
+        super(grid);
+
+        this.observerBlocked = false;
+        this.prevAction = null;
+        this.unblockTimeout = null;
+        this._lastEntry = null;
+        this._scheduleResize = /** @type {() => void} */ (debounce(() => this.resize(), 100));
+        this.observer = new ResizeObserver((entries) => {
+            this._lastEntry = entries[entries.length - 1];
+            this._scheduleResize();
+        });
+    }
+
+    connected() {
+        if (this.grid.options.responsive) {
+            this.observe();
+        }
+    }
+
+    disconnected() {
+        this.unobserve();
+    }
+
+    /**
+     * @param {Boolean} enabled
+     */
+    responsiveChanged(enabled) {
+        if (enabled) {
+            this.observe();
+        } else {
+            this.unobserve();
+        }
+    }
+
+    observe() {
+        if (!this.grid.options.responsive) {
+            return;
+        }
+        this.observer.observe(this.grid);
+        this.grid.style.display = "block"; // Otherwise resize doesn't happen
+        this.grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
+    }
+
+    unobserve() {
+        this.observer.unobserve(this.grid);
+        this.grid.style.display = "unset";
+        this.grid.style.overflowX = "unset";
+    }
+
+    /**
+     * Inject the responsive toggle column when columns are hidden.
+     * @param {import("../data-grid.js").Column[]} columns
+     */
+    extendColumns(columns) {
+        if (!this.grid.options.responsiveToggle || !this.hasHiddenColumns()) {
+            return;
+        }
+        columns.unshift({
+            id: "$responsive",
+            virtual: true,
+            position: "start",
+            noSort: true,
+            title: "",
+            renderHeaderCell: (th) => this.createHeaderCell(th),
+            renderFilterCell: (th) => this.createFilterCell(th),
+            renderCell: (td, ctx) => this.createDataCell(td, ctx),
+        });
+    }
+
+    blockObserver() {
+        this.observerBlocked = true;
+        if (this.unblockTimeout) {
+            clearTimeout(this.unblockTimeout);
+        }
+    }
+
+    unblockObserver() {
+        this.unblockTimeout = setTimeout(() => {
+            this.observerBlocked = false;
+        }, 200); // more than debounce
+    }
+
+    /**
+     * @returns {Boolean}
+     */
+    hasHiddenColumns() {
+        let flag = false;
+
+        for (const col of this.grid.options.columns) {
+            if (col.responsiveHidden) {
+                flag = true;
+            }
+        }
+        return flag;
+    }
+
+    /**
+     * @param {HTMLTableCellElement} th
+     */
+    createHeaderCell(th) {
+        setAttribute(th, "width", "40");
+        th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
+        th.tabIndex = 0;
+    }
+
+    /**
+     * @param {HTMLTableCellElement} th
+     */
+    createFilterCell(th) {
+        th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
+        th.tabIndex = 0;
+    }
+
+    /**
+     * @param {HTMLTableCellElement} td
+     * @param {Object} ctx
+     */
+    createDataCell(td, ctx) {
+        td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
+
+        // Create icon
+        td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+</svg>
+<svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
+  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+</svg></div>`;
+
+        td.addEventListener("click", this);
+        td.addEventListener("mousedown", this);
+    }
+
+    /**
+     * Apply responsive hide/show based on the last observed size.
+     */
+    resize() {
+        const grid = this.grid;
         const table = grid.table;
-        if (grid.plugins.ResponsiveGrid.observerBlocked) {
+        if (this.observerBlocked) {
+            return;
+        }
+        const entry = this._lastEntry;
+        if (!entry) {
             return;
         }
         // check inlineSize (width) and not blockSize (height)
@@ -51,7 +186,7 @@ const callback = debounce((entries) => {
         }, 0);
         const diff = (realTableWidth || tableWidth) - size - 1;
         const minWidth = 50;
-        const prevAction = grid.plugins.ResponsiveGrid.prevAction;
+        const prevAction = this.prevAction;
         // We have an array with the columns to show/hide are in order, most important first
         const headerCols = sortByPriority(
             findAll(grid.headerRow, "th[field]")
@@ -70,7 +205,7 @@ const callback = debounce((entries) => {
             if (prevAction === "show") {
                 return;
             }
-            grid.plugins.ResponsiveGrid.prevAction = "hide";
+            this.prevAction = "hide";
             let remaining = diff;
             let cols = headerCols.filter((col) => {
                 return !col.hasAttribute("hidden") && col.hasAttribute("data-responsive");
@@ -108,7 +243,7 @@ const callback = debounce((entries) => {
             if (prevAction === "hide") {
                 return;
             }
-            grid.plugins.ResponsiveGrid.prevAction = "show";
+            this.prevAction = "show";
 
             const requiredWidth =
                 headerCols
@@ -171,136 +306,10 @@ const callback = debounce((entries) => {
             grid.renderTable();
         }
         // Prevent resize loop
-        setTimeout(() => {
-            grid.plugins.ResponsiveGrid.prevAction = null;
+        this.unblockTimeout = setTimeout(() => {
+            this.prevAction = null;
         }, 1000);
         grid.table.style.visibility = "visible";
-    }
-}, 100);
-const resizeObserver = new ResizeObserver(callback);
-
-/**
- * Responsive data grid
- */
-class ResponsiveGrid extends BasePlugin {
-    constructor(grid) {
-        super(grid);
-
-        this.observerBlocked = false;
-        this.prevAction = null;
-    }
-
-    connected() {
-        if (this.grid.options.responsive) {
-            this.observe();
-        }
-    }
-
-    disconnected() {
-        this.unobserve();
-    }
-
-    observe() {
-        if (!this.grid.options.responsive) {
-            return;
-        }
-        resizeObserver.observe(this.grid);
-        this.grid.style.display = "block"; // Otherwise resize doesn't happen
-        this.grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
-    }
-
-    unobserve() {
-        resizeObserver.unobserve(this.grid);
-        this.grid.style.display = "unset";
-        this.grid.style.overflowX = "unset";
-    }
-
-    blockObserver() {
-        this.observerBlocked = true;
-        if (obsTo) {
-            clearTimeout(obsTo);
-        }
-    }
-
-    unblockObserver() {
-        obsTo = setTimeout(() => {
-            this.observerBlocked = false;
-        }, 200); // more than debounce
-    }
-
-    /**
-     * @returns {Boolean}
-     */
-    hasHiddenColumns() {
-        let flag = false;
-
-        for (const col of this.grid.options.columns) {
-            if (col.responsiveHidden) {
-                flag = true;
-            }
-        }
-        return flag;
-    }
-
-    colIndex() {
-        return this.grid.startColIndex() - 1;
-    }
-
-    /**
-     * @param {HTMLTableRowElement} tr
-     */
-    createHeaderCol(tr) {
-        if (!this.grid.options.responsiveToggle) {
-            return;
-        }
-        const th = ce("th", tr);
-        setAttribute(th, "scope", "col");
-        setAttribute(th, "role", "columnheader");
-        setAttribute(th, "aria-colindex", this.colIndex());
-        setAttribute(th, "width", "40");
-        th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
-        th.tabIndex = 0;
-    }
-
-    /**
-     * @param {HTMLTableRowElement} tr
-     */
-    createFilterCol(tr) {
-        if (!this.grid.options.responsiveToggle) {
-            return;
-        }
-        const th = ce("th", tr);
-        setAttribute(th, "role", "columnheader");
-        setAttribute(th, "aria-colindex", this.colIndex());
-        th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-        th.tabIndex = 0;
-    }
-
-    /**
-     * @param {HTMLTableRowElement} tr
-     */
-    createDataCol(tr) {
-        if (!this.grid.options.responsiveToggle) {
-            return;
-        }
-        // Create col
-        const td = document.createElement("td");
-        setAttribute(td, "role", "gridcell");
-        setAttribute(td, "aria-colindex", this.colIndex());
-        td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-
-        // Create icon
-        td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
-  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-  <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg>
-<svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
-  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg></div>`;
-        tr.appendChild(td);
-
-        td.addEventListener("click", this);
-        td.addEventListener("mousedown", this);
     }
 
     computeLabelWidth() {

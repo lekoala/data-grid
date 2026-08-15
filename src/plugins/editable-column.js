@@ -1,13 +1,33 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch } from "../utils/shortcuts.js";
+import { dispatch, findAll } from "../utils/shortcuts.js";
 
 /**
  * Make editable inputs in rows
  */
 class EditableColumn extends BasePlugin {
     /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context !== "body") {
+            return;
+        }
+        const grid = this.grid;
+        const cells = findAll(grid, "tbody td.dg-editable-col");
+        for (const td of cells) {
+            const rowIndex = Number.parseInt(td.dataset.rowIndex);
+            const column = grid.getColumns().find((c) => (c.id ?? c.field) === td.getAttribute("data-column-id"));
+            const item = grid.rows[rowIndex];
+            if (!column || !item) {
+                continue;
+            }
+            this.makeEditableInput(td, column, item, rowIndex);
+        }
+    }
+
+    /**
      *
-     * @param {HTMLTableCellElement} td
+     * @param {HTMLElement} td
      * @param {import("../data-grid").Column} column
      * @param {Object} item
      * @param {number} i
@@ -57,7 +77,7 @@ class EditableColumn extends BasePlugin {
                 value: input.value,
             });
         });
-        td.appendChild(input);
+        td.replaceChildren(input);
     }
 }
 

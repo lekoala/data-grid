@@ -1,25 +1,38 @@
 import BasePlugin from "../core/base-plugin.js";
 import getParentElement from "../utils/getParentElement.js";
-import { dispatch, findAll, getAttribute, on, setAttribute } from "../utils/shortcuts.js";
+import { dispatch, findAll, on } from "../utils/shortcuts.js";
 
 /**
  * Allows to move headers
  */
 class DraggableHeaders extends BasePlugin {
     /**
-     * @param {HTMLTableCellElement} th
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context !== "table") {
+            return;
+        }
+        const headers = findAll(this.grid, "thead tr.dg-head-columns th[data-column-id]");
+        for (const th of headers) {
+            this.makeHeaderDraggable(th);
+        }
+    }
+
+    /**
+     * @param {HTMLElement} th
      */
     makeHeaderDraggable(th) {
         const grid = this.grid;
         th.draggable = true;
         on(th, "dragstart", (e) => {
-            if (grid.plugins.ColumnResizer?.isResizing && e.preventDefault) {
+            if (grid._isResizing && e.preventDefault) {
                 e.preventDefault();
                 return;
             }
             grid.log("reorder col");
             e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
+            e.dataTransfer.setData("text/plain", th.getAttribute("data-column-id"));
         });
         on(th, "dragover", (e) => {
             if (e.preventDefault) {
@@ -32,52 +45,33 @@ class DraggableHeaders extends BasePlugin {
             if (e.stopPropagation) {
                 e.stopPropagation();
             }
-            const t = e.target;
-            const target = getParentElement(t, "TH");
-            const index = Number.parseInt(e.dataTransfer.getData("text/plain"));
-            const targetIndex = Number.parseInt(target.getAttribute("aria-colindex"));
-
-            if (index === targetIndex) {
+            const target = getParentElement(e.target, "TH");
+            const draggedId = e.dataTransfer.getData("text/plain");
+            const targetId = target?.getAttribute("data-column-id");
+            if (!targetId || draggedId === targetId) {
                 grid.log("reordered col stayed the same");
-                return;
+                return false;
             }
-            grid.log(`reordered col from ${index} to ${targetIndex}`);
-
-            const offset = grid.startColIndex();
-            const tmp = grid.options.columns[index - offset];
-            grid.options.columns[index - offset] = grid.options.columns[targetIndex - offset];
-            grid.options.columns[targetIndex - offset] = tmp;
-
-            const swapNodes = (selector, el1) => {
-                const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
-                const el2 = grid.querySelector(
-                    `${selector} tr[aria-rowindex="${rowIndex}"] [aria-colindex="${targetIndex}"]`,
-                );
-                setAttribute(el1, "aria-colindex", targetIndex);
-                setAttribute(el2, "aria-colindex", index);
-                const newNode = document.createElement("th");
-                el1.parentNode.insertBefore(newNode, el1);
-                el2.parentNode.replaceChild(el1, el2);
-                newNode.parentNode.replaceChild(el2, newNode);
-            };
-
-            // Swap all rows in header and body
-            for (const el1 of findAll(grid, `thead th[aria-colindex="${index}"]`)) {
-                swapNodes("thead", el1);
+            // Virtual columns are pinned and cannot be reordered
+            if (draggedId.startsWith("$") || targetId.startsWith("$")) {
+                return false;
             }
-            for (const el1 of findAll(grid, `tbody td[aria-colindex="${index}"]`)) {
-                swapNodes("tbody", el1);
-            }
+            grid.log(`reordered col from ${draggedId} to ${targetId}`);
 
-            // Updates the columns
-            grid.options.columns = findAll(grid, "thead tr.dg-head-columns th[field]").map((th) =>
-                grid.options.columns.find((c) => c.field === getAttribute(th, "field")),
-            );
+            const cols = grid.options.columns;
+            const from = cols.findIndex((c) => (c.id ?? c.field) === draggedId);
+            const to = cols.findIndex((c) => (c.id ?? c.field) === targetId);
+            if (from === -1 || to === -1) {
+                return false;
+            }
+            [cols[from], cols[to]] = [cols[to], cols[from]];
+
+            grid.renderTable();
 
             dispatch(grid, "columnReordered", {
-                col: tmp.field,
-                from: index,
-                to: targetIndex,
+                col: draggedId,
+                from,
+                to,
             });
             return false;
         });

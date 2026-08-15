@@ -18,6 +18,17 @@ class ContextMenu extends BasePlugin {
         }
     }
 
+    /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context !== "table") {
+            return;
+        }
+        this.createMenu();
+        this.attachContextMenu();
+    }
+
     attachContextMenu() {
         const grid = this.grid;
         on(grid.headerRow, "contextmenu", this);

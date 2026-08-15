@@ -34,8 +34,11 @@ import {
 /**
  * Column definition
  * @typedef Column
- * @property {String} field - the key in the data
- * @property {String} title - the title to display in the header (defaults to "field" if not set)
+ * @property {String} [field] - the key in the data
+ * @property {String} [id] - stable identifier (defaults to field). Plugin columns use "$..." ids.
+ * @property {Boolean} [virtual] - injected by a plugin
+ * @property {"start"|"end"} [position] - order group for plugin columns
+ * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
  * @property {Number} [width] - the width of the column (auto otherwise)
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
@@ -51,6 +54,9 @@ import {
  * @property {String} [filterType] - defines a filter field type ("text" or "select" - defaults to "text")
  * @property {Array} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
  * @property {Object} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
+ * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
+ * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
+ * @property {(td: HTMLTableCellElement, ctx: Object) => void} [renderCell] - optional custom cell renderer (the core creates the <td>)
  */
 
 /**
@@ -65,35 +71,12 @@ import {
  * @property {Boolean} default - is the default row action
  */
 
-// Import definitions without importing the actual file
-/** @typedef {import('./plugins/autosize-column').default} AutosizeColumn */
-/** @typedef {import('./plugins/column-resizer').default} ColumnResizer */
-/** @typedef {import('./plugins/context-menu').default} ContextMenu */
-/** @typedef {import('./plugins/draggable-headers').default} DraggableHeaders */
-/** @typedef {import('./plugins/editable-column').default} EditableColumn */
-/** @typedef {import('./plugins/fixed-height').default} FixedHeight */
-/** @typedef {import('./plugins/responsive-grid').default} ResponsiveGrid */
-/** @typedef {import('./plugins/row-actions').default} RowActions */
-/** @typedef {import('./plugins/selectable-rows').default} SelectableRows */
-/** @typedef {import('./plugins/touch-support').default} TouchSupport */
-/** @typedef {import('./plugins/spinner-support').default} SpinnerSupport */
-/** @typedef {import('./plugins/save-state').default} SaveState */
+/** @typedef {import("./core/base-plugin.js").Plugin} Plugin */
 
 /**
- * These plugins are all optional
- * @typedef {Object} Plugins
- * @property {ColumnResizer} [ColumnResizer] resize handlers in the headers
- * @property {ContextMenu} [ContextMenu] menu to show/hide columns
- * @property {DraggableHeaders} [DraggableHeaders] draggable headers columns
- * @property {EditableColumn} [EditableColumn] draggable headers columns
- * @property {TouchSupport} [TouchSupport] touch swipe
- * @property {SelectableRows} [SelectableRows] create a column with checkboxes to select rows
- * @property {FixedHeight} [FixedHeight] allows having fixed height tables
- * @property {AutosizeColumn} [AutosizeColumn] compute ideal width based on column content
- * @property {ResponsiveGrid} [ResponsiveGrid] hide/show column on the fly
- * @property {RowActions} [RowActions] add action on rows
- * @property {SpinnerSupport} [SpinnerSupport] inserts a spinning icon element to indicate grid loading.
- * @property {SaveState} [SaveState] stores grid filter, sort, and paging.
+ * Registered plugins, keyed by their registration name. The core only
+ * iterates them generically.
+ * @typedef {Record<string, Plugin>} Plugins
  */
 
 /**
@@ -202,6 +185,29 @@ function normalizeQuery(query) {
         }
     }
     return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), sort, filters };
+}
+
+/**
+ * Order columns: plugin "start" columns first (in plugin registration order),
+ * then base columns, then plugin "end" columns.
+ * Start columns are unshifted by plugins, so reversing restores registration order.
+ * @param {Column[]} columns
+ * @returns {Column[]}
+ */
+function orderColumns(columns) {
+    const start = [];
+    const middle = [];
+    const end = [];
+    for (const col of columns) {
+        if (col.position === "start") {
+            start.push(col);
+        } else if (col.position === "end") {
+            end.push(col);
+        } else {
+            middle.push(col);
+        }
+    }
+    return [...start.reverse(), ...middle, ...end];
 }
 
 /**
@@ -342,6 +348,16 @@ class DataGrid extends BaseElement {
          * @type {?Error}
          */
         this.error = null;
+        /**
+         * Normalized columns of the current render cycle
+         * @type {Column[]}
+         */
+        this._columns = [];
+        /**
+         * Set by the ColumnResizer plugin while resizing, checked by sortData
+         * @type {Boolean}
+         */
+        this._isResizing = false;
     }
 
     static template() {
@@ -539,6 +555,35 @@ class DataGrid extends BaseElement {
      */
     static registeredPlugins() {
         return plugins;
+    }
+
+    /**
+     * Run a lifecycle hook on all registered plugins, in registration order.
+     * @param {String} hook
+     * @param {...any} args
+     */
+    runPlugins(hook, ...args) {
+        for (const plugin of Object.values(this.plugins)) {
+            plugin[hook]?.(...args);
+        }
+    }
+
+    /**
+     * Build the normalized column list: base columns + plugin columns, ordered.
+     * @returns {Column[]}
+     */
+    buildColumns() {
+        const columns = this.convertColumns(this.options.columns);
+        this.runPlugins("extendColumns", columns);
+        return orderColumns(columns);
+    }
+
+    /**
+     * The normalized column list of the current render cycle.
+     * @returns {Column[]}
+     */
+    getColumns() {
+        return this._columns;
     }
 
     /**
@@ -779,14 +824,8 @@ class DataGrid extends BaseElement {
     }
 
     responsiveChanged() {
-        if (!this.plugins.ResponsiveGrid) {
-            return;
-        }
-        if (this.options.responsive) {
-            this.plugins.ResponsiveGrid.observe();
-        } else {
-            this.plugins.ResponsiveGrid.unobserve();
-        }
+        this.runPlugins("responsiveChanged", this.options.responsive);
+        this.renderTable();
     }
 
     menuChanged() {
@@ -873,7 +912,7 @@ class DataGrid extends BaseElement {
         this.setupInitialState();
 
         for (const plugin of Object.values(this.plugins)) {
-            await plugin.connected();
+            await plugin.connected?.();
         }
 
         // Display even if we don't have data
@@ -893,7 +932,7 @@ class DataGrid extends BaseElement {
         this.inputPage?.removeEventListener("input", this.gotoPage);
 
         for (const plugin of Object.values(this.plugins)) {
-            plugin.disconnected();
+            plugin.disconnected?.();
         }
     }
 
@@ -973,53 +1012,19 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Returns the starting index of actual data
-     * @returns {Number}
-     */
-    startColIndex() {
-        let start = 1;
-        if (this.options.selectable && this.plugins.SelectableRows) {
-            start++;
-        }
-        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-            start++;
-        }
-        return start;
-    }
-
-    /**
-     * @returns {Boolean}
-     */
-    isSticky() {
-        return this.hasAttribute("sticky");
-    }
-
-    /**
+     * Number of rendered columns of the current column list.
      * @param {Boolean} visibleOnly
      * @returns {Number}
      */
     columnsLength(visibleOnly = false) {
         let len = 0;
-        // One column per (visible) column
-        for (const col of this.options.columns) {
+        for (const col of this.getColumns()) {
             if (visibleOnly && col.hidden) {
                 continue;
             }
             if (!col.attr) {
                 len++;
             }
-        }
-        // Add one col for selectable checkbox at the beginning
-        if (this.options.selectable && this.plugins.SelectableRows) {
-            len++;
-        }
-        // Add one col for actions at the end
-        if (this.options.actions.length && this.plugins.RowActions) {
-            len++;
-        }
-        // Add one col for the responsive toggle
-        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-            len++;
         }
         return len;
     }
@@ -1032,9 +1037,7 @@ class DataGrid extends BaseElement {
         if (!this.table) return this;
         this.table.style.visibility = "hidden";
         this.renderTable();
-        if (this.options.responsive && this.plugins.ResponsiveGrid) {
-            // Let the observer make the table visible
-        } else {
+        if (!this.options.responsive) {
             this.table.style.visibility = "visible";
         }
 
@@ -1059,10 +1062,14 @@ class DataGrid extends BaseElement {
      * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
      */
     getSelection(...keys) {
-        if (!this.plugins.SelectableRows) {
-            return [];
+        for (const plugin of Object.values(this.plugins)) {
+            /** @type {any} */
+            const p = plugin;
+            if (typeof p.getSelection === "function") {
+                return p.getSelection(...keys);
+            }
         }
-        return this.plugins.SelectableRows.getSelection(...keys);
+        return [];
     }
 
     getFirst() {
@@ -1143,7 +1150,7 @@ class DataGrid extends BaseElement {
             this.log("sorting prevented because column is not sortable");
             return;
         }
-        if (this.plugins.ColumnResizer?.isResizing) {
+        if (this._isResizing) {
             this.log("sorting prevented because resizing");
             return;
         }
@@ -1225,12 +1232,12 @@ class DataGrid extends BaseElement {
     renderTable() {
         this.log("render table");
 
-        if (this.options.menu && this.plugins.ContextMenu) {
-            this.plugins.ContextMenu.createMenu();
-        }
-
+        this._columns = this.buildColumns();
+        this.runPlugins("beforeRender");
+        this._renderContext = "table";
         this.renderHeader();
         this.renderFooter();
+        this.runPlugins("afterRender", this._renderContext);
     }
 
     /**
@@ -1244,10 +1251,6 @@ class DataGrid extends BaseElement {
         const thead = this.thead;
         this.createColumnHeaders(thead);
         this.createColumnFilters(thead);
-
-        if (this.options.resizable && this.plugins.ColumnResizer) {
-            this.plugins.ColumnResizer.renderResizer(labels.resizeColumn);
-        }
 
         dispatch(this, "headerRendered");
     }
@@ -1264,7 +1267,9 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Create the column headers based on column definitions and set options
+     * Create the column headers based on the normalized column list.
+     * The core creates the <th> and its structural attributes, then a column
+     * renderHeaderCell (or the default renderer) fills it.
      * @param {HTMLTableSectionElement} thead
      */
     createColumnHeaders(thead) {
@@ -1272,11 +1277,8 @@ class DataGrid extends BaseElement {
         const availableWidth = this.clientWidth;
         const colMaxWidth = Math.round((availableWidth / this.columnsLength(true)) * 2);
 
-        let idx = 0;
-        let tr;
-
         // Create row
-        tr = ce("tr");
+        const tr = ce("tr");
         this.headerRow = tr;
         tr.setAttribute("role", "row");
         tr.setAttribute("aria-rowindex", "1");
@@ -1290,71 +1292,38 @@ class DataGrid extends BaseElement {
             thead?.querySelector("tr").appendChild(sampleTh);
         }
 
-        if (this.options.selectable && this.plugins.SelectableRows) {
-            this.plugins.SelectableRows.createHeaderCol(tr);
-        }
-        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-            this.plugins.ResponsiveGrid.createHeaderCol(tr);
-        }
-
         // Create columns
-        idx = 0;
+        let idx = 0;
         let totalWidth = 0;
-        this.log("createColumnHeaders - columns", this.options.columns);
+        this.log("createColumnHeaders - columns", this.getColumns());
 
-        for (const column of this.options.columns) {
+        for (const column of this.getColumns()) {
             if (column.attr) {
                 continue;
             }
-            const colIdx = idx + this.startColIndex();
+            const colIdx = idx + 1;
             const th = ce("th");
             th.setAttribute("scope", "col");
             th.setAttribute("role", "columnheader");
             th.setAttribute("aria-colindex", `${colIdx}`);
-            th.setAttribute("id", randstr("dg-col-"));
-            if (this.options.sortable && !column.noSort) {
-                th.setAttribute("aria-sort", this.getColumnSort(column.field));
+            setAttribute(th, "data-column-id", column.id ?? column.field);
+            if (!column.virtual) {
+                th.setAttribute("id", randstr("dg-col-"));
+                th.setAttribute("field", column.field);
             }
-            th.setAttribute("field", column.field);
-            if (this.plugins.ResponsiveGrid && this.options.responsive) {
-                setAttribute(th, "data-responsive", column.responsive || "");
-            }
-            // Make sure the header fits (+ add some room for sort icon if necessary)
-            const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
-            th.dataset.minWidth = `${computedWidth}`;
-            applyColumnDefinition(th, column);
-            th.tabIndex = 0;
-            th.textContent = column.title;
 
-            let w = 0;
-            // Autosize small based on first/last row ?
-            // Take into account minWidth of the header and max available size based on col numbers
-            if (this.options.autosize && this.plugins.AutosizeColumn) {
-                const colAvailableWidth = Math.min(availableWidth - totalWidth, colMaxWidth);
-                w = this.plugins.AutosizeColumn.computeSize(
-                    th,
-                    column,
-                    Number.parseInt(th.dataset.minWidth),
-                    colAvailableWidth,
-                );
+            const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
+            if (column.renderHeaderCell) {
+                column.renderHeaderCell(th, ctx);
             } else {
-                w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
-            }
-
-            setAttribute(th, "width", w);
-            if (column.hidden) {
-                th.setAttribute("hidden", "");
-            } else {
-                totalWidth += w;
-            }
-
-            // Reorder columns with drag/drop
-            if (this.options.reorder && this.plugins.DraggableHeaders) {
-                this.plugins.DraggableHeaders.makeHeaderDraggable(th);
+                this.renderDefaultHeaderCell(th, ctx);
             }
 
             tr.appendChild(th);
             idx++;
+            if (!column.hidden) {
+                totalWidth += Number.parseInt(th.getAttribute("width")) || 0;
+            }
         }
 
         // There is too much available width, and we want to avoid fixed layout to split remaining amount
@@ -1366,11 +1335,6 @@ class DataGrid extends BaseElement {
             }
         }
 
-        // Actions
-        if (this.options.actions.length && this.plugins.RowActions) {
-            this.plugins.RowActions.makeActionHeader(tr);
-        }
-
         thead?.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
 
         // Once columns are inserted, we have an actual dom to query
@@ -1378,7 +1342,7 @@ class DataGrid extends BaseElement {
             this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
             const scrollbarWidth = this.offsetWidth - this.clientWidth;
             let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-            if (this.options.responsive && this.plugins.ResponsiveGrid) {
+            if (this.options.responsive) {
                 diff += scrollbarWidth;
             }
             // Remove diff for columns that can afford it
@@ -1404,11 +1368,6 @@ class DataGrid extends BaseElement {
             }
         }
 
-        // Context menu
-        if (this.options.menu && this.plugins.ContextMenu) {
-            this.plugins.ContextMenu.attachContextMenu();
-        }
-
         // Sort col on click and on Enter/Space for keyboard users
         const rowsWithSort = findAll(tr, "[aria-sort]");
         for (const sortableRow of rowsWithSort) {
@@ -1424,12 +1383,38 @@ class DataGrid extends BaseElement {
         this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
     }
 
+    /**
+     * Default header cell renderer for base columns.
+     * @param {HTMLTableCellElement} th
+     * @param {Object} ctx
+     */
+    renderDefaultHeaderCell(th, ctx) {
+        const { column, sampleTh } = ctx;
+        if (this.options.sortable && !column.noSort) {
+            th.setAttribute("aria-sort", this.getColumnSort(column.field));
+        }
+        if (this.options.responsive) {
+            setAttribute(th, "data-responsive", column.responsive || "");
+        }
+        // Make sure the header fits (+ add some room for sort icon if necessary)
+        const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
+        th.dataset.minWidth = `${computedWidth}`;
+        applyColumnDefinition(th, column);
+        th.tabIndex = 0;
+        th.textContent = column.title;
+
+        const w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
+        setAttribute(th, "width", w);
+        if (column.hidden) {
+            th.setAttribute("hidden", "");
+        }
+    }
+
     createColumnFilters(thead) {
         let idx = 0;
-        let tr;
 
         // Create row for filters
-        tr = ce("tr");
+        const tr = ce("tr");
         tr.setAttribute("role", "row");
         tr.setAttribute("aria-rowindex", "2");
         tr.setAttribute("class", "dg-head-filters");
@@ -1437,19 +1422,12 @@ class DataGrid extends BaseElement {
             tr.setAttribute("hidden", "");
         }
 
-        if (this.options.selectable && this.plugins.SelectableRows) {
-            this.plugins.SelectableRows.createFilterCol(tr);
-        }
-        if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-            this.plugins.ResponsiveGrid.createFilterCol(tr);
-        }
-
-        this.log("createColumnFilters - columns", this.options.columns);
-        for (const column of this.options.columns) {
+        this.log("createColumnFilters - columns", this.getColumns());
+        for (const column of this.getColumns()) {
             if (column.attr) {
                 continue;
             }
-            const colIdx = idx + this.startColIndex();
+            const colIdx = idx + 1;
             const relatedTh = thead?.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
             if (!relatedTh) {
                 console.warn("Related th not found", colIdx);
@@ -1457,32 +1435,21 @@ class DataGrid extends BaseElement {
             }
             const th = ce("th");
             th.setAttribute("aria-colindex", `${colIdx}`);
+            setAttribute(th, "data-column-id", column.id ?? column.field);
 
-            const filter = this.createFilterElement(column, relatedTh);
-            if (!this.options.filterable) {
-                th.tabIndex = 0;
+            const ctx = { grid: this, column };
+            if (column.renderFilterCell) {
+                column.renderFilterCell(th, ctx);
             } else {
-                filter.tabIndex = 0;
+                this.renderDefaultFilterCell(th, column, relatedTh);
             }
 
             if (column.hidden) {
                 th.setAttribute("hidden", "");
             }
 
-            // Reflect the current query filters into the input
-            const filterState = this._query.filters?.[column.field];
-            if (filterState) {
-                filter.value = filterState.value ?? "";
-            }
-
-            th.appendChild(filter);
             tr.appendChild(th);
             idx++;
-        }
-
-        // Actions
-        if (this.options.actions.length && this.plugins.RowActions) {
-            this.plugins.RowActions.makeActionFilter(tr);
         }
 
         thead?.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
@@ -1508,6 +1475,29 @@ class DataGrid extends BaseElement {
                 el.addEventListener("paste", eventHandler);
             }
         }
+    }
+
+    /**
+     * Default filter cell renderer for base columns.
+     * @param {HTMLTableCellElement} th
+     * @param {Column} column
+     * @param {HTMLTableCellElement} relatedTh
+     */
+    renderDefaultFilterCell(th, column, relatedTh) {
+        const filter = this.createFilterElement(column, relatedTh);
+        if (!this.options.filterable) {
+            th.tabIndex = 0;
+        } else {
+            filter.tabIndex = 0;
+        }
+
+        // Reflect the current query filters into the input
+        const filterState = this._query.filters?.[column.field];
+        if (filterState) {
+            filter.value = filterState.value ?? "";
+        }
+
+        th.appendChild(filter);
     }
 
     createFilterElement(column, relatedTh) {
@@ -1555,24 +1545,18 @@ class DataGrid extends BaseElement {
      */
     renderBody() {
         this.log("render body");
-        let tr;
-        let td;
-        let idx;
+        this._columns = this.buildColumns();
+        this.runPlugins("beforeRender");
+        this._renderContext = "body";
+
         const tbody = ce("tbody");
 
         let i = 0;
         for (const item of this.rows) {
-            tr = ce("tr");
+            const tr = ce("tr");
             setAttribute(tr, "role", "row");
             setAttribute(tr, "aria-rowindex", i + 1);
             tr.tabIndex = 0;
-
-            if (this.options.selectable && this.plugins.SelectableRows) {
-                this.plugins.SelectableRows.createDataCol(tr);
-            }
-            if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-                this.plugins.ResponsiveGrid.createDataCol(tr);
-            }
 
             // Expandable
             if (this.options.expand) {
@@ -1580,21 +1564,14 @@ class DataGrid extends BaseElement {
 
                 on(tr, "click", (ev) => {
                     if (ev.target.matches(this._excludedRowElementSelector)) return;
-                    if (this.plugins.ResponsiveGrid) {
-                        this.plugins.ResponsiveGrid.blockObserver();
-                    }
                     toggleClass(ev.currentTarget, "dg-expanded");
-                    if (this.plugins.ResponsiveGrid) {
-                        this.plugins.ResponsiveGrid.unblockObserver();
-                    }
                 });
             }
 
-            idx = 0;
-
-            for (const column of this.options.columns) {
+            let idx = 0;
+            for (const column of this.getColumns()) {
                 if (!column) {
-                    console.error("Empty column found!", this.options.columns);
+                    console.error("Empty column found!", this.getColumns());
                 }
                 // It should be applied as an attr of the row
                 if (column.attr) {
@@ -1606,67 +1583,25 @@ class DataGrid extends BaseElement {
                             tr.setAttribute(column.attr, item[column.field]);
                         }
                     }
-                    return;
+                    continue;
                 }
-                td = ce("td");
+                const td = ce("td");
                 td.setAttribute("role", "gridcell");
-                td.setAttribute("aria-colindex", `${idx + this.startColIndex()}`);
+                td.setAttribute("aria-colindex", `${idx + 1}`);
+                setAttribute(td, "data-column-id", column.id ?? column.field);
                 applyColumnDefinition(td, column);
                 // This is required for pure css responsive layout
                 td.setAttribute("data-name", column.title);
                 td.tabIndex = -1;
 
-                // Inline editing ...
-                if (column.editable && this.plugins.EditableColumn) {
-                    addClass(td, "dg-editable-col");
-                    this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
+                const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field] };
+                if (column.renderCell) {
+                    column.renderCell(td, ctx);
                 } else {
-                    // ... or formatting
-                    const v = item[column.field] ?? "";
-                    let tv;
-                    // TODO: make this modular
-                    switch (column.transform) {
-                        case "uppercase":
-                            tv = v.toUpperCase();
-                            break;
-                        case "lowercase":
-                            tv = v.toLowerCase();
-                            break;
-                        default:
-                            tv = v;
-                            break;
-                    }
-                    if (column.format) {
-                        // Only use formatting with values or if defaultFormatValue is set
-                        if (column.defaultFormatValue !== undefined && (tv === "" || tv === null)) {
-                            tv = `${column.defaultFormatValue}`;
-                        }
-                        if (typeof column.format === "string" && tv) {
-                            td.innerHTML = interpolate(
-                                column.format,
-                                Object.assign(
-                                    {
-                                        _v: v,
-                                        _tv: tv,
-                                    },
-                                    item,
-                                ),
-                            );
-                        } else if (column.format instanceof Function) {
-                            const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
-                            td.innerHTML = val || tv || v;
-                        }
-                    } else {
-                        td.textContent = tv;
-                    }
+                    this.renderDefaultCell(td, ctx);
                 }
                 tr.appendChild(td);
                 idx++;
-            }
-
-            // Actions
-            if (this.options.actions.length && this.plugins.RowActions) {
-                this.plugins.RowActions.makeActionRow(tr, item);
             }
 
             tbody.appendChild(tr);
@@ -1682,21 +1617,70 @@ class DataGrid extends BaseElement {
         prev && tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
         this.table?.replaceChild(tbody, prev);
 
-        if (this.plugins.FixedHeight) {
-            this.plugins.FixedHeight.createFakeRow();
-        }
-
         this.paginate();
 
-        if (this.plugins.SelectableRows) {
-            this.plugins.SelectableRows.shouldSelectAll(tbody);
-        }
+        this.runPlugins("afterRender", this._renderContext);
 
         this.classList.toggle("dg-empty", !this.rows.length);
 
         setAttribute(this.table, "aria-rowcount", this.rows.length);
 
         dispatch(this, "bodyRendered");
+    }
+
+    /**
+     * Default cell renderer for base columns (transform / format).
+     * Editable cells are marked for the EditableColumn plugin.
+     * @param {HTMLTableCellElement} td
+     * @param {Object} ctx
+     */
+    renderDefaultCell(td, ctx) {
+        const { column, row: item, rowIndex: i } = ctx;
+
+        if (column.editable) {
+            addClass(td, "dg-editable-col");
+            td.dataset.field = column.field;
+            td.dataset.rowIndex = `${i}`;
+        }
+
+        // ... or formatting
+        const v = item[column.field] ?? "";
+        let tv;
+        // TODO: make this modular
+        switch (column.transform) {
+            case "uppercase":
+                tv = v.toUpperCase();
+                break;
+            case "lowercase":
+                tv = v.toLowerCase();
+                break;
+            default:
+                tv = v;
+                break;
+        }
+        if (column.format) {
+            // Only use formatting with values or if defaultFormatValue is set
+            if (column.defaultFormatValue !== undefined && (tv === "" || tv === null)) {
+                tv = `${column.defaultFormatValue}`;
+            }
+            if (typeof column.format === "string" && tv) {
+                td.innerHTML = interpolate(
+                    column.format,
+                    Object.assign(
+                        {
+                            _v: v,
+                            _tv: tv,
+                        },
+                        item,
+                    ),
+                );
+            } else if (column.format instanceof Function) {
+                const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr: td.parentElement });
+                td.innerHTML = val || tv || v;
+            }
+        } else {
+            td.textContent = tv;
+        }
     }
 
     paginate() {
@@ -1718,15 +1702,6 @@ class DataGrid extends BaseElement {
         }
         if (!total) {
             low = 0;
-        }
-
-        if (this.options.selectable && this.plugins.SelectableRows) {
-            this.plugins.SelectableRows.clearCheckboxes(this.tbody);
-        }
-
-        // Store default height and update styles if needed
-        if (this.plugins.FixedHeight) {
-            this.plugins.FixedHeight.updateFakeRow();
         }
 
         // Enable/disable buttons if shown

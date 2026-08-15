@@ -19,6 +19,17 @@ class FixedHeight extends BasePlugin {
     }
 
     /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context !== "body") {
+            return;
+        }
+        this.createFakeRow();
+        this.updateFakeRow();
+    }
+
+    /**
      */
     createFakeRow() {
         const grid = this.grid;

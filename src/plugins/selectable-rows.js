@@ -1,6 +1,6 @@
 // @ts-nocheck
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
+import { $$, dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
@@ -25,6 +25,38 @@ class SelectableRows extends BasePlugin {
 
     get visibleOnly() {
         return this.grid.options.selectVisibleOnly;
+    }
+
+    /**
+     * Inject the selection column at the start.
+     * @param {import("../data-grid.js").Column[]} columns
+     */
+    extendColumns(columns) {
+        if (!this.grid.options.selectable) {
+            return;
+        }
+        columns.unshift({
+            id: "$selection",
+            virtual: true,
+            position: "start",
+            noSort: true,
+            title: "",
+            renderHeaderCell: (th) => this.createHeaderCell(th),
+            renderFilterCell: (th) => this.createFilterCell(th),
+            renderCell: (td, ctx) => this.createDataCell(td, ctx),
+        });
+    }
+
+    /**
+     * After the body render, keep the select all checkbox in sync.
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context !== "body") {
+            return;
+        }
+        this.clearCheckboxes(this.grid.tbody);
+        this.shouldSelectAll(this.grid.tbody);
     }
 
     /**
@@ -74,21 +106,16 @@ class SelectableRows extends BasePlugin {
                 input.dataset.toggled = "false"; // Reset toggled state for radio buttons
             }
         }
-        this.selectAll.checked = false;
-    }
-
-    colIndex() {
-        return this.grid.startColIndex() - 2;
+        if (this.selectAll) {
+            this.selectAll.checked = false;
+        }
     }
 
     /**
-     * @param {HTMLTableRowElement} tr
+     * @param {HTMLTableCellElement} th
      */
-    createHeaderCol(tr) {
-        const th = document.createElement("th");
-        setAttribute(th, "scope", "col");
-        setAttribute(th, "role", "columnheader");
-        setAttribute(th, "aria-colindex", this.colIndex());
+    createHeaderCell(th) {
+        setAttribute(th, "width", "40");
         th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
         th.tabIndex = 0;
 
@@ -103,54 +130,27 @@ class SelectableRows extends BasePlugin {
         label.appendChild(this.selectAll);
 
         th.appendChild(label);
-
-        th.setAttribute("width", "40");
-        tr.appendChild(th);
     }
 
     /**
-     * @param {HTMLTableRowElement} tr
+     * @param {HTMLTableCellElement} th
      */
-    createFilterCol(tr) {
-        const th = document.createElement("th");
-        setAttribute(th, "role", "columnheader");
-        setAttribute(th, "aria-colindex", this.colIndex());
+    createFilterCell(th) {
         th.classList.add(SELECTABLE_CLASS);
         th.tabIndex = 0;
-
-        tr.appendChild(th);
     }
 
     /**
-     * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
-     * It should check selectAll if all is checked
-     * It should uncheck selectAll if any is unchecked
-     * @param {HTMLTableSectionElement} tbody
+     * @param {HTMLTableCellElement} td
+     * @param {Object} ctx
      */
-    shouldSelectAll(tbody) {
-        if (!this.selectAll) {
-            return;
-        }
-        // Delegate listener for change events on input checkboxes
-        tbody.addEventListener("change", this);
-        // Make sure state is up to date
-        tbody.dispatchEvent(new Event("change"));
-    }
-
-    /**
-     * @param {HTMLTableRowElement} tr
-     */
-    createDataCol(tr) {
-        // Create col
-        const td = document.createElement("td");
-        setAttribute(td, "role", "gridcell");
-        setAttribute(td, "aria-colindex", this.colIndex());
+    createDataCell(td, ctx) {
         td.classList.add(SELECTABLE_CLASS);
 
         // Create input
         const input = document.createElement("input");
         // Alias row id for easy retrieval in getSelection
-        input.dataset.id = tr.getAttribute("aria-rowindex");
+        input.dataset.id = `${ctx.rowIndex + 1}`;
         input.type = this.isSingleSelect ? "radio" : "checkbox";
         input.classList.add(CHECKBOX_CLASS);
         if (this.isSingleSelect) {
@@ -167,8 +167,22 @@ class SelectableRows extends BasePlugin {
 
         // Prevent unwanted click behaviour on row
         label.addEventListener("click", this);
+    }
 
-        tr.appendChild(td);
+    /**
+     * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
+     * It should check selectAll if all is checked
+     * It should uncheck selectAll if any is unchecked
+     * @param {HTMLTableSectionElement} tbody
+     */
+    shouldSelectAll(tbody) {
+        if (!this.selectAll) {
+            return;
+        }
+        // Delegate listener for change events on input checkboxes
+        tbody.addEventListener("change", this);
+        // Make sure state is up to date
+        tbody.dispatchEvent(new Event("change"));
     }
 
     /**

@@ -7,7 +7,7 @@ import { $ } from "../utils/shortcuts.js";
 class SpinnerSupport extends BasePlugin {
     connected() {
         // Inserts spinner
-        if (this.grid.options.spinnerClass && this.grid.plugins.SpinnerSupport) {
+        if (this.grid.options.spinnerClass) {
             this.add();
         }
     }

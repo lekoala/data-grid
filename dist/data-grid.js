@@ -107,14 +107,14 @@ function $(selector, base = document) {
   }
   return base.querySelector(selector);
 }
-function $$2(selector, base = document) {
+function $$(selector, base = document) {
   return Array.from(base.querySelectorAll(selector));
 }
 function find(el, selector) {
   return $(selector, el);
 }
 function findAll(el, selector) {
-  return $$2(selector, el);
+  return $$(selector, el);
 }
 function ce(tagName, parent = null) {
   const el = document.createElement(tagName);
@@ -554,6 +554,21 @@ function normalizeQuery(query) {
   }
   return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), sort, filters };
 }
+function orderColumns(columns) {
+  const start = [];
+  const middle = [];
+  const end = [];
+  for (const col of columns) {
+    if (col.position === "start") {
+      start.push(col);
+    } else if (col.position === "end") {
+      end.push(col);
+    } else {
+      middle.push(col);
+    }
+  }
+  return [...start.reverse(), ...middle, ...end];
+}
 function applyColumnDefinition(el, column) {
   if (column.width) {
     setAttribute(el, "width", column.width);
@@ -634,6 +649,8 @@ var DataGrid = class extends base_element_default {
     this.pages = 0;
     this.loading = false;
     this.error = null;
+    this._columns = [];
+    this._isResizing = false;
   }
   static template() {
     return `
@@ -816,6 +833,32 @@ var DataGrid = class extends base_element_default {
    */
   static registeredPlugins() {
     return plugins;
+  }
+  /**
+   * Run a lifecycle hook on all registered plugins, in registration order.
+   * @param {String} hook
+   * @param {...any} args
+   */
+  runPlugins(hook, ...args) {
+    for (const plugin of Object.values(this.plugins)) {
+      plugin[hook]?.(...args);
+    }
+  }
+  /**
+   * Build the normalized column list: base columns + plugin columns, ordered.
+   * @returns {Column[]}
+   */
+  buildColumns() {
+    const columns = this.convertColumns(this.options.columns);
+    this.runPlugins("extendColumns", columns);
+    return orderColumns(columns);
+  }
+  /**
+   * The normalized column list of the current render cycle.
+   * @returns {Column[]}
+   */
+  getColumns() {
+    return this._columns;
   }
   /**
    * @param {Object|Array} columns
@@ -1030,14 +1073,8 @@ var DataGrid = class extends base_element_default {
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
   }
   responsiveChanged() {
-    if (!this.plugins.ResponsiveGrid) {
-      return;
-    }
-    if (this.options.responsive) {
-      this.plugins.ResponsiveGrid.observe();
-    } else {
-      this.plugins.ResponsiveGrid.unobserve();
-    }
+    this.runPlugins("responsiveChanged", this.options.responsive);
+    this.renderTable();
   }
   menuChanged() {
     this.renderHeader();
@@ -1092,7 +1129,7 @@ var DataGrid = class extends base_element_default {
     this.setupDataSource();
     this.setupInitialState();
     for (const plugin of Object.values(this.plugins)) {
-      await plugin.connected();
+      await plugin.connected?.();
     }
     this.dirChanged();
     this.populatePageSizes();
@@ -1107,7 +1144,7 @@ var DataGrid = class extends base_element_default {
     this.selectPerPage?.removeEventListener("change", this.changePerPage);
     this.inputPage?.removeEventListener("input", this.gotoPage);
     for (const plugin of Object.values(this.plugins)) {
-      plugin.disconnected();
+      plugin.disconnected?.();
     }
   }
   init() {
@@ -1168,47 +1205,19 @@ var DataGrid = class extends base_element_default {
     });
   }
   /**
-   * Returns the starting index of actual data
-   * @returns {Number}
-   */
-  startColIndex() {
-    let start = 1;
-    if (this.options.selectable && this.plugins.SelectableRows) {
-      start++;
-    }
-    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-      start++;
-    }
-    return start;
-  }
-  /**
-   * @returns {Boolean}
-   */
-  isSticky() {
-    return this.hasAttribute("sticky");
-  }
-  /**
+   * Number of rendered columns of the current column list.
    * @param {Boolean} visibleOnly
    * @returns {Number}
    */
   columnsLength(visibleOnly = false) {
     let len = 0;
-    for (const col of this.options.columns) {
+    for (const col of this.getColumns()) {
       if (visibleOnly && col.hidden) {
         continue;
       }
       if (!col.attr) {
         len++;
       }
-    }
-    if (this.options.selectable && this.plugins.SelectableRows) {
-      len++;
-    }
-    if (this.options.actions.length && this.plugins.RowActions) {
-      len++;
-    }
-    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-      len++;
     }
     return len;
   }
@@ -1220,8 +1229,7 @@ var DataGrid = class extends base_element_default {
     if (!this.table) return this;
     this.table.style.visibility = "hidden";
     this.renderTable();
-    if (this.options.responsive && this.plugins.ResponsiveGrid) {
-    } else {
+    if (!this.options.responsive) {
       this.table.style.visibility = "visible";
     }
     if (!this.rowHeight) {
@@ -1243,10 +1251,13 @@ var DataGrid = class extends base_element_default {
    * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
    */
   getSelection(...keys) {
-    if (!this.plugins.SelectableRows) {
-      return [];
+    for (const plugin of Object.values(this.plugins)) {
+      const p = plugin;
+      if (typeof p.getSelection === "function") {
+        return p.getSelection(...keys);
+      }
     }
-    return this.plugins.SelectableRows.getSelection(...keys);
+    return [];
   }
   getFirst() {
     if (this.loading) {
@@ -1316,7 +1327,7 @@ var DataGrid = class extends base_element_default {
       this.log("sorting prevented because column is not sortable");
       return;
     }
-    if (this.plugins.ColumnResizer?.isResizing) {
+    if (this._isResizing) {
       this.log("sorting prevented because resizing");
       return;
     }
@@ -1380,11 +1391,12 @@ var DataGrid = class extends base_element_default {
   }
   renderTable() {
     this.log("render table");
-    if (this.options.menu && this.plugins.ContextMenu) {
-      this.plugins.ContextMenu.createMenu();
-    }
+    this._columns = this.buildColumns();
+    this.runPlugins("beforeRender");
+    this._renderContext = "table";
     this.renderHeader();
     this.renderFooter();
+    this.runPlugins("afterRender", this._renderContext);
   }
   /**
    * Create table header
@@ -1396,9 +1408,6 @@ var DataGrid = class extends base_element_default {
     const thead = this.thead;
     this.createColumnHeaders(thead);
     this.createColumnFilters(thead);
-    if (this.options.resizable && this.plugins.ColumnResizer) {
-      this.plugins.ColumnResizer.renderResizer(labels.resizeColumn);
-    }
     dispatch(this, "headerRendered");
   }
   renderFooter() {
@@ -1411,15 +1420,15 @@ var DataGrid = class extends base_element_default {
     tfoot.style.display = "";
   }
   /**
-   * Create the column headers based on column definitions and set options
+   * Create the column headers based on the normalized column list.
+   * The core creates the <th> and its structural attributes, then a column
+   * renderHeaderCell (or the default renderer) fills it.
    * @param {HTMLTableSectionElement} thead
    */
   createColumnHeaders(thead) {
     const availableWidth = this.clientWidth;
     const colMaxWidth = Math.round(availableWidth / this.columnsLength(true) * 2);
-    let idx = 0;
-    let tr;
-    tr = ce("tr");
+    const tr = ce("tr");
     this.headerRow = tr;
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "1");
@@ -1430,60 +1439,34 @@ var DataGrid = class extends base_element_default {
       sampleTh = ce("th");
       thead?.querySelector("tr").appendChild(sampleTh);
     }
-    if (this.options.selectable && this.plugins.SelectableRows) {
-      this.plugins.SelectableRows.createHeaderCol(tr);
-    }
-    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-      this.plugins.ResponsiveGrid.createHeaderCol(tr);
-    }
-    idx = 0;
+    let idx = 0;
     let totalWidth = 0;
-    this.log("createColumnHeaders - columns", this.options.columns);
-    for (const column of this.options.columns) {
+    this.log("createColumnHeaders - columns", this.getColumns());
+    for (const column of this.getColumns()) {
       if (column.attr) {
         continue;
       }
-      const colIdx = idx + this.startColIndex();
+      const colIdx = idx + 1;
       const th = ce("th");
       th.setAttribute("scope", "col");
       th.setAttribute("role", "columnheader");
       th.setAttribute("aria-colindex", `${colIdx}`);
-      th.setAttribute("id", randstr("dg-col-"));
-      if (this.options.sortable && !column.noSort) {
-        th.setAttribute("aria-sort", this.getColumnSort(column.field));
+      setAttribute(th, "data-column-id", column.id ?? column.field);
+      if (!column.virtual) {
+        th.setAttribute("id", randstr("dg-col-"));
+        th.setAttribute("field", column.field);
       }
-      th.setAttribute("field", column.field);
-      if (this.plugins.ResponsiveGrid && this.options.responsive) {
-        setAttribute(th, "data-responsive", column.responsive || "");
-      }
-      const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
-      th.dataset.minWidth = `${computedWidth}`;
-      applyColumnDefinition(th, column);
-      th.tabIndex = 0;
-      th.textContent = column.title;
-      let w = 0;
-      if (this.options.autosize && this.plugins.AutosizeColumn) {
-        const colAvailableWidth = Math.min(availableWidth - totalWidth, colMaxWidth);
-        w = this.plugins.AutosizeColumn.computeSize(
-          th,
-          column,
-          Number.parseInt(th.dataset.minWidth),
-          colAvailableWidth
-        );
+      const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
+      if (column.renderHeaderCell) {
+        column.renderHeaderCell(th, ctx);
       } else {
-        w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
-      }
-      setAttribute(th, "width", w);
-      if (column.hidden) {
-        th.setAttribute("hidden", "");
-      } else {
-        totalWidth += w;
-      }
-      if (this.options.reorder && this.plugins.DraggableHeaders) {
-        this.plugins.DraggableHeaders.makeHeaderDraggable(th);
+        this.renderDefaultHeaderCell(th, ctx);
       }
       tr.appendChild(th);
       idx++;
+      if (!column.hidden) {
+        totalWidth += Number.parseInt(th.getAttribute("width")) || 0;
+      }
     }
     if (totalWidth < availableWidth) {
       const visibleCols = findAll(tr, "th:not([hidden],.dg-not-resizable)");
@@ -1492,15 +1475,12 @@ var DataGrid = class extends base_element_default {
         removeAttribute(lastCol, "width");
       }
     }
-    if (this.options.actions.length && this.plugins.RowActions) {
-      this.plugins.RowActions.makeActionHeader(tr);
-    }
     thead?.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
     if (thead && thead.offsetWidth > availableWidth) {
       this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
       const scrollbarWidth = this.offsetWidth - this.clientWidth;
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-      if (this.options.responsive && this.plugins.ResponsiveGrid) {
+      if (this.options.responsive) {
         diff += scrollbarWidth;
       }
       const thWithWidth = findAll(tr, "th[width]");
@@ -1523,9 +1503,6 @@ var DataGrid = class extends base_element_default {
         }
       }
     }
-    if (this.options.menu && this.plugins.ContextMenu) {
-      this.plugins.ContextMenu.attachContextMenu();
-    }
     const rowsWithSort = findAll(tr, "[aria-sort]");
     for (const sortableRow of rowsWithSort) {
       sortableRow.addEventListener("click", () => this.sortData(sortableRow));
@@ -1538,28 +1515,45 @@ var DataGrid = class extends base_element_default {
     }
     this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
   }
+  /**
+   * Default header cell renderer for base columns.
+   * @param {HTMLTableCellElement} th
+   * @param {Object} ctx
+   */
+  renderDefaultHeaderCell(th, ctx) {
+    const { column, sampleTh } = ctx;
+    if (this.options.sortable && !column.noSort) {
+      th.setAttribute("aria-sort", this.getColumnSort(column.field));
+    }
+    if (this.options.responsive) {
+      setAttribute(th, "data-responsive", column.responsive || "");
+    }
+    const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
+    th.dataset.minWidth = `${computedWidth}`;
+    applyColumnDefinition(th, column);
+    th.tabIndex = 0;
+    th.textContent = column.title;
+    const w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
+    setAttribute(th, "width", w);
+    if (column.hidden) {
+      th.setAttribute("hidden", "");
+    }
+  }
   createColumnFilters(thead) {
     let idx = 0;
-    let tr;
-    tr = ce("tr");
+    const tr = ce("tr");
     tr.setAttribute("role", "row");
     tr.setAttribute("aria-rowindex", "2");
     tr.setAttribute("class", "dg-head-filters");
     if (!this.options.filterable) {
       tr.setAttribute("hidden", "");
     }
-    if (this.options.selectable && this.plugins.SelectableRows) {
-      this.plugins.SelectableRows.createFilterCol(tr);
-    }
-    if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-      this.plugins.ResponsiveGrid.createFilterCol(tr);
-    }
-    this.log("createColumnFilters - columns", this.options.columns);
-    for (const column of this.options.columns) {
+    this.log("createColumnFilters - columns", this.getColumns());
+    for (const column of this.getColumns()) {
       if (column.attr) {
         continue;
       }
-      const colIdx = idx + this.startColIndex();
+      const colIdx = idx + 1;
       const relatedTh = thead?.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
       if (!relatedTh) {
         console.warn("Related th not found", colIdx);
@@ -1567,25 +1561,18 @@ var DataGrid = class extends base_element_default {
       }
       const th = ce("th");
       th.setAttribute("aria-colindex", `${colIdx}`);
-      const filter = this.createFilterElement(column, relatedTh);
-      if (!this.options.filterable) {
-        th.tabIndex = 0;
+      setAttribute(th, "data-column-id", column.id ?? column.field);
+      const ctx = { grid: this, column };
+      if (column.renderFilterCell) {
+        column.renderFilterCell(th, ctx);
       } else {
-        filter.tabIndex = 0;
+        this.renderDefaultFilterCell(th, column, relatedTh);
       }
       if (column.hidden) {
         th.setAttribute("hidden", "");
       }
-      const filterState = this._query.filters?.[column.field];
-      if (filterState) {
-        filter.value = filterState.value ?? "";
-      }
-      th.appendChild(filter);
       tr.appendChild(th);
       idx++;
-    }
-    if (this.options.actions.length && this.plugins.RowActions) {
-      this.plugins.RowActions.makeActionFilter(tr);
     }
     thead?.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
     if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
@@ -1606,6 +1593,25 @@ var DataGrid = class extends base_element_default {
         el.addEventListener("paste", eventHandler);
       }
     }
+  }
+  /**
+   * Default filter cell renderer for base columns.
+   * @param {HTMLTableCellElement} th
+   * @param {Column} column
+   * @param {HTMLTableCellElement} relatedTh
+   */
+  renderDefaultFilterCell(th, column, relatedTh) {
+    const filter = this.createFilterElement(column, relatedTh);
+    if (!this.options.filterable) {
+      th.tabIndex = 0;
+    } else {
+      filter.tabIndex = 0;
+    }
+    const filterState = this._query.filters?.[column.field];
+    if (filterState) {
+      filter.value = filterState.value ?? "";
+    }
+    th.appendChild(filter);
   }
   createFilterElement(column, relatedTh) {
     const isSelect = column.filterType === "select";
@@ -1643,39 +1649,27 @@ var DataGrid = class extends base_element_default {
    */
   renderBody() {
     this.log("render body");
-    let tr;
-    let td;
-    let idx;
+    this._columns = this.buildColumns();
+    this.runPlugins("beforeRender");
+    this._renderContext = "body";
     const tbody = ce("tbody");
     let i = 0;
     for (const item of this.rows) {
-      tr = ce("tr");
+      const tr = ce("tr");
       setAttribute(tr, "role", "row");
       setAttribute(tr, "aria-rowindex", i + 1);
       tr.tabIndex = 0;
-      if (this.options.selectable && this.plugins.SelectableRows) {
-        this.plugins.SelectableRows.createDataCol(tr);
-      }
-      if (this.options.responsive && this.plugins.ResponsiveGrid?.hasHiddenColumns()) {
-        this.plugins.ResponsiveGrid.createDataCol(tr);
-      }
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
         on(tr, "click", (ev) => {
           if (ev.target.matches(this._excludedRowElementSelector)) return;
-          if (this.plugins.ResponsiveGrid) {
-            this.plugins.ResponsiveGrid.blockObserver();
-          }
           toggleClass(ev.currentTarget, "dg-expanded");
-          if (this.plugins.ResponsiveGrid) {
-            this.plugins.ResponsiveGrid.unblockObserver();
-          }
         });
       }
-      idx = 0;
-      for (const column of this.options.columns) {
+      let idx = 0;
+      for (const column of this.getColumns()) {
         if (!column) {
-          console.error("Empty column found!", this.options.columns);
+          console.error("Empty column found!", this.getColumns());
         }
         if (column.attr) {
           if (item[column.field]) {
@@ -1685,59 +1679,23 @@ var DataGrid = class extends base_element_default {
               tr.setAttribute(column.attr, item[column.field]);
             }
           }
-          return;
+          continue;
         }
-        td = ce("td");
+        const td = ce("td");
         td.setAttribute("role", "gridcell");
-        td.setAttribute("aria-colindex", `${idx + this.startColIndex()}`);
+        td.setAttribute("aria-colindex", `${idx + 1}`);
+        setAttribute(td, "data-column-id", column.id ?? column.field);
         applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
         td.tabIndex = -1;
-        if (column.editable && this.plugins.EditableColumn) {
-          addClass(td, "dg-editable-col");
-          this.plugins.EditableColumn.makeEditableInput(td, column, item, i);
+        const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field] };
+        if (column.renderCell) {
+          column.renderCell(td, ctx);
         } else {
-          const v = item[column.field] ?? "";
-          let tv;
-          switch (column.transform) {
-            case "uppercase":
-              tv = v.toUpperCase();
-              break;
-            case "lowercase":
-              tv = v.toLowerCase();
-              break;
-            default:
-              tv = v;
-              break;
-          }
-          if (column.format) {
-            if (column.defaultFormatValue !== void 0 && (tv === "" || tv === null)) {
-              tv = `${column.defaultFormatValue}`;
-            }
-            if (typeof column.format === "string" && tv) {
-              td.innerHTML = interpolate(
-                column.format,
-                Object.assign(
-                  {
-                    _v: v,
-                    _tv: tv
-                  },
-                  item
-                )
-              );
-            } else if (column.format instanceof Function) {
-              const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr });
-              td.innerHTML = val || tv || v;
-            }
-          } else {
-            td.textContent = tv;
-          }
+          this.renderDefaultCell(td, ctx);
         }
         tr.appendChild(td);
         idx++;
-      }
-      if (this.options.actions.length && this.plugins.RowActions) {
-        this.plugins.RowActions.makeActionRow(tr, item);
       }
       tbody.appendChild(tr);
       dispatch(this, "rowRendered", { rowData: item, tr });
@@ -1747,16 +1705,60 @@ var DataGrid = class extends base_element_default {
     const prev = this.tbody;
     prev && tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
     this.table?.replaceChild(tbody, prev);
-    if (this.plugins.FixedHeight) {
-      this.plugins.FixedHeight.createFakeRow();
-    }
     this.paginate();
-    if (this.plugins.SelectableRows) {
-      this.plugins.SelectableRows.shouldSelectAll(tbody);
-    }
+    this.runPlugins("afterRender", this._renderContext);
     this.classList.toggle("dg-empty", !this.rows.length);
     setAttribute(this.table, "aria-rowcount", this.rows.length);
     dispatch(this, "bodyRendered");
+  }
+  /**
+   * Default cell renderer for base columns (transform / format).
+   * Editable cells are marked for the EditableColumn plugin.
+   * @param {HTMLTableCellElement} td
+   * @param {Object} ctx
+   */
+  renderDefaultCell(td, ctx) {
+    const { column, row: item, rowIndex: i } = ctx;
+    if (column.editable) {
+      addClass(td, "dg-editable-col");
+      td.dataset.field = column.field;
+      td.dataset.rowIndex = `${i}`;
+    }
+    const v = item[column.field] ?? "";
+    let tv;
+    switch (column.transform) {
+      case "uppercase":
+        tv = v.toUpperCase();
+        break;
+      case "lowercase":
+        tv = v.toLowerCase();
+        break;
+      default:
+        tv = v;
+        break;
+    }
+    if (column.format) {
+      if (column.defaultFormatValue !== void 0 && (tv === "" || tv === null)) {
+        tv = `${column.defaultFormatValue}`;
+      }
+      if (typeof column.format === "string" && tv) {
+        td.innerHTML = interpolate(
+          column.format,
+          Object.assign(
+            {
+              _v: v,
+              _tv: tv
+            },
+            item
+          )
+        );
+      } else if (column.format instanceof Function) {
+        const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr: td.parentElement });
+        td.innerHTML = val || tv || v;
+      }
+    } else {
+      td.textContent = tv;
+    }
   }
   paginate() {
     this.log("paginate");
@@ -1772,12 +1774,6 @@ var DataGrid = class extends base_element_default {
     }
     if (!total) {
       low = 0;
-    }
-    if (this.options.selectable && this.plugins.SelectableRows) {
-      this.plugins.SelectableRows.clearCheckboxes(this.tbody);
-    }
-    if (this.plugins.FixedHeight) {
-      this.plugins.FixedHeight.updateFakeRow();
     }
     if (this.btnFirst) {
       this.btnFirst.disabled = this._query.page <= 1;
@@ -1829,6 +1825,30 @@ var BasePlugin = class {
   disconnected() {
   }
   /**
+   * Inject or configure normalized columns. Transform columns in place.
+   * @param {Column[]} columns
+   */
+  extendColumns(columns) {
+  }
+  /**
+   * Called before a render cycle.
+   */
+  beforeRender() {
+  }
+  /**
+   * Called after a render cycle. The context is "table" for the header/footer
+   * render and "body" for the rows render.
+   * @param {("table"|"body")} context
+   */
+  afterRender(context) {
+  }
+  /**
+   * Called when the responsive option changes.
+   * @param {Boolean} enabled
+   */
+  responsiveChanged(enabled) {
+  }
+  /**
    * Handle events within the plugin
    * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events
    * @param {Event} event
@@ -1854,6 +1874,15 @@ var ColumnResizer = class extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.isResizing = false;
+  }
+  /**
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "table") {
+      return;
+    }
+    this.renderResizer(this.grid.labels.resizeColumn);
   }
   /**
    * @param {String} resizeLabel
@@ -1887,6 +1916,7 @@ var ColumnResizer = class extends base_plugin_default {
         grid.log("resized column");
         setTimeout(() => {
           this.isResizing = false;
+          grid._isResizing = false;
         }, 0);
         removeClass(resizer, "dg-resizer-active");
         if (grid.options.reorder) {
@@ -1906,6 +1936,7 @@ var ColumnResizer = class extends base_plugin_default {
       on(resizer, "mousedown", (e) => {
         e.stopPropagation();
         this.isResizing = true;
+        grid._isResizing = true;
         const target = e.target;
         const currentCols = findAll(grid, "dg-head-columns th");
         const visibleCols = currentCols.filter((col2) => {
@@ -1953,6 +1984,16 @@ var ContextMenu = class extends base_plugin_default {
     if (this.grid.headerRow) {
       off(this.grid.headerRow, "contextmenu", this);
     }
+  }
+  /**
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "table") {
+      return;
+    }
+    this.createMenu();
+    this.attachContextMenu();
   }
   attachContextMenu() {
     const grid = this.grid;
@@ -2027,19 +2068,31 @@ var context_menu_default = ContextMenu;
 // src/plugins/draggable-headers.js
 var DraggableHeaders = class extends base_plugin_default {
   /**
-   * @param {HTMLTableCellElement} th
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "table") {
+      return;
+    }
+    const headers = findAll(this.grid, "thead tr.dg-head-columns th[data-column-id]");
+    for (const th of headers) {
+      this.makeHeaderDraggable(th);
+    }
+  }
+  /**
+   * @param {HTMLElement} th
    */
   makeHeaderDraggable(th) {
     const grid = this.grid;
     th.draggable = true;
     on(th, "dragstart", (e) => {
-      if (grid.plugins.ColumnResizer?.isResizing && e.preventDefault) {
+      if (grid._isResizing && e.preventDefault) {
         e.preventDefault();
         return;
       }
       grid.log("reorder col");
       e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.setData("text/plain", e.target.getAttribute("aria-colindex"));
+      e.dataTransfer.setData("text/plain", th.getAttribute("data-column-id"));
     });
     on(th, "dragover", (e) => {
       if (e.preventDefault) {
@@ -2052,44 +2105,29 @@ var DraggableHeaders = class extends base_plugin_default {
       if (e.stopPropagation) {
         e.stopPropagation();
       }
-      const t = e.target;
-      const target = getParentElement(t, "TH");
-      const index = Number.parseInt(e.dataTransfer.getData("text/plain"));
-      const targetIndex = Number.parseInt(target.getAttribute("aria-colindex"));
-      if (index === targetIndex) {
+      const target = getParentElement(e.target, "TH");
+      const draggedId = e.dataTransfer.getData("text/plain");
+      const targetId = target?.getAttribute("data-column-id");
+      if (!targetId || draggedId === targetId) {
         grid.log("reordered col stayed the same");
-        return;
+        return false;
       }
-      grid.log(`reordered col from ${index} to ${targetIndex}`);
-      const offset = grid.startColIndex();
-      const tmp = grid.options.columns[index - offset];
-      grid.options.columns[index - offset] = grid.options.columns[targetIndex - offset];
-      grid.options.columns[targetIndex - offset] = tmp;
-      const swapNodes = (selector, el1) => {
-        const rowIndex = el1.parentNode.getAttribute("aria-rowindex");
-        const el2 = grid.querySelector(
-          `${selector} tr[aria-rowindex="${rowIndex}"] [aria-colindex="${targetIndex}"]`
-        );
-        setAttribute(el1, "aria-colindex", targetIndex);
-        setAttribute(el2, "aria-colindex", index);
-        const newNode = document.createElement("th");
-        el1.parentNode.insertBefore(newNode, el1);
-        el2.parentNode.replaceChild(el1, el2);
-        newNode.parentNode.replaceChild(el2, newNode);
-      };
-      for (const el1 of findAll(grid, `thead th[aria-colindex="${index}"]`)) {
-        swapNodes("thead", el1);
+      if (draggedId.startsWith("$") || targetId.startsWith("$")) {
+        return false;
       }
-      for (const el1 of findAll(grid, `tbody td[aria-colindex="${index}"]`)) {
-        swapNodes("tbody", el1);
+      grid.log(`reordered col from ${draggedId} to ${targetId}`);
+      const cols = grid.options.columns;
+      const from = cols.findIndex((c) => (c.id ?? c.field) === draggedId);
+      const to = cols.findIndex((c) => (c.id ?? c.field) === targetId);
+      if (from === -1 || to === -1) {
+        return false;
       }
-      grid.options.columns = findAll(grid, "thead tr.dg-head-columns th[field]").map(
-        (th2) => grid.options.columns.find((c) => c.field === getAttribute(th2, "field"))
-      );
+      [cols[from], cols[to]] = [cols[to], cols[from]];
+      grid.renderTable();
       dispatch(grid, "columnReordered", {
-        col: tmp.field,
-        from: index,
-        to: targetIndex
+        col: draggedId,
+        from,
+        to
       });
       return false;
     });
@@ -2154,6 +2192,36 @@ var SelectableRows = class extends base_plugin_default {
     return this.grid.options.selectVisibleOnly;
   }
   /**
+   * Inject the selection column at the start.
+   * @param {import("../data-grid.js").Column[]} columns
+   */
+  extendColumns(columns) {
+    if (!this.grid.options.selectable) {
+      return;
+    }
+    columns.unshift({
+      id: "$selection",
+      virtual: true,
+      position: "start",
+      noSort: true,
+      title: "",
+      renderHeaderCell: (th) => this.createHeaderCell(th),
+      renderFilterCell: (th) => this.createFilterCell(th),
+      renderCell: (td, ctx) => this.createDataCell(td, ctx)
+    });
+  }
+  /**
+   * After the body render, keep the select all checkbox in sync.
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "body") {
+      return;
+    }
+    this.clearCheckboxes(this.grid.tbody);
+    this.shouldSelectAll(this.grid.tbody);
+  }
+  /**
    * Get selected rows or fields.
    * Returns full rows, a single field's values, or objects with specified fields.
    * In single select mode, returns a single item.
@@ -2197,19 +2265,15 @@ var SelectableRows = class extends base_plugin_default {
         input.dataset.toggled = "false";
       }
     }
-    this.selectAll.checked = false;
-  }
-  colIndex() {
-    return this.grid.startColIndex() - 2;
+    if (this.selectAll) {
+      this.selectAll.checked = false;
+    }
   }
   /**
-   * @param {HTMLTableRowElement} tr
+   * @param {HTMLTableCellElement} th
    */
-  createHeaderCol(tr) {
-    const th = document.createElement("th");
-    setAttribute(th, "scope", "col");
-    setAttribute(th, "role", "columnheader");
-    setAttribute(th, "aria-colindex", this.colIndex());
+  createHeaderCell(th) {
+    setAttribute(th, "width", "40");
     th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
     th.tabIndex = 0;
     this.selectAll = document.createElement("input");
@@ -2221,19 +2285,33 @@ var SelectableRows = class extends base_plugin_default {
     label.hidden = this.isSingleSelect;
     label.appendChild(this.selectAll);
     th.appendChild(label);
-    th.setAttribute("width", "40");
-    tr.appendChild(th);
   }
   /**
-   * @param {HTMLTableRowElement} tr
+   * @param {HTMLTableCellElement} th
    */
-  createFilterCol(tr) {
-    const th = document.createElement("th");
-    setAttribute(th, "role", "columnheader");
-    setAttribute(th, "aria-colindex", this.colIndex());
+  createFilterCell(th) {
     th.classList.add(SELECTABLE_CLASS);
     th.tabIndex = 0;
-    tr.appendChild(th);
+  }
+  /**
+   * @param {HTMLTableCellElement} td
+   * @param {Object} ctx
+   */
+  createDataCell(td, ctx) {
+    td.classList.add(SELECTABLE_CLASS);
+    const input = document.createElement("input");
+    input.dataset.id = `${ctx.rowIndex + 1}`;
+    input.type = this.isSingleSelect ? "radio" : "checkbox";
+    input.classList.add(CHECKBOX_CLASS);
+    if (this.isSingleSelect) {
+      input.name = "dg-row-select";
+      input.dataset.toggled = "false";
+    }
+    const label = document.createElement("label");
+    label.classList.add("dg-clickable-cell");
+    label.appendChild(input);
+    td.appendChild(label);
+    label.addEventListener("click", this);
   }
   /**
    * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
@@ -2247,29 +2325,6 @@ var SelectableRows = class extends base_plugin_default {
     }
     tbody.addEventListener("change", this);
     tbody.dispatchEvent(new Event("change"));
-  }
-  /**
-   * @param {HTMLTableRowElement} tr
-   */
-  createDataCol(tr) {
-    const td = document.createElement("td");
-    setAttribute(td, "role", "gridcell");
-    setAttribute(td, "aria-colindex", this.colIndex());
-    td.classList.add(SELECTABLE_CLASS);
-    const input = document.createElement("input");
-    input.dataset.id = tr.getAttribute("aria-rowindex");
-    input.type = this.isSingleSelect ? "radio" : "checkbox";
-    input.classList.add(CHECKBOX_CLASS);
-    if (this.isSingleSelect) {
-      input.name = "dg-row-select";
-      input.dataset.toggled = "false";
-    }
-    const label = document.createElement("label");
-    label.classList.add("dg-clickable-cell");
-    label.appendChild(input);
-    td.appendChild(label);
-    label.addEventListener("click", this);
-    tr.appendChild(td);
   }
   /**
    * @param {Event} e
@@ -2323,6 +2378,16 @@ var FixedHeight = class extends base_plugin_default {
     }
   }
   /**
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "body") {
+      return;
+    }
+    this.createFakeRow();
+    this.updateFakeRow();
+  }
+  /**
    */
   createFakeRow() {
     const grid = this.grid;
@@ -2371,6 +2436,37 @@ var fixed_height_default = FixedHeight;
 // src/plugins/autosize-column.js
 var AutosizeColumn = class extends base_plugin_default {
   /**
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "table") {
+      return;
+    }
+    const grid = this.grid;
+    if (!grid.options.autosize) {
+      return;
+    }
+    const availableWidth = grid.clientWidth;
+    const colMaxWidth = Math.round(availableWidth / grid.columnsLength(true) * 2);
+    const ths = findAll(grid, "thead tr.dg-head-columns th[data-column-id]:not([hidden])");
+    let totalWidth = 0;
+    for (const th of ths) {
+      const column = grid.getColumns().find((c) => (c.id ?? c.field) === th.getAttribute("data-column-id"));
+      if (!column) {
+        continue;
+      }
+      const colAvailableWidth = Math.min(availableWidth - totalWidth, colMaxWidth);
+      const w = this.computeSize(
+        /** @type {HTMLTableCellElement} */
+        th,
+        column,
+        Number.parseInt(th.dataset.minWidth),
+        colAvailableWidth
+      );
+      totalWidth += Number(w) || 0;
+    }
+  }
+  /**
    * Autosize col based on column data
    * @param {HTMLTableCellElement} th
    * @param {import("../data-grid").Column} column
@@ -2415,7 +2511,6 @@ var autosize_column_default = AutosizeColumn;
 
 // src/plugins/responsive-grid.js
 var RESPONSIVE_CLASS = "dg-responsive";
-var obsTo;
 function sortByPriority(list) {
   return list.sort((a, b) => {
     const v1 = Number.parseInt(a.dataset.responsive) || 1;
@@ -2423,11 +2518,135 @@ function sortByPriority(list) {
     return v2 - v1;
   });
 }
-var callback = debounce((entries) => {
-  for (const entry of entries) {
-    const grid = entry.target;
+var ResponsiveGrid = class extends base_plugin_default {
+  constructor(grid) {
+    super(grid);
+    this.observerBlocked = false;
+    this.prevAction = null;
+    this.unblockTimeout = null;
+    this._lastEntry = null;
+    this._scheduleResize = /** @type {() => void} */
+    debounce(() => this.resize(), 100);
+    this.observer = new ResizeObserver((entries) => {
+      this._lastEntry = entries[entries.length - 1];
+      this._scheduleResize();
+    });
+  }
+  connected() {
+    if (this.grid.options.responsive) {
+      this.observe();
+    }
+  }
+  disconnected() {
+    this.unobserve();
+  }
+  /**
+   * @param {Boolean} enabled
+   */
+  responsiveChanged(enabled) {
+    if (enabled) {
+      this.observe();
+    } else {
+      this.unobserve();
+    }
+  }
+  observe() {
+    if (!this.grid.options.responsive) {
+      return;
+    }
+    this.observer.observe(this.grid);
+    this.grid.style.display = "block";
+    this.grid.style.overflowX = "hidden";
+  }
+  unobserve() {
+    this.observer.unobserve(this.grid);
+    this.grid.style.display = "unset";
+    this.grid.style.overflowX = "unset";
+  }
+  /**
+   * Inject the responsive toggle column when columns are hidden.
+   * @param {import("../data-grid.js").Column[]} columns
+   */
+  extendColumns(columns) {
+    if (!this.grid.options.responsiveToggle || !this.hasHiddenColumns()) {
+      return;
+    }
+    columns.unshift({
+      id: "$responsive",
+      virtual: true,
+      position: "start",
+      noSort: true,
+      title: "",
+      renderHeaderCell: (th) => this.createHeaderCell(th),
+      renderFilterCell: (th) => this.createFilterCell(th),
+      renderCell: (td, ctx) => this.createDataCell(td, ctx)
+    });
+  }
+  blockObserver() {
+    this.observerBlocked = true;
+    if (this.unblockTimeout) {
+      clearTimeout(this.unblockTimeout);
+    }
+  }
+  unblockObserver() {
+    this.unblockTimeout = setTimeout(() => {
+      this.observerBlocked = false;
+    }, 200);
+  }
+  /**
+   * @returns {Boolean}
+   */
+  hasHiddenColumns() {
+    let flag = false;
+    for (const col of this.grid.options.columns) {
+      if (col.responsiveHidden) {
+        flag = true;
+      }
+    }
+    return flag;
+  }
+  /**
+   * @param {HTMLTableCellElement} th
+   */
+  createHeaderCell(th) {
+    setAttribute(th, "width", "40");
+    th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
+    th.tabIndex = 0;
+  }
+  /**
+   * @param {HTMLTableCellElement} th
+   */
+  createFilterCell(th) {
+    th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
+    th.tabIndex = 0;
+  }
+  /**
+   * @param {HTMLTableCellElement} td
+   * @param {Object} ctx
+   */
+  createDataCell(td, ctx) {
+    td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
+    td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+  <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+</svg>
+<svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
+  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+</svg></div>`;
+    td.addEventListener("click", this);
+    td.addEventListener("mousedown", this);
+  }
+  /**
+   * Apply responsive hide/show based on the last observed size.
+   */
+  resize() {
+    const grid = this.grid;
     const table = grid.table;
-    if (grid.plugins.ResponsiveGrid.observerBlocked) {
+    if (this.observerBlocked) {
+      return;
+    }
+    const entry = this._lastEntry;
+    if (!entry) {
       return;
     }
     const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
@@ -2438,7 +2657,7 @@ var callback = debounce((entries) => {
     }, 0);
     const diff = (realTableWidth || tableWidth) - size - 1;
     const minWidth = 50;
-    const prevAction = grid.plugins.ResponsiveGrid.prevAction;
+    const prevAction = this.prevAction;
     const headerCols = sortByPriority(
       findAll(grid.headerRow, "th[field]").reverse().filter((col) => {
         return col.dataset.responsive !== "0";
@@ -2450,7 +2669,7 @@ var callback = debounce((entries) => {
       if (prevAction === "show") {
         return;
       }
-      grid.plugins.ResponsiveGrid.prevAction = "hide";
+      this.prevAction = "hide";
       let remaining = diff;
       let cols = headerCols.filter((col) => {
         return !col.hasAttribute("hidden") && col.hasAttribute("data-responsive");
@@ -2483,7 +2702,7 @@ var callback = debounce((entries) => {
       if (prevAction === "hide") {
         return;
       }
-      grid.plugins.ResponsiveGrid.prevAction = "show";
+      this.prevAction = "show";
       const requiredWidth = headerCols.filter((col) => {
         return !col.hasAttribute("hidden");
       }).reduce((result, col) => {
@@ -2527,115 +2746,10 @@ var callback = debounce((entries) => {
     if (changed) {
       grid.renderTable();
     }
-    setTimeout(() => {
-      grid.plugins.ResponsiveGrid.prevAction = null;
+    this.unblockTimeout = setTimeout(() => {
+      this.prevAction = null;
     }, 1e3);
     grid.table.style.visibility = "visible";
-  }
-}, 100);
-var resizeObserver = new ResizeObserver(callback);
-var ResponsiveGrid = class extends base_plugin_default {
-  constructor(grid) {
-    super(grid);
-    this.observerBlocked = false;
-    this.prevAction = null;
-  }
-  connected() {
-    if (this.grid.options.responsive) {
-      this.observe();
-    }
-  }
-  disconnected() {
-    this.unobserve();
-  }
-  observe() {
-    if (!this.grid.options.responsive) {
-      return;
-    }
-    resizeObserver.observe(this.grid);
-    this.grid.style.display = "block";
-    this.grid.style.overflowX = "hidden";
-  }
-  unobserve() {
-    resizeObserver.unobserve(this.grid);
-    this.grid.style.display = "unset";
-    this.grid.style.overflowX = "unset";
-  }
-  blockObserver() {
-    this.observerBlocked = true;
-    if (obsTo) {
-      clearTimeout(obsTo);
-    }
-  }
-  unblockObserver() {
-    obsTo = setTimeout(() => {
-      this.observerBlocked = false;
-    }, 200);
-  }
-  /**
-   * @returns {Boolean}
-   */
-  hasHiddenColumns() {
-    let flag = false;
-    for (const col of this.grid.options.columns) {
-      if (col.responsiveHidden) {
-        flag = true;
-      }
-    }
-    return flag;
-  }
-  colIndex() {
-    return this.grid.startColIndex() - 1;
-  }
-  /**
-   * @param {HTMLTableRowElement} tr
-   */
-  createHeaderCol(tr) {
-    if (!this.grid.options.responsiveToggle) {
-      return;
-    }
-    const th = ce("th", tr);
-    setAttribute(th, "scope", "col");
-    setAttribute(th, "role", "columnheader");
-    setAttribute(th, "aria-colindex", this.colIndex());
-    setAttribute(th, "width", "40");
-    th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
-    th.tabIndex = 0;
-  }
-  /**
-   * @param {HTMLTableRowElement} tr
-   */
-  createFilterCol(tr) {
-    if (!this.grid.options.responsiveToggle) {
-      return;
-    }
-    const th = ce("th", tr);
-    setAttribute(th, "role", "columnheader");
-    setAttribute(th, "aria-colindex", this.colIndex());
-    th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-    th.tabIndex = 0;
-  }
-  /**
-   * @param {HTMLTableRowElement} tr
-   */
-  createDataCol(tr) {
-    if (!this.grid.options.responsiveToggle) {
-      return;
-    }
-    const td = document.createElement("td");
-    setAttribute(td, "role", "gridcell");
-    setAttribute(td, "aria-colindex", this.colIndex());
-    td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-    td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
-  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-  <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg>
-<svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
-  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg></div>`;
-    tr.appendChild(td);
-    td.addEventListener("click", this);
-    td.addEventListener("mousedown", this);
   }
   computeLabelWidth() {
     let idealWidth = 0;
@@ -2716,38 +2830,46 @@ var RowActions = class extends base_plugin_default {
     return this.grid.options.actions.length > 0;
   }
   /**
-   *
-   * @param {HTMLTableRowElement} tr
+   * Inject the actions column at the end.
+   * @param {import("../data-grid.js").Column[]} columns
    */
-  makeActionHeader(tr) {
-    const actionsTh = document.createElement("th");
-    setAttribute(actionsTh, "role", "columnheader");
-    setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
-    actionsTh.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
-    actionsTh.tabIndex = 0;
-    tr.appendChild(actionsTh);
+  extendColumns(columns) {
+    if (!this.grid.options.actions.length) {
+      return;
+    }
+    columns.push({
+      id: "$actions",
+      virtual: true,
+      position: "end",
+      noSort: true,
+      title: "",
+      renderHeaderCell: (th) => this.createHeaderCell(th),
+      renderFilterCell: (th) => this.createFilterCell(th),
+      renderCell: (td, ctx) => this.makeActionRow(td, ctx)
+    });
   }
   /**
-   *
-   * @param {HTMLTableRowElement} tr
+   * @param {HTMLTableCellElement} th
    */
-  makeActionFilter(tr) {
-    const actionsTh = document.createElement("th");
-    actionsTh.setAttribute("role", "columnheader");
-    setAttribute(actionsTh, "aria-colindex", this.grid.columnsLength(true));
-    actionsTh.classList.add(...["dg-actions", this.actionClass]);
-    actionsTh.tabIndex = 0;
-    tr.appendChild(actionsTh);
+  createHeaderCell(th) {
+    th.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
+    th.tabIndex = 0;
   }
   /**
-   * @param {HTMLTableRowElement} tr
-   * @param {Object} item
+   * @param {HTMLTableCellElement} th
    */
-  makeActionRow(tr, item) {
+  createFilterCell(th) {
+    th.classList.add(...["dg-actions", this.actionClass]);
+    th.tabIndex = 0;
+  }
+  /**
+   * @param {HTMLTableCellElement} td
+   * @param {Object} ctx
+   */
+  makeActionRow(td, ctx) {
+    const grid = this.grid;
+    const item = ctx.row;
     const labels2 = this.grid.labels;
-    const td = document.createElement("td");
-    setAttribute(td, "role", "gridcell");
-    setAttribute(td, "aria-colindex", this.grid.columnsLength(true));
     td.classList.add(...["dg-actions", this.actionClass]);
     td.tabIndex = 0;
     const actionsToggle = document.createElement("button");
@@ -2758,7 +2880,7 @@ var RowActions = class extends base_plugin_default {
       ev.stopPropagation();
       ev.target.parentElement.classList.toggle("dg-actions-expand");
     });
-    for (const action of this.grid.options.actions) {
+    for (const action of grid.options.actions) {
       const button = document.createElement("button");
       if (action.html) {
         button.innerHTML = action.html;
@@ -2784,7 +2906,7 @@ var RowActions = class extends base_plugin_default {
             return;
           }
         }
-        dispatch(this.grid, "action", {
+        dispatch(grid, "action", {
           data: item,
           action: action.name
         });
@@ -2792,11 +2914,11 @@ var RowActions = class extends base_plugin_default {
       button.addEventListener("click", actionHandler);
       td.appendChild(button);
       if (action.default) {
+        const tr = td.parentElement;
         tr.classList.add("dg-actionable");
         tr.addEventListener("click", actionHandler);
       }
     }
-    tr.appendChild(td);
   }
   get actionClass() {
     if (this.grid.options.actions.length < 3 && !this.grid.options.collapseActions) {
@@ -2810,8 +2932,27 @@ var row_actions_default = RowActions;
 // src/plugins/editable-column.js
 var EditableColumn = class extends base_plugin_default {
   /**
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context !== "body") {
+      return;
+    }
+    const grid = this.grid;
+    const cells = findAll(grid, "tbody td.dg-editable-col");
+    for (const td of cells) {
+      const rowIndex = Number.parseInt(td.dataset.rowIndex);
+      const column = grid.getColumns().find((c) => (c.id ?? c.field) === td.getAttribute("data-column-id"));
+      const item = grid.rows[rowIndex];
+      if (!column || !item) {
+        continue;
+      }
+      this.makeEditableInput(td, column, item, rowIndex);
+    }
+  }
+  /**
    *
-   * @param {HTMLTableCellElement} td
+   * @param {HTMLElement} td
    * @param {import("../data-grid").Column} column
    * @param {Object} item
    * @param {number} i
@@ -2854,7 +2995,7 @@ var EditableColumn = class extends base_plugin_default {
         value: input.value
       });
     });
-    td.appendChild(input);
+    td.replaceChildren(input);
   }
 };
 var editable_column_default = EditableColumn;
@@ -2862,7 +3003,7 @@ var editable_column_default = EditableColumn;
 // src/plugins/spinner-support.js
 var SpinnerSupport = class extends base_plugin_default {
   connected() {
-    if (this.grid.options.spinnerClass && this.grid.plugins.SpinnerSupport) {
+    if (this.grid.options.spinnerClass) {
       this.add();
     }
   }
