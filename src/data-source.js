@@ -15,10 +15,16 @@
  */
 
 /**
+ * Supported filter operators
+ * @typedef {"eq"|"neq"|"contains"|"startsWith"|"endsWith"|
+ * "lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
+ */
+
+/**
  * Filter state
  * @typedef {Object} FilterState
- * @property {String} operator
- * @property {any} value
+ * @property {FilterOperator} operator
+ * @property {any} [value]
  */
 
 /**
@@ -36,6 +42,13 @@
  * @property {Array<Record<string, any>>} rows
  * @property {Number} total Number of rows matching the current query (used for pagination)
  * @property {Record<string, any>} [meta] Additional information (ex: total unfiltered)
+ */
+
+/**
+ * A selectable value for a select filter, as provided by meta.filters
+ * @typedef {Object} FilterOption
+ * @property {String|Number|Boolean} value
+ * @property {String} text
  */
 
 /**
@@ -83,8 +96,28 @@ export function encodeSearchParams(value, prefix = "", out = new URLSearchParams
 }
 
 /**
- * Apply structured filters to an array. The UI currently only produces
- * "contains" and "eq", a few common operators are handled defensively.
+ * Whether a value can participate in a numeric comparison.
+ * Excludes "" and non-finite values.
+ * @param {any} value
+ * @returns {Boolean}
+ */
+function isNumericValue(value) {
+    if (value === "" || value === null || value === undefined || typeof value === "boolean") {
+        return false;
+    }
+    return Number.isFinite(Number(value));
+}
+
+/**
+ * Apply structured filters to an array.
+ * Semantics:
+ * - empty := null | undefined | "" (0 and false are NOT empty)
+ * - contains / startsWith / endsWith: case-insensitive string comparison
+ * - eq / neq / in: scalar comparison after string coercion (42 matches "42")
+ * - lt/lte/gt/gte/between: numeric comparison when both operands are finite
+ *   numeric values, otherwise string comparison
+ * - between requires a 2-value array, in requires an array
+ * - empty/invalid filter values are ignored, not treated as "match nothing"
  * @param {Array<Record<string, any>>} rows
  * @param {Record<string, FilterState>} [filters]
  * @returns {Array<Record<string, any>>}
@@ -97,24 +130,77 @@ export function applyFilters(rows, filters) {
         for (const [field, filter] of Object.entries(filters)) {
             const operator = filter?.operator ?? "contains";
             const value = filter?.value;
+            const cell = item[field];
+            if (operator === "empty") {
+                if (cell !== "" && cell !== null && cell !== undefined) {
+                    return false;
+                }
+                continue;
+            }
+            if (operator === "notEmpty") {
+                if (cell === "" || cell === null || cell === undefined) {
+                    return false;
+                }
+                continue;
+            }
+            // All remaining operators require a value
             if (value === null || value === undefined || value === "") {
                 continue;
             }
-            const cell = `${item[field] ?? ""}`;
-            const cellLower = cell.toLowerCase();
+            const cellLower = `${cell ?? ""}`.toLowerCase();
             const valueLower = String(value).toLowerCase();
             switch (operator) {
                 case "eq":
-                    if (cell !== String(value)) return false;
+                    if (`${cell}` !== String(value)) return false;
                     break;
                 case "neq":
-                    if (cell === String(value)) return false;
+                    if (`${cell}` === String(value)) return false;
                     break;
                 case "startsWith":
                     if (!cellLower.startsWith(valueLower)) return false;
                     break;
                 case "endsWith":
                     if (!cellLower.endsWith(valueLower)) return false;
+                    break;
+                case "lt":
+                case "lte":
+                case "gt":
+                case "gte":
+                    if (isNumericValue(cell) && isNumericValue(value)) {
+                        const a = Number(cell);
+                        const b = Number(value);
+                        if (operator === "lt" && a >= b) return false;
+                        if (operator === "lte" && a > b) return false;
+                        if (operator === "gt" && a <= b) return false;
+                        if (operator === "gte" && a < b) return false;
+                    } else {
+                        const cmp = `${cell ?? ""}`.localeCompare(String(value), undefined, { sensitivity: "base" });
+                        if (operator === "lt" && cmp >= 0) return false;
+                        if (operator === "lte" && cmp > 0) return false;
+                        if (operator === "gt" && cmp <= 0) return false;
+                        if (operator === "gte" && cmp < 0) return false;
+                    }
+                    break;
+                case "between": {
+                    if (!Array.isArray(value) || value.length !== 2) {
+                        continue;
+                    }
+                    const [min, max] = value;
+                    if (isNumericValue(cell) && isNumericValue(min) && isNumericValue(max)) {
+                        const v = Number(cell);
+                        if (v < Number(min) || v > Number(max)) return false;
+                    } else {
+                        const cmpMin = `${cell ?? ""}`.localeCompare(String(min), undefined, { sensitivity: "base" });
+                        const cmpMax = `${cell ?? ""}`.localeCompare(String(max), undefined, { sensitivity: "base" });
+                        if (cmpMin < 0 || cmpMax > 0) return false;
+                    }
+                    break;
+                }
+                case "in":
+                    if (!Array.isArray(value)) {
+                        continue;
+                    }
+                    if (!value.some((v) => `${v}` === `${cell}`)) return false;
                     break;
                 default:
                     if (!cellLower.includes(valueLower)) return false;

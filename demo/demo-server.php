@@ -61,30 +61,66 @@ $filteredData = [];
 foreach ($data as $row) {
     $found = true;
     foreach ($filters as $col => $filter) {
+        $operator = $filter["operator"] ?? "contains";
         $value = $filter["value"] ?? "";
-        if ($value === "") {
+
+        // empty / notEmpty operate on the cell itself
+        if ($operator === "empty" || $operator === "notEmpty") {
+            $empty = !isset($row[$col]) || $row[$col] === null || $row[$col] === "";
+            if ($operator === "empty" && !$empty) $found = false;
+            if ($operator === "notEmpty" && $empty) $found = false;
+            continue;
+        }
+
+        // All remaining operators require a value
+        if ($value === "" || $value === null) {
             continue;
         }
         if (!isset($row[$col])) {
             continue;
         }
-        $operator = $filter["operator"] ?? "contains";
-        if ($operator === "eq") {
-            if ($row[$col] != $value) {
-                $found = false;
-            }
-        } elseif ($operator === "neq") {
-            if ($row[$col] == $value) {
-                $found = false;
-            }
-        } elseif ($operator === "startsWith") {
-            if (stripos($row[$col], $value) !== 0) {
-                $found = false;
-            }
-        } else {
-            if (stripos($row[$col], $value) === false) {
-                $found = false;
-            }
+        $cell = (string)$row[$col];
+        $stringValue = (string)$value;
+        switch ($operator) {
+            case "eq":
+                if ($cell !== $stringValue) $found = false;
+                break;
+            case "neq":
+                if ($cell === $stringValue) $found = false;
+                break;
+            case "startsWith":
+                if (stripos($cell, $stringValue) !== 0) $found = false;
+                break;
+            case "endsWith":
+                if (substr($cell, -strlen($stringValue)) !== $stringValue) $found = false;
+                break;
+            case "lt":
+            case "lte":
+            case "gt":
+            case "gte":
+                if (!is_numeric($row[$col]) || !is_numeric($value)) break;
+                $a = (float)$row[$col];
+                $b = (float)$value;
+                if ($operator === "lt" && $a >= $b) $found = false;
+                if ($operator === "lte" && $a > $b) $found = false;
+                if ($operator === "gt" && $a <= $b) $found = false;
+                if ($operator === "gte" && $a < $b) $found = false;
+                break;
+            case "between":
+                if (!is_array($value) || count($value) !== 2) break;
+                if (!is_numeric($row[$col])) break;
+                $a = (float)$row[$col];
+                $min = (float)$value[0];
+                $max = (float)$value[1];
+                if ($a < $min || $a > $max) $found = false;
+                break;
+            case "in":
+                if (!is_array($value)) break;
+                $values = array_map("strval", $value);
+                if (!in_array($cell, $values)) $found = false;
+                break;
+            default:
+                if (stripos($cell, $stringValue) === false) $found = false;
         }
     }
     if ($found) {

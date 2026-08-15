@@ -278,6 +278,12 @@ function encodeSearchParams(value, prefix = "", out = new URLSearchParams()) {
   out.append(prefix, `${v}`);
   return out;
 }
+function isNumericValue(value) {
+  if (value === "" || value === null || value === void 0 || typeof value === "boolean") {
+    return false;
+  }
+  return Number.isFinite(Number(value));
+}
 function applyFilters(rows, filters) {
   if (!filters) {
     return rows.slice();
@@ -286,24 +292,76 @@ function applyFilters(rows, filters) {
     for (const [field, filter] of Object.entries(filters)) {
       const operator = filter?.operator ?? "contains";
       const value = filter?.value;
+      const cell = item[field];
+      if (operator === "empty") {
+        if (cell !== "" && cell !== null && cell !== void 0) {
+          return false;
+        }
+        continue;
+      }
+      if (operator === "notEmpty") {
+        if (cell === "" || cell === null || cell === void 0) {
+          return false;
+        }
+        continue;
+      }
       if (value === null || value === void 0 || value === "") {
         continue;
       }
-      const cell = `${item[field] ?? ""}`;
-      const cellLower = cell.toLowerCase();
+      const cellLower = `${cell ?? ""}`.toLowerCase();
       const valueLower = String(value).toLowerCase();
       switch (operator) {
         case "eq":
-          if (cell !== String(value)) return false;
+          if (`${cell}` !== String(value)) return false;
           break;
         case "neq":
-          if (cell === String(value)) return false;
+          if (`${cell}` === String(value)) return false;
           break;
         case "startsWith":
           if (!cellLower.startsWith(valueLower)) return false;
           break;
         case "endsWith":
           if (!cellLower.endsWith(valueLower)) return false;
+          break;
+        case "lt":
+        case "lte":
+        case "gt":
+        case "gte":
+          if (isNumericValue(cell) && isNumericValue(value)) {
+            const a = Number(cell);
+            const b = Number(value);
+            if (operator === "lt" && a >= b) return false;
+            if (operator === "lte" && a > b) return false;
+            if (operator === "gt" && a <= b) return false;
+            if (operator === "gte" && a < b) return false;
+          } else {
+            const cmp = `${cell ?? ""}`.localeCompare(String(value), void 0, { sensitivity: "base" });
+            if (operator === "lt" && cmp >= 0) return false;
+            if (operator === "lte" && cmp > 0) return false;
+            if (operator === "gt" && cmp <= 0) return false;
+            if (operator === "gte" && cmp < 0) return false;
+          }
+          break;
+        case "between": {
+          if (!Array.isArray(value) || value.length !== 2) {
+            continue;
+          }
+          const [min, max] = value;
+          if (isNumericValue(cell) && isNumericValue(min) && isNumericValue(max)) {
+            const v = Number(cell);
+            if (v < Number(min) || v > Number(max)) return false;
+          } else {
+            const cmpMin = `${cell ?? ""}`.localeCompare(String(min), void 0, { sensitivity: "base" });
+            const cmpMax = `${cell ?? ""}`.localeCompare(String(max), void 0, { sensitivity: "base" });
+            if (cmpMin < 0 || cmpMax > 0) return false;
+          }
+          break;
+        }
+        case "in":
+          if (!Array.isArray(value)) {
+            continue;
+          }
+          if (!value.some((v) => `${v}` === `${cell}`)) return false;
           break;
         default:
           if (!cellLower.includes(valueLower)) return false;
@@ -548,8 +606,22 @@ function normalizeQuery(query) {
   const filters = {};
   if (q.filters && typeof q.filters === "object") {
     for (const [key, filter] of Object.entries(q.filters)) {
-      if (filter && typeof filter === "object" && "value" in filter) {
-        filters[key] = { operator: filter.operator ?? "contains", value: filter.value };
+      if (filter === null || filter === void 0) {
+        continue;
+      }
+      let operator;
+      let value;
+      if (typeof filter === "object") {
+        operator = filter.operator ?? "contains";
+        value = filter.value;
+      } else {
+        operator = "contains";
+        value = filter;
+      }
+      const hasValue = value !== void 0 && value !== null && value !== "";
+      if (hasValue || operator === "empty" || operator === "notEmpty") {
+        filters[key] = /** @type {FilterState} */
+        hasValue ? { operator, value } : { operator };
       }
     }
   }
@@ -1757,16 +1829,9 @@ var DataGrid = class extends base_element_default {
     const isSelect = column.filterType === "select";
     const filter = isSelect ? ce("select") : ce("input");
     if (isSelect) {
-      if (!Array.isArray(column.filterList)) {
-        const sourceRows = this.dataSource instanceof ArrayDataSource ? this.dataSource.rows : this.rows;
-        const uniqueValues = [...new Set((sourceRows ?? []).map((e) => e[column.field]))].filter((v) => v).sort();
-        column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(
-          uniqueValues.map((e) => ({ value: e, text: e }))
-        );
-      }
-      for (const e of column.filterList) {
+      for (const e of this.getFilterOptions(column)) {
         const opt = ce("option");
-        opt.value = e.value;
+        opt.value = `${e.value}`;
         opt.text = e.text;
         if (filter instanceof HTMLSelectElement) {
           filter.add(opt);
@@ -1782,6 +1847,28 @@ var DataGrid = class extends base_element_default {
     filter.id = randstr("dg-filter-");
     filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
     return filter;
+  }
+  /**
+   * Resolve the options of a select filter, directly consumable by the
+   * <select>. Never derives from the currently loaded page: for a server
+   * grid the options must come from meta.filters or an explicit list.
+   * @param {Column} column
+   * @returns {Array<import("./data-source.js").FilterOption>}
+   */
+  getFilterOptions(column) {
+    const firstFilterOption = column.firstFilterOption || this.defaultColumn.firstFilterOption;
+    if (Array.isArray(column.filterList)) {
+      return column.filterList;
+    }
+    const metaOptions = this.meta?.filters?.[column.field];
+    if (Array.isArray(metaOptions)) {
+      return [firstFilterOption, ...metaOptions];
+    }
+    if (this.dataSource instanceof ArrayDataSource) {
+      const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => e[column.field]))].filter((v) => v !== void 0 && v !== null && v !== "").sort();
+      return [firstFilterOption, ...uniqueValues.map((e) => ({ value: e, text: e }))];
+    }
+    return [firstFilterOption];
   }
   /**
    * Render the rows of the current page into tbody

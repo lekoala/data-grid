@@ -201,8 +201,24 @@ function normalizeQuery(query) {
     const filters = {};
     if (q.filters && typeof q.filters === "object") {
         for (const [key, filter] of Object.entries(q.filters)) {
-            if (filter && typeof filter === "object" && "value" in filter) {
-                filters[key] = { operator: filter.operator ?? "contains", value: filter.value };
+            if (filter === null || filter === undefined) {
+                continue;
+            }
+            let operator;
+            let value;
+            if (typeof filter === "object") {
+                operator = filter.operator ?? "contains";
+                value = filter.value;
+            } else {
+                // Legacy shorthand: { field: value } -> contains
+                operator = "contains";
+                value = filter;
+            }
+            // Preserve valid falsy values (0, false); drop empty ones, unless
+            // the operator works without a value (empty/notEmpty).
+            const hasValue = value !== undefined && value !== null && value !== "";
+            if (hasValue || operator === "empty" || operator === "notEmpty") {
+                filters[key] = /** @type {FilterState} */ (hasValue ? { operator, value } : { operator });
             }
         }
     }
@@ -1678,20 +1694,9 @@ class DataGrid extends BaseElement {
         const isSelect = column.filterType === "select";
         const filter = isSelect ? ce("select") : ce("input");
         if (isSelect) {
-            if (!Array.isArray(column.filterList)) {
-                // Gets unique values from the full local collection when available
-                const sourceRows = this.dataSource instanceof ArrayDataSource ? this.dataSource.rows : this.rows;
-                const uniqueValues = [...new Set((sourceRows ?? []).map((e) => e[column.field]))]
-                    .filter((v) => v)
-                    .sort();
-                column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(
-                    uniqueValues.map((e) => ({ value: e, text: e })),
-                );
-            }
-
-            for (const e of column.filterList) {
+            for (const e of this.getFilterOptions(column)) {
                 const opt = ce("option");
-                opt.value = e.value;
+                opt.value = `${e.value}`;
                 opt.text = e.text;
 
                 if (filter instanceof HTMLSelectElement) {
@@ -1711,6 +1716,34 @@ class DataGrid extends BaseElement {
         // Don't use aria-label as it triggers autocomplete
         filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
         return filter;
+    }
+
+    /**
+     * Resolve the options of a select filter, directly consumable by the
+     * <select>. Never derives from the currently loaded page: for a server
+     * grid the options must come from meta.filters or an explicit list.
+     * @param {Column} column
+     * @returns {Array<import("./data-source.js").FilterOption>}
+     */
+    getFilterOptions(column) {
+        const firstFilterOption = column.firstFilterOption || this.defaultColumn.firstFilterOption;
+        // An explicit list is authoritative and used as-is (backward compat)
+        if (Array.isArray(column.filterList)) {
+            return column.filterList;
+        }
+        // Server-provided options for server-first grids
+        const metaOptions = this.meta?.filters?.[column.field];
+        if (Array.isArray(metaOptions)) {
+            return [firstFilterOption, ...metaOptions];
+        }
+        // A local data source owns the full collection and can derive options
+        if (this.dataSource instanceof ArrayDataSource) {
+            const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => e[column.field]))]
+                .filter((v) => v !== undefined && v !== null && v !== "")
+                .sort();
+            return [firstFilterOption, ...uniqueValues.map((e) => ({ value: e, text: e }))];
+        }
+        return [firstFilterOption];
     }
 
     /**
