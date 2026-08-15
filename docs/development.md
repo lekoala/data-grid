@@ -21,6 +21,7 @@ bun run typecheck  # tsc -p jsconfig.json (JSDoc typecheck, strict)
 bun run types      # tsc -p tsconfig.types.json -> dist/types/*.d.ts
 bun run manifest   # generate custom-elements.json (scripts/custom-elements.js)
 bun run build      # Bun.build JS + CSS into dist/ (scripts/build.js)
+bun run check:package # verify the npm tarball content (scripts/check-package.js)
 bun run ci         # check + typecheck + test + types + manifest + build + drift check
 bun run dev        # build + serve demo (Bun.serve, demo/server.js)
 ```
@@ -28,6 +29,12 @@ bun run dev        # build + serve demo (Bun.serve, demo/server.js)
 `bun run ci` ends with `git diff --exit-code -- dist custom-elements.json`: the
 committed `dist/` and `custom-elements.json` must stay in sync with the source.
 Modify a JSDoc or a `--dg-*` token and forget to regenerate -> CI goes red.
+
+`bun run check:package` runs `npm pack --dry-run --json` and asserts the package
+contract: the public artifacts (`data-grid.js`, `src/`, `dist/types/*`,
+`custom-elements.json`, `themes/`, `docs/`) are present, dev-only sources
+(`test/`, `demo/`, `css/`, `scripts/`, `.github/`) are absent, and every
+`exports` target resolves inside the tarball. It needs `npm` (not just Bun).
 
 `bun run dev` serves the whole repo on `http://localhost:8002` (root -> the
 demo pages) plus a mock server-side API (`/api/users`, `/api/errors`) that
@@ -52,3 +59,38 @@ after the repo folder (e.g. `~/k-grid`) to avoid sharing the Windows
 Runtime code targets modern evergreen browsers with native ES modules and
 commonly available Web Platform APIs (~2020). No JavaScript polyfills are
 included or required.
+
+## Release
+
+The publish decision stays human; the CI only validates that the package is
+publishable (`bun run ci` + `npm pack --dry-run` + `bun run check:package`).
+
+1. Set the version in `package.json`.
+2. Validate:
+
+   ```bash
+   bun run ci
+   npm pack --dry-run
+   bun run check:package
+   ```
+
+3. Review the tarball contents (`npm pack --dry-run`).
+4. Publish:
+
+   ```bash
+   npm publish
+   ```
+
+5. Tag the exact published commit:
+
+   ```bash
+   git tag 3.0.0
+   git push origin 3.0.0
+   ```
+
+6. Post-publish check:
+
+   ```bash
+   npm view data-grid-component@3.0.0
+   ```
+

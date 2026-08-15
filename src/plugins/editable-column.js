@@ -29,7 +29,7 @@ class EditableColumn extends BasePlugin {
 
     /**
      * @param {HTMLElement} td
-     * @param {import("../data-grid").Column} column
+     * @param {import("../data-grid.js").Column} column
      * @param {Record<string, any>} item
      * @param {number} i
      */
@@ -123,7 +123,7 @@ class EditableColumn extends BasePlugin {
 
     /**
      * Run the column validator, then the grid-level one.
-     * @param {import("../data-grid").Column} column
+     * @param {import("../data-grid.js").Column} column
      * @param {*} value
      * @param {Object} row
      * @returns {?String} error message or null when valid

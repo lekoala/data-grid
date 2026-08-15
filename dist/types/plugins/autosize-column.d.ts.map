@@ -1,1 +1,1 @@
-{"version":3,"file":"autosize-column.d.ts","sourceRoot":"","sources":["../../../src/plugins/autosize-column.js"],"names":[],"mappings":";AAIA;;GAEG;AACH;IAgCI;;;;;;;OAOG;IACH,gBANW,oBAAoB,UACpB,OAAO,cAAc,EAAE,MAAM,6BAG3B,SAAO,SAAS,CAmC5B;CACJ;uBAjFsB,wBAAwB"}
+{"version":3,"file":"autosize-column.d.ts","sourceRoot":"","sources":["../../../src/plugins/autosize-column.js"],"names":[],"mappings":";AAIA;;GAEG;AACH;IAgCI;;;;;;;OAOG;IACH,gBANW,oBAAoB,UACpB,OAAO,iBAAiB,EAAE,MAAM,6BAG9B,SAAO,SAAS,CAmC5B;CACJ;uBAjFsB,wBAAwB"}

@@ -1,6 +1,6 @@
 export default BasePlugin;
-export type DataGrid = import("../data-grid").default;
-export type Column = import("../data-grid").Column;
+export type DataGrid = import("../data-grid.js").default;
+export type Column = import("../data-grid.js").Column;
 export type RenderContext = "table" | "body";
 /**
  * A plugin hooks into the grid lifecycle. Duck typed: any object exposing one
@@ -26,8 +26,8 @@ export type PluginRegistry = Record<string, PluginConstructor>;
  * Instantiated plugins keyed by registration name. Values are instances.
  */
 export type PluginInstances = Record<string, Plugin>;
-/** @typedef {import("../data-grid").default} DataGrid */
-/** @typedef {import("../data-grid").Column} Column */
+/** @typedef {import("../data-grid.js").default} DataGrid */
+/** @typedef {import("../data-grid.js").Column} Column */
 /**
  * @typedef {"table"|"body"} RenderContext
  */
@@ -59,7 +59,7 @@ declare class BasePlugin {
      * @param {DataGrid} grid
      */
     constructor(grid: DataGrid);
-    grid: import("../data-grid").DataGrid;
+    grid: import("../data-grid.js").DataGrid;
     connected(): void;
     disconnected(): void;
     /**

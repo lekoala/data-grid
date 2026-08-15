@@ -2,7 +2,7 @@ import BasePlugin from "../core/base-plugin.js";
 
 /**
  * @typedef CachedGridState
- * @property {import("../data-source").QueryState} query
+ * @property {import("../data-source.js").QueryState} query
  * @property {Array<{ field: string, hidden?: boolean }>} columns
  * @property {Number} scrollTo
  */

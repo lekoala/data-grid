@@ -15,14 +15,11 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
-      - run: bun run check
-      - run: bun run typecheck
-      - run: bun run test
-      - run: bun run types
-      - run: bun run manifest
-      - run: bun run build
-      - name: Generated artifacts are up to date
-        run: git diff --exit-code -- dist custom-elements.json
+      - run: bun run ci
+      - name: Package is publishable
+        run: npm pack --dry-run
+      - name: Package contents contract
+        run: bun run check:package
 
   browser:
     runs-on: ubuntu-latest

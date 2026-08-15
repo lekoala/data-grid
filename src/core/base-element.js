@@ -2,7 +2,7 @@ import camelize from "../utils/camelize.js";
 import normalizeData from "../utils/normalizeData.js";
 import { dispatch, getAttribute } from "../utils/shortcuts.js";
 
-/** @typedef {import('../data-grid').Options} Options */
+/** @typedef {import('../data-grid.js').Options} Options */
 
 /**
  * Base element that does not contain any specific logic

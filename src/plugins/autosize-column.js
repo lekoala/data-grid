@@ -40,7 +40,7 @@ class AutosizeColumn extends BasePlugin {
     /**
      * Autosize col based on column data
      * @param {HTMLTableCellElement} th
-     * @param {import("../data-grid").Column} column
+     * @param {import("../data-grid.js").Column} column
      * @param {Number} min
      * @param {Number} max
      * @returns {Number|undefined}

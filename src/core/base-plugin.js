@@ -1,5 +1,5 @@
-/** @typedef {import("../data-grid").default} DataGrid */
-/** @typedef {import("../data-grid").Column} Column */
+/** @typedef {import("../data-grid.js").default} DataGrid */
+/** @typedef {import("../data-grid.js").Column} Column */
 
 /**
  * @typedef {"table"|"body"} RenderContext

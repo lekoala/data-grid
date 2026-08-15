@@ -1,6 +1,6 @@
 export default BaseElement;
-export type Options = import("../data-grid").Options;
-/** @typedef {import('../data-grid').Options} Options */
+export type Options = import("../data-grid.js").Options;
+/** @typedef {import('../data-grid.js').Options} Options */
 /**
  * Base element that does not contain any specific logic
  * related to this project but makes HTMLElement usable

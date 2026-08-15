@@ -1,6 +1,6 @@
 export default SaveState;
 export type CachedGridState = {
-    query: import("../data-source").QueryState;
+    query: import("../data-source.js").QueryState;
     columns: Array<{
         field: string;
         hidden?: boolean;
@@ -9,7 +9,7 @@ export type CachedGridState = {
 };
 /**
  * @typedef CachedGridState
- * @property {import("../data-source").QueryState} query
+ * @property {import("../data-source.js").QueryState} query
  * @property {Array<{ field: string, hidden?: boolean }>} columns
  * @property {Number} scrollTo
  */
