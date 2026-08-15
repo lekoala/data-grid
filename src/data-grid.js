@@ -165,9 +165,9 @@ import {
  * @property {String} gotoPrevPage
  * @property {String} gotoNextPage
  * @property {String} gotoLastPage
- * @property {String} of
- * @property {String} items
- * @property {String} selected
+ * @property {String} pageRange
+ * @property {String} resultCount
+ * @property {String} selectedCount
  * @property {String} selectAll
  * @property {String} toggleActions
  * @property {String} resizeColumn
@@ -184,6 +184,12 @@ import {
 let plugins = {};
 
 /**
+ * Connected grid instances that can refresh labels at runtime.
+ * @type {Set<DataGrid>}
+ */
+const connectedInstances = new Set();
+
+/**
  * @type {Labels}
  */
 let labels = {
@@ -193,9 +199,9 @@ let labels = {
     gotoPrevPage: "Go to previous page",
     gotoNextPage: "Go to next page",
     gotoLastPage: "Go to last page",
-    of: "of",
-    items: "items",
-    selected: "selected",
+    pageRange: "{from} - {to} of {total} items",
+    resultCount: "{count} items",
+    selectedCount: "{count} selected",
     selectAll: "Select all rows",
     toggleActions: "Toggle row actions",
     resizeColumn: "Resize column",
@@ -204,6 +210,17 @@ let labels = {
     areYouSure: "Are you sure?",
     networkError: "Network response error",
 };
+
+const LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
+
+/**
+ * @param {string} template
+ * @param {Record<string, string | number>} values
+ * @returns {string}
+ */
+function formatLabel(template, values) {
+    return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
+}
 
 /**
  * Build a fresh, normalized QueryState.
@@ -540,9 +557,7 @@ class DataGrid extends BaseElement {
                     <i class="dg-skip-icon"></i>
                   </button>
                 </div>
-                <div class="dg-meta">
-                  <span class="dg-low">0</span> - <span class="dg-high">0</span> ${labels.of} <span class="dg-total">0</span> ${labels.items}
-                </div>
+                <div class="dg-meta">${formatLabel(labels.pageRange, { from: 0, to: 0, total: 0 })}</div>
             </div>
             </td>
         </tr>
@@ -571,10 +586,37 @@ class DataGrid extends BaseElement {
 
     /**
      * @public
-     * @param {Object} v
+     * @param {Partial<Labels>} v
      */
     static setLabels(v) {
-        labels = Object.assign(labels, v);
+        labels = { ...labels, ...v };
+        for (const instance of connectedInstances) {
+            instance.updateLabels();
+        }
+    }
+
+    /**
+     * @public
+     * @param {String} url
+     * @returns {Promise<Partial<Labels>>}
+     */
+    static async loadLabels(url) {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`Unable to load labels: ${response.status}`);
+        }
+        const nextLabels = /** @type {Partial<Labels>} */ (await response.json());
+        DataGrid.setLabels(nextLabels);
+        return nextLabels;
+    }
+
+    /**
+     * @param {string} template
+     * @param {Record<string, string | number>} values
+     * @returns {string}
+     */
+    formatLabel(template, values) {
+        return formatLabel(template, values);
     }
 
     /** Gets the text to be displayed when no data is loaded.
@@ -601,6 +643,59 @@ class DataGrid extends BaseElement {
         if (status) {
             status.textContent = text;
         }
+    }
+
+    updateLabels() {
+        if (this.selectPerPage) {
+            this.selectPerPage.setAttribute("aria-label", this.labels.itemsPerPage);
+        }
+        if (this.inputPage) {
+            this.inputPage.setAttribute("aria-label", this.labels.gotoPage);
+        }
+        /** @type {Array<[HTMLInputElement | null, String]>} */
+        const buttonLabels = [
+            [this.btnFirst, this.labels.gotoFirstPage],
+            [this.btnPrev, this.labels.gotoPrevPage],
+            [this.btnNext, this.labels.gotoNextPage],
+            [this.btnLast, this.labels.gotoLastPage],
+        ];
+        for (const [button, label] of buttonLabels) {
+            if (!button) {
+                continue;
+            }
+            button.setAttribute("aria-label", label);
+            button.setAttribute("title", label);
+        }
+        this.#setNoData(this.tbody);
+        this.updateMetaLabel();
+        if (this.loading) {
+            this.#updateStatus(this.labels.loading);
+        } else if (this.hasDataError) {
+            this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+        } else {
+            this.#updateStatus(
+                this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
+            );
+        }
+        this.runPlugins("updateLabels");
+    }
+
+    updateMetaLabel() {
+        const meta = this.querySelector(".dg-meta");
+        if (!meta) {
+            return;
+        }
+        const total = this.total;
+        const page = this._query.page || 1;
+        let high = page * this._query.pageSize;
+        let low = high - this._query.pageSize + 1;
+        if (high > total) {
+            high = total;
+        }
+        if (!total) {
+            low = 0;
+        }
+        meta.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
     }
 
     /**
@@ -940,7 +1035,7 @@ class DataGrid extends BaseElement {
         this.error = null;
         setAttribute(this, "data-loading", "");
         removeAttribute(this, "data-error");
-        this.#updateStatus(labels.loading);
+        this.#updateStatus(this.labels.loading);
 
         try {
             let result;
@@ -956,13 +1051,15 @@ class DataGrid extends BaseElement {
             }
             if (requestId !== this._requestSeq) return;
             this.applyResult(result);
-            this.#updateStatus(this.rows.length ? `${this.total} ${labels.items}` : this.noData);
+            this.#updateStatus(
+                this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
+            );
         } catch (err) {
             if (requestId !== this._requestSeq) return;
             const e = /** @type {any} */ (err);
             if (e?.name === "AbortError" || controller.signal.aborted) return;
             const message =
-                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError;
+                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
             this.error = e;
             setAttribute(this, "data-error", "");
             this.tbody?.setAttribute("data-empty-message", message);
@@ -1054,6 +1151,7 @@ class DataGrid extends BaseElement {
     }
 
     async _connected() {
+        connectedInstances.add(this);
         this.table = this.querySelector("table");
         this.btnFirst = this.querySelector(".dg-btn-first");
         this.btnPrev = this.querySelector(".dg-btn-prev");
@@ -1087,11 +1185,13 @@ class DataGrid extends BaseElement {
         // Display even if we don't have data
         this.dirChanged();
         this.populatePageSizes();
+        this.updateLabels();
 
         await this.init();
     }
 
     _disconnected() {
+        connectedInstances.delete(this);
         this._controller?.abort();
         this.btnFirst?.removeEventListener("click", this.getFirst);
         this.btnPrev?.removeEventListener("click", this.getPrev);
@@ -2099,7 +2199,7 @@ class DataGrid extends BaseElement {
             tr.classList.add("dg-error-row");
             const td = ce("td");
             td.colSpan = colspan;
-            td.textContent = message || labels.networkError;
+            td.textContent = message || this.labels.networkError;
             tr.appendChild(td);
             tbody.appendChild(tr);
         } else if (this.rows.length === 0) {
@@ -2170,35 +2270,18 @@ class DataGrid extends BaseElement {
     paginate() {
         this.log("paginate");
 
-        const total = this.total;
-        const p = this._query.page || 1;
         const tfoot = this.tfoot;
         if (!tfoot) return;
 
         // Refresh page count in case we added/removed a page
         this.pages = this.totalPages();
 
-        let high = p * this._query.pageSize;
-        let low = high - this._query.pageSize + 1;
-
-        if (high > total) {
-            high = total;
-        }
-        if (!total) {
-            low = 0;
-        }
-
         // Enable/disable buttons if shown
         if (this.btnFirst) this.btnFirst.disabled = this._query.page <= 1;
         if (this.btnPrev) this.btnPrev.disabled = this._query.page <= 1;
         if (this.btnNext) this.btnNext.disabled = this._query.page >= this.pages;
         if (this.btnLast) this.btnLast.disabled = this._query.page >= this.pages;
-        const lowEl = tfoot.querySelector(".dg-low");
-        const highEl = tfoot.querySelector(".dg-high");
-        const totalEl = tfoot.querySelector(".dg-total");
-        if (lowEl) lowEl.textContent = low.toString();
-        if (highEl) highEl.textContent = high.toString();
-        if (totalEl) totalEl.textContent = `${this.total}`;
+        this.updateMetaLabel();
         tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
     }
 

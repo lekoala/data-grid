@@ -11,9 +11,9 @@
   <script type="module" src="../dist/data-grid.js"></script>
   <script type="module">
     customElements.whenDefined("data-grid").then(() => {
-      console.log("defined");
       customElements.get("data-grid").setLabels({
-        items: "rows",
+        pageRange: "{from} - {to} of {total} rows",
+        resultCount: "{count} rows",
       });
     });
   </script>
@@ -195,6 +195,9 @@
       </li>
       <li class="nav-item">
         <a class="nav-link" href="api.html">API</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="i18n.html">i18n</a>
       </li>
     </ul>
 

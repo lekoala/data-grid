@@ -12,6 +12,7 @@ export type Plugin = {
     extendColumns?: ((columns: Column[]) => void) | undefined;
     beforeRender?: (() => void) | undefined;
     afterRender?: ((context: RenderContext) => void) | undefined;
+    updateLabels?: (() => void) | undefined;
     responsiveChanged?: ((enabled: boolean) => void) | undefined;
 };
 /**
@@ -40,6 +41,7 @@ export type PluginInstances = Record<string, Plugin>;
  * @property {(columns: Column[]) => void} [extendColumns]
  * @property {() => void} [beforeRender]
  * @property {(context: RenderContext) => void} [afterRender]
+ * @property {() => void} [updateLabels]
  * @property {(enabled: boolean) => void} [responsiveChanged]
  */
 /**
@@ -77,6 +79,10 @@ declare class BasePlugin {
      * @param {("table"|"body")} context
      */
     afterRender(context: ("table" | "body")): void;
+    /**
+     * Called when the grid labels change.
+     */
+    updateLabels(): void;
     /**
      * Called when the responsive option changes.
      * @param {Boolean} enabled

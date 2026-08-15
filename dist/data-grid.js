@@ -512,6 +512,7 @@ function randstr(prefix) {
 
 // src/data-grid.js
 var plugins = {};
+var connectedInstances = new Set;
 var labels = {
   itemsPerPage: "Items per page",
   gotoPage: "Go to page",
@@ -519,9 +520,9 @@ var labels = {
   gotoPrevPage: "Go to previous page",
   gotoNextPage: "Go to next page",
   gotoLastPage: "Go to last page",
-  of: "of",
-  items: "items",
-  selected: "selected",
+  pageRange: "{from} - {to} of {total} items",
+  resultCount: "{count} items",
+  selectedCount: "{count} selected",
   selectAll: "Select all rows",
   toggleActions: "Toggle row actions",
   resizeColumn: "Resize column",
@@ -530,6 +531,10 @@ var labels = {
   areYouSure: "Are you sure?",
   networkError: "Network response error"
 };
+var LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
+function formatLabel(template, values) {
+  return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
+}
 function normalizeQuery(query) {
   const q = query || {};
   const page = Math.floor(Number(q.page)) || 1;
@@ -722,9 +727,7 @@ class DataGrid extends base_element_default {
                     <i class="dg-skip-icon"></i>
                   </button>
                 </div>
-                <div class="dg-meta">
-                  <span class="dg-low">0</span> - <span class="dg-high">0</span> ${labels.of} <span class="dg-total">0</span> ${labels.items}
-                </div>
+                <div class="dg-meta">${formatLabel(labels.pageRange, { from: 0, to: 0, total: 0 })}</div>
             </div>
             </td>
         </tr>
@@ -741,7 +744,22 @@ class DataGrid extends base_element_default {
     return labels;
   }
   static setLabels(v) {
-    labels = Object.assign(labels, v);
+    labels = { ...labels, ...v };
+    for (const instance of connectedInstances) {
+      instance.updateLabels();
+    }
+  }
+  static async loadLabels(url) {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Unable to load labels: ${response.status}`);
+    }
+    const nextLabels = await response.json();
+    DataGrid.setLabels(nextLabels);
+    return nextLabels;
+  }
+  formatLabel(template, values) {
+    return formatLabel(template, values);
   }
   get noData() {
     return this.options.noData || this.labels.noData;
@@ -756,6 +774,54 @@ class DataGrid extends base_element_default {
     if (status) {
       status.textContent = text;
     }
+  }
+  updateLabels() {
+    if (this.selectPerPage) {
+      this.selectPerPage.setAttribute("aria-label", this.labels.itemsPerPage);
+    }
+    if (this.inputPage) {
+      this.inputPage.setAttribute("aria-label", this.labels.gotoPage);
+    }
+    const buttonLabels = [
+      [this.btnFirst, this.labels.gotoFirstPage],
+      [this.btnPrev, this.labels.gotoPrevPage],
+      [this.btnNext, this.labels.gotoNextPage],
+      [this.btnLast, this.labels.gotoLastPage]
+    ];
+    for (const [button, label] of buttonLabels) {
+      if (!button) {
+        continue;
+      }
+      button.setAttribute("aria-label", label);
+      button.setAttribute("title", label);
+    }
+    this.#setNoData(this.tbody);
+    this.updateMetaLabel();
+    if (this.loading) {
+      this.#updateStatus(this.labels.loading);
+    } else if (this.hasDataError) {
+      this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+    } else {
+      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+    }
+    this.runPlugins("updateLabels");
+  }
+  updateMetaLabel() {
+    const meta = this.querySelector(".dg-meta");
+    if (!meta) {
+      return;
+    }
+    const total = this.total;
+    const page = this._query.page || 1;
+    let high = page * this._query.pageSize;
+    let low = high - this._query.pageSize + 1;
+    if (high > total) {
+      high = total;
+    }
+    if (!total) {
+      low = 0;
+    }
+    meta.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
   }
   get defaultColumn() {
     return {
@@ -981,7 +1047,7 @@ class DataGrid extends base_element_default {
     this.error = null;
     setAttribute(this, "data-loading", "");
     removeAttribute(this, "data-error");
-    this.#updateStatus(labels.loading);
+    this.#updateStatus(this.labels.loading);
     try {
       let result;
       if (this._initialResult) {
@@ -997,14 +1063,14 @@ class DataGrid extends base_element_default {
       if (requestId !== this._requestSeq)
         return;
       this.applyResult(result);
-      this.#updateStatus(this.rows.length ? `${this.total} ${labels.items}` : this.noData);
+      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
     } catch (err) {
       if (requestId !== this._requestSeq)
         return;
       const e = err;
       if (e?.name === "AbortError" || controller.signal.aborted)
         return;
-      const message = this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError;
+      const message = this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
       this.error = e;
       setAttribute(this, "data-error", "");
       this.tbody?.setAttribute("data-empty-message", message);
@@ -1071,6 +1137,7 @@ class DataGrid extends base_element_default {
     }
   }
   async _connected() {
+    connectedInstances.add(this);
     this.table = this.querySelector("table");
     this.btnFirst = this.querySelector(".dg-btn-first");
     this.btnPrev = this.querySelector(".dg-btn-prev");
@@ -1098,9 +1165,11 @@ class DataGrid extends base_element_default {
     }
     this.dirChanged();
     this.populatePageSizes();
+    this.updateLabels();
     await this.init();
   }
   _disconnected() {
+    connectedInstances.delete(this);
     this._controller?.abort();
     this.btnFirst?.removeEventListener("click", this.getFirst);
     this.btnPrev?.removeEventListener("click", this.getPrev);
@@ -1778,7 +1847,7 @@ class DataGrid extends base_element_default {
       tr.classList.add("dg-error-row");
       const td = ce("td");
       td.colSpan = colspan;
-      td.textContent = message || labels.networkError;
+      td.textContent = message || this.labels.networkError;
       tr.appendChild(td);
       tbody.appendChild(tr);
     } else if (this.rows.length === 0) {
@@ -1831,20 +1900,10 @@ class DataGrid extends base_element_default {
   }
   paginate() {
     this.log("paginate");
-    const total = this.total;
-    const p = this._query.page || 1;
     const tfoot = this.tfoot;
     if (!tfoot)
       return;
     this.pages = this.totalPages();
-    let high = p * this._query.pageSize;
-    let low = high - this._query.pageSize + 1;
-    if (high > total) {
-      high = total;
-    }
-    if (!total) {
-      low = 0;
-    }
     if (this.btnFirst)
       this.btnFirst.disabled = this._query.page <= 1;
     if (this.btnPrev)
@@ -1853,15 +1912,7 @@ class DataGrid extends base_element_default {
       this.btnNext.disabled = this._query.page >= this.pages;
     if (this.btnLast)
       this.btnLast.disabled = this._query.page >= this.pages;
-    const lowEl = tfoot.querySelector(".dg-low");
-    const highEl = tfoot.querySelector(".dg-high");
-    const totalEl = tfoot.querySelector(".dg-total");
-    if (lowEl)
-      lowEl.textContent = low.toString();
-    if (highEl)
-      highEl.textContent = high.toString();
-    if (totalEl)
-      totalEl.textContent = `${this.total}`;
+    this.updateMetaLabel();
     tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
   }
   totalPages() {
@@ -1895,6 +1946,7 @@ class BasePlugin {
   extendColumns(columns) {}
   beforeRender() {}
   afterRender(context) {}
+  updateLabels() {}
   responsiveChanged(enabled) {}
   handleEvent(event) {
     const handler = Reflect.get(this, `on${event.type}`);
@@ -1920,6 +1972,13 @@ class ColumnResizer extends base_plugin_default {
       return;
     }
     this.renderResizer(this.grid.labels.resizeColumn);
+  }
+  updateLabels() {
+    const resizeLabel = this.grid.labels.resizeColumn;
+    const resizers = findAll(this.grid, ".dg-resizer");
+    for (const resizer of resizers) {
+      resizer.ariaLabel = resizeLabel;
+    }
   }
   renderResizer(resizeLabel) {
     const grid = this.grid;
@@ -2261,6 +2320,11 @@ class SelectableRows extends base_plugin_default {
       this.syncSelectAll();
     }
   }
+  updateLabels() {
+    if (this.selectAll) {
+      this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
+    }
+  }
   syncSelection() {
     const grid = this.grid;
     if (!grid.options.selectable) {
@@ -2393,6 +2457,9 @@ class BulkActions extends base_plugin_default {
       this.render();
     }
   }
+  updateLabels() {
+    this.render();
+  }
   render() {
     const grid = this.grid;
     const bulkActions = grid.options.bulkActions ?? [];
@@ -2411,7 +2478,7 @@ class BulkActions extends base_plugin_default {
     const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
     const countEl = document.createElement("span");
     countEl.className = "dg-bulk-count";
-    countEl.textContent = `${count} ${grid.labels.selected}`;
+    countEl.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
     this.bar.appendChild(countEl);
     for (const action of bulkActions) {
       const button = document.createElement("button");
@@ -2874,6 +2941,14 @@ class RowActions extends base_plugin_default {
     th.classList.add("dg-not-sortable", "dg-not-resizable");
   }
   createFilterCell() {}
+  updateLabels() {
+    const toggleLabel = this.grid.labels.toggleActions;
+    const toggles = findAll(this.grid, ".dg-actions-toggle");
+    for (const toggle of toggles) {
+      toggle.setAttribute("aria-label", toggleLabel);
+      toggle.setAttribute("title", toggleLabel);
+    }
+  }
   makeActionRow({ row, tr, grid }) {
     const labels2 = grid.labels;
     const rowData = row ?? {};
@@ -3213,4 +3288,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=E5A293DADA86A8D864756E2164756E21
+//# debugId=26BD5A3AB4C8510064756E2164756E21

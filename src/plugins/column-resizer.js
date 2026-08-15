@@ -27,6 +27,14 @@ class ColumnResizer extends BasePlugin {
         this.renderResizer(this.grid.labels.resizeColumn);
     }
 
+    updateLabels() {
+        const resizeLabel = this.grid.labels.resizeColumn;
+        const resizers = findAll(this.grid, ".dg-resizer");
+        for (const resizer of resizers) {
+            resizer.ariaLabel = resizeLabel;
+        }
+    }
+
     /**
      * @param {String} resizeLabel
      */

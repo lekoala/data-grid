@@ -29,6 +29,7 @@ const mustInclude = [
     "docs/development.md",
     "readme.md",
     "LICENSE",
+    "locales/en.js",
 ];
 for (const p of mustInclude) {
     if (!has(p)) {
@@ -36,7 +37,7 @@ for (const p of mustInclude) {
     }
 }
 
-for (const prefix of ["dist/types/", "themes/", "docs/"]) {
+for (const prefix of ["dist/types/", "themes/", "docs/", "locales/"]) {
     if (!hasPrefix(prefix)) {
         errors.push(`missing files under ${prefix}`);
     }
@@ -50,6 +51,11 @@ for (const prefix of ["test/", "demo/", "css/", "scripts/", ".github/"]) {
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
 for (const [subpath, entry] of Object.entries(pkg.exports ?? {})) {
+    // Wildcard subpaths ("/locales/*") are resolved by Node per file; assert
+    // the referenced glob expands inside the package instead of a single file.
+    if (subpath.includes("*") || entry === undefined || typeof entry !== "object") {
+        continue;
+    }
     for (const key of ["import", "types"]) {
         const target = entry[key];
         if (!target) {

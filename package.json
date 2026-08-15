@@ -14,13 +14,15 @@
     "./data-source": {
       "types": "./dist/types/data-source.d.ts",
       "import": "./src/data-source.js"
-    }
+    },
+    "./locales/*": "./locales/*.js"
   },
   "files": [
     "data-grid.js",
     "src",
     "dist",
     "themes",
+    "locales",
     "docs",
     "custom-elements.json"
   ],
@@ -35,11 +37,12 @@
     "test:browser": "bun test test/browser",
     "test:browser:wsl": "wsl -e bash scripts/test-browser-wsl.sh",
     "check": "biome check .",
+    "check:locales": "bun scripts/check-locales.js",
     "typecheck": "tsc -p jsconfig.json",
     "types": "tsc -p tsconfig.types.json",
     "manifest": "bun scripts/custom-elements.js",
     "check:package": "bun scripts/check-package.js",
-    "ci": "bun run check && bun run typecheck && bun run test && bun run types && bun run manifest && bun run build && git diff --exit-code -- dist custom-elements.json"
+    "ci": "bun run check && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run manifest && bun run build && git diff --exit-code -- dist custom-elements.json"
   },
   "repository": {
     "type": "git",

@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import interpolate from "../utils/interpolate.js";
-import { dispatch, on } from "../utils/shortcuts.js";
+import { dispatch, findAll, on } from "../utils/shortcuts.js";
 
 /**
  * Add actions on rows
@@ -42,6 +42,15 @@ class RowActions extends BasePlugin {
     }
 
     createFilterCell() {}
+
+    updateLabels() {
+        const toggleLabel = this.grid.labels.toggleActions;
+        const toggles = findAll(this.grid, ".dg-actions-toggle");
+        for (const toggle of toggles) {
+            toggle.setAttribute("aria-label", toggleLabel);
+            toggle.setAttribute("title", toggleLabel);
+        }
+    }
 
     /**
      * Build the actions cell content: a toggle button plus one element per action.

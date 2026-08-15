@@ -66,6 +66,12 @@ class SelectableRows extends BasePlugin {
         }
     }
 
+    updateLabels() {
+        if (this.selectAll) {
+            this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
+        }
+    }
+
     /**
      * Reflect the current selection state on the body checkboxes.
      */

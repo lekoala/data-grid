@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Grid — i18n</title>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
+  <link rel="stylesheet" href="../dist/data-grid.css" />
+  <link rel="stylesheet" href="../themes/bootstrap.css" />
+  <link rel="stylesheet" href="demo.css" />
+
+  <!-- Locales import data-grid.js (root), so the grid below must use the
+       same module instance for setLabels() to reach it. -->
+  <script type="module" src="../data-grid.js"></script>
+  <script type="module">
+    import { ArrayDataSource, DataGrid } from "../data-grid.js";
+
+    const data = await (await fetch("demo-simple.json")).json();
+    const grid = new DataGrid({
+      columns: data.options.columns,
+      dataSource: new ArrayDataSource(data.data),
+      selectable: true,
+      bulkActions: [{ name: "export", label: "Export" }],
+      initialQuery: { pageSize: 10 },
+    });
+    document.getElementById("i18n-demo").replaceChildren(grid);
+
+    const select = document.getElementById("locale");
+
+    select.addEventListener("change", async () => {
+      const locale = select.value;
+      await import(`../locales/${locale}.js`);
+      document.documentElement.lang = locale;
+      grid.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+    });
+  </script>
+</head>
+
+<body>
+  <header>
+    <h1>Data Grid</h1>
+    <p><em>Standalone data grid web component</em></p>
+  </header>
+  <main>
+    <ul class="nav nav-pills">
+      <li class="nav-item">
+        <a class="nav-link" href="index.html">Default</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="responsive.html">Responsive</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="server.html">Server</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="actions.html">Actions</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="api.html">API</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" aria-current="page" href="#">i18n</a>
+      </li>
+    </ul>
+
+    <h2>i18n</h2>
+    <p>
+      Locales are self-applying modules: importing one calls
+      <code>DataGrid.setLabels()</code>, which refreshes every connected grid.
+      Arabic switches the grid to RTL.
+    </p>
+
+    <label for="locale">Language</label>
+    <select id="locale">
+      <option value="en" selected>English</option>
+      <option value="fr">Français</option>
+      <option value="nl">Nederlands</option>
+      <option value="de">Deutsch</option>
+      <option value="es">Español</option>
+      <option value="it">Italiano</option>
+      <option value="pt-BR">Português (Brasil)</option>
+      <option value="pt-PT">Português (Portugal)</option>
+      <option value="zh-CN">中文</option>
+      <option value="ja">日本語</option>
+      <option value="ko">한국어</option>
+      <option value="ar">العربية</option>
+      <option value="hi">हिन्दी</option>
+      <option value="ru">Русский</option>
+      <option value="tr">Türkçe</option>
+      <option value="id">Bahasa Indonesia</option>
+      <option value="pl">Polski</option>
+    </select>
+
+    <div class="container g-0 mb-4 mw-100">
+      <div id="i18n-demo"></div>
+    </div>
+  </main>
+  <footer>
+    <hr />
+    Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+  </footer>
+</body>
+
+</html>

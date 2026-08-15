@@ -369,9 +369,9 @@ export type Labels = {
     gotoPrevPage: string;
     gotoNextPage: string;
     gotoLastPage: string;
-    of: string;
-    items: string;
-    selected: string;
+    pageRange: string;
+    resultCount: string;
+    selectedCount: string;
     selectAll: string;
     toggleActions: string;
     resizeColumn: string;
@@ -390,9 +390,15 @@ export class DataGrid extends BaseElement {
     public static getLabels(): Labels;
     /**
      * @public
-     * @param {Object} v
+     * @param {Partial<Labels>} v
      */
-    public static setLabels(v: Object): void;
+    public static setLabels(v: Partial<Labels>): void;
+    /**
+     * @public
+     * @param {String} url
+     * @returns {Promise<Partial<Labels>>}
+     */
+    public static loadLabels(url: string): Promise<Partial<Labels>>;
     /**
      * Register plugin constructors, keyed by name. The core instantiates them
      * on each DataGrid construction. Names are not limited to built-in plugins.
@@ -523,9 +529,17 @@ export class DataGrid extends BaseElement {
      * @returns {Labels}
      */
     public get labels(): Labels;
+    /**
+     * @param {string} template
+     * @param {Record<string, string | number>} values
+     * @returns {string}
+     */
+    formatLabel(template: string, values: Record<string, string | number>): string;
     /** Gets the text to be displayed when no data is loaded.
      * @public */
     public get noData(): string;
+    updateLabels(): void;
+    updateMetaLabel(): void;
     /**
      * @returns {Column}
      */

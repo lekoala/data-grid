@@ -1,0 +1,24 @@
+import DataGrid from "../data-grid.js";
+
+const labels = {
+    itemsPerPage: "Elementi per pagina",
+    gotoPage: "Vai alla pagina",
+    gotoFirstPage: "Prima pagina",
+    gotoPrevPage: "Pagina precedente",
+    gotoNextPage: "Pagina successiva",
+    gotoLastPage: "Ultima pagina",
+    pageRange: "{from} – {to} di {total}",
+    resultCount: "Elementi: {count}",
+    selectedCount: "Selezionati: {count}",
+    selectAll: "Seleziona tutte le righe",
+    toggleActions: "Mostra le azioni della riga",
+    resizeColumn: "Ridimensiona colonna",
+    noData: "Nessun dato",
+    loading: "Caricamento…",
+    areYouSure: "Sei sicuro?",
+    networkError: "Errore durante il caricamento",
+};
+
+DataGrid.setLabels(labels);
+
+export default labels;

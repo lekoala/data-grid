@@ -14,6 +14,7 @@
  * @property {(columns: Column[]) => void} [extendColumns]
  * @property {() => void} [beforeRender]
  * @property {(context: RenderContext) => void} [afterRender]
+ * @property {() => void} [updateLabels]
  * @property {(enabled: boolean) => void} [responsiveChanged]
  */
 
@@ -61,6 +62,11 @@ class BasePlugin {
      * @param {("table"|"body")} context
      */
     afterRender(context) {}
+
+    /**
+     * Called when the grid labels change.
+     */
+    updateLabels() {}
 
     /**
      * Called when the responsive option changes.

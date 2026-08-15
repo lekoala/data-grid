@@ -262,10 +262,25 @@
           ],
           "cssProperties": [
             {
+              "name": "--dg-space-1"
+            },
+            {
+              "name": "--dg-space-2"
+            },
+            {
+              "name": "--dg-space-3"
+            },
+            {
+              "name": "--dg-space-4"
+            },
+            {
               "name": "--dg-bg"
             },
             {
               "name": "--dg-color"
+            },
+            {
+              "name": "--dg-muted-color"
             },
             {
               "name": "--dg-border-color"
@@ -277,10 +292,16 @@
               "name": "--dg-accent-soft"
             },
             {
+              "name": "--dg-focus-ring"
+            },
+            {
               "name": "--dg-header-bg"
             },
             {
               "name": "--dg-header-color"
+            },
+            {
+              "name": "--dg-filter-bg"
             },
             {
               "name": "--dg-row-stripe-bg"
@@ -290,6 +311,9 @@
             },
             {
               "name": "--dg-row-selected-bg"
+            },
+            {
+              "name": "--dg-row-selected-hover-bg"
             },
             {
               "name": "--dg-row-border-color"
@@ -313,6 +337,12 @@
               "name": "--dg-danger-border-color"
             },
             {
+              "name": "--dg-cell-padding-inline"
+            },
+            {
+              "name": "--dg-cell-padding-block"
+            },
+            {
               "name": "--dg-padding-x"
             },
             {
@@ -320,6 +350,18 @@
             },
             {
               "name": "--dg-header-padding-y"
+            },
+            {
+              "name": "--dg-control-padding-inline"
+            },
+            {
+              "name": "--dg-control-height"
+            },
+            {
+              "name": "--dg-selection-column-width"
+            },
+            {
+              "name": "--dg-actions-column-width"
             },
             {
               "name": "--dg-radius"

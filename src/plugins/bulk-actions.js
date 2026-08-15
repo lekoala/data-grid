@@ -45,6 +45,10 @@ class BulkActions extends BasePlugin {
         }
     }
 
+    updateLabels() {
+        this.render();
+    }
+
     /**
      * Render the bulk action bar reflecting the current selection.
      */
@@ -68,7 +72,7 @@ class BulkActions extends BasePlugin {
         const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
         const countEl = document.createElement("span");
         countEl.className = "dg-bulk-count";
-        countEl.textContent = `${count} ${grid.labels.selected}`;
+        countEl.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
         this.bar.appendChild(countEl);
 
         for (const action of bulkActions) {
