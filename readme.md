@@ -193,15 +193,21 @@ regular attributes to avoid cluttering the node with a very large attribute.
 
 ## Action
 
-| Name    | Type                 | Description               |
-|---------|----------------------|---------------------------|
-| title   | <code>String</code>  | the title of the button   |
-| name    | <code>String</code>  | the name of the action    |
-| class   | <code>String</code>  | the class for the button  |
-| url     | <code>String</code>  | link for the action       |
-| html    | <code>String</code>  | custom button data        |
-| confirm | <code>Boolean</code> | needs confirmation        |
-| default | <code>Boolean</code> | is the default row action |
+| Name     | Type                 | Description                                          |
+|----------|----------------------|------------------------------------------------------|
+| name     | <code>String</code>  | the name of the action (button[data-action])         |
+| label    | <code>String</code>  | the label of the button                              |
+| intent   | <code>String</code>  | "default" / "primary" / "danger" (button[data-intent]) |
+| href     | <code>String | Function</code> | link for the action (string with {field} interpolation or (row) => string) |
+| visible  | <code>Function</code> | (row) => Boolean, hides the action when falsy       |
+| disabled | <code>Function</code> | (row) => Boolean, disables the button when truthy    |
+| render   | <code>Function</code> | ({ action, row, grid }) => content, replaces the button content |
+| confirm  | <code>Boolean</code> | needs confirmation                                    |
+| default  | <code>Boolean</code> | is the default row action                            |
+| title    | <code>String</code>  | DEPRECATED: use label                                |
+| class    | <code>String</code>  | DEPRECATED: use intent + CSS                         |
+| url      | <code>String</code>  | DEPRECATED: use href                                 |
+| html     | <code>String</code>  | DEPRECATED: use render                               |
 
 <a name="Plugins"></a>
 
@@ -294,12 +300,17 @@ Define your actions as part of the options
 ...
     "actions": [
       {
-        "name": "edit"
+        "name": "edit",
+        "label": "Edit",
+        "intent": "primary",
+        "href": (row) => `/users/${row.id}`
       },
       {
         "name": "delete",
-        "class": "is-danger",
-        "url": "/delete/{id}"
+        "label": "Delete",
+        "intent": "danger",
+        "confirm": true,
+        "visible": (row) => !row.protected
       }
     ],
 ...
@@ -316,10 +327,14 @@ document.getElementById("demo2-grid").addEventListener("action", (ev) => {
 
 You can add:
 
-- class: custom class
-- url: a formaction will be set (data between {} is interpolated)
-- title: a custom title
-- html: custom html for the button (in order to provide icons, etc)
+- intent: "default" / "primary" / "danger" (sets button[data-intent], styled by the theme)
+- href: renders an `<a>` instead of a button (data between {} is interpolated, or pass a function)
+- visible: (row) => Boolean - hide the action for a given row
+- disabled: (row) => Boolean - disable the action for a given row
+- render: ({ action, row, grid }) => content - replace the button content (Node, string or { html })
+- `grid.actionRenderer` option applies a global renderer to every action
+
+Deprecated: `title`, `class`, `url`, `html` still work but should be replaced.
 
 ## Inline editing
 

@@ -49,9 +49,10 @@ class SelectableRows extends BasePlugin {
             position: "start",
             noSort: true,
             title: "",
+            class: SELECTABLE_CLASS,
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: (th) => this.createFilterCell(th),
-            renderCell: (td, ctx) => this.createDataCell(td, ctx),
+            renderCell: (ctx) => this.createDataCell(ctx),
         });
     }
 
@@ -125,7 +126,7 @@ class SelectableRows extends BasePlugin {
      */
     createHeaderCell(th) {
         setAttribute(th, "width", "40");
-        th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
+        th.classList.add("dg-not-resizable", "dg-not-sortable");
 
         this.selectAll = document.createElement("input");
         this.selectAll.type = "checkbox";
@@ -149,24 +150,19 @@ class SelectableRows extends BasePlugin {
     /**
      * @param {HTMLTableCellElement} th
      */
-    createFilterCell(th) {
-        th.classList.add(SELECTABLE_CLASS);
-    }
+    createFilterCell() {}
 
     /**
-     * @param {HTMLTableCellElement} td
      * @param {Object} ctx
+     * @returns {HTMLElement}
      */
-    createDataCell(td, ctx) {
-        td.classList.add(SELECTABLE_CLASS);
-
+    createDataCell({ row, rowIndex }) {
         const grid = this.grid;
-        const row = ctx.row;
 
         const input = document.createElement("input");
         input.type = this.isSingleSelect ? "radio" : "checkbox";
         input.classList.add(CHECKBOX_CLASS);
-        input.checked = grid.isRowSelected(row, ctx.rowIndex);
+        input.checked = grid.isRowSelected(row, rowIndex);
         if (this.isSingleSelect) {
             input.name = "dg-row-select";
         }
@@ -175,7 +171,6 @@ class SelectableRows extends BasePlugin {
         const label = document.createElement("label");
         label.classList.add("dg-clickable-cell");
         label.appendChild(input);
-        td.appendChild(label);
 
         // Prevent unwanted click behaviour on row (expand, default action...)
         label.addEventListener("click", (event) => {
@@ -186,17 +181,19 @@ class SelectableRows extends BasePlugin {
             // Radio buttons can't be unchecked natively: control the state manually
             input.addEventListener("click", (event) => {
                 event.preventDefault();
-                if (grid.isRowSelected(row, ctx.rowIndex)) {
-                    grid.deselectRow(row, ctx.rowIndex);
+                if (grid.isRowSelected(row, rowIndex)) {
+                    grid.deselectRow(row, rowIndex);
                 } else {
-                    grid.selectRow(row, ctx.rowIndex);
+                    grid.selectRow(row, rowIndex);
                 }
             });
         } else {
             input.addEventListener("change", () => {
-                grid.toggleRow(row, ctx.rowIndex);
+                grid.toggleRow(row, rowIndex);
             });
         }
+
+        return label;
     }
 }
 

@@ -56,19 +56,26 @@ import {
  * @property {Object} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
- * @property {(td: HTMLTableCellElement, ctx: Object) => void} [renderCell] - optional custom cell renderer (the core creates the <td>)
+ * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML). Legacy renderCell(td, ctx) is still supported (arity-based)
+ * @property {String} [format] - legacy string interpolation or function returning HTML (deprecated: use renderCell)
  */
 
 /**
  * Row action
  * @typedef Action
- * @property {String} title - the title of the button
- * @property {String} name - the name of the action
- * @property {String} class - the class for the button
- * @property {String} url - link for the action
- * @property {String} html - custom button data
+ * @property {String} name - the name of the action (button[data-action])
+ * @property {String} [label] - the label of the button
+ * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
+ * @property {String | Function} [href] - link for the action (string with {field} interpolation or (row) => string)
+ * @property {Function} [visible] - (row) => Boolean, hides the action when falsy
+ * @property {Function} [disabled] - (row) => Boolean, disables the button when truthy
+ * @property {Function} [render] - ({ action, row, grid }) => content, replaces the button content
  * @property {Boolean} [confirm] - needs confirmation
- * @property {Boolean} default - is the default row action
+ * @property {Boolean} [default] - is the default row action
+ * @property {String} [title] - DEPRECATED: the title of the button (use label)
+ * @property {String} [class] - DEPRECATED: the class for the button (use intent + CSS)
+ * @property {String} [url] - DEPRECATED: link for the action (use href)
+ * @property {String} [html] - DEPRECATED: custom button data (use render)
  */
 
 /**
@@ -113,6 +120,7 @@ import {
  * @property {Boolean} showPageSize Shows the page size select element
  * @property {Column[]} columns Available columns
  * @property {Action[]} actions Row actions (RowActions module)
+ * @property {Function} [actionRenderer] - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
  * @property {Boolean} collapseActions Group actions (RowActions module)
  * @property {Boolean} expand  Allow cell content to spawn over multiple lines
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
@@ -247,6 +255,27 @@ function orderColumns(columns) {
         }
     }
     return [...start.reverse(), ...middle, ...end];
+}
+
+/**
+ * Apply a renderer result to a cell.
+ * primitive -> textContent, Node -> append, { html } -> innerHTML (opt-in).
+ * @param {HTMLElement} el
+ * @param {*} content
+ */
+function applyCellContent(el, content) {
+    if (content === undefined || content === null) {
+        return;
+    }
+    if (content instanceof Node) {
+        el.appendChild(content);
+        return;
+    }
+    if (typeof content === "object" && content.html !== undefined) {
+        el.innerHTML = content.html;
+        return;
+    }
+    el.textContent = content;
 }
 
 /**
@@ -1791,9 +1820,15 @@ class DataGrid extends BaseElement {
                 // This is required for pure css responsive layout
                 td.setAttribute("data-name", column.title);
 
-                const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field] };
+                const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field], tr };
                 if (column.renderCell) {
-                    column.renderCell(td, ctx);
+                    if (column.renderCell.length > 1) {
+                        // Legacy renderer: fills the td itself
+                        // @ts-expect-error legacy renderCell(td, ctx) signature
+                        column.renderCell(td, ctx);
+                    } else {
+                        applyCellContent(td, column.renderCell(ctx));
+                    }
                 } else {
                     this.renderDefaultCell(td, ctx);
                 }

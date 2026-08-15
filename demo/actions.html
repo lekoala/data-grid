@@ -51,6 +51,42 @@
 
       Toasts.success("element edited")
     });
+
+    const action3Demo = await createStaticGrid(
+      document.getElementById("action3-demo"),
+      "demo-actions2.json",
+      {
+        expand: true,
+        actions: [
+          {
+            name: "edit",
+            label: "Edit",
+            intent: "primary",
+            href: (row) => `/users/${row.id}`,
+            render: () => {
+              const icon = document.createElement("l-i");
+              icon.setAttribute("name", "edit");
+              return icon;
+            },
+          },
+          {
+            name: "archive",
+            label: "Archive",
+            visible: (row) => row.id % 2 === 0,
+          },
+          {
+            name: "delete",
+            label: "Delete",
+            intent: "danger",
+            confirm: true,
+            disabled: (row) => row.id === 1,
+          },
+        ],
+      },
+    );
+    action3Demo.addEventListener("action", (ev) => {
+      document.getElementById("debug-zone").innerText = JSON.stringify(ev.detail);
+    });
   </script>
 </head>
 
@@ -95,6 +131,17 @@
     <p>Multiple actions (> 2) will collapse. This can be forced with <code>collapseActions=true</code></p>
     <div class="container g-0 mb-4 mw-100">
       <div id="action2-demo"></div>
+    </div>
+
+    <h3>Modern contract</h3>
+    <p>
+      Actions now use <code>label</code>, <code>intent</code>, <code>href</code>,
+      <code>visible</code>, <code>disabled</code> and an optional <code>render</code>
+      function - no more <code>class</code>/<code>html</code> design-system coupling.
+      The legacy syntax (see grids above) is still supported.
+    </p>
+    <div class="container g-0 mb-4 mw-100">
+      <div id="action3-demo"></div>
     </div>
   </main>
   <footer>

@@ -94,9 +94,10 @@ class ResponsiveGrid extends BasePlugin {
             position: "start",
             noSort: true,
             title: "",
+            class: `${RESPONSIVE_CLASS}-toggle`,
             renderHeaderCell: (th) => this.createHeaderCell(th),
-            renderFilterCell: (th) => this.createFilterCell(th),
-            renderCell: (td, ctx) => this.createDataCell(td, ctx),
+            renderFilterCell: () => this.createFilterCell(),
+            renderCell: () => this.createDataCell(),
         });
     }
 
@@ -132,34 +133,30 @@ class ResponsiveGrid extends BasePlugin {
      */
     createHeaderCell(th) {
         setAttribute(th, "width", "40");
-        th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
+        th.classList.add("dg-not-resizable", "dg-not-sortable");
     }
 
-    /**
-     * @param {HTMLTableCellElement} th
-     */
-    createFilterCell(th) {
-        th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-    }
+    createFilterCell() {}
 
     /**
-     * @param {HTMLTableCellElement} td
-     * @param {Object} ctx
+     * @returns {HTMLElement}
      */
-    createDataCell(td, ctx) {
-        td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-
+    createDataCell() {
         // Create icon
-        td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+        const cell = document.createElement("div");
+        cell.classList.add("dg-clickable-cell");
+        cell.innerHTML = `<svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
   <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>
 <svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg></div>`;
+</svg>`;
 
-        td.addEventListener("click", this);
-        td.addEventListener("mousedown", this);
+        cell.addEventListener("click", this);
+        cell.addEventListener("mousedown", this);
+
+        return cell;
     }
 
     /**
@@ -341,13 +338,13 @@ class ResponsiveGrid extends BasePlugin {
         // currentTarget is the element that the event listener is attached to.
 
         /**
-         * @type {HTMLTableRowElement}
+         * @type {HTMLElement}
          */
         //@ts-expect-error
-        const td = ev.currentTarget;
-        const tr = td.parentElement;
-        const open = find(td, `.${RESPONSIVE_CLASS}-open`);
-        const close = find(td, `.${RESPONSIVE_CLASS}-close`);
+        const cell = ev.currentTarget;
+        const tr = cell.closest("tr");
+        const open = find(cell, `.${RESPONSIVE_CLASS}-open`);
+        const close = find(cell, `.${RESPONSIVE_CLASS}-close`);
 
         this.blockObserver();
 

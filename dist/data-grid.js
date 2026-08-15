@@ -642,6 +642,20 @@ function orderColumns(columns) {
   }
   return [...start.reverse(), ...middle, ...end];
 }
+function applyCellContent(el, content) {
+  if (content === void 0 || content === null) {
+    return;
+  }
+  if (content instanceof Node) {
+    el.appendChild(content);
+    return;
+  }
+  if (typeof content === "object" && content.html !== void 0) {
+    el.innerHTML = content.html;
+    return;
+  }
+  el.textContent = content;
+}
 function applyColumnDefinition(el, column) {
   if (column.width) {
     setAttribute(el, "width", column.width);
@@ -1903,9 +1917,13 @@ var DataGrid = class extends base_element_default {
         setAttribute(td, "data-column-id", column.id ?? column.field);
         applyColumnDefinition(td, column);
         td.setAttribute("data-name", column.title);
-        const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field] };
+        const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field], tr };
         if (column.renderCell) {
-          column.renderCell(td, ctx);
+          if (column.renderCell.length > 1) {
+            column.renderCell(td, ctx);
+          } else {
+            applyCellContent(td, column.renderCell(ctx));
+          }
         } else {
           this.renderDefaultCell(td, ctx);
         }
@@ -2428,9 +2446,10 @@ var SelectableRows = class extends base_plugin_default {
       position: "start",
       noSort: true,
       title: "",
+      class: SELECTABLE_CLASS,
       renderHeaderCell: (th) => this.createHeaderCell(th),
       renderFilterCell: (th) => this.createFilterCell(th),
-      renderCell: (td, ctx) => this.createDataCell(td, ctx)
+      renderCell: (ctx) => this.createDataCell(ctx)
     });
   }
   /**
@@ -2500,7 +2519,7 @@ var SelectableRows = class extends base_plugin_default {
    */
   createHeaderCell(th) {
     setAttribute(th, "width", "40");
-    th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
+    th.classList.add("dg-not-resizable", "dg-not-sortable");
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
     this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
@@ -2520,45 +2539,42 @@ var SelectableRows = class extends base_plugin_default {
   /**
    * @param {HTMLTableCellElement} th
    */
-  createFilterCell(th) {
-    th.classList.add(SELECTABLE_CLASS);
+  createFilterCell() {
   }
   /**
-   * @param {HTMLTableCellElement} td
    * @param {Object} ctx
+   * @returns {HTMLElement}
    */
-  createDataCell(td, ctx) {
-    td.classList.add(SELECTABLE_CLASS);
+  createDataCell({ row, rowIndex }) {
     const grid = this.grid;
-    const row = ctx.row;
     const input = document.createElement("input");
     input.type = this.isSingleSelect ? "radio" : "checkbox";
     input.classList.add(CHECKBOX_CLASS);
-    input.checked = grid.isRowSelected(row, ctx.rowIndex);
+    input.checked = grid.isRowSelected(row, rowIndex);
     if (this.isSingleSelect) {
       input.name = "dg-row-select";
     }
     const label = document.createElement("label");
     label.classList.add("dg-clickable-cell");
     label.appendChild(input);
-    td.appendChild(label);
     label.addEventListener("click", (event) => {
       event.stopPropagation();
     });
     if (this.isSingleSelect) {
       input.addEventListener("click", (event) => {
         event.preventDefault();
-        if (grid.isRowSelected(row, ctx.rowIndex)) {
-          grid.deselectRow(row, ctx.rowIndex);
+        if (grid.isRowSelected(row, rowIndex)) {
+          grid.deselectRow(row, rowIndex);
         } else {
-          grid.selectRow(row, ctx.rowIndex);
+          grid.selectRow(row, rowIndex);
         }
       });
     } else {
       input.addEventListener("change", () => {
-        grid.toggleRow(row, ctx.rowIndex);
+        grid.toggleRow(row, rowIndex);
       });
     }
+    return label;
   }
 };
 var selectable_rows_default = SelectableRows;
@@ -2851,9 +2867,10 @@ var ResponsiveGrid = class extends base_plugin_default {
       position: "start",
       noSort: true,
       title: "",
+      class: `${RESPONSIVE_CLASS}-toggle`,
       renderHeaderCell: (th) => this.createHeaderCell(th),
-      renderFilterCell: (th) => this.createFilterCell(th),
-      renderCell: (td, ctx) => this.createDataCell(td, ctx)
+      renderFilterCell: () => this.createFilterCell(),
+      renderCell: () => this.createDataCell()
     });
   }
   blockObserver() {
@@ -2884,29 +2901,26 @@ var ResponsiveGrid = class extends base_plugin_default {
    */
   createHeaderCell(th) {
     setAttribute(th, "width", "40");
-    th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
+    th.classList.add("dg-not-resizable", "dg-not-sortable");
+  }
+  createFilterCell() {
   }
   /**
-   * @param {HTMLTableCellElement} th
+   * @returns {HTMLElement}
    */
-  createFilterCell(th) {
-    th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-  }
-  /**
-   * @param {HTMLTableCellElement} td
-   * @param {Object} ctx
-   */
-  createDataCell(td, ctx) {
-    td.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-    td.innerHTML = `<div class='dg-clickable-cell'><svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+  createDataCell() {
+    const cell = document.createElement("div");
+    cell.classList.add("dg-clickable-cell");
+    cell.innerHTML = `<svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
   <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>
 <svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg></div>`;
-    td.addEventListener("click", this);
-    td.addEventListener("mousedown", this);
+</svg>`;
+    cell.addEventListener("click", this);
+    cell.addEventListener("mousedown", this);
+    return cell;
   }
   /**
    * Apply responsive hide/show based on the last observed size.
@@ -3045,10 +3059,10 @@ var ResponsiveGrid = class extends base_plugin_default {
    */
   onclick(ev) {
     ev.stopPropagation();
-    const td = ev.currentTarget;
-    const tr = td.parentElement;
-    const open = find(td, `.${RESPONSIVE_CLASS}-open`);
-    const close = find(td, `.${RESPONSIVE_CLASS}-close`);
+    const cell = ev.currentTarget;
+    const tr = cell.closest("tr");
+    const open = find(cell, `.${RESPONSIVE_CLASS}-open`);
+    const close = find(cell, `.${RESPONSIVE_CLASS}-close`);
     this.blockObserver();
     const isExpanded = hasClass(tr, `${RESPONSIVE_CLASS}-expanded`);
     if (isExpanded) {
@@ -3112,79 +3126,127 @@ var RowActions = class extends base_plugin_default {
       position: "end",
       noSort: true,
       title: "",
+      class: `dg-actions ${this.actionClass}`,
       renderHeaderCell: (th) => this.createHeaderCell(th),
-      renderFilterCell: (th) => this.createFilterCell(th),
-      renderCell: (td, ctx) => this.makeActionRow(td, ctx)
+      renderFilterCell: () => this.createFilterCell(),
+      renderCell: (ctx) => this.makeActionRow(ctx)
     });
   }
   /**
    * @param {HTMLTableCellElement} th
    */
   createHeaderCell(th) {
-    th.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
+    th.classList.add("dg-not-sortable", "dg-not-resizable");
+  }
+  createFilterCell() {
   }
   /**
-   * @param {HTMLTableCellElement} th
-   */
-  createFilterCell(th) {
-    th.classList.add(...["dg-actions", this.actionClass]);
-  }
-  /**
-   * @param {HTMLTableCellElement} td
+   * Build the actions cell content: a toggle button plus one element per action.
    * @param {Object} ctx
+   * @returns {DocumentFragment}
    */
-  makeActionRow(td, ctx) {
-    const grid = this.grid;
-    const item = ctx.row;
-    const labels2 = this.grid.labels;
-    td.classList.add(...["dg-actions", this.actionClass]);
+  makeActionRow({ row, tr, grid }) {
+    const labels2 = grid.labels;
+    const fragment = document.createDocumentFragment();
     const actionsToggle = document.createElement("button");
+    actionsToggle.type = "button";
     actionsToggle.classList.add("dg-actions-toggle");
     actionsToggle.innerHTML = "\u2630";
-    td.appendChild(actionsToggle);
     on(actionsToggle, "click", (ev) => {
       ev.stopPropagation();
       ev.target.parentElement.classList.toggle("dg-actions-expand");
     });
+    fragment.appendChild(actionsToggle);
     for (const action of grid.options.actions) {
-      const button = document.createElement("button");
-      button.dataset.action = action.name;
-      if (action.html) {
-        button.innerHTML = action.html;
-      } else {
-        button.innerText = action.title ?? action.name;
+      if (action.visible && !action.visible(row)) {
+        continue;
       }
-      if (action.title) {
-        button.title = action.title;
-      }
-      if (action.url) {
-        button.type = "submit";
-        button.formAction = interpolate(action.url, item);
-      }
-      if (action.class) {
-        button.classList.add(...action.class.split(" "));
-      }
-      const actionHandler = (ev) => {
-        ev.stopPropagation();
-        if (action.confirm) {
-          const c = confirm(labels2.areYouSure);
-          if (!c) {
-            ev.preventDefault();
-            return;
-          }
-        }
-        dispatch(grid, "action", {
-          data: item,
-          action: action.name
-        });
-      };
-      button.addEventListener("click", actionHandler);
-      td.appendChild(button);
+      const { el, dispatchAction } = this.createActionElement(action, row, grid, labels2);
+      fragment.appendChild(el);
       if (action.default) {
-        const tr = td.parentElement;
         tr.classList.add("dg-actionable");
-        tr.addEventListener("click", actionHandler);
+        on(tr, "click", dispatchAction);
       }
+    }
+    return fragment;
+  }
+  /**
+   * Create the button (or link) for a single action.
+   * @param {import("../data-grid.js").Action} action
+   * @param {Object} row
+   * @param {import("../data-grid.js").default} grid
+   * @param {Object} labels
+   * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
+   */
+  createActionElement(action, row, grid, labels2) {
+    const href = action.href ? typeof action.href === "function" ? action.href(row) : interpolate(action.href, row) : null;
+    const render = action.render ?? grid.options.actionRenderer;
+    const content = render ? render({ action, row, grid }) : null;
+    let el;
+    if (content instanceof Element && (content.tagName === "BUTTON" || content.tagName === "A")) {
+      el = content;
+    } else {
+      const isLink = href !== null;
+      el = document.createElement(isLink ? "a" : "button");
+      if (!isLink) {
+        el.type = "button";
+      }
+      if (content === null || content === void 0) {
+        if (action.html) {
+          el.innerHTML = action.html;
+        } else {
+          el.textContent = action.label ?? action.title ?? action.name;
+        }
+      } else {
+        this.applyContent(el, content);
+      }
+    }
+    if (href !== null && !el.hasAttribute("href")) {
+      el.href = href;
+    }
+    el.dataset.action = action.name;
+    if (action.intent) {
+      el.dataset.intent = action.intent;
+      el.classList.add(`dg-intent-${action.intent}`);
+    }
+    if (action.title) {
+      el.title = action.title;
+    }
+    if (action.class) {
+      el.classList.add(...action.class.split(" "));
+    }
+    if (action.disabled?.(row)) {
+      el.disabled = true;
+    }
+    const dispatchAction = (ev) => {
+      ev.stopPropagation();
+      if (action.confirm) {
+        const c = confirm(labels2.areYouSure);
+        if (!c) {
+          ev.preventDefault();
+          return;
+        }
+      }
+      dispatch(grid, "action", {
+        data: row,
+        action: action.name
+      });
+    };
+    el.addEventListener("click", dispatchAction);
+    return { el, dispatchAction };
+  }
+  /**
+   * Apply renderer content to an element (same contract as renderCell).
+   * @param {HTMLElement} el
+   * @param {*} content
+   */
+  applyContent(el, content) {
+    if (content instanceof Node) {
+      el.appendChild(content);
+    } else if (typeof content === "object" && content.html !== void 0) {
+      el.innerHTML = content.html;
+    } else {
+      el.textContent = content;
     }
   }
   get actionClass() {
