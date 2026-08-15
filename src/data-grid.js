@@ -71,6 +71,24 @@ import {
  * @property {Boolean} default - is the default row action
  */
 
+/**
+ * Bulk action applied to the whole selection, server-first.
+ * @typedef BulkAction
+ * @property {String} name - the name of the action
+ * @property {String} label - the label of the button
+ * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
+ */
+
+/**
+ * Row selection state. Single source of truth, lives in the core.
+ * - "explicit": the selected row keys are in `ids`
+ * - "all": every matching row is selected except the ones in `except` (server-first)
+ * @typedef {Object} SelectionState
+ * @property {"explicit"|"all"} mode
+ * @property {Set<String>} ids - selected row keys (mode "explicit")
+ * @property {Set<String>} except - unselected row keys (mode "all")
+ */
+
 /** @typedef {import("./core/base-plugin.js").Plugin} Plugin */
 
 /**
@@ -100,6 +118,8 @@ import {
  * @property {Boolean} selectable Allow multi-selecting rows with a checkboxes (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} singleSelect Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
+ * @property {String | Function} [rowKey] The field name or a function resolving a stable row key (defaults to "id")
+ * @property {BulkAction[]} [bulkActions] Bulk actions applied to the current selection (BulkActions module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} autohidePager auto-hides the pager when number of records falls below the selected page size
@@ -128,6 +148,7 @@ import {
  * @property {String} gotoLastPage
  * @property {String} of
  * @property {String} items
+ * @property {String} selected
  * @property {String} resizeColumn
  * @property {String} noData
  * @property {String} areYouSure
@@ -152,6 +173,7 @@ let labels = {
     gotoLastPage: "Go to last page",
     of: "of",
     items: "items",
+    selected: "selected",
     resizeColumn: "Resize column",
     noData: "No data",
     areYouSure: "Are you sure?",
@@ -311,6 +333,12 @@ class DataGrid extends BaseElement {
          * @type {QueryState}
          */
         this._query = normalizeQuery(this._initialQuery);
+
+        /**
+         * Selection state, single source of truth for row selection
+         * @type {SelectionState}
+         */
+        this._selection = { mode: "explicit", ids: new Set(), except: new Set() };
 
         this._requestSeq = 0;
         this._controller = null;
@@ -481,6 +509,8 @@ class DataGrid extends BaseElement {
             selectable: false,
             selectVisibleOnly: true,
             singleSelect: false,
+            rowKey: "id",
+            bulkActions: [],
             resizable: false,
             autosize: true,
             expand: false,
@@ -1053,7 +1083,121 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Resolve the stable key of a row.
+     * @param {Record<string, any>} row
+     * @param {Number} [index] Fallback index (current page) when the row has no key
+     * @returns {String}
+     */
+    resolveRowKey(row, index = 0) {
+        const rowKey = this.options.rowKey;
+        let key;
+        if (typeof rowKey === "function") {
+            key = rowKey(row);
+        } else if (rowKey) {
+            key = row[rowKey];
+        }
+        return key === undefined || key === null ? String(index) : String(key);
+    }
+
+    /**
+     * Whether a row is part of the current selection.
+     * @param {Record<string, any>} row
+     * @param {Number} [index]
+     * @returns {Boolean}
+     */
+    isRowSelected(row, index = 0) {
+        const key = this.resolveRowKey(row, index);
+        const sel = this._selection;
+        return sel.mode === "all" ? !sel.except.has(key) : sel.ids.has(key);
+    }
+
+    /**
+     * Snapshot of the current selection state.
+     * @returns {SelectionState}
+     */
+    getSelectionState() {
+        return {
+            mode: this._selection.mode,
+            ids: new Set(this._selection.ids),
+            except: new Set(this._selection.except),
+        };
+    }
+
+    /**
+     * Select a row (single select keeps at most one key).
+     * @param {Record<string, any>} row
+     * @param {Number} [index]
+     */
+    selectRow(row, index = 0) {
+        const key = this.resolveRowKey(row, index);
+        const sel = this._selection;
+        if (this.options.singleSelect) {
+            sel.mode = "explicit";
+            sel.ids.clear();
+            sel.except.clear();
+            sel.ids.add(key);
+        } else if (sel.mode === "all") {
+            sel.except.delete(key);
+        } else {
+            sel.ids.add(key);
+        }
+        this._selectionChanged();
+    }
+
+    /**
+     * Deselect a row.
+     * @param {Record<string, any>} row
+     * @param {Number} [index]
+     */
+    deselectRow(row, index = 0) {
+        const key = this.resolveRowKey(row, index);
+        const sel = this._selection;
+        if (sel.mode === "all") {
+            sel.except.add(key);
+        } else {
+            sel.ids.delete(key);
+        }
+        this._selectionChanged();
+    }
+
+    /**
+     * Toggle the selection state of a row.
+     * @param {Record<string, any>} row
+     * @param {Number} [index]
+     */
+    toggleRow(row, index = 0) {
+        if (this.isRowSelected(row, index)) {
+            this.deselectRow(row, index);
+        } else {
+            this.selectRow(row, index);
+        }
+    }
+
+    /**
+     * Select all visible rows (or everything when selectVisibleOnly is false).
+     */
+    selectAll() {
+        if (this.options.selectVisibleOnly) {
+            const ids = new Set(this.rows.map((row, i) => this.resolveRowKey(row, i)));
+            this._selection = { mode: "explicit", ids, except: new Set() };
+        } else {
+            this._selection = { mode: "all", ids: new Set(), except: new Set() };
+        }
+        this._selectionChanged();
+    }
+
+    /**
+     * Reset the selection and refresh the UI.
+     */
+    clearSelection() {
+        this._selection = { mode: "explicit", ids: new Set(), except: new Set() };
+        this._selectionChanged();
+    }
+
+    /**
      * Get selected rows or specific fields from selected rows.
+     * Only reflects the currently loaded page (compat). For a server-side
+     * selection spanning pages, use getSelectionState().
      * If no keys are provided, returns the full row objects.
      * If one key is provided, returns an array of values for that key.
      * If multiple keys are provided, returns an array of objects with those keys and values.
@@ -1062,14 +1206,44 @@ class DataGrid extends BaseElement {
      * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
      */
     getSelection(...keys) {
-        for (const plugin of Object.values(this.plugins)) {
-            /** @type {any} */
-            const p = plugin;
-            if (typeof p.getSelection === "function") {
-                return p.getSelection(...keys);
+        const selected = [];
+        for (let i = 0; i < this.rows.length; i++) {
+            const row = this.rows[i];
+            if (!this.isRowSelected(row, i)) {
+                continue;
+            }
+            if (keys.length === 0) {
+                selected.push(row);
+            } else if (keys.length === 1) {
+                selected.push(row[keys[0]]);
+            } else {
+                selected.push(Object.fromEntries(keys.map((k) => [k, row[k]])));
             }
         }
-        return [];
+        return this.options.singleSelect ? (selected[0] ?? {}) : selected;
+    }
+
+    /**
+     * Reflect the selection on the DOM and notify listeners.
+     * The core owns the tr[data-selected] state attribute.
+     */
+    _selectionChanged() {
+        const tbody = this.tbody;
+        if (tbody) {
+            const trs = Array.from(tbody.querySelectorAll("tr"));
+            for (let i = 0; i < this.rows.length; i++) {
+                const tr = trs[i];
+                if (!tr || tr.classList.contains("dg-fake-row")) {
+                    continue;
+                }
+                if (this.isRowSelected(this.rows[i], i)) {
+                    setAttribute(tr, "data-selected", "");
+                } else {
+                    removeAttribute(tr, "data-selected");
+                }
+            }
+        }
+        dispatch(this, "selectionChange", { selectionState: this.getSelectionState() });
     }
 
     getFirst() {

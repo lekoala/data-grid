@@ -184,6 +184,23 @@ data-grid .dg-selectable {
   font-size: 1em;
 }
 
+data-grid .dg-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 0;
+}
+
+data-grid .dg-bulk-actions[hidden] {
+  display: none;
+}
+
+data-grid .dg-bulk-count {
+  margin-right: auto;
+  font-weight: 600;
+}
+
 data-grid .dg-selectable label {
   display: flex;
   align-items: center;
@@ -364,7 +381,7 @@ data-grid tbody td input.dg-editable:focus {
   box-shadow: inset 0px 0px 0px 1px var(--color);
 }
 
-data-grid tbody tr:has(.dg-selectable [type="radio"]:checked) {
+data-grid tbody tr[data-selected] {
   background-color: var(--selected-bgcolor);
 }
 

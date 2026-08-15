@@ -525,6 +525,7 @@ var labels = {
   gotoLastPage: "Go to last page",
   of: "of",
   items: "items",
+  selected: "selected",
   resizeColumn: "Resize column",
   noData: "No data",
   areYouSure: "Are you sure?",
@@ -639,6 +640,7 @@ var DataGrid = class extends base_element_default {
     }
     this._initialQuery = normalizeQuery(this.options.initialQuery);
     this._query = normalizeQuery(this._initialQuery);
+    this._selection = { mode: "explicit", ids: /* @__PURE__ */ new Set(), except: /* @__PURE__ */ new Set() };
     this._requestSeq = 0;
     this._controller = null;
     this.initialResult = null;
@@ -766,6 +768,8 @@ var DataGrid = class extends base_element_default {
       selectable: false,
       selectVisibleOnly: true,
       singleSelect: false,
+      rowKey: "id",
+      bulkActions: [],
       resizable: false,
       autosize: true,
       expand: false,
@@ -1242,7 +1246,113 @@ var DataGrid = class extends base_element_default {
     return this.fixPage();
   }
   /**
+   * Resolve the stable key of a row.
+   * @param {Record<string, any>} row
+   * @param {Number} [index] Fallback index (current page) when the row has no key
+   * @returns {String}
+   */
+  resolveRowKey(row, index = 0) {
+    const rowKey = this.options.rowKey;
+    let key;
+    if (typeof rowKey === "function") {
+      key = rowKey(row);
+    } else if (rowKey) {
+      key = row[rowKey];
+    }
+    return key === void 0 || key === null ? String(index) : String(key);
+  }
+  /**
+   * Whether a row is part of the current selection.
+   * @param {Record<string, any>} row
+   * @param {Number} [index]
+   * @returns {Boolean}
+   */
+  isRowSelected(row, index = 0) {
+    const key = this.resolveRowKey(row, index);
+    const sel = this._selection;
+    return sel.mode === "all" ? !sel.except.has(key) : sel.ids.has(key);
+  }
+  /**
+   * Snapshot of the current selection state.
+   * @returns {SelectionState}
+   */
+  getSelectionState() {
+    return {
+      mode: this._selection.mode,
+      ids: new Set(this._selection.ids),
+      except: new Set(this._selection.except)
+    };
+  }
+  /**
+   * Select a row (single select keeps at most one key).
+   * @param {Record<string, any>} row
+   * @param {Number} [index]
+   */
+  selectRow(row, index = 0) {
+    const key = this.resolveRowKey(row, index);
+    const sel = this._selection;
+    if (this.options.singleSelect) {
+      sel.mode = "explicit";
+      sel.ids.clear();
+      sel.except.clear();
+      sel.ids.add(key);
+    } else if (sel.mode === "all") {
+      sel.except.delete(key);
+    } else {
+      sel.ids.add(key);
+    }
+    this._selectionChanged();
+  }
+  /**
+   * Deselect a row.
+   * @param {Record<string, any>} row
+   * @param {Number} [index]
+   */
+  deselectRow(row, index = 0) {
+    const key = this.resolveRowKey(row, index);
+    const sel = this._selection;
+    if (sel.mode === "all") {
+      sel.except.add(key);
+    } else {
+      sel.ids.delete(key);
+    }
+    this._selectionChanged();
+  }
+  /**
+   * Toggle the selection state of a row.
+   * @param {Record<string, any>} row
+   * @param {Number} [index]
+   */
+  toggleRow(row, index = 0) {
+    if (this.isRowSelected(row, index)) {
+      this.deselectRow(row, index);
+    } else {
+      this.selectRow(row, index);
+    }
+  }
+  /**
+   * Select all visible rows (or everything when selectVisibleOnly is false).
+   */
+  selectAll() {
+    if (this.options.selectVisibleOnly) {
+      const ids = new Set(this.rows.map((row, i) => this.resolveRowKey(row, i)));
+      this._selection = { mode: "explicit", ids, except: /* @__PURE__ */ new Set() };
+    } else {
+      this._selection = { mode: "all", ids: /* @__PURE__ */ new Set(), except: /* @__PURE__ */ new Set() };
+    }
+    this._selectionChanged();
+  }
+  /**
+   * Reset the selection and refresh the UI.
+   */
+  clearSelection() {
+    this._selection = { mode: "explicit", ids: /* @__PURE__ */ new Set(), except: /* @__PURE__ */ new Set() };
+    this._selectionChanged();
+  }
+  /**
    * Get selected rows or specific fields from selected rows.
+   * Only reflects the currently loaded page (compat). For a server-side
+   * selection spanning pages, use getSelectionState().
    * If no keys are provided, returns the full row objects.
    * If one key is provided, returns an array of values for that key.
    * If multiple keys are provided, returns an array of objects with those keys and values.
@@ -1251,13 +1361,43 @@ var DataGrid = class extends base_element_default {
    * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
    */
   getSelection(...keys) {
-    for (const plugin of Object.values(this.plugins)) {
-      const p = plugin;
-      if (typeof p.getSelection === "function") {
-        return p.getSelection(...keys);
+    const selected = [];
+    for (let i = 0; i < this.rows.length; i++) {
+      const row = this.rows[i];
+      if (!this.isRowSelected(row, i)) {
+        continue;
+      }
+      if (keys.length === 0) {
+        selected.push(row);
+      } else if (keys.length === 1) {
+        selected.push(row[keys[0]]);
+      } else {
+        selected.push(Object.fromEntries(keys.map((k) => [k, row[k]])));
       }
     }
-    return [];
+    return this.options.singleSelect ? selected[0] ?? {} : selected;
+  }
+  /**
+   * Reflect the selection on the DOM and notify listeners.
+   * The core owns the tr[data-selected] state attribute.
+   */
+  _selectionChanged() {
+    const tbody = this.tbody;
+    if (tbody) {
+      const trs = Array.from(tbody.querySelectorAll("tr"));
+      for (let i = 0; i < this.rows.length; i++) {
+        const tr = trs[i];
+        if (!tr || tr.classList.contains("dg-fake-row")) {
+          continue;
+        }
+        if (this.isRowSelected(this.rows[i], i)) {
+          setAttribute(tr, "data-selected", "");
+        } else {
+          removeAttribute(tr, "data-selected");
+        }
+      }
+    }
+    dispatch(this, "selectionChange", { selectionState: this.getSelectionState() });
   }
   getFirst() {
     if (this.loading) {
@@ -2178,18 +2318,25 @@ var SELECTABLE_CLASS = "dg-selectable";
 var SELECT_ALL_CLASS = "dg-select-all";
 var CHECKBOX_CLASS = "form-check-input";
 var SelectableRows = class extends base_plugin_default {
-  #cbSelector = `tbody tr${this.visibleOnly ? ":not([hidden])" : ""} .${SELECTABLE_CLASS} input[type=checkbox]`;
-  #inputSelector = `tbody .${SELECTABLE_CLASS} input`;
-  disconnected() {
-    if (this.selectAll) {
-      this.selectAll.removeEventListener("change", this);
-    }
-  }
   get isSingleSelect() {
     return this.grid.options.singleSelect;
   }
   get visibleOnly() {
     return this.grid.options.selectVisibleOnly;
+  }
+  connected() {
+    this.grid.addEventListener("selectionChange", this);
+  }
+  disconnected() {
+    this.grid.removeEventListener("selectionChange", this);
+  }
+  /**
+   * @param {Event} event
+   */
+  handleEvent(event) {
+    if (event.type === "selectionChange") {
+      this.syncSelection();
+    }
   }
   /**
    * Inject the selection column at the start.
@@ -2211,63 +2358,66 @@ var SelectableRows = class extends base_plugin_default {
     });
   }
   /**
-   * After the body render, keep the select all checkbox in sync.
+   * After a render cycle, reflect the selection state on the checkboxes.
    * @param {import("../core/base-plugin.js").RenderContext} context
    */
   afterRender(context) {
-    if (context !== "body") {
-      return;
+    if (context === "body") {
+      this.syncSelection();
+    } else if (context === "table") {
+      this.syncSelectAll();
     }
-    this.clearCheckboxes(this.grid.tbody);
-    this.shouldSelectAll(this.grid.tbody);
   }
   /**
-   * Get selected rows or fields.
-   * Returns full rows, a single field's values, or objects with specified fields.
-   * In single select mode, returns a single item.
-   * @param {...string} keys Field names to select.
-   * @returns {Array|Object} Selected data.
+   * Reflect the current selection state on the body checkboxes.
    */
-  getSelection(...keys) {
+  syncSelection() {
     const grid = this.grid;
-    const selectedData = [];
-    const inputs = findAll(grid, `${this.#inputSelector}:checked`);
-    for (const checkbox of inputs) {
-      const idx = Number.parseInt(checkbox.dataset.id);
-      const item = grid.rows[idx - 1];
-      if (!item) {
-        console.warn(`Item ${idx} not found`);
+    if (!grid.options.selectable) {
+      return;
+    }
+    const tbody = grid.tbody;
+    if (!tbody) {
+      return;
+    }
+    const inputs = tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`);
+    const trs = Array.from(tbody.querySelectorAll("tr"));
+    for (const input of inputs) {
+      const tr = input.closest("tr");
+      if (!tr) {
         continue;
       }
-      if (keys.length === 0) {
-        selectedData.push(item);
-      } else if (keys.length === 1) {
-        selectedData.push(item[keys[0]]);
-      } else {
-        selectedData.push(Object.fromEntries(keys.map((k) => [k, item[k]])));
+      const index = trs.indexOf(tr);
+      const row = grid.rows[index];
+      if (row === void 0) {
+        continue;
       }
+      input.checked = grid.isRowSelected(row, index);
     }
-    return this.isSingleSelect ? selectedData[0] ?? {} : selectedData;
+    this.syncSelectAll();
   }
   /**
-   * Uncheck box if hidden and visible only
-   * @param {HTMLTableSectionElement} tbody
+   * Keep the header select-all checkbox in sync with the body.
    */
-  clearCheckboxes(tbody) {
+  syncSelectAll() {
     const grid = this.grid;
-    if (!grid.options.selectVisibleOnly) {
+    if (!this.selectAll || !grid.options.selectable) {
       return;
     }
-    const inputs = findAll(tbody, `tr[hidden] .${SELECTABLE_CLASS} input`);
-    for (const input of inputs) {
-      input.checked = false;
-      if (this.isSingleSelect) {
-        input.dataset.toggled = "false";
+    const visible = [];
+    const tbody = grid.tbody;
+    if (tbody) {
+      const inputs = tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`);
+      for (const input of inputs) {
+        if (this.visibleOnly && input.closest("tr[hidden]")) {
+          continue;
+        }
+        visible.push(input);
       }
     }
-    if (this.selectAll) {
-      this.selectAll.checked = false;
-    }
+    const checked = visible.filter((input) => input.checked).length;
+    this.selectAll.indeterminate = checked > 0 && checked < visible.length;
+    this.selectAll.checked = visible.length > 0 && checked === visible.length;
   }
   /**
    * @param {HTMLTableCellElement} th
@@ -2278,13 +2428,19 @@ var SelectableRows = class extends base_plugin_default {
     th.tabIndex = 0;
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
-    this.selectAll.classList.add(SELECT_ALL_CLASS);
-    this.selectAll.classList.add(CHECKBOX_CLASS);
-    this.selectAll.addEventListener("change", this);
+    this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
+    this.selectAll.addEventListener("change", () => {
+      if (this.selectAll.checked) {
+        this.grid.selectAll();
+      } else {
+        this.grid.clearSelection();
+      }
+    });
     const label = document.createElement("label");
     label.hidden = this.isSingleSelect;
     label.appendChild(this.selectAll);
     th.appendChild(label);
+    this.syncSelectAll();
   }
   /**
    * @param {HTMLTableCellElement} th
@@ -2299,73 +2455,119 @@ var SelectableRows = class extends base_plugin_default {
    */
   createDataCell(td, ctx) {
     td.classList.add(SELECTABLE_CLASS);
+    const grid = this.grid;
+    const row = ctx.row;
     const input = document.createElement("input");
-    input.dataset.id = `${ctx.rowIndex + 1}`;
     input.type = this.isSingleSelect ? "radio" : "checkbox";
     input.classList.add(CHECKBOX_CLASS);
+    input.checked = grid.isRowSelected(row, ctx.rowIndex);
     if (this.isSingleSelect) {
       input.name = "dg-row-select";
-      input.dataset.toggled = "false";
     }
     const label = document.createElement("label");
     label.classList.add("dg-clickable-cell");
     label.appendChild(input);
     td.appendChild(label);
-    label.addEventListener("click", this);
-  }
-  /**
-   * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
-   * It should check selectAll if all is checked
-   * It should uncheck selectAll if any is unchecked
-   * @param {HTMLTableSectionElement} tbody
-   */
-  shouldSelectAll(tbody) {
-    if (!this.selectAll) {
-      return;
-    }
-    tbody.addEventListener("change", this);
-    tbody.dispatchEvent(new Event("change"));
-  }
-  /**
-   * @param {Event} e
-   */
-  onclick(e) {
-    if (!this.isSingleSelect) return e.stopPropagation();
-    const el = e.target, unchecked = el.dataset.toggled !== "true";
-    unchecked && $$(`${this.#cbSelector.replace("checkbox", "radio")}`, this.grid)?.forEach((r) => {
-      if (r.name === el.name && r !== el) r.checked = r.dataset.toggled = false;
+    label.addEventListener("click", (event) => {
+      event.stopPropagation();
     });
-    el.checked = el.dataset.toggled = unchecked;
-    !unchecked && this.onchange(e);
-  }
-  /**
-   * Handle change event on select all or any select checkbox in the table body
-   * @param {import("../utils/shortcuts.js").FlexibleEvent} e
-   */
-  onchange(e) {
-    const el = e.target, grid = this.grid;
-    if (hasClass(e.target, SELECT_ALL_CLASS)) {
-      findAll(grid, this.#inputSelector).forEach((cb) => {
-        if (!this.visibleOnly || cb.offsetWidth) cb.checked = this.selectAll.checked;
+    if (this.isSingleSelect) {
+      input.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (grid.isRowSelected(row, ctx.rowIndex)) {
+          grid.deselectRow(row, ctx.rowIndex);
+        } else {
+          grid.selectRow(row, ctx.rowIndex);
+        }
       });
-    } else if (el.matches(this.#cbSelector)) {
-      if (!el.closest(`.${SELECTABLE_CLASS}`)) return;
-      const totalCheckboxes = findAll(grid, this.#cbSelector);
-      this.selectAll.checked = totalCheckboxes.every((n) => n.checked);
-    }
-    if (el.matches(`.${SELECT_ALL_CLASS},${this.#inputSelector}`)) {
-      dispatch(
-        el,
-        "rowsSelected",
-        {
-          selection: grid.getSelection()
-        },
-        true
-      );
+    } else {
+      input.addEventListener("change", () => {
+        grid.toggleRow(row, ctx.rowIndex);
+      });
     }
   }
 };
 var selectable_rows_default = SelectableRows;
+
+// src/plugins/bulk-actions.js
+var BulkActions = class extends base_plugin_default {
+  connected() {
+    const grid = this.grid;
+    this.bar = document.createElement("div");
+    this.bar.className = "dg-bulk-actions";
+    this.bar.hidden = true;
+    const table = grid.querySelector("table");
+    if (table) {
+      grid.insertBefore(this.bar, table);
+    } else {
+      grid.appendChild(this.bar);
+    }
+    grid.addEventListener("selectionChange", this);
+    this.render();
+  }
+  disconnected() {
+    this.grid.removeEventListener("selectionChange", this);
+    this.bar?.remove();
+  }
+  /**
+   * @param {Event} event
+   */
+  handleEvent(event) {
+    if (event.type === "selectionChange") {
+      this.render();
+    }
+  }
+  /**
+   * @param {import("../core/base-plugin.js").RenderContext} context
+   */
+  afterRender(context) {
+    if (context === "body") {
+      this.render();
+    }
+  }
+  /**
+   * Render the bulk action bar reflecting the current selection.
+   */
+  render() {
+    const grid = this.grid;
+    if (!this.bar || !grid.options.bulkActions.length) {
+      return;
+    }
+    const selection = grid.getSelectionState();
+    const hasSelection = selection.mode === "all" || selection.ids.size > 0;
+    this.bar.hidden = !hasSelection;
+    if (!hasSelection) {
+      return;
+    }
+    while (this.bar.firstChild) {
+      this.bar.removeChild(this.bar.firstChild);
+    }
+    const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
+    const countEl = document.createElement("span");
+    countEl.className = "dg-bulk-count";
+    countEl.textContent = `${count} ${grid.labels.selected}`;
+    this.bar.appendChild(countEl);
+    for (const action of grid.options.bulkActions) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.action = action.name;
+      if (action.intent) {
+        button.dataset.intent = action.intent;
+      }
+      button.textContent = action.label ?? action.name;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        dispatch(grid, "bulkAction", {
+          action: action.name,
+          selection: grid.getSelectionState(),
+          query: grid.query
+        });
+      });
+      this.bar.appendChild(button);
+    }
+  }
+};
+var bulk_actions_default = BulkActions;
 
 // src/plugins/fixed-height.js
 var FixedHeight = class extends base_plugin_default {
@@ -3115,6 +3317,7 @@ data_grid_default.registerPlugins({
   DraggableHeaders: draggable_headers_default,
   TouchSupport: touch_support_default,
   SelectableRows: selectable_rows_default,
+  BulkActions: bulk_actions_default,
   FixedHeight: fixed_height_default,
   AutosizeColumn: autosize_column_default,
   ResponsiveGrid: responsive_grid_default,

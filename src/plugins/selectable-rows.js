@@ -1,6 +1,6 @@
 // @ts-nocheck
 import BasePlugin from "../core/base-plugin.js";
-import { $$, dispatch, findAll, hasClass, setAttribute } from "../utils/shortcuts.js";
+import { setAttribute } from "../utils/shortcuts.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
@@ -10,21 +10,29 @@ const CHECKBOX_CLASS = "form-check-input"; //bs5
  * Allows to select rows
  */
 class SelectableRows extends BasePlugin {
-    #cbSelector = `tbody tr${this.visibleOnly ? ":not([hidden])" : ""} .${SELECTABLE_CLASS} input[type=checkbox]`;
-    #inputSelector = `tbody .${SELECTABLE_CLASS} input`;
-
-    disconnected() {
-        if (this.selectAll) {
-            this.selectAll.removeEventListener("change", this);
-        }
-    }
-
     get isSingleSelect() {
         return this.grid.options.singleSelect;
     }
 
     get visibleOnly() {
         return this.grid.options.selectVisibleOnly;
+    }
+
+    connected() {
+        this.grid.addEventListener("selectionChange", this);
+    }
+
+    disconnected() {
+        this.grid.removeEventListener("selectionChange", this);
+    }
+
+    /**
+     * @param {Event} event
+     */
+    handleEvent(event) {
+        if (event.type === "selectionChange") {
+            this.syncSelection();
+        }
     }
 
     /**
@@ -48,67 +56,68 @@ class SelectableRows extends BasePlugin {
     }
 
     /**
-     * After the body render, keep the select all checkbox in sync.
+     * After a render cycle, reflect the selection state on the checkboxes.
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
-        if (context !== "body") {
-            return;
+        if (context === "body") {
+            this.syncSelection();
+        } else if (context === "table") {
+            this.syncSelectAll();
         }
-        this.clearCheckboxes(this.grid.tbody);
-        this.shouldSelectAll(this.grid.tbody);
     }
 
     /**
-     * Get selected rows or fields.
-     * Returns full rows, a single field's values, or objects with specified fields.
-     * In single select mode, returns a single item.
-     * @param {...string} keys Field names to select.
-     * @returns {Array|Object} Selected data.
+     * Reflect the current selection state on the body checkboxes.
      */
-    getSelection(...keys) {
+    syncSelection() {
         const grid = this.grid;
-        const selectedData = [];
-
-        const inputs = findAll(grid, `${this.#inputSelector}:checked`);
-
-        for (const checkbox of inputs) {
-            const idx = Number.parseInt(checkbox.dataset.id);
-            const item = grid.rows[idx - 1];
-            if (!item) {
-                console.warn(`Item ${idx} not found`);
+        if (!grid.options.selectable) {
+            return;
+        }
+        const tbody = grid.tbody;
+        if (!tbody) {
+            return;
+        }
+        const inputs = tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`);
+        const trs = Array.from(tbody.querySelectorAll("tr"));
+        for (const input of inputs) {
+            const tr = input.closest("tr");
+            if (!tr) {
                 continue;
             }
-            if (keys.length === 0) {
-                selectedData.push(item);
-            } else if (keys.length === 1) {
-                selectedData.push(item[keys[0]]);
-            } else {
-                selectedData.push(Object.fromEntries(keys.map((k) => [k, item[k]])));
+            const index = trs.indexOf(tr);
+            const row = grid.rows[index];
+            if (row === undefined) {
+                continue;
             }
+            input.checked = grid.isRowSelected(row, index);
         }
-        return this.isSingleSelect ? (selectedData[0] ?? {}) : selectedData;
+        this.syncSelectAll();
     }
 
     /**
-     * Uncheck box if hidden and visible only
-     * @param {HTMLTableSectionElement} tbody
+     * Keep the header select-all checkbox in sync with the body.
      */
-    clearCheckboxes(tbody) {
+    syncSelectAll() {
         const grid = this.grid;
-        if (!grid.options.selectVisibleOnly) {
+        if (!this.selectAll || !grid.options.selectable) {
             return;
         }
-        const inputs = findAll(tbody, `tr[hidden] .${SELECTABLE_CLASS} input`);
-        for (const input of inputs) {
-            input.checked = false;
-            if (this.isSingleSelect) {
-                input.dataset.toggled = "false"; // Reset toggled state for radio buttons
+        const visible = [];
+        const tbody = grid.tbody;
+        if (tbody) {
+            const inputs = tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`);
+            for (const input of inputs) {
+                if (this.visibleOnly && input.closest("tr[hidden]")) {
+                    continue;
+                }
+                visible.push(input);
             }
         }
-        if (this.selectAll) {
-            this.selectAll.checked = false;
-        }
+        const checked = visible.filter((input) => input.checked).length;
+        this.selectAll.indeterminate = checked > 0 && checked < visible.length;
+        this.selectAll.checked = visible.length > 0 && checked === visible.length;
     }
 
     /**
@@ -121,15 +130,21 @@ class SelectableRows extends BasePlugin {
 
         this.selectAll = document.createElement("input");
         this.selectAll.type = "checkbox";
-        this.selectAll.classList.add(SELECT_ALL_CLASS);
-        this.selectAll.classList.add(CHECKBOX_CLASS);
-        this.selectAll.addEventListener("change", this);
+        this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
+        this.selectAll.addEventListener("change", () => {
+            if (this.selectAll.checked) {
+                this.grid.selectAll();
+            } else {
+                this.grid.clearSelection();
+            }
+        });
 
         const label = document.createElement("label");
         label.hidden = this.isSingleSelect;
         label.appendChild(this.selectAll);
 
         th.appendChild(label);
+        this.syncSelectAll();
     }
 
     /**
@@ -147,87 +162,42 @@ class SelectableRows extends BasePlugin {
     createDataCell(td, ctx) {
         td.classList.add(SELECTABLE_CLASS);
 
-        // Create input
+        const grid = this.grid;
+        const row = ctx.row;
+
         const input = document.createElement("input");
-        // Alias row id for easy retrieval in getSelection
-        input.dataset.id = `${ctx.rowIndex + 1}`;
         input.type = this.isSingleSelect ? "radio" : "checkbox";
         input.classList.add(CHECKBOX_CLASS);
+        input.checked = grid.isRowSelected(row, ctx.rowIndex);
         if (this.isSingleSelect) {
             input.name = "dg-row-select";
-            input.dataset.toggled = "false";
         }
 
         // Label need to take full space thanks to css to make the whole cell clickable
         const label = document.createElement("label");
         label.classList.add("dg-clickable-cell");
-
         label.appendChild(input);
         td.appendChild(label);
 
-        // Prevent unwanted click behaviour on row
-        label.addEventListener("click", this);
-    }
+        // Prevent unwanted click behaviour on row (expand, default action...)
+        label.addEventListener("click", (event) => {
+            event.stopPropagation();
+        });
 
-    /**
-     * Handles the selectAll checkbox when any other .dg-selectable checkbox is checked on table body.
-     * It should check selectAll if all is checked
-     * It should uncheck selectAll if any is unchecked
-     * @param {HTMLTableSectionElement} tbody
-     */
-    shouldSelectAll(tbody) {
-        if (!this.selectAll) {
-            return;
-        }
-        // Delegate listener for change events on input checkboxes
-        tbody.addEventListener("change", this);
-        // Make sure state is up to date
-        tbody.dispatchEvent(new Event("change"));
-    }
-
-    /**
-     * @param {Event} e
-     */
-    onclick(e) {
-        if (!this.isSingleSelect) return e.stopPropagation();
-
-        // Implements radio button toggle behaviour for selecting and unselecting a row
-        const el = e.target,
-            unchecked = el.dataset.toggled !== "true";
-        unchecked &&
-            $$(`${this.#cbSelector.replace("checkbox", "radio")}`, this.grid)?.forEach((r) => {
-                // Uncheck all other radios in the same group and reset their data-toggled
-                if (r.name === el.name && r !== el) r.checked = r.dataset.toggled = false;
+        if (this.isSingleSelect) {
+            // Radio buttons can't be unchecked natively: control the state manually
+            input.addEventListener("click", (event) => {
+                event.preventDefault();
+                if (grid.isRowSelected(row, ctx.rowIndex)) {
+                    grid.deselectRow(row, ctx.rowIndex);
+                } else {
+                    grid.selectRow(row, ctx.rowIndex);
+                }
             });
-        el.checked = el.dataset.toggled = unchecked;
-        !unchecked && this.onchange(e); // Fires rowsSelected event
-    }
-
-    /**
-     * Handle change event on select all or any select checkbox in the table body
-     * @param {import("../utils/shortcuts.js").FlexibleEvent} e
-     */
-    onchange(e) {
-        const el = e.target,
-            grid = this.grid;
-        if (hasClass(e.target, SELECT_ALL_CLASS)) {
-            findAll(grid, this.#inputSelector).forEach((cb) => {
-                if (!this.visibleOnly || cb.offsetWidth) cb.checked = this.selectAll.checked;
+        } else {
+            input.addEventListener("change", () => {
+                grid.toggleRow(row, ctx.rowIndex);
             });
-        } else if (el.matches(this.#cbSelector)) {
-            if (!el.closest(`.${SELECTABLE_CLASS}`)) return;
-            const totalCheckboxes = findAll(grid, this.#cbSelector);
-            this.selectAll.checked = totalCheckboxes.every((n) => n.checked);
-        }
-        if (el.matches(`.${SELECT_ALL_CLASS},${this.#inputSelector}`)) {
-            dispatch(
-                el,
-                "rowsSelected",
-                {
-                    selection: grid.getSelection(),
-                },
-                true,
-            );
         }
     }
 }
