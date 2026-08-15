@@ -87,7 +87,7 @@ data-grid::-webkit-scrollbar-thumb:hover {
   background: var(--scroller-thumb-hover);
 }
 
-data-grid > table[role="grid"] tr.dg-head-columns:is(:empty, :has(> :first-child:not([scope="col"]))) {
+data-grid > table tr.dg-head-columns:is(:empty, :has(> :first-child:not([scope="col"]))) {
   display: none;
 }
 
@@ -117,12 +117,12 @@ data-grid tfoot {
   color: var(--header-color);
 }
 
-data-grid.dg-loading:not(.dg-initialized) thead,
-data-grid.dg-loading:not(.dg-initialized) tfoot {
+data-grid[data-loading]:not(.dg-initialized) thead,
+data-grid[data-loading]:not(.dg-initialized) tfoot {
   background: none;
 }
 
-data-grid.dg-loading tbody {
+data-grid[data-loading] tbody {
   animation-name: dataGridShow;
   animation-timing-function: ease-in;
   animation-fill-mode: forwards;
@@ -130,7 +130,7 @@ data-grid.dg-loading tbody {
   pointer-events: none;
 }
 
-data-grid.dg-loading:not(:has(th)) tfoot {
+data-grid[data-loading]:not(:has(th)) tfoot {
   display: none;
 }
 
@@ -385,16 +385,18 @@ data-grid tbody tr[data-selected] {
   background-color: var(--selected-bgcolor);
 }
 
-data-grid.dg-empty tbody {
+data-grid[data-empty] tbody,
+data-grid[data-error] tbody {
   height: 4rem;
   position: relative;
 }
 
-data-grid.dg-empty tbody:before {
+data-grid[data-empty] tbody:before,
+data-grid[data-error] tbody:before {
   position: absolute;
   top: 50%;
   left: 50%;
-  content: attr(data-empty);
+  content: attr(data-empty-message);
   transform: translate(-50%, -50%);
   opacity: 0.5;
   font-size: 1.5rem;
@@ -405,26 +407,26 @@ data-grid.dg-empty tbody:before {
   width: 90%;
 }
 
-data-grid.dg-empty tr.dg-fake-row {
+data-grid[data-empty] tr.dg-fake-row {
   height: 4rem;
   border: none;
 }
 
-data-grid.dg-empty.dg-network-error table {
+data-grid[data-error] table {
   color: #842029;
   background-color: #f8d7da;
   border: 1px solid #f5c2c7;
 }
 
-data-grid.dg-empty.dg-network-error tbody {
+data-grid[data-error] tbody {
   height: auto;
 }
 
-data-grid.dg-empty.dg-network-error tbody:before {
+data-grid[data-error] tbody:before {
   font-size: 1.2rem;
 }
 
-data-grid.dg-empty.dg-network-error tbody tr:not(.dg-fake-row) {
+data-grid[data-error] tbody tr:not(.dg-fake-row) {
   display: none;
 }
 
@@ -494,13 +496,11 @@ data-grid tfoot.dg-footer-compact .dg-input-page {
   display: none;
 }
 
-data-grid [aria-sort] {
+data-grid th.dg-sortable {
   cursor: pointer;
   padding-right: 1.5rem;
 }
 
-data-grid [aria-sort="none"]:after,
-data-grid [aria-sort="none"]:before,
 data-grid [aria-sort="ascending"]:before,
 data-grid [aria-sort="descending"]:after {
   right: 0.5rem;
@@ -513,19 +513,6 @@ data-grid [aria-sort="descending"]:after {
   border-color: rgba(0, 0, 0, 0);
   border-width: 0.25rem;
   margin-left: -0.25rem;
-}
-
-data-grid [aria-sort="none"]:before {
-  border-bottom-color: currentColor;
-  opacity: 0.25;
-  top: calc(50% - 0.6rem);
-}
-
-data-grid [aria-sort="none"]:after {
-  border-top-color: currentColor;
-  opacity: 0.25;
-  bottom: calc(50% - 0.5rem);
-  top: auto;
 }
 
 data-grid [aria-sort="ascending"]:before {

@@ -45,7 +45,6 @@ class EditableColumn extends BasePlugin {
         }
         input.autocomplete = "off";
         input.spellcheck = false;
-        input.tabIndex = 0;
         input.classList.add("dg-editable");
         input.name = `${gridId.replace("-", "_")}[${i + 1}][${column.field}]`;
         input.value = item[column.field];

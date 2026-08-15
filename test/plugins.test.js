@@ -87,10 +87,6 @@ test("SelectableRows and RowActions inject start/end columns", async () => {
     const actionsTd = inst.querySelector('tbody td[data-column-id="$actions"]');
     expect(actionsTd).toBeTruthy();
     expect(actionsTd.querySelector("button")).toBeTruthy();
-
-    // aria-colindex is sequential presentation info
-    expect(headerThs[0].getAttribute("aria-colindex")).toBe("1");
-    expect(headerThs[1].getAttribute("aria-colindex")).toBe("2");
     document.body.removeChild(inst);
 });
 

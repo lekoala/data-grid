@@ -35,10 +35,8 @@ class FixedHeight extends BasePlugin {
         const grid = this.grid;
         const tbody = grid.querySelector("tbody");
         const tr = document.createElement("tr");
-        setAttribute(tr, "role", "row");
         setAttribute(tr, "hidden", "");
         tr.classList.add("dg-fake-row");
-        tr.tabIndex = 0;
         tbody?.appendChild(tr);
     }
 

@@ -84,7 +84,7 @@ data-grid .dg-responsive-table th {
     background-color: var(--header-background);
   }
 
-  data-grid[responsive] tbody td[role="gridcell"] {
+  data-grid[responsive] tbody td {
     padding-left: calc(100% - var(--responsive-width) - var(--padding) * 4 + 0.5rem);
   }
 
@@ -102,7 +102,7 @@ data-grid .dg-responsive-table th {
     padding: 5px;
   }
 
-  data-grid[responsive] td[role="gridcell"] {
+  data-grid[responsive] td {
     min-height: 35px;
     width: auto;
   }
@@ -125,7 +125,7 @@ data-grid .dg-responsive-table th {
     width: calc(100% - var(--responsive-width) - var(--padding) * 4);
   }
 
-  data-grid[responsive] tr.dg-head-columns th[role="columnheader button"] {
+  data-grid[responsive] tr.dg-head-columns th.dg-sortable {
     padding: 0.36em 1.3em 0.36em 0.75em;
   }
 

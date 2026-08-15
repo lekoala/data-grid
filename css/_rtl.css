@@ -3,13 +3,11 @@ data-grid[dir="rtl"] td {
   text-align: right;
 }
 
-data-grid[dir="rtl"] [aria-sort] {
+data-grid[dir="rtl"] th.dg-sortable {
   padding-left: 1rem;
   padding-right: 0.5rem;
 }
 
-data-grid[dir="rtl"] [aria-sort="none"]:after,
-data-grid[dir="rtl"] [aria-sort="none"]:before,
 data-grid[dir="rtl"] [aria-sort="ascending"]:before,
 data-grid[dir="rtl"] [aria-sort="descending"]:after {
   left: 0.75rem;

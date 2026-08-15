@@ -126,7 +126,6 @@ class SelectableRows extends BasePlugin {
     createHeaderCell(th) {
         setAttribute(th, "width", "40");
         th.classList.add(...[SELECTABLE_CLASS, "dg-not-resizable", "dg-not-sortable"]);
-        th.tabIndex = 0;
 
         this.selectAll = document.createElement("input");
         this.selectAll.type = "checkbox";
@@ -152,7 +151,6 @@ class SelectableRows extends BasePlugin {
      */
     createFilterCell(th) {
         th.classList.add(SELECTABLE_CLASS);
-        th.tabIndex = 0;
     }
 
     /**

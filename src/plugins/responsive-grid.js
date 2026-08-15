@@ -133,7 +133,6 @@ class ResponsiveGrid extends BasePlugin {
     createHeaderCell(th) {
         setAttribute(th, "width", "40");
         th.classList.add(...[`${RESPONSIVE_CLASS}-toggle`, "dg-not-resizable", "dg-not-sortable"]);
-        th.tabIndex = 0;
     }
 
     /**
@@ -141,7 +140,6 @@ class ResponsiveGrid extends BasePlugin {
      */
     createFilterCell(th) {
         th.classList.add(`${RESPONSIVE_CLASS}-toggle`);
-        th.tabIndex = 0;
     }
 
     /**
@@ -314,15 +312,12 @@ class ResponsiveGrid extends BasePlugin {
 
     computeLabelWidth() {
         let idealWidth = 0;
-        let consideredCol = 0;
-        while (idealWidth < 120) {
-            consideredCol++;
-            const hCol = find(this.grid, `.dg-head-columns th[aria-colindex="${consideredCol}"]`);
-            if (hCol) {
-                idealWidth += hCol.offsetWidth;
-            } else {
+        const hCols = findAll(this.grid, ".dg-head-columns th");
+        for (const hCol of hCols) {
+            if (idealWidth >= 120) {
                 break;
             }
+            idealWidth += hCol.offsetWidth;
         }
         return idealWidth;
     }

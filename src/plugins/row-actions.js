@@ -38,7 +38,6 @@ class RowActions extends BasePlugin {
      */
     createHeaderCell(th) {
         th.classList.add(...["dg-actions", "dg-not-sortable", "dg-not-resizable", this.actionClass]);
-        th.tabIndex = 0;
     }
 
     /**
@@ -46,7 +45,6 @@ class RowActions extends BasePlugin {
      */
     createFilterCell(th) {
         th.classList.add(...["dg-actions", this.actionClass]);
-        th.tabIndex = 0;
     }
 
     /**
@@ -58,7 +56,6 @@ class RowActions extends BasePlugin {
         const item = ctx.row;
         const labels = this.grid.labels;
         td.classList.add(...["dg-actions", this.actionClass]);
-        td.tabIndex = 0;
 
         // Add menu toggle
         const actionsToggle = document.createElement("button");
@@ -72,6 +69,7 @@ class RowActions extends BasePlugin {
 
         for (const action of grid.options.actions) {
             const button = document.createElement("button");
+            button.dataset.action = action.name;
             if (action.html) {
                 button.innerHTML = action.html;
             } else {

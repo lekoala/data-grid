@@ -406,15 +406,15 @@ class DataGrid extends BaseElement {
 
     static template() {
         return `
-<table role="grid" >
-    <thead role="rowgroup">
-        <tr role="row" aria-rowindex="1" class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
-        <tr role="row" aria-rowindex="2" class="dg-head-filters"></tr>
+<table>
+    <thead>
+        <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
+        <tr class="dg-head-filters"></tr>
     </thead>
-    <tbody role="rowgroup" data-empty="${labels.noData}"></tbody>
-    <tfoot role="rowgroup" hidden>
-        <tr role="row" aria-rowindex="1">
-            <td role="gridcell">
+    <tbody data-empty-message="${labels.noData}"></tbody>
+    <tfoot hidden>
+        <tr>
+            <td>
             <div class="dg-footer">
                 <div class="dg-page-nav">
                   <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
@@ -441,8 +441,8 @@ class DataGrid extends BaseElement {
             </td>
         </tr>
     </tfoot>
-    <ul class="dg-menu" hidden></ul>
 </table>
+<ul class="dg-menu" hidden></ul>
 `;
     }
 
@@ -476,8 +476,8 @@ class DataGrid extends BaseElement {
      * @param {HTMLTableSectionElement} tbody
      */
     #setNoData(tbody) {
-        if (!this.hasDataError && tbody.getAttribute("data-empty") !== this.noData) {
-            tbody.setAttribute("data-empty", this.noData);
+        if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
+            tbody.setAttribute("data-empty-message", this.noData);
         }
     }
 
@@ -801,8 +801,8 @@ class DataGrid extends BaseElement {
 
         this.loading = true;
         this.error = null;
-        this.classList.add("dg-loading");
-        this.classList.remove("dg-empty", "dg-network-error");
+        setAttribute(this, "data-loading", "");
+        removeAttribute(this, "data-error");
 
         try {
             let result;
@@ -818,16 +818,16 @@ class DataGrid extends BaseElement {
             if (requestId !== this._requestSeq) return;
             if (err?.name === "AbortError" || controller.signal.aborted) return;
             this.error = err;
-            this.classList.add("dg-empty", "dg-network-error");
+            setAttribute(this, "data-error", "");
             this.tbody?.setAttribute(
-                "data-empty",
+                "data-empty-message",
                 this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
             );
             dispatch(this, "loadError", err);
         } finally {
             if (requestId === this._requestSeq) {
                 this.loading = false;
-                this.classList.remove("dg-loading");
+                removeAttribute(this, "data-loading");
             }
         }
     }
@@ -1314,16 +1314,13 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Compute the aria-sort value for a column based on the current query.
+     * Sort direction of a column based on the current query.
      * @param {String} field
-     * @returns {"ascending"|"descending"|"none"}
+     * @returns {"asc"|"desc"|null}
      */
-    getColumnSort(field) {
+    getColumnSortDirection(field) {
         const s = (this._query.sort || []).find((x) => x.field === field);
-        if (!s) {
-            return "none";
-        }
-        return s.direction === "asc" ? "ascending" : "descending";
+        return s?.direction ?? null;
     }
 
     /**
@@ -1348,7 +1345,7 @@ class DataGrid extends BaseElement {
         // We clicked on a column, update sort state
         if (col === null) {
             // Or fetch current sort
-            col = this.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
+            col = this.querySelector("thead tr.dg-head-columns th[aria-sort]");
         }
         if (!col) {
             return;
@@ -1356,27 +1353,30 @@ class DataGrid extends BaseElement {
 
         const current = col.getAttribute("aria-sort");
         let next;
-        if (!current || current === "none") {
+        if (!current) {
             next = "ascending";
         } else if (current === "ascending") {
             next = "descending";
         } else {
-            next = "none";
+            next = null;
         }
 
         const sort =
-            next === "none"
+            next === null
                 ? []
                 : [{ field: col.getAttribute("field"), direction: next === "ascending" ? "asc" : "desc" }];
 
         // Reflect the sort state on the headers immediately
         const headers = findAll(this, "thead tr.dg-head-columns th");
         for (const th of headers) {
-            if (!th.hasAttribute("aria-sort")) {
-                continue;
-            }
             const match = sort.find((s) => s.field === th.getAttribute("field"));
-            th.setAttribute("aria-sort", match ? (match.direction === "asc" ? "ascending" : "descending") : "none");
+            if (match) {
+                th.setAttribute("aria-sort", match.direction === "asc" ? "ascending" : "descending");
+                setAttribute(th, "data-sort", match.direction);
+            } else {
+                th.removeAttribute("aria-sort");
+                th.removeAttribute("data-sort");
+            }
         }
 
         return this.setQuery({ sort });
@@ -1470,8 +1470,6 @@ class DataGrid extends BaseElement {
         // Create row
         const tr = ce("tr");
         this.headerRow = tr;
-        tr.setAttribute("role", "row");
-        tr.setAttribute("aria-rowindex", "1");
         tr.setAttribute("class", "dg-head-columns");
 
         // We need a real th from the dom to compute the size
@@ -1483,7 +1481,6 @@ class DataGrid extends BaseElement {
         }
 
         // Create columns
-        let idx = 0;
         let totalWidth = 0;
         this.log("createColumnHeaders - columns", this.getColumns());
 
@@ -1491,11 +1488,8 @@ class DataGrid extends BaseElement {
             if (column.attr) {
                 continue;
             }
-            const colIdx = idx + 1;
             const th = ce("th");
             th.setAttribute("scope", "col");
-            th.setAttribute("role", "columnheader");
-            th.setAttribute("aria-colindex", `${colIdx}`);
             setAttribute(th, "data-column-id", column.id ?? column.field);
             if (!column.virtual) {
                 th.setAttribute("id", randstr("dg-col-"));
@@ -1510,7 +1504,6 @@ class DataGrid extends BaseElement {
             }
 
             tr.appendChild(th);
-            idx++;
             if (!column.hidden) {
                 totalWidth += Number.parseInt(th.getAttribute("width")) || 0;
             }
@@ -1558,19 +1551,14 @@ class DataGrid extends BaseElement {
             }
         }
 
-        // Sort col on click and on Enter/Space for keyboard users
-        const rowsWithSort = findAll(tr, "[aria-sort]");
-        for (const sortableRow of rowsWithSort) {
-            sortableRow.addEventListener("click", () => this.sortData(sortableRow));
-            sortableRow.addEventListener("keydown", (event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    this.sortData(sortableRow);
-                }
-            });
+        // Sort col on button click (native button handles Enter/Space)
+        const sortableHeaders = findAll(tr, "th.dg-sortable");
+        for (const th of sortableHeaders) {
+            const button = th.querySelector("button[type=button]");
+            if (button) {
+                button.addEventListener("click", () => this.sortData(th));
+            }
         }
-
-        this.table && setAttribute(this.table, "aria-colcount", this.columnsLength(true));
     }
 
     /**
@@ -1580,8 +1568,9 @@ class DataGrid extends BaseElement {
      */
     renderDefaultHeaderCell(th, ctx) {
         const { column, sampleTh } = ctx;
-        if (this.options.sortable && !column.noSort) {
-            th.setAttribute("aria-sort", this.getColumnSort(column.field));
+        const sortable = this.options.sortable && !column.noSort;
+        if (sortable) {
+            th.classList.add("dg-sortable");
         }
         if (this.options.responsive) {
             setAttribute(th, "data-responsive", column.responsive || "");
@@ -1590,13 +1579,25 @@ class DataGrid extends BaseElement {
         const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
         th.dataset.minWidth = `${computedWidth}`;
         applyColumnDefinition(th, column);
-        th.tabIndex = 0;
-        th.textContent = column.title;
 
         const w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
         setAttribute(th, "width", w);
         if (column.hidden) {
             th.setAttribute("hidden", "");
+        }
+
+        if (sortable) {
+            const direction = this.getColumnSortDirection(column.field);
+            if (direction) {
+                th.setAttribute("aria-sort", direction === "asc" ? "ascending" : "descending");
+                setAttribute(th, "data-sort", direction);
+            }
+            const button = ce("button");
+            button.type = "button";
+            button.textContent = column.title;
+            th.appendChild(button);
+        } else {
+            th.textContent = column.title;
         }
     }
 
@@ -1605,26 +1606,24 @@ class DataGrid extends BaseElement {
 
         // Create row for filters
         const tr = ce("tr");
-        tr.setAttribute("role", "row");
-        tr.setAttribute("aria-rowindex", "2");
         tr.setAttribute("class", "dg-head-filters");
         if (!this.options.filterable) {
             tr.setAttribute("hidden", "");
         }
 
+        // The header cells are indexed the same way (same column iteration order)
+        const headerThs = Array.from(thead?.querySelectorAll("tr.dg-head-columns th") ?? []);
         this.log("createColumnFilters - columns", this.getColumns());
         for (const column of this.getColumns()) {
             if (column.attr) {
                 continue;
             }
-            const colIdx = idx + 1;
-            const relatedTh = thead?.querySelector(`tr.dg-head-columns th[aria-colindex="${colIdx}"]`);
+            const relatedTh = headerThs[idx];
             if (!relatedTh) {
-                console.warn("Related th not found", colIdx);
+                console.warn("Related th not found", idx);
                 continue;
             }
             const th = ce("th");
-            th.setAttribute("aria-colindex", `${colIdx}`);
             setAttribute(th, "data-column-id", column.id ?? column.field);
 
             const ctx = { grid: this, column };
@@ -1675,11 +1674,6 @@ class DataGrid extends BaseElement {
      */
     renderDefaultFilterCell(th, column, relatedTh) {
         const filter = this.createFilterElement(column, relatedTh);
-        if (!this.options.filterable) {
-            th.tabIndex = 0;
-        } else {
-            filter.tabIndex = 0;
-        }
 
         // Reflect the current query filters into the input
         const filterState = this._query.filters?.[column.field];
@@ -1761,9 +1755,6 @@ class DataGrid extends BaseElement {
         let i = 0;
         for (const item of this.rows) {
             const tr = ce("tr");
-            setAttribute(tr, "role", "row");
-            setAttribute(tr, "aria-rowindex", i + 1);
-            tr.tabIndex = 0;
 
             // Expandable
             if (this.options.expand) {
@@ -1775,7 +1766,6 @@ class DataGrid extends BaseElement {
                 });
             }
 
-            let idx = 0;
             for (const column of this.getColumns()) {
                 if (!column) {
                     console.error("Empty column found!", this.getColumns());
@@ -1793,13 +1783,10 @@ class DataGrid extends BaseElement {
                     continue;
                 }
                 const td = ce("td");
-                td.setAttribute("role", "gridcell");
-                td.setAttribute("aria-colindex", `${idx + 1}`);
                 setAttribute(td, "data-column-id", column.id ?? column.field);
                 applyColumnDefinition(td, column);
                 // This is required for pure css responsive layout
                 td.setAttribute("data-name", column.title);
-                td.tabIndex = -1;
 
                 const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field] };
                 if (column.renderCell) {
@@ -1808,7 +1795,6 @@ class DataGrid extends BaseElement {
                     this.renderDefaultCell(td, ctx);
                 }
                 tr.appendChild(td);
-                idx++;
             }
 
             tbody.appendChild(tr);
@@ -1817,20 +1803,20 @@ class DataGrid extends BaseElement {
             i++;
         }
 
-        tbody.setAttribute("role", "rowgroup");
-
         // Keep data empty message
         const prev = this.tbody;
-        prev && tbody.setAttribute("data-empty", prev.getAttribute("data-empty"));
+        prev && tbody.setAttribute("data-empty-message", prev.getAttribute("data-empty-message"));
         this.table?.replaceChild(tbody, prev);
 
         this.paginate();
 
         this.runPlugins("afterRender", this._renderContext);
 
-        this.classList.toggle("dg-empty", !this.rows.length);
-
-        setAttribute(this.table, "aria-rowcount", this.rows.length);
+        if (this.rows.length) {
+            removeAttribute(this, "data-empty");
+        } else {
+            setAttribute(this, "data-empty", "");
+        }
 
         dispatch(this, "bodyRendered");
     }

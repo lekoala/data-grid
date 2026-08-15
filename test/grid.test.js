@@ -34,7 +34,7 @@ test("it is registered", () => {
     expect(inst).toBe(DataGrid);
 });
 
-test("row cells get the correct aria-colindex", async () => {
+test("cells carry a stable data-column-id", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [
@@ -45,9 +45,9 @@ test("row cells get the correct aria-colindex", async () => {
         [{ name: "Alice", age: 30 }],
     );
 
-    const tds = inst.querySelectorAll("tbody tr td[aria-colindex]");
-    expect(tds[0].getAttribute("aria-colindex")).toBe("1");
-    expect(tds[1].getAttribute("aria-colindex")).toBe("2");
+    const tds = inst.querySelectorAll("tbody tr td[data-column-id]");
+    expect(tds[0].getAttribute("data-column-id")).toBe("name");
+    expect(tds[1].getAttribute("data-column-id")).toBe("age");
     removeGrid(inst);
 });
 
@@ -70,7 +70,7 @@ test("reconnecting the element does not duplicate the template", async () => {
     removeGrid(inst);
 });
 
-test("clicking a sortable header toggles aria-sort and sorts rows", async () => {
+test("clicking the sort button toggles aria-sort/data-sort and sorts rows", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
@@ -79,22 +79,31 @@ test("clicking a sortable header toggles aria-sort and sorts rows", async () => 
         [{ name: "b" }, { name: "a" }],
     );
 
-    const th = inst.querySelector("thead tr.dg-head-columns th[aria-sort]");
-    expect(th).toBeTruthy();
+    const th = inst.querySelector("thead tr.dg-head-columns th.dg-sortable");
+    const button = th.querySelector("button");
+    expect(button).toBeTruthy();
+    expect(th.hasAttribute("aria-sort")).toBe(false);
+    expect(th.hasAttribute("data-sort")).toBe(false);
 
-    th.click();
+    button.click();
     expect(th.getAttribute("aria-sort")).toBe("ascending");
+    expect(th.getAttribute("data-sort")).toBe("asc");
     await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("a");
 
-    th.click();
+    button.click();
     expect(th.getAttribute("aria-sort")).toBe("descending");
+    expect(th.getAttribute("data-sort")).toBe("desc");
     await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("b");
+
+    button.click();
+    expect(th.hasAttribute("aria-sort")).toBe(false);
+    expect(th.hasAttribute("data-sort")).toBe(false);
     removeGrid(inst);
 });
 
-test("sortable header reacts to Enter and Space", async () => {
+test("sortable header button is the tab stop and a click activates sorting", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
@@ -103,11 +112,13 @@ test("sortable header reacts to Enter and Space", async () => {
         [{ name: "b" }, { name: "a" }],
     );
 
-    const th = inst.querySelector("thead tr.dg-head-columns th[aria-sort]");
-    th.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    const th = inst.querySelector("thead tr.dg-head-columns th.dg-sortable");
+    const button = th.querySelector("button[type=button]");
+    expect(button.tabIndex).toBe(0); // native tab stop
+
+    // Native buttons activate on Enter/Space by firing a click
+    button.dispatchEvent(new Event("click"));
     expect(th.getAttribute("aria-sort")).toBe("ascending");
-    th.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
-    expect(th.getAttribute("aria-sort")).toBe("descending");
     removeGrid(inst);
 });
 
