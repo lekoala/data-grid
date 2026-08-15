@@ -13,6 +13,7 @@ import {
 } from "../utils/shortcuts.js";
 
 const RESPONSIVE_CLASS = "dg-responsive";
+const RESPONSIVE_TOGGLE_WIDTH = 40;
 
 /**
  * @param {Array<HTMLElement>} list
@@ -37,7 +38,6 @@ class ResponsiveGrid extends BasePlugin {
         super(grid);
 
         this.observerBlocked = false;
-        this.prevAction = null;
         this.unblockTimeout = null;
         this._lastEntry = null;
         this._scheduleResize = /** @type {() => void} */ (debounce(() => this.resize(), 100));
@@ -55,6 +55,9 @@ class ResponsiveGrid extends BasePlugin {
 
     disconnected() {
         this.unobserve();
+        if (this.unblockTimeout) {
+            clearTimeout(this.unblockTimeout);
+        }
     }
 
     /**
@@ -114,6 +117,11 @@ class ResponsiveGrid extends BasePlugin {
     unblockObserver() {
         this.unblockTimeout = setTimeout(() => {
             this.observerBlocked = false;
+            // Re-evaluate with the latest observed size: a resize that arrived
+            // while the observer was blocked would otherwise be lost.
+            if (this._lastEntry) {
+                this.resize();
+            }
         }, 200); // more than debounce
     }
 
@@ -182,140 +190,134 @@ class ResponsiveGrid extends BasePlugin {
         // check inlineSize (width) and not blockSize (height)
         const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
         const size = Math.round(contentBoxSize.inlineSize);
-        const tableWidth = table.offsetWidth;
-        const realTableWidth = findAll(headerRow, "th").reduce((result, th) => {
-            return result + th.offsetWidth;
-        }, 0);
-        const diff = (realTableWidth || tableWidth) - size - 1;
-        const minWidth = 50;
-        const prevAction = this.prevAction;
-        // We have an array with the columns to show/hide are in order, most important first
-        const headerCols = sortByPriority(
+
+        // Preferred (ideal) width of a header column, before any compression.
+        // Falls back to the CSS min-width (plugin columns such as actions or
+        // selection only declare a min/width in CSS) and finally 0: a column
+        // without a declared basis is a stretch column and must not feed its
+        // layout-dependent offsetWidth back into the math (that oscillates).
+        const preferredWidth = (/** @type {HTMLElement} */ th) => {
+            return (
+                Number.parseInt(th.dataset.preferredWidth ?? "") ||
+                Number.parseInt(th.getAttribute("width") ?? "") ||
+                Number.parseInt(th.dataset.minWidth ?? "") ||
+                Number.parseInt(getComputedStyle(th).minWidth || "") ||
+                0
+            );
+        };
+
+        // Hideable candidates: data columns only, responsive !== "0", not
+        // manually hidden. Ordered most important last (priority order).
+        const items = sortByPriority(
             findAll(headerRow, "th[field]")
                 .reverse() // Order takes precedence if no priority is set
-                .filter((col) => {
-                    // Leave out unresponsive columns
-                    return col.dataset.responsive !== "0";
+                .filter((th) => {
+                    const column = grid.getCol(th.getAttribute("field") ?? "");
+                    return column && column.responsive !== 0 && !column.hidden;
                 }),
-        );
+        ).map((th) => {
+            return {
+                th,
+                column: /** @type {import("../data-grid.js").Column|null} */ (
+                    grid.getCol(th.getAttribute("field") ?? "")
+                ),
+            };
+        });
+
+        const isColumnHidden = (/** @type {import("../data-grid.js").Column|null} */ column) => {
+            return Boolean(column && (column.hidden || column.responsiveHidden));
+        };
+
+        // Virtual/fixed columns (selection, actions, ...) consume width without
+        // being hideable. The responsive toggle column is excluded: it is
+        // reserved separately below, only when columns are hidden.
+        const fixedWidth = findAll(headerRow, "th:not([field])")
+            .filter((th) => {
+                return !th.classList.contains(`${RESPONSIVE_CLASS}-toggle`);
+            })
+            .reduce((result, th) => {
+                return result + preferredWidth(/** @type {HTMLElement} */ (th));
+            }, 0);
+        const requiredWidth = (/** @type {Array<any>} */ visibleItems) => {
+            let total = fixedWidth;
+            if (grid.options.responsiveToggle && items.some(({ column }) => column?.responsiveHidden)) {
+                total += RESPONSIVE_TOGGLE_WIDTH;
+            }
+            for (const { th } of visibleItems) {
+                total += preferredWidth(th);
+            }
+            return total;
+        };
+
+        // All data columns that are currently rendered (including responsive: 0
+        // columns, which never hide but still consume width).
+        let visible = findAll(headerRow, "th[field]")
+            .map((th) => {
+                return {
+                    th,
+                    column: /** @type {import("../data-grid.js").Column|null} */ (
+                        grid.getCol(th.getAttribute("field") ?? "")
+                    ),
+                };
+            })
+            .filter(({ column }) => !isColumnHidden(column));
         let changed = false;
 
-        grid.log(`table is ${tableWidth}/${realTableWidth} and available size is ${size}. Diff: ${diff}`);
-
-        // The table is too big when diff has a high value, otherwise it will be like -1 or -2
-        if (diff > 0) {
-            if (prevAction === "show") {
-                return;
-            }
-            this.prevAction = "hide";
-            let remaining = diff;
-            let cols = headerCols.filter((col) => {
-                return !col.hasAttribute("hidden") && col.hasAttribute("data-responsive");
-            });
-            if (cols.length === 0) {
-                cols = headerCols.filter((col) => {
-                    return !col.hasAttribute("hidden");
-                });
-                // Always keep one column
-                if (cols.length === 1) {
-                    return;
+        // The table is too wide: hide the next priority column until it fits.
+        // Always keep at least one real data column.
+        if (requiredWidth(visible) > size) {
+            for (const item of items) {
+                if (requiredWidth(visible) <= size) {
+                    break;
                 }
-            }
-
-            for (const col of cols) {
-                if (remaining < 0) {
+                if (visible.length <= 1) {
+                    break;
+                }
+                const { column } = item;
+                if (!column?.field || isColumnHidden(column)) {
                     continue;
                 }
-
-                const colWidth = col.offsetWidth;
-                const field = col.getAttribute("field");
-                if (!field) {
-                    continue;
-                }
-                col.dataset.baseWidth = `${col.offsetWidth}`;
-
-                grid.hideColumn(field, false);
-                grid.setColProp(field, "responsiveHidden", true);
+                grid.setColProp(column.field, "responsiveHidden", true);
+                visible = visible.filter((c) => c.th !== item.th);
                 changed = true;
-
-                remaining -= colWidth;
-                remaining = Math.round(remaining);
             }
         } else {
-            if (prevAction === "hide") {
-                return;
-            }
-            this.prevAction = "show";
-
-            const requiredWidth =
-                headerCols
-                    .filter((col) => {
-                        return !col.hasAttribute("hidden");
-                    })
-                    .reduce((result, col) => {
-                        const width = col.dataset.minWidth
-                            ? Number.parseInt(col.dataset.minWidth ?? "")
-                            : col.offsetWidth;
-                        return result + width;
-                    }, 0) + minWidth; // Add an offset so that inserting column is smoother
-
-            // Compute available width to insert columns
-            let remaining = size - requiredWidth;
-            // Do we have any hidden column that we can restore ?
-            const filteredHeaderCols = headerCols
-                .slice()
-                .reverse() // Reverse the array to restore the columns in the proper order
-                .filter((col) => {
-                    return col.hasAttribute("hidden");
-                });
-
-            for (const col of filteredHeaderCols) {
-                if (remaining < minWidth) {
+            // Room is available: restore columns in reverse priority order while
+            // they fit.
+            const restorable = items.filter(({ column }) => column?.responsiveHidden).reverse();
+            for (const { th, column } of restorable) {
+                if (!column?.field) {
                     continue;
                 }
-                const colWidth = Number.parseInt(col.dataset.minWidth ?? "");
-
-                // We need to have enough space to restore it
-                if (colWidth > remaining) {
-                    remaining = -1; // break loop to keep restoring in order
-                    continue;
+                const width = preferredWidth(th);
+                if (requiredWidth(visible) + width > size) {
+                    break;
                 }
-
-                const field = col.getAttribute("field");
-                if (!field) {
-                    continue;
-                }
-
-                grid.showColumn(field, false);
-                grid.setColProp(field, "responsiveHidden", false);
+                grid.setColProp(column.field, "responsiveHidden", false);
+                visible = [...visible, { th, column }];
                 changed = true;
-
-                remaining -= colWidth;
-                remaining = Math.round(remaining);
             }
         }
 
-        // Check footer
-        const footer = find(table, "tfoot");
-        if (!footer) {
-            return;
-        }
-        const realFooterWidth = findAll(footer, ".dg-footer > div").reduce((result, div) => {
-            return result + div.offsetWidth;
-        }, 0);
-        const availableFooterWidth = footer.offsetWidth - realFooterWidth;
-        if (realFooterWidth > size) {
-            addClass(footer, "dg-footer-compact");
-        } else if (availableFooterWidth > 250) {
-            removeClass(footer, "dg-footer-compact");
-        }
         if (changed) {
+            this.blockObserver();
             grid.renderTable();
+            this.unblockObserver();
         }
-        // Prevent resize loop
-        this.unblockTimeout = setTimeout(() => {
-            this.prevAction = null;
-        }, 1000);
+
+        // Footer compact state is independent of column changes.
+        const footer = find(table, "tfoot");
+        if (footer) {
+            const realFooterWidth = findAll(footer, ".dg-footer > div").reduce((result, div) => {
+                return result + div.offsetWidth;
+            }, 0);
+            const availableFooterWidth = footer.offsetWidth - realFooterWidth;
+            if (realFooterWidth > size) {
+                addClass(footer, "dg-footer-compact");
+            } else if (availableFooterWidth > 250) {
+                removeClass(footer, "dg-footer-compact");
+            }
+        }
         table.style.visibility = "visible";
     }
 

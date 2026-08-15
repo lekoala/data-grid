@@ -48,12 +48,12 @@ data-grid {
   --dg-radius: 8px;
   --dg-padding-half: calc(var(--dg-padding-y) / 2);
   --dg-icon-scale: 1;
-  --dg-responsive-width: 60%;
   color: var(--dg-color);
   font: inherit;
   line-height: inherit;
   display: block;
   position: relative;
+  overflow-x: auto;
   min-height: 6rem;
 }
 
@@ -173,6 +173,7 @@ data-grid tr {
 }
 
 data-grid th, data-grid td {
+  box-sizing: border-box;
   empty-cells: show;
   padding: var(--dg-padding-y) var(--dg-padding-x);
   text-align: left;
@@ -215,10 +216,12 @@ data-grid .dg-expandable.dg-expanded td {
 }
 
 data-grid .dg-selectable {
-  padding-left: var(--dg-space-1);
-  padding-right: var(--dg-space-1);
+  inline-size: var(--dg-selection-column-width);
+  min-inline-size: var(--dg-selection-column-width);
+  max-inline-size: var(--dg-selection-column-width);
   text-align: center;
-  width: var(--dg-selection-column-width);
+  padding-inline-start: 0;
+  padding-inline-end: 0;
   font-size: 1em;
 }
 
@@ -608,18 +611,18 @@ data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .d
 
 data-grid th.dg-sortable {
   cursor: pointer;
-  padding-right: calc(var(--dg-padding-x)  + 1rem);
 }
 
-data-grid th.dg-sortable > .dg-sort {
+data-grid th.dg-sortable > .dg-sort, data-grid th.dg-sortable > .dg-sort:hover, data-grid th.dg-sortable > .dg-sort:active, data-grid th.dg-sortable > .dg-sort:focus {
   appearance: none;
   box-shadow: none;
-  color: inherit;
+  color: var(--dg-header-color);
   display: flex;
   font: inherit;
   gap: var(--dg-space-1);
   line-height: inherit;
   text-align: inherit;
+  text-decoration: none;
   background: none;
   border: 0;
   border-radius: 0;
@@ -635,42 +638,28 @@ data-grid th.dg-sortable:focus-within {
   box-shadow: inset 0 -2px 0 var(--dg-accent);
 }
 
-data-grid [aria-sort="ascending"]:before, data-grid [aria-sort="descending"]:after {
-  right: var(--dg-padding-x);
+data-grid th[aria-sort] > .dg-sort:after {
   content: " ";
-  position: absolute;
-  border: .2rem solid #0000;
+  border: 4px solid #0000;
+  border-width: 4px 5px;
+  flex: none;
   width: 0;
   height: 0;
-  margin-left: -.2rem;
-  top: calc(50% - .5rem);
 }
 
-data-grid [aria-sort="ascending"]:before {
-  border-bottom-color: var(--dg-color);
-  opacity: .75;
+data-grid th[aria-sort="ascending"] > .dg-sort:after {
+  border-top-width: 0;
+  border-bottom-color: var(--dg-header-color);
 }
 
-data-grid [aria-sort="descending"]:after {
-  border-top-color: var(--dg-color);
-  opacity: .75;
-  top: auto;
-  bottom: calc(50% - .5rem);
+data-grid th[aria-sort="descending"] > .dg-sort:after {
+  border-bottom-width: 0;
+  border-top-color: var(--dg-header-color);
 }
 
 /* css/_rtl.css */
 data-grid[dir="rtl"] th, data-grid[dir="rtl"] td {
   text-align: right;
-}
-
-data-grid[dir="rtl"] th.dg-sortable {
-  padding-left: calc(var(--dg-padding-x)  + 1rem);
-  padding-right: var(--dg-padding-x);
-}
-
-data-grid[dir="rtl"] [aria-sort="ascending"]:before, data-grid[dir="rtl"] [aria-sort="descending"]:after {
-  left: var(--dg-padding-x);
-  right: auto;
 }
 
 data-grid[dir="rtl"] tfoot .dg-meta {
@@ -790,32 +779,62 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
   display: inline-block;
 }
 
-data-grid .dg-actions.dg-actions-expand {
+data-grid .dg-actions-menu {
   position: absolute;
-  right: var(--dg-space-2);
-  display: flex;
-  justify-content: flex-end;
-  align-items:  center;
-  gap: var(--dg-space-1);
-  padding: var(--dg-space-1);
+  z-index: 3;
+  list-style: none;
+  padding: var(--dg-space-2);
   background-color: var(--dg-bg);
   border: 1px solid var(--dg-border-color);
   border-radius: var(--dg-radius);
-  z-index: 1;
-  width: auto;
-  max-width: none;
-  min-height: 32px;
-  top: 50%;
-  transform: translateY(-50%);
-  box-shadow: 0 10px 24px #0f172a14;
+  display: none;
+  min-width: 180px;
+  max-width: 240px;
+  margin: 0;
+  box-shadow: 0 12px 24px #0f172a1a;
 }
 
-data-grid .dg-actions.dg-actions-expand.dg-actions-more {
+data-grid .dg-actions-menu.dg-actions-open {
+  display: block;
+}
+
+data-grid .dg-actions-menu li {
+  margin: 0;
+  padding: 0;
+}
+
+data-grid .dg-actions-menu li + li {
+  margin-top: var(--dg-space-1);
+}
+
+data-grid .dg-actions-menu button, data-grid .dg-actions-menu a {
+  display: flex;
+  justify-content: flex-start;
+  align-items:  center;
+  gap: var(--dg-space-2);
+  padding: 0 var(--dg-space-2);
+  border-radius: var(--dg-space-1);
+  color: var(--dg-color);
+  text-decoration: none;
+  background-color: #0000;
+  border: 1px solid #0000;
   width: 100%;
+  height: auto;
+  min-height: 28px;
 }
 
-data-grid .dg-actions.dg-actions-expand.dg-actions-more button, data-grid .dg-actions.dg-actions-expand.dg-actions-more a {
-  display: inline-block;
+data-grid .dg-actions-menu button:hover, data-grid .dg-actions-menu a:hover {
+  background-color: var(--dg-row-hover-bg);
+}
+
+data-grid .dg-actions-menu button[data-intent="primary"], data-grid .dg-actions-menu a[data-intent="primary"] {
+  color: var(--dg-accent);
+  background-color: #0000;
+}
+
+data-grid .dg-actions-menu button[data-intent="danger"], data-grid .dg-actions-menu a[data-intent="danger"] {
+  color: var(--dg-danger-color);
+  background-color: #0000;
 }
 
 data-grid button[data-intent="danger"], data-grid a[data-intent="danger"] {
@@ -901,137 +920,6 @@ data-grid .dg-responsive-table td, data-grid .dg-responsive-table th {
 
 data-grid .dg-responsive-table th {
   max-width: 40%;
-}
-
-@media only screen and (max-width: 767px) {
-  data-grid[responsive] .dg-resizer, data-grid[responsive] .dg-meta, data-grid[responsive] .dg-input-page {
-    display: none;
-  }
-
-  data-grid[responsive] table, data-grid[responsive] tbody, data-grid[responsive] tfoot, data-grid[responsive] th, data-grid[responsive] td, data-grid[responsive] tr:not([hidden]) {
-    display: block;
-  }
-
-  data-grid[responsive] thead {
-    display: flex;
-    border-bottom: 1px solid var(--dg-border-color);
-  }
-
-  data-grid[responsive] thead > tr {
-    flex-grow: 1;
-  }
-
-  data-grid[responsive] thead th {
-    width: auto;
-  }
-
-  data-grid[responsive] tbody tr {
-    border: 1px solid var(--dg-row-border-color);
-    border-radius: var(--dg-radius);
-    margin-bottom: var(--dg-space-2);
-    padding: 0;
-  }
-
-  data-grid[responsive] tbody td {
-    border: none;
-    border-bottom: 1px solid var(--dg-row-border-color);
-    position: relative;
-    padding-left: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 2);
-  }
-
-  data-grid[responsive] tbody td:last-child {
-    border: 0;
-  }
-
-  data-grid[responsive] tbody td:before {
-    color: var(--dg-header-color);
-    position: absolute;
-    padding: var(--dg-padding-y);
-    width: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4);
-    content: attr(data-name);
-    display: block;
-    background-color: var(--dg-header-bg);
-    font-size: .875em;
-    font-weight: 600;
-    top: 0;
-    left: 0;
-  }
-
-  data-grid[responsive] tbody td {
-    padding-left: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4 + .5rem);
-  }
-
-  data-grid[responsive] .dg-selectable {
-    height: var(--dg-control-height);
-    width: auto;
-    margin: 2px 1px;
-  }
-
-  data-grid[responsive] td.dg-selectable:before, data-grid[responsive] td.dg-actions:before {
-    padding: 0;
-  }
-
-  data-grid[responsive] td.dg-selectable label {
-    padding: var(--dg-space-1);
-  }
-
-  data-grid[responsive] td {
-    min-height: calc(var(--dg-control-height)  + var(--dg-space-1));
-    width: auto;
-  }
-
-  data-grid[responsive] td[data-name]:before {
-    height: 100%;
-  }
-
-  data-grid[responsive] td.dg-actions {
-    padding-left: inherit;
-    width: inherit;
-  }
-
-  data-grid[responsive] .dg-actions button {
-    width: inherit !important;
-  }
-
-  data-grid[responsive] tr.dg-head-columns {
-    width: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4);
-    padding: 0;
-  }
-
-  data-grid[responsive] tr.dg-head-columns th.dg-sortable {
-    padding: var(--dg-space-1) calc(var(--dg-padding-x)  + 1rem) var(--dg-space-1) var(--dg-padding-x);
-  }
-
-  data-grid[responsive] tr.dg-head-filters {
-    vertical-align: top;
-    width: calc(100% - (100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4));
-    background: none;
-    padding: 0;
-  }
-
-  data-grid[responsive] .dg-head-filters th input:not(:-webkit-any([type="checkbox"], [type="radio"])) {
-    height: var(--dg-control-height);
-  }
-
-  data-grid[responsive] .dg-head-filters th input:not(:-moz-any([type="checkbox"], [type="radio"])) {
-    height: var(--dg-control-height);
-  }
-
-  data-grid[responsive] .dg-head-filters th input:not(:is([type="checkbox"], [type="radio"])) {
-    height: var(--dg-control-height);
-  }
-
-  data-grid[responsive] .dg-head-filters th.dg-selectable {
-    background: none;
-  }
-
-  data-grid[responsive] .dg-head-filters th.dg-selectable label:before {
-    content: "Column Filters";
-  }
-
-  data-grid[responsive] tfoot .dg-page-nav, data-grid[data-responsive="true"] tfoot .dg-page-nav {
-    min-width: revert;
-  }
 }
 
 /* css/data-grid.css */

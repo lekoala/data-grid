@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import interpolate from "../utils/interpolate.js";
-import { dispatch, findAll, on } from "../utils/shortcuts.js";
+import { dispatch, findAll, off, on } from "../utils/shortcuts.js";
 
 /**
  * Add actions on rows
@@ -53,6 +53,126 @@ class RowActions extends BasePlugin {
     }
 
     /**
+     * Close the popover on any full table render.
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        if (context === "table") {
+            this.closeActionMenu();
+        }
+    }
+
+    /**
+     * Toggle the popover menu for a collapsed actions cell.
+     * @param {HTMLElement} cell
+     * @param {Record<string, any>} row
+     */
+    toggleActionMenu(cell, row) {
+        if (this.openCell === cell) {
+            this.closeActionMenu();
+            return;
+        }
+        this.openActionMenu(cell, row);
+    }
+
+    /**
+     * Open (and fill) the popover menu anchored to the given actions cell.
+     * @param {HTMLElement} cell
+     * @param {Record<string, any>} row
+     */
+    openActionMenu(cell, row) {
+        const grid = this.grid;
+        const labels = grid.labels;
+        if (!this.menu) {
+            this.menu = document.createElement("ul");
+            this.menu.classList.add("dg-actions-menu");
+            grid.appendChild(this.menu);
+            // Capture: close even when an action handler stops propagation.
+            this.menu.addEventListener("click", () => this.closeActionMenu(), true);
+        }
+        const menu = this.menu;
+        while (menu.lastChild) {
+            menu.removeChild(menu.lastChild);
+        }
+        for (const action of grid.options.actions) {
+            if (action.visible && !action.visible(row)) {
+                continue;
+            }
+            const li = document.createElement("li");
+            const { el } = this.createActionElement(action, row, grid, labels);
+            li.appendChild(el);
+            menu.appendChild(li);
+        }
+        if (!menu.lastChild) {
+            return;
+        }
+        this.openCell = cell;
+        cell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "true");
+        menu.classList.add("dg-actions-open");
+        this.positionActionMenu(cell);
+        this._boundDocumentClick = (/** @type {MouseEvent} */ ev) => {
+            if (!menu.contains(/** @type {Node} */ (ev.target))) {
+                this.closeActionMenu();
+            }
+        };
+        on(document, "click", this._boundDocumentClick);
+        this._boundKeydown = (/** @type {KeyboardEvent} */ ev) => {
+            if (ev.key === "Escape") {
+                this.closeActionMenu();
+            }
+        };
+        on(document, "keydown", this._boundKeydown);
+    }
+
+    /**
+     * Position the menu inside the grid, flipping up or to the left when the
+     * cell sits close to an edge. The menu stays inside the grid bounds so the
+     * grid scroll container never clips it.
+     * @param {HTMLElement} cell
+     */
+    positionActionMenu(cell) {
+        const menu = this.menu;
+        const grid = this.grid;
+        if (!menu) {
+            return;
+        }
+        const gridRect = grid.getBoundingClientRect();
+        const cellRect = cell.getBoundingClientRect();
+        const menuHeight = menu.offsetHeight;
+        const menuWidth = menu.offsetWidth;
+        let top = cellRect.bottom - gridRect.top;
+        if (top + menuHeight > gridRect.height) {
+            top = cellRect.top - gridRect.top - menuHeight;
+        }
+        menu.style.top = `${Math.max(0, top)}px`;
+        let right = gridRect.right - cellRect.right;
+        if (right + menuWidth > gridRect.width) {
+            right = gridRect.width - menuWidth;
+        }
+        menu.style.right = `${Math.max(0, right)}px`;
+        menu.style.left = "auto";
+    }
+
+    /**
+     * Close and reset the popover menu.
+     */
+    closeActionMenu() {
+        if (this._boundDocumentClick) {
+            off(document, "click", this._boundDocumentClick);
+            this._boundDocumentClick = null;
+        }
+        if (this._boundKeydown) {
+            off(document, "keydown", this._boundKeydown);
+            this._boundKeydown = null;
+        }
+        if (this.openCell) {
+            this.openCell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "false");
+        }
+        this.openCell = null;
+        this.menu?.classList.remove("dg-actions-open");
+    }
+
+    /**
      * Build the actions cell content: a toggle button plus one element per action.
      * @param {import("../data-grid.js").CellContext} ctx
      * @returns {DocumentFragment}
@@ -69,12 +189,14 @@ class RowActions extends BasePlugin {
         actionsToggle.textContent = "⋯";
         actionsToggle.setAttribute("aria-label", labels.toggleActions);
         actionsToggle.setAttribute("aria-expanded", "false");
+        actionsToggle.setAttribute("aria-haspopup", "menu");
         actionsToggle.title = labels.toggleActions;
         on(actionsToggle, "click", (/** @type {MouseEvent} */ ev) => {
             ev.stopPropagation();
-            const parent = /** @type {HTMLElement} */ (ev.target).parentElement;
-            const expanded = parent?.classList.toggle("dg-actions-expand") ?? false;
-            actionsToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+            const cell = /** @type {HTMLElement} */ (actionsToggle.closest("td") ?? actionsToggle.parentElement);
+            if (cell) {
+                this.toggleActionMenu(cell, rowData);
+            }
         });
         fragment.appendChild(actionsToggle);
 

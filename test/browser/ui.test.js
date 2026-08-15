@@ -87,3 +87,51 @@ test.skipIf(IS_WINDOWS)(
     },
     TIMEOUT,
 );
+
+test.skipIf(IS_WINDOWS)(
+    "a host button color rule does not recolor sort headers",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        const color = await read(
+            v,
+            "getComputedStyle(document.querySelector('#local-grid thead th.dg-sortable button.dg-sort')).color",
+        );
+        expect(color.toLowerCase()).toBe("rgb(17, 24, 39)"); // --dg-header-color
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "responsive hides then restores columns across a shrink/grow sequence",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+        await v.evaluate(`(() => window.grid.setAttribute('responsive', ''))()`);
+
+        const hiddenFields = () => "window.grid.options.columns.filter(c => c.responsiveHidden).map(c => c.field)";
+        const hiddenJson = () => `JSON.stringify(${hiddenFields()})`;
+
+        await v.resize(1280, 900);
+        await waitFor(v, `${hiddenJson()} === '[]'`);
+
+        await v.resize(640, 900);
+        await waitFor(v, `${hiddenFields()}.length > 0`);
+        const at640 = await read(v, hiddenJson());
+
+        await v.resize(400, 900);
+        await waitFor(v, `${hiddenFields()}.length > ${JSON.parse(at640).length}`);
+        const at400 = await read(v, hiddenJson());
+        expect(JSON.parse(at400).length).toBeGreaterThan(JSON.parse(at640).length);
+
+        await v.resize(640, 900);
+        await waitFor(v, `${hiddenFields()}.length === ${JSON.parse(at640).length}`);
+
+        await v.resize(1280, 900);
+        await waitFor(v, `${hiddenJson()} === '[]'`);
+    },
+    TIMEOUT,
+);

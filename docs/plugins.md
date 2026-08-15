@@ -63,7 +63,7 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column         |
 | `BulkActions`      | `bulkActions`                 | bulk action bar for the selection       |
 | `RowActions`       | `actions`                     | row actions column                      |
-| `ResponsiveGrid`   | `responsive`                  | hide/show columns on small screens      |
+| `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room |
 | `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers          |
 | `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering         |
 | `ContextMenu`      | `menu`                        | right-click menu to toggle columns      |

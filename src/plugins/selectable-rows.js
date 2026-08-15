@@ -150,6 +150,8 @@ class SelectableRows extends BasePlugin {
 
         const label = document.createElement("label");
         label.hidden = this.isSingleSelect;
+        // Same full-cell centering box as the row checkboxes
+        label.classList.add("dg-clickable-cell");
         label.appendChild(this.selectAll);
 
         th.appendChild(label);

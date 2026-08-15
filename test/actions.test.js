@@ -221,3 +221,63 @@ test("default action makes the row clickable", async () => {
     expect(detail.action).toBe("view");
     document.body.removeChild(inst);
 });
+
+test("more than two actions collapse into a popover menu", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "one", label: "One" },
+                { name: "two", label: "Two" },
+                { name: "three", label: "Three" },
+            ],
+        },
+        [{ name: "a" }],
+        { RowActions },
+    );
+    const cell = inst.tbody.querySelector('td[data-column-id="$actions"]');
+    expect(cell.classList.contains("dg-actions-more")).toBe(true);
+    expect(cell.querySelectorAll("button[data-action]").length).toBe(3);
+
+    const toggle = cell.querySelector("button.dg-actions-toggle");
+    toggle.click();
+    const menu = inst.querySelector(".dg-actions-menu");
+    expect(menu.classList.contains("dg-actions-open")).toBe(true);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(menu.querySelectorAll("button[data-action]").length).toBe(3);
+
+    // Selecting an action dispatches it and closes the menu
+    let detail = null;
+    inst.addEventListener("action", (ev) => {
+        detail = ev.detail;
+    });
+    menu.querySelector('button[data-action="two"]').click();
+    expect(detail.action).toBe("two");
+    expect(menu.classList.contains("dg-actions-open")).toBe(false);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    document.body.removeChild(inst);
+});
+
+test("Escape closes the actions popover", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "one", label: "One" },
+                { name: "two", label: "Two" },
+                { name: "three", label: "Three" },
+            ],
+        },
+        [{ name: "a" }],
+        { RowActions },
+    );
+    const toggle = inst.tbody.querySelector('td[data-column-id="$actions"] button.dg-actions-toggle');
+    toggle.click();
+    const menu = inst.querySelector(".dg-actions-menu");
+    expect(menu.classList.contains("dg-actions-open")).toBe(true);
+
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(menu.classList.contains("dg-actions-open")).toBe(false);
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    document.body.removeChild(inst);
+});

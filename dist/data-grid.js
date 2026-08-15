@@ -599,6 +599,9 @@ function applyCellContent(el, content) {
   }
   el.textContent = content;
 }
+function isColumnHidden(column) {
+  return Boolean(column.hidden || column.responsiveHidden);
+}
 function applyColumnDefinition(el, column) {
   if (column.width) {
     setAttribute(el, "width", column.width);
@@ -606,7 +609,7 @@ function applyColumnDefinition(el, column) {
   if (column.class) {
     addClass(el, column.class);
   }
-  if (column.hidden) {
+  if (isColumnHidden(column)) {
     setAttribute(el, "hidden", "");
     if (column.responsiveHidden) {
       addClass(el, "dg-responsive-hidden");
@@ -1211,12 +1214,12 @@ class DataGrid extends base_element_default {
   }
   visibleColumns() {
     return this.options.columns.filter((col) => {
-      return !col.hidden;
+      return !isColumnHidden(col);
     });
   }
   hiddenColumns() {
     return this.options.columns.filter((col) => {
-      return col.hidden === true;
+      return isColumnHidden(col);
     });
   }
   showColumn(field, render = true) {
@@ -1240,7 +1243,7 @@ class DataGrid extends base_element_default {
   columnsLength(visibleOnly = false) {
     let len = 0;
     for (const col of this.getColumns()) {
-      if (visibleOnly && col.hidden) {
+      if (visibleOnly && isColumnHidden(col)) {
         continue;
       }
       if (!col.attr) {
@@ -1600,8 +1603,11 @@ class DataGrid extends base_element_default {
       } else {
         this.renderDefaultHeaderCell(th, ctx);
       }
+      if (column.class) {
+        addClass(th, column.class);
+      }
       tr.appendChild(th);
-      if (!column.hidden) {
+      if (!isColumnHidden(column)) {
         totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
       }
     }
@@ -1665,7 +1671,8 @@ class DataGrid extends base_element_default {
     applyColumnDefinition(th, column);
     const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
     setAttribute(th, "width", w);
-    if (column.hidden) {
+    th.dataset.preferredWidth = `${w}`;
+    if (isColumnHidden(column)) {
       th.setAttribute("hidden", "");
     }
     if (sortable) {
@@ -1709,7 +1716,7 @@ class DataGrid extends base_element_default {
       } else {
         this.renderDefaultFilterCell(th, column, relatedTh);
       }
-      if (column.hidden) {
+      if (isColumnHidden(column)) {
         th.setAttribute("hidden", "");
       }
       tr.appendChild(th);
@@ -2387,6 +2394,7 @@ class SelectableRows extends base_plugin_default {
     });
     const label = document.createElement("label");
     label.hidden = this.isSingleSelect;
+    label.classList.add("dg-clickable-cell");
     label.appendChild(this.selectAll);
     th.appendChild(label);
     this.syncSelectAll();
@@ -2622,6 +2630,7 @@ var autosize_column_default = AutosizeColumn;
 
 // src/plugins/responsive-grid.js
 var RESPONSIVE_CLASS = "dg-responsive";
+var RESPONSIVE_TOGGLE_WIDTH = 40;
 function sortByPriority(list) {
   return list.sort((a, b) => {
     const v1 = Number.parseInt(a.dataset.responsive ?? "") || 1;
@@ -2634,7 +2643,6 @@ class ResponsiveGrid extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.observerBlocked = false;
-    this.prevAction = null;
     this.unblockTimeout = null;
     this._lastEntry = null;
     this._scheduleResize = debounce(() => this.resize(), 100);
@@ -2650,6 +2658,9 @@ class ResponsiveGrid extends base_plugin_default {
   }
   disconnected() {
     this.unobserve();
+    if (this.unblockTimeout) {
+      clearTimeout(this.unblockTimeout);
+    }
   }
   responsiveChanged(enabled) {
     if (enabled) {
@@ -2696,6 +2707,9 @@ class ResponsiveGrid extends base_plugin_default {
   unblockObserver() {
     this.unblockTimeout = setTimeout(() => {
       this.observerBlocked = false;
+      if (this._lastEntry) {
+        this.resize();
+      }
     }, 200);
   }
   hasHiddenColumns() {
@@ -2742,105 +2756,91 @@ class ResponsiveGrid extends base_plugin_default {
     }
     const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
     const size = Math.round(contentBoxSize.inlineSize);
-    const tableWidth = table.offsetWidth;
-    const realTableWidth = findAll(headerRow, "th").reduce((result, th) => {
-      return result + th.offsetWidth;
+    const preferredWidth = (th) => {
+      return Number.parseInt(th.dataset.preferredWidth ?? "") || Number.parseInt(th.getAttribute("width") ?? "") || Number.parseInt(th.dataset.minWidth ?? "") || Number.parseInt(getComputedStyle(th).minWidth || "") || 0;
+    };
+    const items = sortByPriority(findAll(headerRow, "th[field]").reverse().filter((th) => {
+      const column = grid.getCol(th.getAttribute("field") ?? "");
+      return column && column.responsive !== 0 && !column.hidden;
+    })).map((th) => {
+      return {
+        th,
+        column: grid.getCol(th.getAttribute("field") ?? "")
+      };
+    });
+    const isColumnHidden2 = (column) => {
+      return Boolean(column && (column.hidden || column.responsiveHidden));
+    };
+    const fixedWidth = findAll(headerRow, "th:not([field])").filter((th) => {
+      return !th.classList.contains(`${RESPONSIVE_CLASS}-toggle`);
+    }).reduce((result, th) => {
+      return result + preferredWidth(th);
     }, 0);
-    const diff = (realTableWidth || tableWidth) - size - 1;
-    const minWidth = 50;
-    const prevAction = this.prevAction;
-    const headerCols = sortByPriority(findAll(headerRow, "th[field]").reverse().filter((col) => {
-      return col.dataset.responsive !== "0";
-    }));
+    const requiredWidth = (visibleItems) => {
+      let total = fixedWidth;
+      if (grid.options.responsiveToggle && items.some(({ column }) => column?.responsiveHidden)) {
+        total += RESPONSIVE_TOGGLE_WIDTH;
+      }
+      for (const { th } of visibleItems) {
+        total += preferredWidth(th);
+      }
+      return total;
+    };
+    let visible = findAll(headerRow, "th[field]").map((th) => {
+      return {
+        th,
+        column: grid.getCol(th.getAttribute("field") ?? "")
+      };
+    }).filter(({ column }) => !isColumnHidden2(column));
     let changed = false;
-    grid.log(`table is ${tableWidth}/${realTableWidth} and available size is ${size}. Diff: ${diff}`);
-    if (diff > 0) {
-      if (prevAction === "show") {
-        return;
-      }
-      this.prevAction = "hide";
-      let remaining = diff;
-      let cols = headerCols.filter((col) => {
-        return !col.hasAttribute("hidden") && col.hasAttribute("data-responsive");
-      });
-      if (cols.length === 0) {
-        cols = headerCols.filter((col) => {
-          return !col.hasAttribute("hidden");
-        });
-        if (cols.length === 1) {
-          return;
+    if (requiredWidth(visible) > size) {
+      for (const item of items) {
+        if (requiredWidth(visible) <= size) {
+          break;
         }
-      }
-      for (const col of cols) {
-        if (remaining < 0) {
+        if (visible.length <= 1) {
+          break;
+        }
+        const { column } = item;
+        if (!column?.field || isColumnHidden2(column)) {
           continue;
         }
-        const colWidth = col.offsetWidth;
-        const field = col.getAttribute("field");
-        if (!field) {
-          continue;
-        }
-        col.dataset.baseWidth = `${col.offsetWidth}`;
-        grid.hideColumn(field, false);
-        grid.setColProp(field, "responsiveHidden", true);
+        grid.setColProp(column.field, "responsiveHidden", true);
+        visible = visible.filter((c) => c.th !== item.th);
         changed = true;
-        remaining -= colWidth;
-        remaining = Math.round(remaining);
       }
     } else {
-      if (prevAction === "hide") {
-        return;
-      }
-      this.prevAction = "show";
-      const requiredWidth = headerCols.filter((col) => {
-        return !col.hasAttribute("hidden");
-      }).reduce((result, col) => {
-        const width = col.dataset.minWidth ? Number.parseInt(col.dataset.minWidth ?? "") : col.offsetWidth;
-        return result + width;
-      }, 0) + minWidth;
-      let remaining = size - requiredWidth;
-      const filteredHeaderCols = headerCols.slice().reverse().filter((col) => {
-        return col.hasAttribute("hidden");
-      });
-      for (const col of filteredHeaderCols) {
-        if (remaining < minWidth) {
+      const restorable = items.filter(({ column }) => column?.responsiveHidden).reverse();
+      for (const { th, column } of restorable) {
+        if (!column?.field) {
           continue;
         }
-        const colWidth = Number.parseInt(col.dataset.minWidth ?? "");
-        if (colWidth > remaining) {
-          remaining = -1;
-          continue;
+        const width = preferredWidth(th);
+        if (requiredWidth(visible) + width > size) {
+          break;
         }
-        const field = col.getAttribute("field");
-        if (!field) {
-          continue;
-        }
-        grid.showColumn(field, false);
-        grid.setColProp(field, "responsiveHidden", false);
+        grid.setColProp(column.field, "responsiveHidden", false);
+        visible = [...visible, { th, column }];
         changed = true;
-        remaining -= colWidth;
-        remaining = Math.round(remaining);
       }
-    }
-    const footer = find(table, "tfoot");
-    if (!footer) {
-      return;
-    }
-    const realFooterWidth = findAll(footer, ".dg-footer > div").reduce((result, div) => {
-      return result + div.offsetWidth;
-    }, 0);
-    const availableFooterWidth = footer.offsetWidth - realFooterWidth;
-    if (realFooterWidth > size) {
-      addClass(footer, "dg-footer-compact");
-    } else if (availableFooterWidth > 250) {
-      removeClass(footer, "dg-footer-compact");
     }
     if (changed) {
+      this.blockObserver();
       grid.renderTable();
+      this.unblockObserver();
     }
-    this.unblockTimeout = setTimeout(() => {
-      this.prevAction = null;
-    }, 1000);
+    const footer = find(table, "tfoot");
+    if (footer) {
+      const realFooterWidth = findAll(footer, ".dg-footer > div").reduce((result, div) => {
+        return result + div.offsetWidth;
+      }, 0);
+      const availableFooterWidth = footer.offsetWidth - realFooterWidth;
+      if (realFooterWidth > size) {
+        addClass(footer, "dg-footer-compact");
+      } else if (availableFooterWidth > 250) {
+        removeClass(footer, "dg-footer-compact");
+      }
+    }
     table.style.visibility = "visible";
   }
   computeLabelWidth() {
@@ -2950,6 +2950,97 @@ class RowActions extends base_plugin_default {
       toggle.setAttribute("title", toggleLabel);
     }
   }
+  afterRender(context) {
+    if (context === "table") {
+      this.closeActionMenu();
+    }
+  }
+  toggleActionMenu(cell, row) {
+    if (this.openCell === cell) {
+      this.closeActionMenu();
+      return;
+    }
+    this.openActionMenu(cell, row);
+  }
+  openActionMenu(cell, row) {
+    const grid = this.grid;
+    const labels2 = grid.labels;
+    if (!this.menu) {
+      this.menu = document.createElement("ul");
+      this.menu.classList.add("dg-actions-menu");
+      grid.appendChild(this.menu);
+      this.menu.addEventListener("click", () => this.closeActionMenu(), true);
+    }
+    const menu = this.menu;
+    while (menu.lastChild) {
+      menu.removeChild(menu.lastChild);
+    }
+    for (const action of grid.options.actions) {
+      if (action.visible && !action.visible(row)) {
+        continue;
+      }
+      const li = document.createElement("li");
+      const { el } = this.createActionElement(action, row, grid, labels2);
+      li.appendChild(el);
+      menu.appendChild(li);
+    }
+    if (!menu.lastChild) {
+      return;
+    }
+    this.openCell = cell;
+    cell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "true");
+    menu.classList.add("dg-actions-open");
+    this.positionActionMenu(cell);
+    this._boundDocumentClick = (ev) => {
+      if (!menu.contains(ev.target)) {
+        this.closeActionMenu();
+      }
+    };
+    on(document, "click", this._boundDocumentClick);
+    this._boundKeydown = (ev) => {
+      if (ev.key === "Escape") {
+        this.closeActionMenu();
+      }
+    };
+    on(document, "keydown", this._boundKeydown);
+  }
+  positionActionMenu(cell) {
+    const menu = this.menu;
+    const grid = this.grid;
+    if (!menu) {
+      return;
+    }
+    const gridRect = grid.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    const menuHeight = menu.offsetHeight;
+    const menuWidth = menu.offsetWidth;
+    let top = cellRect.bottom - gridRect.top;
+    if (top + menuHeight > gridRect.height) {
+      top = cellRect.top - gridRect.top - menuHeight;
+    }
+    menu.style.top = `${Math.max(0, top)}px`;
+    let right = gridRect.right - cellRect.right;
+    if (right + menuWidth > gridRect.width) {
+      right = gridRect.width - menuWidth;
+    }
+    menu.style.right = `${Math.max(0, right)}px`;
+    menu.style.left = "auto";
+  }
+  closeActionMenu() {
+    if (this._boundDocumentClick) {
+      off(document, "click", this._boundDocumentClick);
+      this._boundDocumentClick = null;
+    }
+    if (this._boundKeydown) {
+      off(document, "keydown", this._boundKeydown);
+      this._boundKeydown = null;
+    }
+    if (this.openCell) {
+      this.openCell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "false");
+    }
+    this.openCell = null;
+    this.menu?.classList.remove("dg-actions-open");
+  }
   makeActionRow({ row, tr, grid }) {
     const labels2 = grid.labels;
     const rowData = row ?? {};
@@ -2960,12 +3051,14 @@ class RowActions extends base_plugin_default {
     actionsToggle.textContent = "⋯";
     actionsToggle.setAttribute("aria-label", labels2.toggleActions);
     actionsToggle.setAttribute("aria-expanded", "false");
+    actionsToggle.setAttribute("aria-haspopup", "menu");
     actionsToggle.title = labels2.toggleActions;
     on(actionsToggle, "click", (ev) => {
       ev.stopPropagation();
-      const parent = ev.target.parentElement;
-      const expanded = parent?.classList.toggle("dg-actions-expand") ?? false;
-      actionsToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
+      const cell = actionsToggle.closest("td") ?? actionsToggle.parentElement;
+      if (cell) {
+        this.toggleActionMenu(cell, rowData);
+      }
     });
     fragment.appendChild(actionsToggle);
     for (const action of grid.options.actions) {
@@ -3289,4 +3382,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=33B5C35CDCE0639D64756E2164756E21
+//# debugId=2F73EB4DB7EC080A64756E2164756E21

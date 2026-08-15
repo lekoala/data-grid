@@ -155,6 +155,17 @@ test("single select keeps at most one selected row and allows toggling off", asy
     document.body.removeChild(inst);
 });
 
+test("header and body checkboxes share the same centering box", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
+
+    // The header select-all uses the exact same full-cell label as the rows
+    const headerLabel = inst.querySelector('thead th[data-column-id="$selection"] label');
+    const bodyLabel = inst.querySelector('tbody td[data-column-id="$selection"] label');
+    expect(headerLabel.classList.contains("dg-clickable-cell")).toBe(true);
+    expect(bodyLabel.classList.contains("dg-clickable-cell")).toBe(true);
+    document.body.removeChild(inst);
+});
+
 test("bulkActions render a bar and dispatch bulkAction", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name" }],

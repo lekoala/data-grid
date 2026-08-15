@@ -73,33 +73,66 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
   display: inline-block;
 }
 
-data-grid .dg-actions.dg-actions-expand {
+data-grid .dg-actions-menu {
   position: absolute;
-  right: var(--dg-space-2);
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--dg-space-1);
-  width: auto;
-  max-width: none;
-  min-height: 32px;
-  padding: var(--dg-space-1);
+  z-index: 3;
+  list-style: none;
+  margin: 0;
+  padding: var(--dg-space-2);
+  min-width: 180px;
+  max-width: 240px;
   background-color: var(--dg-bg);
   border: 1px solid var(--dg-border-color);
   border-radius: var(--dg-radius);
-  box-shadow: 0 10px 24px rgb(15 23 42 / 8%);
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
+  box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
+  display: none;
 }
 
-data-grid .dg-actions.dg-actions-expand.dg-actions-more {
+data-grid .dg-actions-menu.dg-actions-open {
+  display: block;
+}
+
+data-grid .dg-actions-menu li {
+  margin: 0;
+  padding: 0;
+}
+
+data-grid .dg-actions-menu li + li {
+  margin-top: var(--dg-space-1);
+}
+
+data-grid .dg-actions-menu button,
+data-grid .dg-actions-menu a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--dg-space-2);
   width: 100%;
+  min-height: 28px;
+  height: auto;
+  padding: 0 var(--dg-space-2);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--dg-space-1);
+  color: var(--dg-color);
+  text-decoration: none;
 }
 
-data-grid .dg-actions.dg-actions-expand.dg-actions-more button,
-data-grid .dg-actions.dg-actions-expand.dg-actions-more a {
-  display: inline-block;
+data-grid .dg-actions-menu button:hover,
+data-grid .dg-actions-menu a:hover {
+  background-color: var(--dg-row-hover-bg);
+}
+
+data-grid .dg-actions-menu button[data-intent="primary"],
+data-grid .dg-actions-menu a[data-intent="primary"] {
+  background-color: transparent;
+  color: var(--dg-accent);
+}
+
+data-grid .dg-actions-menu button[data-intent="danger"],
+data-grid .dg-actions-menu a[data-intent="danger"] {
+  background-color: transparent;
+  color: var(--dg-danger-color);
 }
 
 data-grid button[data-intent="danger"],

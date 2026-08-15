@@ -1,0 +1,7 @@
+# Normalize line endings to LF everywhere, on every platform.
+# biome and .editorconfig expect LF; this overrides core.autocrlf on Windows.
+* text=auto eol=lf
+
+# Batch files must keep CRLF to run correctly on Windows.
+*.bat text eol=crlf
+*.cmd text eol=crlf

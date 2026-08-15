@@ -19,17 +19,20 @@
         document.getElementById("responsive-demo"),
         "demo.json",
         {
-          expand: true,
           selectable: true,
-          menu: true,
-          filterable: true,
           resizable: true,
-          autosize: true,
-          reorder: true,
           sortable: true,
-          debug: true,
           responsive: true,
-          initialQuery: { pageSize: 25 },
+          initialQuery: { pageSize: 15 },
+          columns: [
+            { field: "id", title: "ID", width: 72, responsive: 0 },
+            { field: "first_name", title: "First Name", responsive: 1 },
+            { field: "last_name", title: "Last Name", responsive: 1 },
+            { field: "email", title: "Email", responsive: 2 },
+            { field: "company", title: "Company", responsive: 3 },
+            { field: "job_title", title: "Job Title", responsive: 4 },
+            { field: "city", title: "City", responsive: 5 },
+          ],
         },
         ["sticky"],
       );
@@ -37,23 +40,11 @@
         console.log(e.type, e.detail);
       });
 
-      await createStaticGrid(
-        document.getElementById("responsive-demo-css"),
-        "demo.json",
-        {
-          expand: true,
-          selectable: true,
-          menu: true,
-          filterable: true,
-          resizable: true,
-          autosize: true,
-          reorder: true,
-          sortable: true,
-          debug: true,
-          initialQuery: { pageSize: 25 },
-        },
-        ["responsive"],
-      );
+      const frame = document.getElementById("responsive-frame");
+      const width = document.getElementById("width");
+      new ResizeObserver(() => {
+        width.textContent = `${Math.round(frame.getBoundingClientRect().width)}px`;
+      }).observe(frame);
     </script>
   </head>
 
@@ -73,27 +64,32 @@
       </ul>
 
       <h2>Responsive</h2>
-
-      <ul>
-        <li><code>responsive</code> to enable responsive table.</li>
-      </ul>
-
       <p>
-        Prioritize column by using 'responsive' key in column definition. Without it, last column goes first. It also works with the context
-        menu.
+        The <code>responsive</code> option enables the <code>ResponsiveGrid</code> plugin: it hides columns by
+        priority when the grid runs out of room, and restores them when space comes back. Columns marked
+        <code>responsive: 0</code> are never hidden; higher values disappear first.
       </p>
-      <p>On small size, a compact footer is used.</p>
+      <p>
+        Without <code>responsive</code>, the grid stays a real table and scrolls horizontally when the columns
+        don't fit.
+      </p>
 
       <div class="demo-grid">
-        <div class="resize-me">
+        <div class="demo-toolbar">
+          <div>
+            <p class="demo-kicker">Torture test</p>
+            <h2>Priority-driven hide/show</h2>
+          </div>
+          <span class="demo-meta">width: <code id="width">—</code></span>
+        </div>
+        <div class="resize-me" id="responsive-frame">
           <div id="responsive-demo"></div>
         </div>
-
-        <h2>CSS Only</h2>
-
-        <p>As an alternative, a CSS only solution is also provided based on media queries</p>
-
-        <div id="responsive-demo-css"></div>
+        <p class="demo-note">
+          Drag the bottom-right handle to shrink the container. <code>City</code> goes first, then
+          <code>Job Title</code>, <code>Company</code>, <code>Email</code>, and finally the names — while
+          <code>ID</code> always survives. The <code>+</code> toggle reveals hidden values per row.
+        </p>
       </div>
     </main>
     <footer>

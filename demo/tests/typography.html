@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid — Typography torture test</title>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../../dist/data-grid.css" />
+    <link rel="stylesheet" href="../demo.css" />
+
+    <style type="text/css">
+      /* Host-style leak that must NOT recolor .dg-sort headers */
+      .typ-frame button {
+        color: #1d4ed8;
+      }
+
+      .typ-frame {
+        font-size: 16px;
+        margin-bottom: 1rem;
+      }
+
+      .typ-frame.is-large {
+        font-size: 24px;
+      }
+
+      .typ-frame.is-extreme {
+        font-size: 32px;
+      }
+
+      .typ-note {
+        color: #526174;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+      }
+    </style>
+
+    <script type="module">
+      import { createStaticGrid } from "../demo.js";
+
+      const opts = {
+        sortable: true,
+        selectable: true,
+        resizable: true,
+        filterable: true,
+        columns: [
+          { field: "id", title: "ID", width: 72 },
+          { field: "first_name", title: "First Name" },
+          { field: "last_name", title: "Last Name" },
+          { field: "email", title: "Email" },
+          { field: "company", title: "Company" },
+        ],
+        initialQuery: { pageSize: 5, sort: [{ field: "first_name", direction: "asc" }] },
+      };
+
+      for (const [id, note] of [
+        ["typ-16", "Inherited 16px font. Baseline: label, sort indicator, select-all checkbox and resize handle all centered."],
+        ["typ-24", "24px host typography: no fixed header height, the sort icon stays a stable glyph next to the label."],
+        ["typ-32", "32px extreme: headers grow, controls must stay vertically centered, host button color must not leak."],
+      ]) {
+        const grid = await createStaticGrid(document.getElementById(id), "../demo-simple.json", opts, ["sticky"]);
+        grid.setAttribute("aria-label", id);
+      }
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Typography torture test — headers inherit host font sizes</em></p>
+    </header>
+    <main>
+      <p>
+        This page is a technical torture test, not a showcase. The host declares <code>button { color: blue }</code>;
+        the sort headers must stay on <code>--dg-header-color</code>. Increasing the font size must not break the
+        vertical centering of the select-all checkbox, the sort indicator or the resize handle.
+      </p>
+
+      <div class="demo-grid">
+        <div class="typ-frame" id="typ-16"></div>
+        <p class="typ-note">16px</p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="typ-frame is-large" id="typ-24"></div>
+        <p class="typ-note">24px</p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="typ-frame is-extreme" id="typ-32"></div>
+        <p class="typ-note">32px</p>
+      </div>
+    </main>
+    <footer>
+      <hr />
+      <a href="../index.html">Back to the demos</a>
+    </footer>
+  </body>
+</html>

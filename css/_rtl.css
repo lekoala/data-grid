@@ -3,17 +3,6 @@ data-grid[dir="rtl"] td {
   text-align: right;
 }
 
-data-grid[dir="rtl"] th.dg-sortable {
-  padding-left: calc(var(--dg-padding-x) + 1rem);
-  padding-right: var(--dg-padding-x);
-}
-
-data-grid[dir="rtl"] [aria-sort="ascending"]:before,
-data-grid[dir="rtl"] [aria-sort="descending"]:after {
-  left: var(--dg-padding-x);
-  right: auto;
-}
-
 data-grid[dir="rtl"] tfoot .dg-meta {
   margin-left: auto;
   margin-right: 0;

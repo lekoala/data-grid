@@ -1,8 +1,6 @@
 /**
  * Data Grid Web component
- *
- * Credits for inspiration
- * @link https://github.com/riverside/zino-grid
+ * https://github.com/lekoala/data-grid
  */
 
 import BaseElement from "./core/base-element.js";
@@ -318,6 +316,17 @@ function applyCellContent(el, content) {
 }
 
 /**
+ * A column is hidden when the host/config hides it (`hidden`) or when
+ * ResponsiveGrid temporarily hides it (`responsiveHidden`). These are two
+ * distinct states: only `hidden` is the explicit, persisted choice.
+ * @param {import("./data-grid.js").Column} column
+ * @returns {Boolean}
+ */
+function isColumnHidden(column) {
+    return Boolean(column.hidden || column.responsiveHidden);
+}
+
+/**
  * Column definition will update some props on the html element
  * @param {HTMLElement} el
  * @param {Column} column
@@ -329,7 +338,7 @@ function applyColumnDefinition(el, column) {
     if (column.class) {
         addClass(el, column.class);
     }
-    if (column.hidden) {
+    if (isColumnHidden(column)) {
         setAttribute(el, "hidden", "");
         if (column.responsiveHidden) {
             addClass(el, "dg-responsive-hidden");
@@ -1258,13 +1267,13 @@ class DataGrid extends BaseElement {
 
     visibleColumns() {
         return this.options.columns.filter((col) => {
-            return !col.hidden;
+            return !isColumnHidden(col);
         });
     }
 
     hiddenColumns() {
         return this.options.columns.filter((col) => {
-            return col.hidden === true;
+            return isColumnHidden(col);
         });
     }
 
@@ -1310,7 +1319,7 @@ class DataGrid extends BaseElement {
     columnsLength(visibleOnly = false) {
         let len = 0;
         for (const col of this.getColumns()) {
-            if (visibleOnly && col.hidden) {
+            if (visibleOnly && isColumnHidden(col)) {
                 continue;
             }
             if (!col.attr) {
@@ -1864,9 +1873,15 @@ class DataGrid extends BaseElement {
             } else {
                 this.renderDefaultHeaderCell(th, ctx);
             }
+            // Plugin header renderers only add their structural classes; apply
+            // the column class (ex: dg-selectable, dg-actions, dg-responsive-toggle)
+            // so header and body share the same styling hooks.
+            if (column.class) {
+                addClass(th, column.class);
+            }
 
             tr.appendChild(th);
-            if (!column.hidden) {
+            if (!isColumnHidden(column)) {
                 totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
             }
         }
@@ -1947,7 +1962,10 @@ class DataGrid extends BaseElement {
 
         const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
         setAttribute(th, "width", w);
-        if (column.hidden) {
+        // Preferred width before the compression phase: ResponsiveGrid reasons
+        // on this value instead of the post-compression width.
+        th.dataset.preferredWidth = `${w}`;
+        if (isColumnHidden(column)) {
             th.setAttribute("hidden", "");
         }
 
@@ -2004,7 +2022,7 @@ class DataGrid extends BaseElement {
                 this.renderDefaultFilterCell(th, column, relatedTh);
             }
 
-            if (column.hidden) {
+            if (isColumnHidden(column)) {
                 th.setAttribute("hidden", "");
             }
 

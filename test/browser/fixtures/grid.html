@@ -5,6 +5,12 @@
   <title>data-grid browser fixture</title>
   <!-- Absolute paths: this fixture is served by demo/server.js from the repo root. -->
   <link rel="stylesheet" href="/dist/data-grid.css" />
+  <style>
+    /* Host-style leak: must not recolor .dg-sort headers or grid buttons */
+    button {
+      color: rgb(255, 0, 0);
+    }
+  </style>
   <script type="module">
     import DataGrid, { ArrayDataSource } from "/dist/data-grid.js";
 
@@ -19,10 +25,10 @@
     const localGrid = new DataGrid({
       id: "local-grid",
       columns: [
-        { field: "id", title: "ID", width: 60 },
-        { field: "name", title: "Name" },
-        { field: "age", title: "Age" },
-        { field: "company", title: "Company", editable: true },
+        { field: "id", title: "ID", width: 80, responsive: 0 },
+        { field: "name", title: "Name", width: 200, responsive: 1 },
+        { field: "age", title: "Age", width: 160, responsive: 2 },
+        { field: "company", title: "Company", width: 240, responsive: 3, editable: true },
       ],
       dataSource: new ArrayDataSource(rows),
       sortable: true,
