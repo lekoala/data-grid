@@ -36,13 +36,22 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
-    "a clicked checkbox keeps keyboard focus",
+    "keyboard selection preserves checkbox focus",
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/${FIXTURE}`);
         await waitFor(v, "window.grid && window.grid.rows.length > 0");
 
-        await v.click('#local-grid tbody td[data-column-id="$selection"] input');
+        const selector = '#local-grid tbody td[data-column-id="$selection"] input';
+        await v.evaluate(`(() => {
+            document.querySelector(${JSON.stringify(selector)}).focus();
+        })()`);
+        expect(await read(v, "document.activeElement.type")).toBe("checkbox");
+
+        await v.press("Space");
+        await waitFor(v, "window.grid.getSelectionState().ids.size === 1");
+
+        // The selection refresh must not steal focus from the keyboard user
         expect(await read(v, "document.activeElement.type")).toBe("checkbox");
         expect(await read(v, "document.activeElement.closest('#local-grid') !== null")).toBe(true);
     },

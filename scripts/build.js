@@ -16,7 +16,6 @@ async function main() {
             target: "browser",
             format: "esm",
             minify: t.minify,
-            sourcemap: "external",
         });
         if (!result.success) {
             for (const log of result.logs) {
