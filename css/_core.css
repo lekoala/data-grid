@@ -39,7 +39,7 @@ data-grid {
   --dg-row-hover-bg: #f8fafc;
   --dg-row-selected-bg: #eef4ff;
   --dg-row-selected-hover-bg: #e7f0ff;
-  --dg-row-border-color: #edf2f7;
+  --dg-row-border-color: var(--dg-border-color);
 
   /* controls (buttons / inputs / selects) */
   --dg-control-bg: #fff;
@@ -74,6 +74,14 @@ data-grid {
   min-height: 6rem;
   position: relative;
   overflow-x: auto;
+}
+
+/* Subtle horizontal row dividers: lighter than the header/filter separations
+   where color-mix is supported, falling back to the base border color. */
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  data-grid {
+    --dg-row-border-color: color-mix(in srgb, var(--dg-border-color) 70%, transparent);
+  }
 }
 
 data-grid .dg-status {
@@ -596,8 +604,17 @@ data-grid[data-error] table {
 
 data-grid tbody tr {
   background-color: transparent;
-  border-bottom: solid 1px var(--dg-row-border-color);
   transition: background-color 120ms ease;
+}
+
+/* Horizontal row dividers live on the cells: Chrome does not paint borders on
+   <tr>. Direct cells only, so the nested responsive table stays untouched. */
+data-grid > table > tbody > tr > td {
+  border-bottom: 1px solid var(--dg-row-border-color);
+}
+
+data-grid > table > tbody > tr:last-child > td {
+  border-bottom: 0;
 }
 
 data-grid tbody tr:nth-child(even) {

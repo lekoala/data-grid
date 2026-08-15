@@ -29,7 +29,7 @@ data-grid {
   --dg-row-hover-bg: #f8fafc;
   --dg-row-selected-bg: #eef4ff;
   --dg-row-selected-hover-bg: #e7f0ff;
-  --dg-row-border-color: #edf2f7;
+  --dg-row-border-color: var(--dg-border-color);
   --dg-control-bg: #fff;
   --dg-control-color: var(--dg-color);
   --dg-control-border-color: #d4dde7;
@@ -55,6 +55,12 @@ data-grid {
   position: relative;
   overflow-x: auto;
   min-height: 6rem;
+}
+
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  data-grid {
+    --dg-row-border-color: color-mix(in srgb, var(--dg-border-color) 70%, transparent);
+  }
 }
 
 data-grid .dg-status {
@@ -627,9 +633,16 @@ data-grid[data-error] table {
 }
 
 data-grid tbody tr {
-  border-bottom: solid 1px var(--dg-row-border-color);
   background-color: #0000;
   transition: background-color .12s;
+}
+
+data-grid > table > tbody > tr > td {
+  border-bottom: 1px solid var(--dg-row-border-color);
+}
+
+data-grid > table > tbody > tr:last-child > td {
+  border-bottom: 0;
 }
 
 data-grid tbody tr:nth-child(2n) {
