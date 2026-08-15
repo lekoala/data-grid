@@ -28,22 +28,21 @@ export function stopServer() {
 
 /**
  * Create a WebView. On Linux the Chrome backend is requested explicitly with
- * the path from BUN_CHROME_PATH (when set) and the subprocess output is
- * inherited so a silently crashing Chrome surfaces its stderr. macOS keeps the
- * platform default WKWebView. Tall viewport so the multiple fixture grids (and
- * their footers) fit without scrolling.
+ * spawn mode (`url: false`, so Bun never tries to attach to a running Chrome)
+ * and the subprocess output is inherited so a silently crashing Chrome
+ * surfaces its stderr. Bun resolves the Chrome executable itself from the
+ * PATH. macOS keeps the platform default WKWebView. Tall viewport so the
+ * multiple fixture grids (and their footers) fit without scrolling.
  * @returns {Bun.WebView}
  */
 export function view() {
-    const chromePath = process.env.BUN_CHROME_PATH;
-
-    if (process.platform === "linux" && chromePath) {
+    if (process.platform === "linux") {
         return new Bun.WebView({
             width: 1280,
             height: 3000,
             backend: {
                 type: "chrome",
-                path: chromePath,
+                url: false,
                 stdout: "inherit",
                 stderr: "inherit",
             },

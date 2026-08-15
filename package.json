@@ -5,6 +5,7 @@
   "type": "module",
   "main": "data-grid",
   "types": "./dist/types/data-grid.d.ts",
+  "packageManager": "bun@1.3.14",
   "customElements": "custom-elements.json",
   "exports": {
     ".": {
