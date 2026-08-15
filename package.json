@@ -7,10 +7,11 @@
   "scripts": {
     "dev": "bun run build && bun demo/server.js",
     "build": "bun scripts/build.js",
-    "test": "bun test",
+    "test": "bun test --path-ignore-patterns 'test/browser/**'",
+    "test:browser": "bun test test/browser",
     "check": "biome check .",
     "typecheck": "tsc -p jsconfig.json",
-    "ci": "bun run check && bun run typecheck && bun test && bun run build"
+    "ci": "bun run check && bun run typecheck && bun run test && bun run build"
   },
   "repository": {
     "type": "git",

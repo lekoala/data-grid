@@ -13,7 +13,8 @@ bun install
 ## Commands
 
 ```bash
-bun test           # unit/component tests (happy-dom)
+bun test           # unit/component tests (happy-dom) - excludes test/browser
+bun run test:browser # real-browser tests (Bun.WebView + demo/server.js) - CI only, skipped on Windows
 bun run check      # Biome lint + format check
 bun run typecheck  # tsc -p jsconfig.json (JSDoc typecheck)
 bun run build      # Bun.build JS + CSS into dist/ (scripts/build.js)
@@ -25,6 +26,10 @@ bun run dev        # build + serve demo (Bun.serve, demo/server.js)
 demo pages) plus a mock server-side API (`/api/users`, `/api/errors`) that
 simulates pagination, sort, filters, latency and errors. `demo/server.js`
 reuses the same filter/sort helpers as the client (`src/data-source.js`).
+
+`bun run test:browser` needs a real browser: `Bun.WebView` uses Chrome/Chromium
+on Linux and WKWebView on macOS. It does not run on Windows (skipped). The CI
+workflow runs it on Ubuntu (Chrome) and macOS (WKWebView).
 
 ## Browser baseline
 

@@ -17,5 +17,34 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun run check
       - run: bun run typecheck
-      - run: bun test
+      - run: bun run test
       - run: bun run build
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - uses: browser-actions/setup-chrome@v1
+        id: chrome
+      - run: bun run build
+      - name: Browser tests (Chrome)
+        env:
+          BUN_CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+        run: bun run test:browser
+
+  browser-webkit:
+    runs-on: macos-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: Browser tests (WKWebView)
+        run: bun run test:browser
