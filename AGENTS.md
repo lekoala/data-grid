@@ -11,7 +11,14 @@ runtime requirement (no Bun/Node APIs in `src/`).
 
 - Bun: install, test, build (`scripts/build.js` via `Bun.build`), dev server (`demo/server.js`)
 - Biome: lint + format (single `bun run check`)
-- tsc: typecheck from JSDoc (`checkJs`), `strict` off for now
+- tsc: typecheck from JSDoc (`checkJs`, `strict` on) via `bun run typecheck`; emits
+  `.d.ts` into `dist/types` via `bun run types` (`tsconfig.types.json`)
+- `scripts/custom-elements.js` generates `custom-elements.json` (`bun run manifest`), schema `2.1.0`
+- `bun run ci` = check + typecheck + test + types + manifest + build + drift check
+  (`git diff --exit-code -- dist custom-elements.json`) so committed artifacts stay in sync
+- Mark the public API surface of `src/data-grid.js` with `@public` in JSDoc: the
+  CEM generator and the docs rely on it. No `@deprecated` markers: v3 is a clean
+  contract, legacy behavior is removed, not annotated.
 
 ## Architecture rules
 

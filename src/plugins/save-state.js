@@ -3,11 +3,14 @@ import BasePlugin from "../core/base-plugin.js";
 /**
  * @typedef CachedGridState
  * @property {import("../data-source").QueryState} query
- * @property {Array} columns
+ * @property {Array<{ field: string, hidden?: boolean }>} columns
  * @property {Number} scrollTo
  */
 
 class SaveState extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
     constructor(grid) {
         super(grid);
         this.cachedState = null;
@@ -61,22 +64,29 @@ class SaveState extends BasePlugin {
         }
         this._setState({
             query: grid.query,
-            columns: grid.options.columns.map((col) => ({ field: col.field, hidden: col.hidden })),
+            columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) })),
             scrollTo: window.scrollY,
         });
     }
 
+    /**
+     * @param {...any} data
+     */
     log(...data) {
         this.grid.log("[Save-State] ", ...data);
     }
 
     /**
-     * @returns {CachedGridState}
+     * @returns {CachedGridState|undefined}
      */
     _getState() {
+        /** @type {CachedGridState|undefined} */
         let state;
         try {
-            state = JSON.parse(sessionStorage.getItem(`gridSaveState_${this.grid.id}`));
+            const raw = sessionStorage.getItem(`gridSaveState_${this.grid.id}`);
+            if (raw) {
+                state = JSON.parse(raw);
+            }
         } catch (_) {}
         return state;
     }

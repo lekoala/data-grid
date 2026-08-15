@@ -268,11 +268,11 @@ export class FetchDataSource {
     /**
      * @param {String} url
      * @param {Object} [options]
-     * @param {Object} [options.params] Extra constant HTTP params appended to each request
+     * @param {Record<string, any>} [options.params] Extra constant HTTP params appended to each request
      * @param {(query: QueryState) => any} [options.serializeQuery] Defaults to identity (QueryState preserved)
      * @param {(response: any) => PageResult} [options.parseResponse] Defaults to parseResult
      */
-    constructor(url, { params = {}, serializeQuery = null, parseResponse = null } = {}) {
+    constructor(url, { params = {}, serializeQuery, parseResponse } = {}) {
         this.url = url;
         this.params = params;
         this.serializeQuery = serializeQuery;
@@ -289,7 +289,8 @@ export class FetchDataSource {
         if (!base || base === "about:blank") {
             base = "http://localhost/";
         }
-        if (!base.split("/").pop().includes(".")) {
+        const last = base.split("/").pop();
+        if (!last?.includes(".")) {
             base += base.endsWith("/") ? "" : "/";
         }
         const url = new URL(this.url, base);
@@ -343,7 +344,7 @@ export class ArrayDataSource {
      * @param {(response: any) => PageResult} [parseResponse]
      * @returns {Promise<ArrayDataSource>}
      */
-    static async fromUrl(url, parseResponse = null) {
+    static async fromUrl(url, parseResponse) {
         const response = await fetch(url);
         if (!response.ok) {
             throw new Error(response.statusText || "Network response error");
@@ -379,7 +380,7 @@ export class ArrayDataSource {
      * @param {any} value
      * @param {String} [key] Field to match. Defaults to the first field.
      */
-    remove(value, key = null) {
+    remove(value, key) {
         const k = key ?? (this.rows[0] && Object.keys(this.rows[0])[0]);
         if (k === undefined) {
             return;

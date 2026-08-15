@@ -4,6 +4,18 @@
   "description": "Standalone data grid web component",
   "type": "module",
   "main": "data-grid",
+  "types": "./dist/types/data-grid.d.ts",
+  "customElements": "custom-elements.json",
+  "exports": {
+    ".": {
+      "types": "./dist/types/data-grid.d.ts",
+      "import": "./data-grid.js"
+    },
+    "./data-source": {
+      "types": "./dist/types/data-source.d.ts",
+      "import": "./src/data-source.js"
+    }
+  },
   "scripts": {
     "dev": "bun run build && bun demo/server.js",
     "build": "bun scripts/build.js",
@@ -12,7 +24,9 @@
     "test:browser:wsl": "wsl -e bash scripts/test-browser-wsl.sh",
     "check": "biome check .",
     "typecheck": "tsc -p jsconfig.json",
-    "ci": "bun run check && bun run typecheck && bun run test && bun run build"
+    "types": "tsc -p tsconfig.types.json",
+    "manifest": "bun scripts/custom-elements.js",
+    "ci": "bun run check && bun run typecheck && bun run test && bun run types && bun run manifest && bun run build && git diff --exit-code -- dist custom-elements.json"
   },
   "repository": {
     "type": "git",

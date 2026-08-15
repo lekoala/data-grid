@@ -4,6 +4,9 @@ import BasePlugin from "../core/base-plugin.js";
  * Allows to paginate with horizontal swipe motions
  */
 class TouchSupport extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
     constructor(grid) {
         super(grid);
         this.touch = null;
@@ -20,17 +23,21 @@ class TouchSupport extends BasePlugin {
         grid.removeEventListener("touchmove", this);
     }
 
-    ontouchstart(e) {
-        this.touch = e.touches[0];
+    ontouchstart(/** @type {TouchEvent} */ e) {
+        this.touch = e.touches[0] ?? null;
     }
 
-    ontouchmove(e) {
+    ontouchmove(/** @type {TouchEvent} */ e) {
         if (!this.touch) {
             return;
         }
+        const touch = e.touches[0];
+        if (!touch) {
+            return;
+        }
         const grid = this.grid;
-        const xDiff = this.touch.clientX - e.touches[0].clientX;
-        const yDiff = this.touch.clientY - e.touches[0].clientY;
+        const xDiff = this.touch.clientX - touch.clientX;
+        const yDiff = this.touch.clientY - touch.clientY;
 
         if (Math.abs(xDiff) > Math.abs(yDiff)) {
             if (xDiff > 0) {

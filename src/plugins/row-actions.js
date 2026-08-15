@@ -30,7 +30,7 @@ class RowActions extends BasePlugin {
             class: `dg-actions ${this.actionClass}`,
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: () => this.createFilterCell(),
-            renderCell: (ctx) => this.makeActionRow(ctx),
+            renderCell: (ctx) => this.makeActionRow(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
         });
     }
 
@@ -45,11 +45,12 @@ class RowActions extends BasePlugin {
 
     /**
      * Build the actions cell content: a toggle button plus one element per action.
-     * @param {Object} ctx
+     * @param {import("../data-grid.js").CellContext} ctx
      * @returns {DocumentFragment}
      */
     makeActionRow({ row, tr, grid }) {
         const labels = grid.labels;
+        const rowData = row ?? {};
         const fragment = document.createDocumentFragment();
 
         // Add menu toggle
@@ -57,21 +58,22 @@ class RowActions extends BasePlugin {
         actionsToggle.type = "button";
         actionsToggle.classList.add("dg-actions-toggle");
         actionsToggle.innerHTML = "☰";
-        on(actionsToggle, "click", (ev) => {
+        on(actionsToggle, "click", (/** @type {MouseEvent} */ ev) => {
             ev.stopPropagation();
-            ev.target.parentElement.classList.toggle("dg-actions-expand");
+            const parent = /** @type {HTMLElement} */ (ev.target).parentElement;
+            parent?.classList.toggle("dg-actions-expand");
         });
         fragment.appendChild(actionsToggle);
 
         for (const action of grid.options.actions) {
-            if (action.visible && !action.visible(row)) {
+            if (action.visible && !action.visible(rowData)) {
                 continue;
             }
-            const { el, dispatchAction } = this.createActionElement(action, row, grid, labels);
+            const { el, dispatchAction } = this.createActionElement(action, rowData, grid, labels);
             fragment.appendChild(el);
 
             // Row action
-            if (action.default) {
+            if (action.default && tr) {
                 tr.classList.add("dg-actionable");
                 on(tr, "click", dispatchAction);
             }
@@ -83,9 +85,9 @@ class RowActions extends BasePlugin {
     /**
      * Create the button (or link) for a single action.
      * @param {import("../data-grid.js").Action} action
-     * @param {Object} row
+     * @param {Record<string, any>} row
      * @param {import("../data-grid.js").default} grid
-     * @param {Object} labels
+     * @param {import("../data-grid.js").Labels} labels
      * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
      */
     createActionElement(action, row, grid, labels) {
@@ -102,14 +104,12 @@ class RowActions extends BasePlugin {
         /** @type {HTMLElement} */
         let el;
         if (content instanceof Element && (content.tagName === "BUTTON" || content.tagName === "A")) {
-            // @ts-expect-error narrowed to HTMLButtonElement | HTMLAnchorElement
-            el = content;
+            el = /** @type {HTMLElement} */ (content);
         } else {
             const isLink = href !== null;
             el = document.createElement(isLink ? "a" : "button");
             if (!isLink) {
-                // @ts-expect-error button only
-                el.type = "button";
+                /** @type {HTMLButtonElement} */ (el).type = "button";
             }
             if (content === null || content === undefined) {
                 if (action.html) {
@@ -123,8 +123,7 @@ class RowActions extends BasePlugin {
         }
 
         if (href !== null && !el.hasAttribute("href")) {
-            // @ts-expect-error anchor only
-            el.href = href;
+            /** @type {HTMLAnchorElement} */ (el).href = href;
         }
         el.dataset.action = action.name;
         if (action.intent) {
@@ -138,11 +137,10 @@ class RowActions extends BasePlugin {
             el.classList.add(...action.class.split(" "));
         }
         if (action.disabled?.(row)) {
-            // @ts-expect-error button/link only
-            el.disabled = true;
+            /** @type {HTMLButtonElement} */ (el).disabled = true;
         }
 
-        const dispatchAction = (ev) => {
+        const dispatchAction = (/** @type {Event} */ ev) => {
             ev.stopPropagation();
             if (action.confirm) {
                 const c = confirm(labels.areYouSure);

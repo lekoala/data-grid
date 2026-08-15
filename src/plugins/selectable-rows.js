@@ -1,4 +1,3 @@
-// @ts-nocheck
 import BasePlugin from "../core/base-plugin.js";
 import { setAttribute } from "../utils/shortcuts.js";
 
@@ -51,8 +50,8 @@ class SelectableRows extends BasePlugin {
             title: "",
             class: SELECTABLE_CLASS,
             renderHeaderCell: (th) => this.createHeaderCell(th),
-            renderFilterCell: (th) => this.createFilterCell(th),
-            renderCell: (ctx) => this.createDataCell(ctx),
+            renderFilterCell: () => this.createFilterCell(),
+            renderCell: (ctx) => this.createDataCell(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
         });
     }
 
@@ -80,7 +79,9 @@ class SelectableRows extends BasePlugin {
         if (!tbody) {
             return;
         }
-        const inputs = tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`);
+        const inputs = /** @type {HTMLInputElement[]} */ (
+            Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`))
+        );
         const trs = Array.from(tbody.querySelectorAll("tr"));
         for (const input of inputs) {
             const tr = input.closest("tr");
@@ -108,7 +109,9 @@ class SelectableRows extends BasePlugin {
         const visible = [];
         const tbody = grid.tbody;
         if (tbody) {
-            const inputs = tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`);
+            const inputs = /** @type {HTMLInputElement[]} */ (
+                Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`))
+            );
             for (const input of inputs) {
                 if (this.visibleOnly && input.closest("tr[hidden]")) {
                     continue;
@@ -132,7 +135,7 @@ class SelectableRows extends BasePlugin {
         this.selectAll.type = "checkbox";
         this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
         this.selectAll.addEventListener("change", () => {
-            if (this.selectAll.checked) {
+            if (this.selectAll?.checked) {
                 this.grid.selectAll();
             } else {
                 this.grid.clearSelection();
@@ -147,13 +150,10 @@ class SelectableRows extends BasePlugin {
         this.syncSelectAll();
     }
 
-    /**
-     * @param {HTMLTableCellElement} th
-     */
     createFilterCell() {}
 
     /**
-     * @param {Object} ctx
+     * @param {import("../data-grid.js").CellContext} ctx
      * @returns {HTMLElement}
      */
     createDataCell({ row, rowIndex }) {
@@ -162,7 +162,7 @@ class SelectableRows extends BasePlugin {
         const input = document.createElement("input");
         input.type = this.isSingleSelect ? "radio" : "checkbox";
         input.classList.add(CHECKBOX_CLASS);
-        input.checked = grid.isRowSelected(row, rowIndex);
+        input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
         if (this.isSingleSelect) {
             input.name = "dg-row-select";
         }
@@ -181,15 +181,17 @@ class SelectableRows extends BasePlugin {
             // Radio buttons can't be unchecked natively: control the state manually
             input.addEventListener("click", (event) => {
                 event.preventDefault();
-                if (grid.isRowSelected(row, rowIndex)) {
-                    grid.deselectRow(row, rowIndex);
-                } else {
-                    grid.selectRow(row, rowIndex);
+                if (row && grid.isRowSelected(row, rowIndex ?? 0)) {
+                    grid.deselectRow(row, rowIndex ?? 0);
+                } else if (row) {
+                    grid.selectRow(row, rowIndex ?? 0);
                 }
             });
         } else {
             input.addEventListener("change", () => {
-                grid.toggleRow(row, rowIndex);
+                if (row) {
+                    grid.toggleRow(row, rowIndex ?? 0);
+                }
             });
         }
 

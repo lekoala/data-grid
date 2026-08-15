@@ -1,0 +1,345 @@
+{
+  "schemaVersion": "2.1.0",
+  "readme": "readme.md",
+  "modules": [
+    {
+      "kind": "javascript-module",
+      "path": "src/data-grid.js",
+      "declarations": [
+        {
+          "kind": "class",
+          "name": "DataGrid",
+          "description": "Server-first, explicitly paginated data grid web component.",
+          "tagName": "data-grid",
+          "attributes": [
+            {
+              "name": "src"
+            },
+            {
+              "name": "sortable"
+            },
+            {
+              "name": "filterable"
+            },
+            {
+              "name": "responsive"
+            },
+            {
+              "name": "selectable"
+            },
+            {
+              "name": "single-select"
+            },
+            {
+              "name": "reorder"
+            },
+            {
+              "name": "menu"
+            },
+            {
+              "name": "expand"
+            },
+            {
+              "name": "autosize"
+            },
+            {
+              "name": "resizable"
+            },
+            {
+              "name": "autoheight"
+            },
+            {
+              "name": "autohide-pager"
+            },
+            {
+              "name": "show-page-size"
+            },
+            {
+              "name": "debug"
+            },
+            {
+              "name": "dir"
+            },
+            {
+              "name": "density"
+            }
+          ],
+          "members": [
+            {
+              "kind": "getter",
+              "name": "labels"
+            },
+            {
+              "kind": "method",
+              "name": "getLabels",
+              "static": true
+            },
+            {
+              "kind": "method",
+              "name": "setLabels",
+              "static": true
+            },
+            {
+              "kind": "getter",
+              "name": "noData",
+              "description": "Gets the text to be displayed when no data is loaded."
+            },
+            {
+              "kind": "getter",
+              "name": "query",
+              "description": "Snapshot of the current query state."
+            },
+            {
+              "kind": "getter",
+              "name": "page",
+              "description": "Convenience read-only accessor for the current page."
+            },
+            {
+              "kind": "method",
+              "name": "registerPlugins",
+              "static": true,
+              "description": "Register plugin constructors, keyed by name. The core instantiates them on each DataGrid construction. Names are not limited to built-in plugins."
+            },
+            {
+              "kind": "method",
+              "name": "unregisterPlugins",
+              "static": true
+            },
+            {
+              "kind": "method",
+              "name": "registeredPlugins",
+              "static": true
+            },
+            {
+              "kind": "method",
+              "name": "getColumns",
+              "description": "The normalized column list of the current render cycle."
+            },
+            {
+              "kind": "method",
+              "name": "setQuery",
+              "description": "Merge a patch into the query state and reload. Changing filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch."
+            },
+            {
+              "kind": "method",
+              "name": "resetQuery",
+              "description": "Reset the query to its initial state and reload."
+            },
+            {
+              "kind": "method",
+              "name": "refresh",
+              "description": "Reload the result matching the current query."
+            },
+            {
+              "kind": "method",
+              "name": "showColumn"
+            },
+            {
+              "kind": "method",
+              "name": "hideColumn"
+            },
+            {
+              "kind": "method",
+              "name": "isRowSelected",
+              "description": "Whether a row is part of the current selection."
+            },
+            {
+              "kind": "method",
+              "name": "getSelectionState",
+              "description": "Snapshot of the current selection state."
+            },
+            {
+              "kind": "method",
+              "name": "selectRow",
+              "description": "Select a row (single select keeps at most one key)."
+            },
+            {
+              "kind": "method",
+              "name": "deselectRow",
+              "description": "Deselect a row."
+            },
+            {
+              "kind": "method",
+              "name": "toggleRow",
+              "description": "Toggle the selection state of a row."
+            },
+            {
+              "kind": "method",
+              "name": "selectAll",
+              "description": "Select all visible rows (or everything when selectVisibleOnly is false)."
+            },
+            {
+              "kind": "method",
+              "name": "clearSelection",
+              "description": "Reset the selection and refresh the UI."
+            },
+            {
+              "kind": "method",
+              "name": "getSelection",
+              "description": "Get selected rows or specific fields from selected rows. Only reflects the currently loaded page (compat). For a server-side selection spanning pages, use getSelectionState(). If no keys are provided, returns the full row objects. If one key is provided, returns an array of values for that key. If multiple keys are provided, returns an array of objects with those keys and values. In single select mode, returns a single object or value."
+            },
+            {
+              "kind": "method",
+              "name": "getFirst"
+            },
+            {
+              "kind": "method",
+              "name": "getLast"
+            },
+            {
+              "kind": "method",
+              "name": "getPrev"
+            },
+            {
+              "kind": "method",
+              "name": "getNext"
+            },
+            {
+              "kind": "field",
+              "name": "sortAsc"
+            },
+            {
+              "kind": "field",
+              "name": "sortDesc"
+            },
+            {
+              "kind": "field",
+              "name": "sortNone"
+            },
+            {
+              "kind": "method",
+              "name": "clearFilters"
+            },
+            {
+              "kind": "method",
+              "name": "getFilterOptions",
+              "description": "Resolve the options of a select filter, directly consumable by the <select>. Never derives from the currently loaded page: for a server grid the options must come from meta.filters or an explicit list."
+            },
+            {
+              "kind": "method",
+              "name": "totalPages"
+            }
+          ],
+          "events": [
+            {
+              "name": "action"
+            },
+            {
+              "name": "bodyRendered"
+            },
+            {
+              "name": "bulkAction"
+            },
+            {
+              "name": "columnReordered"
+            },
+            {
+              "name": "columnResized"
+            },
+            {
+              "name": "columnVisibility"
+            },
+            {
+              "name": "edit"
+            },
+            {
+              "name": "headerRendered"
+            },
+            {
+              "name": "loadError"
+            },
+            {
+              "name": "rowRendered"
+            },
+            {
+              "name": "selectionChange"
+            }
+          ],
+          "cssProperties": [
+            {
+              "name": "--dg-bg"
+            },
+            {
+              "name": "--dg-color"
+            },
+            {
+              "name": "--dg-border-color"
+            },
+            {
+              "name": "--dg-accent"
+            },
+            {
+              "name": "--dg-accent-soft"
+            },
+            {
+              "name": "--dg-header-bg"
+            },
+            {
+              "name": "--dg-header-color"
+            },
+            {
+              "name": "--dg-row-stripe-bg"
+            },
+            {
+              "name": "--dg-row-hover-bg"
+            },
+            {
+              "name": "--dg-row-selected-bg"
+            },
+            {
+              "name": "--dg-row-border-color"
+            },
+            {
+              "name": "--dg-control-bg"
+            },
+            {
+              "name": "--dg-control-color"
+            },
+            {
+              "name": "--dg-control-border-color"
+            },
+            {
+              "name": "--dg-danger-bg"
+            },
+            {
+              "name": "--dg-danger-color"
+            },
+            {
+              "name": "--dg-danger-border-color"
+            },
+            {
+              "name": "--dg-padding-x"
+            },
+            {
+              "name": "--dg-padding-y"
+            },
+            {
+              "name": "--dg-header-padding-y"
+            },
+            {
+              "name": "--dg-radius"
+            }
+          ]
+        }
+      ],
+      "exports": [
+        {
+          "kind": "js",
+          "name": "DataGrid",
+          "declaration": {
+            "name": "DataGrid",
+            "module": "src/data-grid.js"
+          }
+        },
+        {
+          "kind": "js",
+          "name": "default",
+          "declaration": {
+            "name": "DataGrid",
+            "module": "src/data-grid.js"
+          }
+        }
+      ]
+    }
+  ]
+}

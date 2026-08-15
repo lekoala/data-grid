@@ -116,28 +116,28 @@ export function removeAttribute(el, name) {
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerObject|FlexibleListener} listener
+ * @param {Function|EventListenerObject|FlexibleListener} listener
  */
 export function on(el, type, listener) {
-    el.addEventListener(type, listener, passiveOpts(type));
+    el.addEventListener(type, /** @type {any} */ (listener), passiveOpts(type));
 }
 
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerObject|FlexibleListener} listener
+ * @param {Function|EventListenerObject|FlexibleListener} listener
  */
 export function off(el, type, listener) {
-    el.removeEventListener(type, listener, passiveOpts(type));
+    el.removeEventListener(type, /** @type {any} */ (listener), passiveOpts(type));
 }
 
 /**
  * @param {EventTarget} el
  * @param {String} type
- * @param {EventListenerObject|FlexibleListener} listener
+ * @param {Function|EventListenerObject|FlexibleListener} listener
  */
 export function one(el, type, listener) {
-    el.addEventListener(type, listener, {
+    el.addEventListener(type, /** @type {any} */ (listener), {
         once: true,
     });
 }
@@ -218,7 +218,7 @@ export function $$(selector, base = document) {
  * For actual type, prefer use of el.querySelector
  * @param {HTMLElement} el
  * @param {String|HTMLElement} selector
- * @returns {FlexibleHTMLElement}
+ * @returns {FlexibleHTMLElement|null}
  */
 export function find(el, selector) {
     return $(selector, el);
@@ -246,7 +246,7 @@ export function el(el) {
 /**
  * @template {keyof HTMLElementTagNameMap} K
  * @param {K} tagName
- * @param {HTMLElement} parent
+ * @param {HTMLElement|null} [parent]
  * @returns {HTMLElementTagNameMap[K]}
  */
 export function ce(tagName, parent = null) {
@@ -262,5 +262,5 @@ export function ce(tagName, parent = null) {
  * @param {HTMLElement} existingNode
  */
 export function insertAfter(newNode, existingNode) {
-    existingNode.parentNode.insertBefore(newNode, existingNode.nextSibling);
+    existingNode.parentNode?.insertBefore(newNode, existingNode.nextSibling);
 }

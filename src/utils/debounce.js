@@ -9,9 +9,12 @@
  * @returns {ExtendedFunction}
  */
 export default function debounce(handler, timeout = 300) {
+    /** @type {ReturnType<typeof setTimeout> | null} */
     let timer = null;
     return (...args) => {
-        clearTimeout(timer);
+        if (timer !== null) {
+            clearTimeout(timer);
+        }
         timer = setTimeout(() => {
             timer = null;
             handler(...args);

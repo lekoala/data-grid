@@ -1,16 +1,17 @@
 /**
  * @param {URL} url
- * @param {Object} params
+ * @param {Record<string, any>} params
  */
 export default function appendParamsToUrl(url, params = {}) {
     for (const key of Object.keys(params)) {
-        if (Array.isArray(params[key])) {
-            for (const k of Object.keys(params[key])) {
-                // @ts-expect-error
-                url.searchParams.append(isNaN(k) ? `${key}[${k}]` : key, params[key][k]);
+        const value = params[key];
+        if (Array.isArray(value)) {
+            const arr = /** @type {any} */ (value);
+            for (const k of Object.keys(value)) {
+                url.searchParams.append(Number.isNaN(Number(k)) ? `${key}[${k}]` : key, arr[k]);
             }
         } else {
-            url.searchParams.append(key, params[key]);
+            url.searchParams.append(key, value);
         }
     }
 }

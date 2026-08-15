@@ -50,7 +50,8 @@ class BulkActions extends BasePlugin {
      */
     render() {
         const grid = this.grid;
-        if (!this.bar || !grid.options.bulkActions.length) {
+        const bulkActions = grid.options.bulkActions ?? [];
+        if (!this.bar || !bulkActions.length) {
             return;
         }
         const selection = grid.getSelectionState();
@@ -70,7 +71,7 @@ class BulkActions extends BasePlugin {
         countEl.textContent = `${count} ${grid.labels.selected}`;
         this.bar.appendChild(countEl);
 
-        for (const action of grid.options.bulkActions) {
+        for (const action of bulkActions) {
             const button = document.createElement("button");
             button.type = "button";
             button.dataset.action = action.name;

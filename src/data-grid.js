@@ -30,6 +30,7 @@ import {
 /** @typedef {import("./data-source.js").QueryState} QueryState */
 /** @typedef {import("./data-source.js").PageResult} PageResult */
 /** @typedef {import("./data-source.js").FilterState} FilterState */
+/** @typedef {import("./data-source.js").FilterOption} FilterOption */
 
 /**
  * Column definition
@@ -44,7 +45,7 @@ import {
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} [hidden] - hide the column
  * @property {Boolean} [noSort] - allow disabling sort for a given column
- * @property {String | Function} [format] - custom data formatting
+ * @property {String | Function} [format] - legacy string interpolation or function returning HTML
  * @property {String} [defaultFormatValue] - default value to use for formatting
  * @property {String} [transform] - custom value transformation
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
@@ -53,12 +54,26 @@ import {
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
  * @property {String} [filterType] - defines a filter field type ("text" or "select" - defaults to "text")
- * @property {Array} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
- * @property {Object} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
+ * @property {Array<any>} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
+ * @property {FilterOption} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
  * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML). Legacy renderCell(td, ctx) is still supported (arity-based)
- * @property {String} [format] - legacy string interpolation or function returning HTML (deprecated: use renderCell)
+ */
+
+/**
+ * Render context passed to header/filter/cell renderers. Only `grid` and
+ * `column` are always present.
+ * @typedef {Object} CellContext
+ * @property {DataGrid} grid
+ * @property {Column} column
+ * @property {Record<string, any>} [row]
+ * @property {Number} [rowIndex]
+ * @property {any} [value]
+ * @property {HTMLTableRowElement} [tr]
+ * @property {HTMLTableCellElement} [sampleTh]
+ * @property {Number} [availableWidth]
+ * @property {Number} [colMaxWidth]
  */
 
 /**
@@ -73,10 +88,10 @@ import {
  * @property {Function} [render] - ({ action, row, grid }) => content, replaces the button content
  * @property {Boolean} [confirm] - needs confirmation
  * @property {Boolean} [default] - is the default row action
- * @property {String} [title] - DEPRECATED: the title of the button (use label)
- * @property {String} [class] - DEPRECATED: the class for the button (use intent + CSS)
- * @property {String} [url] - DEPRECATED: link for the action (use href)
- * @property {String} [html] - DEPRECATED: custom button data (use render)
+ * @property {String} [title] - the title of the button
+ * @property {String} [class] - the class for the button
+ * @property {String} [url] - link for the action
+ * @property {String} [html] - custom button data
  */
 
 /**
@@ -98,12 +113,9 @@ import {
  */
 
 /** @typedef {import("./core/base-plugin.js").Plugin} Plugin */
-
-/**
- * Registered plugins, keyed by their registration name. The core only
- * iterates them generically.
- * @typedef {Record<string, Plugin>} Plugins
- */
+/** @typedef {import("./core/base-plugin.js").PluginConstructor} PluginConstructor */
+/** @typedef {import("./core/base-plugin.js").PluginRegistry} PluginRegistry */
+/** @typedef {import("./core/base-plugin.js").PluginInstances} PluginInstances */
 
 /**
  * Available data grid options, plugins included
@@ -111,13 +123,13 @@ import {
  * @property {?String} id Custom id for the grid
  * @property {?String} src An URL to a server-side endpoint (FetchDataSource)
  * @property {Object} params Extra constant HTTP params passed to FetchDataSource
- * @property {DataSource} [dataSource] Custom data source (defaults to FetchDataSource or ArrayDataSource)
+ * @property {?DataSource} [dataSource] Custom data source (defaults to FetchDataSource or ArrayDataSource)
  * @property {Boolean} debug Log actions in DevTools console
  * @property {Boolean} sortable Allows a sort by column functionality
  * @property {Boolean} filterable Allows a filtering functionality
  * @property {String} dir Dir
  * @property {"compact"|"default"|"comfortable"} [density] Row density (maps to --dg-padding-* tokens)
- * @property {Array} pageSizes Available page size options
+ * @property {Array<any>} pageSizes Available page size options
  * @property {Boolean} showPageSize Shows the page size select element
  * @property {Column[]} columns Available columns
  * @property {Action[]} actions Row actions (RowActions module)
@@ -143,8 +155,8 @@ import {
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
- * @property {QueryState} [initialQuery] Initial runtime query state
- * @property {PageResult} [initialResult] Initial result to display without loading the data source
+ * @property {?QueryState} [initialQuery] Initial runtime query state
+ * @property {?PageResult} [initialResult] Initial result to display without loading the data source
  * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
  */
 
@@ -167,8 +179,8 @@ import {
  */
 
 /**
- * List of registered plugins
- * @type {Plugins}
+ * List of registered plugin constructors
+ * @type {PluginRegistry}
  */
 let plugins = {};
 
@@ -193,7 +205,7 @@ let labels = {
 
 /**
  * Build a fresh, normalized QueryState.
- * @param {QueryState} [query]
+ * @param {?QueryState} [query]
  * @returns {QueryState}
  */
 function normalizeQuery(query) {
@@ -348,92 +360,154 @@ class DataGrid extends BaseElement {
         "Unidentified",
     ];
 
+    /**
+     * Instantiated plugins, keyed by their registration name.
+     * @type {PluginInstances}
+     */
+    plugins = this._initPlugins();
+
+    /**
+     * Initial query used by resetQuery()
+     * @type {QueryState}
+     */
+    _initialQuery = normalizeQuery(this.options.initialQuery);
+
+    /**
+     * Runtime query state, single source of truth
+     * @type {QueryState}
+     */
+    _query = normalizeQuery(this._initialQuery);
+
+    /**
+     * Selection state, single source of truth for row selection
+     * @type {SelectionState}
+     */
+    _selection = { mode: "explicit", ids: new Set(), except: new Set() };
+
+    /**
+     * @type {Number}
+     */
+    _requestSeq = 0;
+
+    /**
+     * @type {?AbortController}
+     */
+    _controller = null;
+
+    /**
+     * Optional initial result, can be set as a property before connection
+     * @type {PageResult|null}
+     */
+    initialResult = null;
+
+    /**
+     * @type {PageResult|null}
+     */
+    _initialResult = this.options.initialResult || this.initialResult || null;
+
+    /**
+     * Rows of the current page
+     * @type {Array<Record<string, any>>}
+     */
+    rows = [];
+
+    /**
+     * Total number of rows matching the current query
+     * @type {Number}
+     */
+    total = 0;
+
+    /**
+     * Meta information returned by the data source
+     * @type {Record<string, any>}
+     */
+    meta = {};
+
+    /**
+     * @type {Number}
+     */
+    pages = 0;
+
+    /**
+     * @type {Boolean}
+     */
+    loading = false;
+
+    /**
+     * @type {?Error}
+     */
+    error = null;
+
+    /**
+     * Normalized columns of the current render cycle
+     * @type {Column[]}
+     */
+    _columns = [];
+
+    /**
+     * Set by the ColumnResizer plugin while resizing, checked by sortData
+     * @type {Boolean}
+     */
+    _isResizing = false;
+
+    /**
+     * The active data source, set by setupDataSource().
+     * @type {DataSource|null}
+     */
+    dataSource = null;
+
+    /**
+     * DOM refs set on connect from the rendered template.
+     * @type {HTMLTableElement|null}
+     */
+    table = null;
+
+    /** @type {HTMLInputElement|null} */
+    btnFirst = null;
+
+    /** @type {HTMLInputElement|null} */
+    btnPrev = null;
+
+    /** @type {HTMLInputElement|null} */
+    btnNext = null;
+
+    /** @type {HTMLInputElement|null} */
+    btnLast = null;
+
+    /** @type {HTMLSelectElement|null} */
+    selectPerPage = null;
+
+    /** @type {HTMLInputElement|null} */
+    inputPage = null;
+
+    /** @type {HTMLTableRowElement|null} */
+    headerRow = null;
+
+    /** @type {Number|null} */
+    rowHeight = null;
+
+    /**
+     * Current render context, set by renderTable/renderBody.
+     * @type {import("./core/base-plugin.js").RenderContext|null}
+     */
+    _renderContext = null;
+
     _ready() {
-        setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
-
-        // Make the IDE happy
-        /**
-         * @type {Options}
-         */
-        this.options = this.options || this.defaultOptions;
-        if (this.options.singleSelect) this.options.selectable = true; // singleSelect implies selectable
-
-        // Init values
         this.fireEvents = false;
+        setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
+        if (this.options.singleSelect) this.options.selectable = true; // singleSelect implies selectable
+    }
 
-        /**
-         * @type {Plugins}
-         */
-        this.plugins = {};
-        // Init plugins
+    /**
+     * Instantiate the registered plugin constructors.
+     * @returns {PluginInstances}
+     */
+    _initPlugins() {
+        const instances = /** @type {PluginInstances} */ ({});
         for (const [pluginName, pluginClass] of Object.entries(plugins)) {
-            // @ts-expect-error until we can set typeof import ...
-            this.plugins[pluginName] = new pluginClass(this);
+            instances[pluginName] = new pluginClass(this);
         }
-
-        /**
-         * Initial query used by resetQuery()
-         * @type {QueryState}
-         */
-        this._initialQuery = normalizeQuery(this.options.initialQuery);
-        /**
-         * Runtime query state, single source of truth
-         * @type {QueryState}
-         */
-        this._query = normalizeQuery(this._initialQuery);
-
-        /**
-         * Selection state, single source of truth for row selection
-         * @type {SelectionState}
-         */
-        this._selection = { mode: "explicit", ids: new Set(), except: new Set() };
-
-        this._requestSeq = 0;
-        this._controller = null;
-        /**
-         * Optional initial result, can be set as a property before connection
-         * @type {PageResult|null}
-         */
-        this.initialResult = null;
-        this._initialResult = this.options.initialResult || this.initialResult || null;
-
-        /**
-         * Rows of the current page
-         * @type {Array}
-         */
-        this.rows = [];
-        /**
-         * Total number of rows matching the current query
-         * @type {Number}
-         */
-        this.total = 0;
-        /**
-         * Meta information returned by the data source
-         * @type {Object}
-         */
-        this.meta = {};
-        /**
-         * @type {Number}
-         */
-        this.pages = 0;
-        /**
-         * @type {Boolean}
-         */
-        this.loading = false;
-        /**
-         * @type {?Error}
-         */
-        this.error = null;
-        /**
-         * Normalized columns of the current render cycle
-         * @type {Column[]}
-         */
-        this._columns = [];
-        /**
-         * Set by the ColumnResizer plugin while resizing, checked by sortData
-         * @type {Boolean}
-         */
-        this._isResizing = false;
+        return instances;
     }
 
     static template() {
@@ -479,6 +553,7 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * @public
      * @returns {Labels}
      */
     get labels() {
@@ -486,6 +561,7 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * @public
      * @returns {Labels}
      */
     static getLabels() {
@@ -493,13 +569,15 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * @public
      * @param {Object} v
      */
     static setLabels(v) {
         labels = Object.assign(labels, v);
     }
 
-    /** Gets the text to be displayed when no data is loaded. */
+    /** Gets the text to be displayed when no data is loaded.
+     * @public */
     get noData() {
         return this.options.noData || this.labels.noData;
     }
@@ -597,6 +675,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Snapshot of the current query state.
+     * @public
      * @returns {QueryState}
      */
     get query() {
@@ -605,6 +684,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Convenience read-only accessor for the current page.
+     * @public
      * @returns {Number}
      */
     get page() {
@@ -612,14 +692,18 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * @param {Plugins} list
+     * Register plugin constructors, keyed by name. The core instantiates them
+     * on each DataGrid construction. Names are not limited to built-in plugins.
+     * @public
+     * @param {PluginRegistry} list
      */
     static registerPlugins(list) {
         plugins = list;
     }
 
     /**
-     * @param {String} plugin
+     * @public
+     * @param {?String} [plugin]
      */
     static unregisterPlugins(plugin = null) {
         if (plugin === null) {
@@ -630,7 +714,8 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * @returns {Plugins}
+     * @public
+     * @returns {PluginRegistry}
      */
     static registeredPlugins() {
         return plugins;
@@ -643,7 +728,10 @@ class DataGrid extends BaseElement {
      */
     runPlugins(hook, ...args) {
         for (const plugin of Object.values(this.plugins)) {
-            plugin[hook]?.(...args);
+            const fn = Reflect.get(plugin, hook);
+            if (typeof fn === "function") {
+                fn.call(plugin, ...args);
+            }
         }
     }
 
@@ -659,6 +747,7 @@ class DataGrid extends BaseElement {
 
     /**
      * The normalized column list of the current render cycle.
+     * @public
      * @returns {Column[]}
      */
     getColumns() {
@@ -666,7 +755,7 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * @param {Object|Array} columns
+     * @param {Record<string, any>|Array<any>} columns
      * @returns {Column[]}
      */
     convertColumns(columns) {
@@ -704,7 +793,7 @@ class DataGrid extends BaseElement {
 
     /**
      * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dom-attributes
-     * @returns {Array}
+     * @returns {Array<any>}
      */
     static get observedAttributes() {
         return [
@@ -730,20 +819,17 @@ class DataGrid extends BaseElement {
 
     /** @returns {HTMLTableSectionElement} */
     get thead() {
-        //@ts-expect-error
-        return $("thead", this);
+        return /** @type {HTMLTableSectionElement} */ ($("thead", this));
     }
 
     /** @returns {HTMLTableSectionElement} */
     get tbody() {
-        //@ts-expect-error
-        return $("tbody", this);
+        return /** @type {HTMLTableSectionElement} */ ($("tbody", this));
     }
 
     /** @returns {HTMLTableSectionElement} */
     get tfoot() {
-        //@ts-expect-error
-        return $("tfoot", this);
+        return /** @type {HTMLTableSectionElement} */ ($("tfoot", this));
     }
 
     /**
@@ -770,14 +856,14 @@ class DataGrid extends BaseElement {
             return;
         }
         if (this.hasAttribute("page-size")) {
-            const pageSize = Number.parseInt(this.getAttribute("page-size"));
+            const pageSize = Number.parseInt(this.getAttribute("page-size") ?? "");
             if (pageSize) {
                 this._query.pageSize = pageSize;
                 this._initialQuery.pageSize = pageSize;
             }
         }
         if (this.hasAttribute("page")) {
-            const page = Number.parseInt(this.getAttribute("page"));
+            const page = Number.parseInt(this.getAttribute("page") ?? "");
             if (page) {
                 this._query.page = page;
                 this._initialQuery.page = page;
@@ -789,8 +875,9 @@ class DataGrid extends BaseElement {
      * Merge a patch into the query state and reload.
      * Changing filters, sort or pageSize resets the page to 1 unless an explicit
      * page is provided in the patch.
-     * @param {Object} patch
-     * @returns {Promise}
+     * @public
+     * @param {Partial<QueryState>} patch
+     * @returns {Promise<void>}
      */
     setQuery(patch) {
         const next = normalizeQuery(this._query);
@@ -807,7 +894,8 @@ class DataGrid extends BaseElement {
 
     /**
      * Reset the query to its initial state and reload.
-     * @returns {Promise}
+     * @public
+     * @returns {Promise<void>}
      */
     resetQuery() {
         this._query = normalizeQuery(this._initialQuery);
@@ -816,7 +904,8 @@ class DataGrid extends BaseElement {
 
     /**
      * Reload the result matching the current query.
-     * @returns {Promise}
+     * @public
+     * @returns {Promise<void>}
      */
     refresh() {
         return this.load();
@@ -825,7 +914,8 @@ class DataGrid extends BaseElement {
     /**
      * Single load path: abort previous request, load the current query,
      * protect against stale responses, then render.
-     * @returns {Promise}
+     * @public
+     * @returns {Promise<void>}
      */
     async load() {
         const requestId = ++this._requestSeq;
@@ -844,20 +934,25 @@ class DataGrid extends BaseElement {
                 result = this._initialResult;
                 this._initialResult = null;
             } else {
-                result = await this.dataSource.load(this.query, { signal: controller.signal });
+                const ds = this.dataSource;
+                if (!ds) {
+                    throw new Error("No data source");
+                }
+                result = await ds.load(this.query, { signal: controller.signal });
             }
             if (requestId !== this._requestSeq) return;
             this.applyResult(result);
         } catch (err) {
             if (requestId !== this._requestSeq) return;
-            if (err?.name === "AbortError" || controller.signal.aborted) return;
-            this.error = err;
+            const e = /** @type {any} */ (err);
+            if (e?.name === "AbortError" || controller.signal.aborted) return;
+            this.error = e;
             setAttribute(this, "data-error", "");
             this.tbody?.setAttribute(
                 "data-empty-message",
-                this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
+                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
             );
-            dispatch(this, "loadError", err);
+            dispatch(this, "loadError", e);
         } finally {
             if (requestId === this._requestSeq) {
                 this.loading = false;
@@ -868,7 +963,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Apply a PageResult and render.
-     * @param {PageResult|Array} result
+     * @param {PageResult|Array<any>} result
      */
     applyResult(result) {
         const page = Array.isArray(result) ? { rows: result, total: result.length, meta: {} } : result;
@@ -944,33 +1039,12 @@ class DataGrid extends BaseElement {
     }
 
     async _connected() {
-        /**
-         * @type {HTMLTableElement}
-         */
         this.table = this.querySelector("table");
-        /**
-         * @type {HTMLInputElement}
-         */
         this.btnFirst = this.querySelector(".dg-btn-first");
-        /**
-         * @type {HTMLInputElement}
-         */
         this.btnPrev = this.querySelector(".dg-btn-prev");
-        /**
-         * @type {HTMLInputElement}
-         */
         this.btnNext = this.querySelector(".dg-btn-next");
-        /**
-         * @type {HTMLInputElement}
-         */
         this.btnLast = this.querySelector(".dg-btn-last");
-        /**
-         * @type {HTMLSelectElement}
-         */
         this.selectPerPage = this.querySelector(".dg-select-per-page");
-        /**
-         * @type {HTMLInputElement}
-         */
         this.inputPage = this.querySelector(".dg-input-page");
 
         this.getFirst = this.getFirst.bind(this);
@@ -980,13 +1054,13 @@ class DataGrid extends BaseElement {
         this.changePerPage = this.changePerPage.bind(this);
         this.gotoPage = this.gotoPage.bind(this);
 
-        this.btnFirst.addEventListener("click", this.getFirst);
-        this.btnPrev.addEventListener("click", this.getPrev);
-        this.btnNext.addEventListener("click", this.getNext);
-        this.btnLast.addEventListener("click", this.getLast);
-        this.selectPerPage.addEventListener("change", this.changePerPage);
-        this.selectPerPage.toggleAttribute("hidden", !this.options.showPageSize);
-        this.inputPage.addEventListener("input", this.gotoPage);
+        this.btnFirst?.addEventListener("click", this.getFirst);
+        this.btnPrev?.addEventListener("click", this.getPrev);
+        this.btnNext?.addEventListener("click", this.getNext);
+        this.btnLast?.addEventListener("click", this.getLast);
+        this.selectPerPage?.addEventListener("change", this.changePerPage);
+        this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
+        this.inputPage?.addEventListener("input", this.gotoPage);
 
         this.setupDataSource();
         this.setupInitialState();
@@ -1029,8 +1103,8 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * @param {string} field
-     * @returns {Column}
+     * @param {String} field
+     * @returns {Column|null}
      */
     getCol(field) {
         let found = null;
@@ -1043,15 +1117,25 @@ class DataGrid extends BaseElement {
         return found;
     }
 
+    /**
+     * @param {String} field
+     * @param {String} prop
+     * @returns {any}
+     */
     getColProp(field, prop) {
         const c = this.getCol(field);
-        return c ? c[prop] : null;
+        return c ? Reflect.get(c, prop) : null;
     }
 
+    /**
+     * @param {String} field
+     * @param {String} prop
+     * @param {any} val
+     */
     setColProp(field, prop, val) {
         const c = this.getCol(field);
         if (c) {
-            c[prop] = val;
+            Reflect.set(c, prop, val);
         }
     }
 
@@ -1067,6 +1151,11 @@ class DataGrid extends BaseElement {
         });
     }
 
+    /**
+     * @public
+     * @param {String} field
+     * @param {Boolean} [render]
+     */
     showColumn(field, render = true) {
         this.setColProp(field, "hidden", false);
 
@@ -1079,6 +1168,11 @@ class DataGrid extends BaseElement {
         });
     }
 
+    /**
+     * @public
+     * @param {String} field
+     * @param {Boolean} [render]
+     */
     hideColumn(field, render = true) {
         this.setColProp(field, "hidden", true);
 
@@ -1151,6 +1245,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Whether a row is part of the current selection.
+     * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      * @returns {Boolean}
@@ -1163,6 +1258,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Snapshot of the current selection state.
+     * @public
      * @returns {SelectionState}
      */
     getSelectionState() {
@@ -1175,6 +1271,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Select a row (single select keeps at most one key).
+     * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      */
@@ -1196,6 +1293,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Deselect a row.
+     * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      */
@@ -1212,6 +1310,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Toggle the selection state of a row.
+     * @public
      * @param {Record<string, any>} row
      * @param {Number} [index]
      */
@@ -1225,6 +1324,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Select all visible rows (or everything when selectVisibleOnly is false).
+     * @public
      */
     selectAll() {
         if (this.options.selectVisibleOnly) {
@@ -1238,6 +1338,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Reset the selection and refresh the UI.
+     * @public
      */
     clearSelection() {
         this._selection = { mode: "explicit", ids: new Set(), except: new Set() };
@@ -1252,8 +1353,9 @@ class DataGrid extends BaseElement {
      * If one key is provided, returns an array of values for that key.
      * If multiple keys are provided, returns an array of objects with those keys and values.
      * In single select mode, returns a single object or value.
+     * @public
      * @param {...String} keys - Field names to select from each row.
-     * @returns {Array|Object} Selected rows, values, or objects depending on selection and keys.
+     * @returns {Array<any>|Object} Selected rows, values, or objects depending on selection and keys.
      */
     getSelection(...keys) {
         const selected = [];
@@ -1296,6 +1398,10 @@ class DataGrid extends BaseElement {
         dispatch(this, "selectionChange", { selectionState: this.getSelectionState() });
     }
 
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
     getFirst() {
         if (this.loading) {
             return;
@@ -1303,6 +1409,10 @@ class DataGrid extends BaseElement {
         return this.setQuery({ page: 1 });
     }
 
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
     getLast() {
         if (this.loading) {
             return;
@@ -1310,6 +1420,10 @@ class DataGrid extends BaseElement {
         return this.setQuery({ page: this.pages });
     }
 
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
     getPrev() {
         if (this.loading) {
             return;
@@ -1317,6 +1431,10 @@ class DataGrid extends BaseElement {
         return this.setQuery({ page: Math.max(1, this._query.page - 1) });
     }
 
+    /**
+     * @public
+     * @returns {Promise<void>|undefined}
+     */
     getNext() {
         if (this.loading) {
             return;
@@ -1324,14 +1442,22 @@ class DataGrid extends BaseElement {
         return this.setQuery({ page: this._query.page + 1 });
     }
 
+    /**
+     * @param {Event|KeyboardEvent} event
+     * @returns {Promise<void>|undefined}
+     */
     gotoPage(event) {
         if (event.type === "keypress") {
-            const key = event.keyCode || event.key;
+            const keyEvent = /** @type {KeyboardEvent} */ (event);
+            const key = keyEvent.keyCode || keyEvent.key;
             if (key === 13 || key === "Enter") {
                 event.preventDefault();
             } else {
                 return;
             }
+        }
+        if (!this.inputPage) {
+            return;
         }
         const page = Number.parseInt(this.inputPage.value);
         if (page) {
@@ -1341,9 +1467,14 @@ class DataGrid extends BaseElement {
 
     /**
      * This is the callback for the select control
+     * @returns {Promise<void>|undefined}
      */
     changePerPage() {
-        const pageSize = Number.parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value);
+        const select = this.selectPerPage;
+        if (!select) {
+            return;
+        }
+        const pageSize = Number.parseInt(select.options[select.selectedIndex].value);
         return this.setQuery({ pageSize });
     }
 
@@ -1359,7 +1490,8 @@ class DataGrid extends BaseElement {
 
     /**
      * Trigger sort based on the current header state.
-     * @param {Element} baseCol The column that was clicked or null to use current sort
+     * @param {?Element} [baseCol] The column that was clicked or null to use current sort
+     * @returns {Promise<void>|undefined}
      */
     sortData(baseCol = null) {
         this.log("sort data");
@@ -1367,9 +1499,12 @@ class DataGrid extends BaseElement {
         let col = baseCol;
 
         // Early exit
-        if (col && this.getColProp(col.getAttribute("field"), "noSort")) {
-            this.log("sorting prevented because column is not sortable");
-            return;
+        if (col) {
+            const field = col.getAttribute("field");
+            if (field && this.getColProp(field, "noSort")) {
+                this.log("sorting prevented because column is not sortable");
+                return;
+            }
         }
         if (this._isResizing) {
             this.log("sorting prevented because resizing");
@@ -1398,7 +1533,12 @@ class DataGrid extends BaseElement {
         const sort =
             next === null
                 ? []
-                : [{ field: col.getAttribute("field"), direction: next === "ascending" ? "asc" : "desc" }];
+                : [
+                      {
+                          field: col.getAttribute("field") ?? "",
+                          direction: /** @type {"asc"|"desc"} */ (next === "ascending" ? "asc" : "desc"),
+                      },
+                  ];
 
         // Reflect the sort state on the headers immediately
         const headers = findAll(this, "thead tr.dg-head-columns th");
@@ -1416,14 +1556,26 @@ class DataGrid extends BaseElement {
         return this.setQuery({ sort });
     }
 
+    /**
+     * @param {String} columnName
+     * @param {"asc"|"desc"|"none"} direction
+     * @returns {Promise<void>}
+     */
     _sort(columnName, direction) {
         return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
     }
 
+    /** @public @param {String} columnName */
     sortAsc = (columnName) => this._sort(columnName, "asc");
+    /** @public @param {String} columnName */
     sortDesc = (columnName) => this._sort(columnName, "desc");
+    /** @public @param {String} columnName */
     sortNone = (columnName) => this._sort(columnName, "none");
 
+    /**
+     * @public
+     * @returns {Promise<void>}
+     */
     clearFilters() {
         const inputs = findAll(this, this._filterSelector);
         for (const input of inputs) {
@@ -1438,13 +1590,15 @@ class DataGrid extends BaseElement {
     filterData() {
         this.log("filter data");
 
+        /** @type {Record<string, FilterState>} */
         const filters = {};
         const inputs = findAll(this, this._filterSelector);
         for (const input of inputs) {
             const value = input.value;
-            if (value) {
+            const name = input.dataset.name;
+            if (value && name) {
                 const isSelect = /select/i.test(input.tagName);
-                filters[input.dataset.name] = {
+                filters[name] = {
                     operator: isSelect ? "eq" : "contains",
                     value,
                 };
@@ -1485,6 +1639,7 @@ class DataGrid extends BaseElement {
         const tfoot = this.tfoot;
         if (!tfoot) return;
         const td = tfoot.querySelector("td");
+        if (!td) return;
         tfoot.removeAttribute("hidden");
         setAttribute(td, "colspan", this.columnsLength(true));
         tfoot.style.display = "";
@@ -1507,11 +1662,11 @@ class DataGrid extends BaseElement {
         tr.setAttribute("class", "dg-head-columns");
 
         // We need a real th from the dom to compute the size
-        let sampleTh = thead?.querySelector("tr.dg-head-columns th");
+        let sampleTh = /** @type {HTMLTableCellElement | null} */ (thead?.querySelector("tr.dg-head-columns th"));
         this.log("createColumnHeaders - sampleTh", sampleTh);
         if (!sampleTh) {
             sampleTh = ce("th");
-            thead?.querySelector("tr").appendChild(sampleTh);
+            thead?.querySelector("tr")?.appendChild(sampleTh);
         }
 
         // Create columns
@@ -1527,7 +1682,7 @@ class DataGrid extends BaseElement {
             setAttribute(th, "data-column-id", column.id ?? column.field);
             if (!column.virtual) {
                 th.setAttribute("id", randstr("dg-col-"));
-                th.setAttribute("field", column.field);
+                th.setAttribute("field", column.field ?? "");
             }
 
             const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
@@ -1539,7 +1694,7 @@ class DataGrid extends BaseElement {
 
             tr.appendChild(th);
             if (!column.hidden) {
-                totalWidth += Number.parseInt(th.getAttribute("width")) || 0;
+                totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
             }
         }
 
@@ -1552,7 +1707,10 @@ class DataGrid extends BaseElement {
             }
         }
 
-        thead?.replaceChild(tr, thead.querySelector("tr.dg-head-columns"));
+        const oldRow = thead?.querySelector("tr.dg-head-columns");
+        if (thead && oldRow) {
+            thead.replaceChild(tr, oldRow);
+        }
 
         // Once columns are inserted, we have an actual dom to query
         if (thead && thead.offsetWidth > availableWidth) {
@@ -1572,8 +1730,8 @@ class DataGrid extends BaseElement {
                 if (diff <= 0) {
                     continue;
                 }
-                const actualWidth = Number.parseInt(th.getAttribute("width"));
-                const minWidth = th.dataset.minWidth ? Number.parseInt(th.dataset.minWidth) : 0;
+                const actualWidth = Number.parseInt(th.getAttribute("width") ?? "");
+                const minWidth = Number.parseInt(th.dataset.minWidth ?? "") || 0;
                 if (actualWidth > minWidth) {
                     let newWidth = actualWidth - diff;
                     if (newWidth < minWidth) {
@@ -1598,7 +1756,7 @@ class DataGrid extends BaseElement {
     /**
      * Default header cell renderer for base columns.
      * @param {HTMLTableCellElement} th
-     * @param {Object} ctx
+     * @param {CellContext} ctx
      */
     renderDefaultHeaderCell(th, ctx) {
         const { column, sampleTh } = ctx;
@@ -1610,31 +1768,34 @@ class DataGrid extends BaseElement {
             setAttribute(th, "data-responsive", column.responsive || "");
         }
         // Make sure the header fits (+ add some room for sort icon if necessary)
-        const computedWidth = getTextWidth(column.title, sampleTh, true) + 20;
+        const computedWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
         th.dataset.minWidth = `${computedWidth}`;
         applyColumnDefinition(th, column);
 
-        const w = Math.max(Number.parseInt(th.dataset.minWidth), Number.parseInt(th.getAttribute("width")));
+        const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
         setAttribute(th, "width", w);
         if (column.hidden) {
             th.setAttribute("hidden", "");
         }
 
         if (sortable) {
-            const direction = this.getColumnSortDirection(column.field);
+            const direction = this.getColumnSortDirection(column.field ?? "");
             if (direction) {
                 th.setAttribute("aria-sort", direction === "asc" ? "ascending" : "descending");
                 setAttribute(th, "data-sort", direction);
             }
             const button = ce("button");
             button.type = "button";
-            button.textContent = column.title;
+            button.textContent = column.title ?? "";
             th.appendChild(button);
         } else {
-            th.textContent = column.title;
+            th.textContent = column.title ?? "";
         }
     }
 
+    /**
+     * @param {HTMLTableSectionElement} thead
+     */
     createColumnFilters(thead) {
         let idx = 0;
 
@@ -1646,7 +1807,9 @@ class DataGrid extends BaseElement {
         }
 
         // The header cells are indexed the same way (same column iteration order)
-        const headerThs = Array.from(thead?.querySelectorAll("tr.dg-head-columns th") ?? []);
+        const headerThs = /** @type {HTMLTableCellElement[]} */ (
+            Array.from(thead?.querySelectorAll("tr.dg-head-columns th") ?? [])
+        );
         this.log("createColumnFilters - columns", this.getColumns());
         for (const column of this.getColumns()) {
             if (column.attr) {
@@ -1675,7 +1838,10 @@ class DataGrid extends BaseElement {
             idx++;
         }
 
-        thead?.replaceChild(tr, thead.querySelector("tr.dg-head-filters"));
+        const oldRow = thead?.querySelector("tr.dg-head-filters");
+        if (thead && oldRow) {
+            thead.replaceChild(tr, oldRow);
+        }
 
         if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
             this.options.filterKeypressDelay = 0;
@@ -1685,7 +1851,7 @@ class DataGrid extends BaseElement {
         for (const el of filteredRows) {
             const isSelect = /select/i.test(el.tagName);
             const eventName = isSelect ? "change" : "keyup";
-            const eventHandler = debounce((e) => {
+            const eventHandler = debounce((/** @type {KeyboardEvent} */ e) => {
                 const key = e.keyCode || e.key;
                 const isKeyPressFilter = !this.options.filterOnEnter && !this._excludedKeys.some((k) => k === key);
                 if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change" || e.type === "paste") {
@@ -1710,14 +1876,22 @@ class DataGrid extends BaseElement {
         const filter = this.createFilterElement(column, relatedTh);
 
         // Reflect the current query filters into the input
-        const filterState = this._query.filters?.[column.field];
-        if (filterState) {
-            filter.value = filterState.value ?? "";
+        const field = column.field;
+        if (field) {
+            const filterState = this._query.filters?.[field];
+            if (filterState) {
+                filter.value = filterState.value ?? "";
+            }
         }
 
         th.appendChild(filter);
     }
 
+    /**
+     * @param {Column} column
+     * @param {HTMLTableCellElement} relatedTh
+     * @returns {HTMLInputElement|HTMLSelectElement}
+     */
     createFilterElement(column, relatedTh) {
         const isSelect = column.filterType === "select";
         const filter = isSelect ? ce("select") : ce("input");
@@ -1732,17 +1906,17 @@ class DataGrid extends BaseElement {
                 }
             }
         } else {
-            //@ts-expect-error
-            filter.type = "text";
-            filter.inputMode = "search";
-            filter.autocomplete = "off";
-            filter.spellcheck = false;
+            const input = /** @type {HTMLInputElement} */ (filter);
+            input.type = "text";
+            input.inputMode = "search";
+            input.autocomplete = "off";
+            input.spellcheck = false;
         }
         // Allows binding filter to this column
-        filter.dataset.name = column.field;
+        filter.dataset.name = column.field ?? "";
         filter.id = randstr("dg-filter-");
         // Don't use aria-label as it triggers autocomplete
-        filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id"));
+        filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id") ?? "");
         return filter;
     }
 
@@ -1750,23 +1924,26 @@ class DataGrid extends BaseElement {
      * Resolve the options of a select filter, directly consumable by the
      * <select>. Never derives from the currently loaded page: for a server
      * grid the options must come from meta.filters or an explicit list.
+     * @public
      * @param {Column} column
      * @returns {Array<import("./data-source.js").FilterOption>}
      */
     getFilterOptions(column) {
-        const firstFilterOption = column.firstFilterOption || this.defaultColumn.firstFilterOption;
+        const field = column.field;
+        const firstFilterOption = column.firstFilterOption ||
+            this.defaultColumn.firstFilterOption || { value: "", text: "" };
         // An explicit list is authoritative and used as-is (backward compat)
         if (Array.isArray(column.filterList)) {
             return column.filterList;
         }
         // Server-provided options for server-first grids
-        const metaOptions = this.meta?.filters?.[column.field];
+        const metaOptions = field ? this.meta?.filters?.[field] : undefined;
         if (Array.isArray(metaOptions)) {
             return [firstFilterOption, ...metaOptions];
         }
         // A local data source owns the full collection and can derive options
         if (this.dataSource instanceof ArrayDataSource) {
-            const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => e[column.field]))]
+            const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => (field ? e[field] : undefined)))]
                 .filter((v) => v !== undefined && v !== null && v !== "")
                 .sort();
             return [firstFilterOption, ...uniqueValues.map((e) => ({ value: e, text: e }))];
@@ -1803,26 +1980,28 @@ class DataGrid extends BaseElement {
             for (const column of this.getColumns()) {
                 if (!column) {
                     console.error("Empty column found!", this.getColumns());
+                    continue;
                 }
+                const field = column.field;
                 // It should be applied as an attr of the row
                 if (column.attr) {
-                    if (item[column.field]) {
+                    if (field && item[field]) {
                         // Special case if we try to write over the class attr
                         if (column.attr === "class") {
-                            addClass(tr, item[column.field]);
+                            addClass(tr, item[field]);
                         } else {
-                            tr.setAttribute(column.attr, item[column.field]);
+                            tr.setAttribute(column.attr, item[field]);
                         }
                     }
                     continue;
                 }
                 const td = ce("td");
-                setAttribute(td, "data-column-id", column.id ?? column.field);
+                setAttribute(td, "data-column-id", column.id ?? field);
                 applyColumnDefinition(td, column);
                 // This is required for pure css responsive layout
-                td.setAttribute("data-name", column.title);
+                td.setAttribute("data-name", column.title ?? "");
 
-                const ctx = { grid: this, column, row: item, rowIndex: i, value: item[column.field], tr };
+                const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
                 if (column.renderCell) {
                     if (column.renderCell.length > 1) {
                         // Legacy renderer: fills the td itself
@@ -1845,8 +2024,10 @@ class DataGrid extends BaseElement {
 
         // Keep data empty message
         const prev = this.tbody;
-        prev && tbody.setAttribute("data-empty-message", prev.getAttribute("data-empty-message"));
-        this.table?.replaceChild(tbody, prev);
+        if (prev) {
+            tbody.setAttribute("data-empty-message", prev.getAttribute("data-empty-message") ?? "");
+            this.table?.replaceChild(tbody, prev);
+        }
 
         this.paginate();
 
@@ -1865,19 +2046,23 @@ class DataGrid extends BaseElement {
      * Default cell renderer for base columns (transform / format).
      * Editable cells are marked for the EditableColumn plugin.
      * @param {HTMLTableCellElement} td
-     * @param {Object} ctx
+     * @param {CellContext} ctx
      */
     renderDefaultCell(td, ctx) {
         const { column, row: item, rowIndex: i } = ctx;
+        const field = column.field;
+        if (!field || !item) {
+            return;
+        }
 
         if (column.editable) {
             addClass(td, "dg-editable-col");
-            td.dataset.field = column.field;
+            td.dataset.field = field;
             td.dataset.rowIndex = `${i}`;
         }
 
         // ... or formatting
-        const v = item[column.field] ?? "";
+        const v = item[field] ?? "";
         let tv;
         // TODO: make this modular
         switch (column.transform) {
@@ -1938,19 +2123,21 @@ class DataGrid extends BaseElement {
         }
 
         // Enable/disable buttons if shown
-        if (this.btnFirst) {
-            this.btnFirst.disabled = this._query.page <= 1;
-            this.btnPrev.disabled = this._query.page <= 1;
-            this.btnNext.disabled = this._query.page >= this.pages;
-            this.btnLast.disabled = this._query.page >= this.pages;
-        }
-        tfoot.querySelector(".dg-low").textContent = low.toString();
-        tfoot.querySelector(".dg-high").textContent = high.toString();
-        tfoot.querySelector(".dg-total").textContent = `${this.total}`;
+        if (this.btnFirst) this.btnFirst.disabled = this._query.page <= 1;
+        if (this.btnPrev) this.btnPrev.disabled = this._query.page <= 1;
+        if (this.btnNext) this.btnNext.disabled = this._query.page >= this.pages;
+        if (this.btnLast) this.btnLast.disabled = this._query.page >= this.pages;
+        const lowEl = tfoot.querySelector(".dg-low");
+        const highEl = tfoot.querySelector(".dg-high");
+        const totalEl = tfoot.querySelector(".dg-total");
+        if (lowEl) lowEl.textContent = low.toString();
+        if (highEl) highEl.textContent = high.toString();
+        if (totalEl) totalEl.textContent = `${this.total}`;
         tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
     }
 
     /**
+     * @public
      * @returns {number}
      */
     totalPages() {

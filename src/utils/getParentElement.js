@@ -5,9 +5,10 @@
  * @returns {HTMLElement}
  */
 export default function getParentElement(el, type, prop = "nodeName") {
+    /** @type {HTMLElement | null} */
     let parent = el;
-    while (parent[prop] !== type) {
+    while (parent && Reflect.get(parent, prop) !== type) {
         parent = parent.parentElement;
     }
-    return parent;
+    return /** @type {HTMLElement} */ (parent);
 }

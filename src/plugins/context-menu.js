@@ -8,7 +8,7 @@ import { off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
 class ContextMenu extends BasePlugin {
     connected() {
         /**
-         * @type {HTMLUListElement}
+         * @type {HTMLUListElement|null}
          */
         this.menu = this.grid.querySelector(".dg-menu");
     }
@@ -31,13 +31,18 @@ class ContextMenu extends BasePlugin {
 
     attachContextMenu() {
         const grid = this.grid;
-        on(grid.headerRow, "contextmenu", this);
+        if (grid.headerRow) {
+            on(grid.headerRow, "contextmenu", this);
+        }
     }
 
-    onchange(e) {
+    onchange(/** @type {Event} */ e) {
         const grid = this.grid;
-        const t = e.target;
+        const t = /** @type {HTMLInputElement} */ (e.target);
         const field = t.dataset.name;
+        if (!field) {
+            return;
+        }
         if (t.checked) {
             grid.showColumn(field);
         } else {
@@ -52,10 +57,13 @@ class ContextMenu extends BasePlugin {
         grid.fixPage(); //fixes Chrome footer flexbox resize issues that may appear when there is a large number of columns (i.e. more than 10).
     }
 
-    oncontextmenu(e) {
+    oncontextmenu(/** @type {MouseEvent} */ e) {
         e.preventDefault();
-        const target = getParentElement(e.target, "THEAD");
+        const target = getParentElement(/** @type {HTMLElement} */ (e.target), "THEAD");
         const menu = this.menu;
+        if (!menu) {
+            return;
+        }
         const rect = target.getBoundingClientRect();
         let x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
@@ -69,8 +77,8 @@ class ContextMenu extends BasePlugin {
             menu.style.left = `${x}px`;
         }
 
-        const documentClickHandler = (e) => {
-            if (!menu.contains(e.target)) {
+        const documentClickHandler = (/** @type {MouseEvent} */ e) => {
+            if (!menu.contains(/** @type {Node} */ (e.target))) {
                 setAttribute(menu, "hidden", "");
                 off(document, "click", documentClickHandler);
             }
@@ -80,6 +88,9 @@ class ContextMenu extends BasePlugin {
     createMenu() {
         const grid = this.grid;
         const menu = this.menu;
+        if (!menu) {
+            return;
+        }
         while (menu.lastChild) {
             menu.removeChild(menu.lastChild);
         }
@@ -97,7 +108,7 @@ class ContextMenu extends BasePlugin {
             if (!col.hidden) {
                 checkbox.checked = true;
             }
-            const text = document.createTextNode(col.title);
+            const text = document.createTextNode(col.title ?? "");
 
             label.appendChild(checkbox);
             label.appendChild(text);

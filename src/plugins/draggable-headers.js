@@ -25,28 +25,38 @@ class DraggableHeaders extends BasePlugin {
     makeHeaderDraggable(th) {
         const grid = this.grid;
         th.draggable = true;
-        on(th, "dragstart", (e) => {
+        on(th, "dragstart", (/** @type {DragEvent} */ e) => {
             if (grid._isResizing && e.preventDefault) {
                 e.preventDefault();
                 return;
             }
             grid.log("reorder col");
-            e.dataTransfer.effectAllowed = "move";
-            e.dataTransfer.setData("text/plain", th.getAttribute("data-column-id"));
+            const dt = e.dataTransfer;
+            if (!dt) {
+                return;
+            }
+            dt.effectAllowed = "move";
+            dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
         });
-        on(th, "dragover", (e) => {
+        on(th, "dragover", (/** @type {DragEvent} */ e) => {
             if (e.preventDefault) {
                 e.preventDefault();
             }
-            e.dataTransfer.dropEffect = "move";
+            if (e.dataTransfer) {
+                e.dataTransfer.dropEffect = "move";
+            }
             return false;
         });
-        on(th, "drop", (e) => {
+        on(th, "drop", (/** @type {DragEvent} */ e) => {
             if (e.stopPropagation) {
                 e.stopPropagation();
             }
-            const target = getParentElement(e.target, "TH");
-            const draggedId = e.dataTransfer.getData("text/plain");
+            const target = getParentElement(/** @type {HTMLElement} */ (e.target), "TH");
+            const dt = e.dataTransfer;
+            if (!dt) {
+                return false;
+            }
+            const draggedId = dt.getData("text/plain");
             const targetId = target?.getAttribute("data-column-id");
             if (!targetId || draggedId === targetId) {
                 grid.log("reordered col stayed the same");

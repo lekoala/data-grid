@@ -1,7 +1,7 @@
 /**
  * Replace element within {} by their data value
  * @param {String} str
- * @param {Object} data
+ * @param {Record<string, any>} data
  * @returns {String}
  */
 export default function interpolate(str, data) {

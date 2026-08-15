@@ -1,7 +1,7 @@
 /**
  * Force value as arrays
- * @param {String|Array} v
- * @returns {Array}
+ * @param {String|Array<any>} v
+ * @returns {Array<any>}
  */
 export default function convertArray(v) {
     if (typeof v === "string") {

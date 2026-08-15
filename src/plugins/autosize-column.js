@@ -30,7 +30,7 @@ class AutosizeColumn extends BasePlugin {
             const w = this.computeSize(
                 /** @type {HTMLTableCellElement} */ (th),
                 column,
-                Number.parseInt(th.dataset.minWidth),
+                Number.parseInt(th.dataset.minWidth ?? ""),
                 colAvailableWidth,
             );
             totalWidth += Number(w) || 0;
@@ -43,20 +43,21 @@ class AutosizeColumn extends BasePlugin {
      * @param {import("../data-grid").Column} column
      * @param {Number} min
      * @param {Number} max
-     * @returns {Number}
+     * @returns {Number|undefined}
      */
     computeSize(th, column, min, max) {
         const grid = this.grid;
         if (hasAttribute(th, "width")) {
             return getAttribute(th, "width");
         }
-        if (!grid.rows.length) {
+        const field = column.field;
+        if (!field || !grid.rows.length) {
             return;
         }
         const firstVal = grid.rows[0];
         const lastVal = grid.rows[grid.rows.length - 1];
-        let v = firstVal[column.field] ? firstVal[column.field].toString() : "";
-        const v2 = lastVal[column.field] ? lastVal[column.field].toString() : "";
+        let v = firstVal[field] ? firstVal[field].toString() : "";
+        const v2 = lastVal[field] ? lastVal[field].toString() : "";
         if (v2.length > v.length) {
             v = v2;
         }

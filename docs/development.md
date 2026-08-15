@@ -17,11 +17,17 @@ bun test           # unit/component tests (happy-dom) - excludes test/browser
 bun run test:browser # real-browser tests (Bun.WebView + demo/server.js) - CI only, skipped on Windows
 bun run test:browser:wsl # run the browser suite inside WSL (Linux/Chrome)
 bun run check      # Biome lint + format check
-bun run typecheck  # tsc -p jsconfig.json (JSDoc typecheck)
+bun run typecheck  # tsc -p jsconfig.json (JSDoc typecheck, strict)
+bun run types      # tsc -p tsconfig.types.json -> dist/types/*.d.ts
+bun run manifest   # generate custom-elements.json (scripts/custom-elements.js)
 bun run build      # Bun.build JS + CSS into dist/ (scripts/build.js)
-bun run ci         # check + typecheck + test + build
+bun run ci         # check + typecheck + test + types + manifest + build + drift check
 bun run dev        # build + serve demo (Bun.serve, demo/server.js)
 ```
+
+`bun run ci` ends with `git diff --exit-code -- dist custom-elements.json`: the
+committed `dist/` and `custom-elements.json` must stay in sync with the source.
+Modify a JSDoc or a `--dg-*` token and forget to regenerate -> CI goes red.
 
 `bun run dev` serves the whole repo on `http://localhost:8002` (root -> the
 demo pages) plus a mock server-side API (`/api/users`, `/api/errors`) that

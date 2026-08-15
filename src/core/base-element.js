@@ -36,7 +36,7 @@ class BaseElement extends HTMLElement {
     }
 
     /**
-     * @returns {Array}
+     * @returns {Array<any>}
      */
     static get observedAttributes() {
         return [];
@@ -79,8 +79,9 @@ class BaseElement extends HTMLElement {
      * @param {Event} event
      */
     handleEvent(event) {
-        if (this[`on${event.type}`]) {
-            this[`on${event.type}`](event);
+        const handler = Reflect.get(this, `on${event.type}`);
+        if (typeof handler === "function") {
+            handler.call(this, event);
         }
     }
 
@@ -99,8 +100,8 @@ class BaseElement extends HTMLElement {
             // Render the template only once, even when the element is reconnected
             if (!this.rendered) {
                 const template = document.createElement("template");
-                // @ts-expect-error
-                template.innerHTML = this.constructor.template();
+                const ctor = /** @type {typeof BaseElement} */ (this.constructor);
+                template.innerHTML = ctor.template();
                 this.appendChild(template.content.cloneNode(true));
                 this.rendered = true;
             }
@@ -150,14 +151,17 @@ class BaseElement extends HTMLElement {
 
         this.log(`attributeChangedCallback: ${attributeName}`);
 
-        const transformer = this.transformAttributes[attributeName] ?? normalizeData;
+        const transformer = Reflect.get(this.transformAttributes, attributeName) ?? normalizeData;
         const attr = camelize(attributeName);
         const raw = newValue === "" ? "true" : newValue;
-        this.options[attr] = transformer(raw);
+        Reflect.set(this.options, attr, transformer(raw));
 
         // Fire internal event
-        if (this.fireEvents && this[`${attr}Changed`]) {
-            this[`${attr}Changed`]();
+        if (this.fireEvents) {
+            const handler = Reflect.get(this, `${attr}Changed`);
+            if (typeof handler === "function") {
+                handler.call(this);
+            }
         }
     }
 }

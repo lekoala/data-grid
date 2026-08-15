@@ -1,3 +1,4 @@
+/** @type {HTMLCanvasElement | undefined} */
 let canvas;
 
 /**
@@ -26,8 +27,8 @@ export default function getTextWidth(text, el = document.body, withPadding = fal
     if (!canvas) {
         canvas = document.createElement("canvas");
     }
-    const context = canvas.getContext("2d");
+    const context = /** @type {CanvasRenderingContext2D} */ (canvas.getContext("2d"));
     context.font = `${fontWeight} ${fontSize} ${fontFamily}`;
     const metrics = context.measureText(text);
-    return Number.parseInt(metrics.width) + padding;
+    return Math.floor(metrics.width) + padding;
 }

@@ -38,8 +38,10 @@ class SpinnerSupport extends BasePlugin {
 `;
         if (!$("#dg-styles")) {
             const styleParent = $("head") ?? $("body");
-            const position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
-            styleParent.insertAdjacentHTML(position, template);
+            if (styleParent) {
+                const position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
+                styleParent.insertAdjacentHTML(position, template);
+            }
         }
         !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
     }

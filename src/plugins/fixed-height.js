@@ -7,6 +7,9 @@ import { setAttribute } from "../utils/shortcuts.js";
  * We should add a fake row to push the footer down in case we don't have enough rows
  */
 class FixedHeight extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
     constructor(grid) {
         super(grid);
 
@@ -65,10 +68,11 @@ class FixedHeight extends BasePlugin {
         if (!grid.options.autoheight) {
             return;
         }
+        const rowHeight = grid.rowHeight ?? 0;
         // Find remaining missing height
-        const max = grid.query.pageSize * grid.rowHeight;
+        const max = grid.query.pageSize * rowHeight;
         const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
-        const fakeHeight = visibleRows > 1 ? max - visibleRows * grid.rowHeight : max;
+        const fakeHeight = visibleRows > 1 ? max - visibleRows * rowHeight : max;
         if (fakeHeight > 0) {
             setAttribute(fakeRow, "height", fakeHeight);
             fakeRow.removeAttribute("hidden");

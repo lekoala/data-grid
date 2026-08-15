@@ -1,6 +1,6 @@
 /**
  * @param {HTMLElement} el
- * @returns {Object}
+ * @returns {{ top: number, left: number }}
  */
 export default function elementOffset(el) {
     const rect = el.getBoundingClientRect();

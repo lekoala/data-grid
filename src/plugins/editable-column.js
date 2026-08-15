@@ -17,7 +17,7 @@ class EditableColumn extends BasePlugin {
         const grid = this.grid;
         const cells = findAll(grid, "tbody td.dg-editable-col");
         for (const td of cells) {
-            const rowIndex = Number.parseInt(td.dataset.rowIndex);
+            const rowIndex = Number.parseInt(td.dataset.rowIndex ?? "");
             const column = grid.getColumns().find((c) => (c.id ?? c.field) === td.getAttribute("data-column-id"));
             const item = grid.rows[rowIndex];
             if (!column || !item) {
@@ -30,12 +30,16 @@ class EditableColumn extends BasePlugin {
     /**
      * @param {HTMLElement} td
      * @param {import("../data-grid").Column} column
-     * @param {Object} item
+     * @param {Record<string, any>} item
      * @param {number} i
      */
     makeEditableInput(td, column, item, i) {
         const grid = this.grid;
-        const gridId = grid.getAttribute("id");
+        const field = column.field;
+        if (!field) {
+            return;
+        }
+        const gridId = grid.getAttribute("id") ?? "";
         const input = document.createElement("input");
         input.type = column.editableType || "text";
         if (input.type === "email") {
@@ -48,23 +52,23 @@ class EditableColumn extends BasePlugin {
         input.autocomplete = "off";
         input.spellcheck = false;
         input.classList.add("dg-editable");
-        input.name = `${gridId.replace("-", "_")}[${i + 1}][${column.field}]`;
-        input.value = item[column.field];
-        input.dataset.field = column.field;
+        input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
+        input.value = item[field];
+        input.dataset.field = field;
 
-        const previous = () => item[column.field];
+        const previous = () => item[field];
 
         const startEditing = () => {
             td.dataset.editing = "";
-            delete td.dataset.invalid;
-            delete td.title;
+            td.removeAttribute("data-invalid");
+            td.removeAttribute("title");
         };
 
         const endEditing = () => {
-            delete td.dataset.editing;
+            td.removeAttribute("data-editing");
         };
 
-        const reject = (message) => {
+        const reject = (/** @type {String|null} */ message = null) => {
             input.value = previous();
             endEditing();
             if (message) {
@@ -85,14 +89,14 @@ class EditableColumn extends BasePlugin {
                 return;
             }
             const prev = previous();
-            item[column.field] = value;
+            item[field] = value;
             const ev = new CustomEvent("edit", {
-                detail: { data: item, value, field: column.field, column },
+                detail: { data: item, value, field, column },
                 cancelable: true,
             });
             grid.dispatchEvent(ev);
             if (ev.defaultPrevented) {
-                item[column.field] = prev;
+                item[field] = prev;
             }
             endEditing();
         };

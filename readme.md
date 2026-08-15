@@ -3,21 +3,30 @@
 [![NPM](https://nodei.co/npm/data-grid-component.png?mini=true)](https://nodei.co/npm/data-grid-component/)
 [![Downloads](https://img.shields.io/npm/dt/data-grid-component.svg)](https://www.npmjs.com/package/data-grid-component)
 
-Autonomous open source grid component with RTL support. Designed for server side paginated content but also work for basic tables.
+Autonomous open source grid component with RTL support. Designed for server side
+paginated content but also works for basic tables.
 
 Key features:
 
-- Server side support
+- Server side support (`FetchDataSource`)
 - Inline editing
-- Sorting/filtering
+- Sorting / filtering
 - i18n friendly
-- Easily themable
+- Easily themable (`--dg-*` tokens)
+
+Docs:
+
+- [Server-side data](docs/server-data.md)
+- [Filtering](docs/filtering.md)
+- [Selection](docs/selection.md)
+- [Row actions](docs/actions.md)
+- [Plugins](docs/plugins.md)
+- [Styling](docs/styling.md)
+- [Inline editing](docs/editing.md)
 
 ## How to use
 
 ### Installation
-
-- Install with **npm**
 
 ```
 $ npm install data-grid-component
@@ -28,431 +37,198 @@ $ npm install data-grid-component
 - HTML way
 
 ```html
-<data-grid data-url="data.json"></data-grid>
+<data-grid src="data.json" sortable filterable></data-grid>
 <script type="module" src="./data-grid.js"></script>
 ```
-
-Grid customizations are possible via attributes.
 
 - using the DOM API
 
-```html
-<script type="module" src="./data-grid.js"></script>
-<script>
-  const grid = document.createElement("data-grid");
-  grid.dataset.url = "data.json"; // Use setAttribute on existing instance to trigger reload
-  document.body.appendChild(grid);
-</script>
+```js
+const grid = document.createElement("data-grid");
+grid.setAttribute("src", "/api/users"); // triggers a reload on an existing instance
+document.body.appendChild(grid);
 ```
 
-- using the constructor with import statement
+- using the constructor with an import statement
 
-```html
-<script type="module">
-  import { DataGrid } from "./data-grid.js";
-  const grid = new DataGrid({
-    url: "data.json",
-  });
-  document.body.appendChild(grid);
-</script>
+```js
+import { DataGrid } from "data-grid-component";
+const grid = new DataGrid({ src: "/api/users" });
+document.body.appendChild(grid);
 ```
 
-- using the constructor without import statement
+## Options
 
-```html
-<script type="module" src="./data-grid.js"></script>
-<script type="module">
-  const grid = new DataGrid({
-    url: "data.json",
-  });
-  document.body.appendChild(grid);
-</script>
-```
+Options are set as constructor options or reflected HTML attributes. The
+`data-*` attributes map to options (kebab-case -> camelCase, a bare attribute
+means `true`). Some options only work if the proper plugin is loaded.
 
-### Styling
+| Option                | Type               | Default       | Description                                                             |
+|-----------------------|--------------------|---------------|-------------------------------------------------------------------------|
+| `src`                 | `String`           | `""`          | URL to a server-side endpoint (`FetchDataSource`)                       |
+| `params`              | `Object`           | `{}`          | Extra constant HTTP params sent with each request                       |
+| `dataSource`          | `DataSource`       | -             | Custom data source (defaults to `FetchDataSource` or `ArrayDataSource`) |
+| `columns`             | `Column[]`         | `[]`          | Available columns                                                       |
+| `rowKey`              | `String \| Function` | `"id"`     | Field or function resolving a stable row key                            |
+| `sortable`            | `Boolean`          | `false`       | Sort by column                                                          |
+| `filterable`          | `Boolean`          | `false`       | Show the filter row                                                     |
+| `selectable`          | `Boolean`          | `false`       | Select rows with checkboxes (`SelectableRows`)                          |
+| `singleSelect`        | `Boolean`          | `false`       | Select a single row with radios (implies `selectable`)                  |
+| `selectVisibleOnly`   | `Boolean`          | `true`        | `selectAll` only selects the visible rows                               |
+| `actions`             | `Action[]`         | `[]`          | Row actions (`RowActions`)                                              |
+| `actionRenderer`      | `Function`         | -             | Global action renderer: `({ action, row, grid }) => content`            |
+| `collapseActions`     | `Boolean`          | `false`       | Group actions under a toggle (`RowActions`)                             |
+| `bulkActions`         | `BulkAction[]`     | `[]`          | Bulk actions on the current selection (`BulkActions`)                   |
+| `resizable`           | `Boolean`          | `false`       | Resizable columns (`ColumnResizer`)                                     |
+| `reorder`             | `Boolean`          | `false`       | Draggable column headers (`DraggableHeaders`)                           |
+| `menu`                | `Boolean`          | `false`       | Right-click column menu (`ContextMenu`)                                 |
+| `responsive`          | `Boolean`          | `false`       | Responsive columns (`ResponsiveGrid`)                                   |
+| `responsiveToggle`    | `Boolean`          | `true`        | Show toggle column on small screens                                      |
+| `autosize`            | `Boolean`          | `true`        | Compute column sizes from data (`AutosizeColumn`)                       |
+| `autoheight`          | `Boolean`          | `true`        | Fill table height on the last page (`FixedHeight`)                      |
+| `autohidePager`       | `Boolean`          | `false`       | Hide the pager when everything fits                                     |
+| `expand`              | `Boolean`          | `false`       | Allow cell content to span multiple lines                               |
+| `pageSizes`           | `Number[]`         | `[10,25,50,100,250]` | Available page size options                                      |
+| `showPageSize`        | `Boolean`          | `true`        | Show the page size select                                               |
+| `filterOnEnter`       | `Boolean`          | `true`        | Filter only on Enter/Return                                             |
+| `filterKeypressDelay` | `Number`           | `500`         | Debounce delay for keypress filtering                                   |
+| `density`             | `"compact" \| "default" \| "comfortable"` | `"default"` | Row density              |
+| `spinnerClass`        | `String`           | `""`          | CSS classes for the loading spinner (`SpinnerSupport`)                  |
+| `saveState`           | `Boolean`          | `false`       | Persist query and columns (`SaveState`)                                 |
+| `errorMessage`        | `String`           | `""`          | Message shown when a load fails                                         |
+| `initialQuery`        | `QueryState`       | -             | Initial runtime query state                                             |
+| `initialResult`       | `PageResult`       | -             | Initial result to display without loading the data source               |
+| `validate`            | `Function`         | -             | Grid-level editor validator (`EditableColumn`)                          |
+| `debug`               | `Boolean`          | `false`       | Log actions in DevTools console                                         |
+| `dir`                 | `String`           | `"ltr"`       | Direction                                                               |
+| `id`                  | `String`           | auto          | Custom id for the grid                                                  |
 
-The core stylesheet (`css/data-grid.css`) is neutral and dependency-free. All
-themeable values are exposed as `--dg-*` custom properties, so the grid follows
-the application's design system instead of carrying its own.
+### Attributes
 
-```css
-data-grid {
-  --dg-bg: #fff;                /* table + menu surfaces */
-  --dg-color: #212529;          /* text */
-  --dg-border-color: #e9ecef;   /* default border */
-  --dg-accent: #0d6efd;         /* interactive accent */
-  --dg-accent-soft: #cfe2ff;    /* focus ring */
-  --dg-header-bg: #e9ecef;
-  --dg-header-color: #212529;
-  --dg-row-stripe-bg: rgba(0, 0, 0, 0.05);
-  --dg-row-hover-bg: #fffcee;
-  --dg-row-selected-bg: #cfe2ff;
-  --dg-row-border-color: #f2f2f2;
-  --dg-control-bg: #fff;        /* buttons / inputs / selects */
-  --dg-control-color: #212529;
-  --dg-control-border-color: #e9ecef;
-  --dg-danger-bg: #f8d7da;      /* error state */
-  --dg-danger-color: #842029;
-  --dg-danger-border-color: #f5c2c7;
-  --dg-padding-x: 0.75rem;
-  --dg-padding-y: 0.5rem;
-  --dg-header-padding-y: 0.75rem;
-  --dg-radius: 0.25rem;
-}
-```
-
-#### Bootstrap theme
-
-`themes/bootstrap.css` maps these tokens onto Bootstrap 5 variables, including
-dark mode via `[data-bs-theme="dark"]`. Load it after `data-grid.css`:
+The main attributes are `src`, `sortable`, `filterable`, `responsive`,
+`selectable`, `single-select`, `reorder`, `menu`, `expand`, `autosize`,
+`resizable`, `autoheight`, `autohide-pager`, `show-page-size`, `debug`, `dir`,
+`density`. Example:
 
 ```html
-<link rel="stylesheet" href="dist/data-grid.css" />
-<link rel="stylesheet" href="themes/bootstrap.css" />
+<data-grid src="/api/users" sortable filterable selectable density="compact"></data-grid>
 ```
 
-#### Density
+## API
 
-```html
-<data-grid density="compact"></data-grid>
-```
+The runtime state is a `QueryState` (`page`, `pageSize`, `sort`, `filters`).
+Query methods reload through the single `load()` path (AbortController + stale
+response protection).
 
-Density is `compact`, `default` or `comfortable` and only adjusts the
-`--dg-padding-*` tokens.
-
-### Options attributes
-
-These are the options accessibles through the components data attributes. Some options only work if the proper plugin is loaded.
-You can also pass them as a json string in data-config.
-
-| Name                | Type                                         | Description                                                                                                                                       |
-|---------------------|----------------------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------|
-| id                  | <code>String</code>                          | Custom id for the grid                                                                                                                            |
-| url                 | <code>String</code>                          | An URL with data to display in JSON format                                                                                                        |
-| debug               | <code>Boolean</code>                         | Log actions in DevTools console                                                                                                                   |
-| filter              | <code>Boolean</code>                         | Allows a filtering functionality                                                                                                                  |
-| sort                | <code>Boolean</code>                         | Allows a sort by column functionality                                                                                                             |
-| defaultSort         | <code>String</code>                          | Default sort field if sorting is enabled                                                                                                          |
-| server              | <code>Boolean</code>                         | Is a server side powered grid                                                                                                                     |
-| serverParams        | [<code>ServerParams</code>](#ServerParams)   | Describe keys passed to the server backend                                                                                                        |
-| dir                 | <code>String</code>                          | Dir                                                                                                                                               |
-| perPageValues       | <code>Array</code>                           | Available per page options                                                                                                                        |
-| hidePerPage         | <code>Boolean</code>                         | Hides the page size select element                                                                                                                |
-| columns             | [<code>Array.&lt;Column&gt;</code>](#Column) | Available columns                                                                                                                                 |
-| defaultPage         | <code>Number</code>                          | Starting page                                                                                                                                     |
-| perPage             | <code>Number</code>                          | Number of records displayed per page (page size)                                                                                                  |
-| expand              | <code>Boolean</code>                         | Allow cell content to spawn over multiple lines                                                                                                   |
-| actions             | [<code>Array.&lt;Action&gt;</code>](#Action) | Row actions (RowActions module)                                                                                                                   |
-| collapseActions     | <code>Boolean</code>                         | Group actions (RowActions module)                                                                                                                 |
-| resizable           | <code>Boolean</code>                         | Make columns resizable (ColumnResizer module)                                                                                                     |
-| selectable          | <code>Boolean</code>                         | Allow multi-selecting rows with a checkboxes (SelectableRows module)                                                                              |
-| selectVisibleOnly   | <code>Boolean</code>                         | Select all only selects visible rows (SelectableRows module)                                                                                      |
-| singleSelect        | <code>Boolean</code>                         | Enables single row select with radio buttons - no need to set <code>selectable</code> (SelectableRows module)                                     |
-| autosize            | <code>Boolean</code>                         | Compute column sizes based on given data (Autosize module)                                                                                        |
-| autoheight          | <code>Boolean</code>                         | Adjust height so that it matches table size (FixedHeight module)                                                                                  |
-| autohidePager       | <code>Boolean</code>                         | auto-hides the pager when number of records falls below the selected page size                                                                    |
-| menu                | <code>Boolean</code>                         | Right click menu on column headers (ContextMenu module)                                                                                           |
-| reorder             | <code>Boolean</code>                         | Allows a column reordering functionality (DraggableHeaders module)                                                                                |
-| responsive          | <code>Boolean</code>                         | Change display mode on small screens (ResponsiveGrid module)                                                                                      |
-| responsiveToggle    | <code>Boolean</code>                         | Show toggle column (ResponsiveGrid module)                                                                                                        |
-| filterOnEnter       | <code>Boolean</code>                         | Toggles the ability to filter column data by pressing the Enter or Return key                                                                     |
-| spinnerClass        | <code>String</code>                          | Sets a space-delimited string of css classes for a spinner                                                                                        |
-| filterKeypressDelay | <code>Number</code>                          | Sets a keypress delay time in milliseconds before triggering filter operation.                                                                    |
-| saveState           | <code>Boolean</code>                         | Enable/disable save state plugin (SaveState module)                                                                                               |
-| errorMessage        | <code>String</code>                          | A generic text to be displayed in footer when error occurs.                                                                                       |
-| noData              | <code>String</code>                          | A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component. |                                                   |
-
-<a name="Column"></a>
+| Member                  | Description                                                     |
+|-------------------------|-----------------------------------------------------------------|
+| `grid.query`            | snapshot of the current query state (getter)                    |
+| `grid.page`             | current page (getter)                                           |
+| `grid.rows` / `grid.total` / `grid.meta` | result of the current query                          |
+| `grid.loading` / `grid.error` | load status and last error                                 |
+| `setQuery(patch)`       | merge a patch (`page`, `pageSize`, `sort`, `filters`) and reload |
+| `resetQuery()`          | reset to the initial query and reload                           |
+| `refresh()` / `load()`  | reload the current query                                        |
+| `getColumns()`          | normalized column list of the current render cycle              |
+| `showColumn(field)` / `hideColumn(field)` | toggle a column                                     |
+| `getFilterOptions(column)` | options for a select filter                                  |
+| `getSelectionState()`   | `{ mode, ids, except }` snapshot (server-first selection)       |
+| `isRowSelected(row)`    | whether a row is selected                                       |
+| `selectRow(row)` / `deselectRow(row)` / `toggleRow(row)` | row selection          |
+| `selectAll()` / `clearSelection()` | select/reset the selection                             |
+| `getSelection(...keys)` | page-local selected rows (see `docs/selection.md`)             |
+| `getFirst()` / `getPrev()` / `getNext()` / `getLast()` | paging             |
+| `clearFilters()`        | clear the current filters                                       |
+| `sortAsc(field)` / `sortDesc(field)` / `sortNone(field)` | sort helpers   |
+| `DataGrid.registerPlugins(map)` | register plugin constructors                             |
+| `DataGrid.setLabels(object)` | translate the UI labels                                      |
 
 ## Column
 
-When using the response data or the JS api, you have the opportunity to pass column definitions. This scenario is not supported using
-regular attributes to avoid cluttering the node with a very large attribute.
-
-| Name                 | Type                                         | Description                                                                                                  |
-|----------------------|----------------------------------------------|--------------------------------------------------------------------------------------------------------------|
-| field                | <code>String</code>                          | the key in the data                                                                                          |
-| title                | <code>String</code>                          | the title to display in the header (defaults to "field" if not set)                                          |
-| [width]              | <code>Number</code>                          | the width of the column (auto otherwise)                                                                     |
-| [class]              | <code>String</code>                          | class to set on the column (target body or header with th.class or td.class)                                 |
-| [attr]               | <code>String</code>                          | don't render the column and set a matching attribute on the row with the value of the field                  |
-| [hidden]             | <code>Boolean</code>                         | hide the column                                                                                              |
-| [noSort]             | <code>Boolean</code>                         | allow disabling sort for a given column                                                                      |
-| [format]             | <code>String</code> \| <code>function</code> | custom data formatting                                                                                       |
-| [defaultFormatValue] | <code>String</code>                          | default value to use for formatting                                                                          |
-| [transform]          | <code>String</code>                          | custom value transformation                                                                                  |
-| [editable]           | <code>Boolean</code>                         | replace with input (EditableColumn module)                                                                   |
-| [editableType]       | <code>String</code>                          | type of input (EditableColumn module)                                                                        |
-| [responsive]         | <code>Number</code>                          | the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)                   |
-| [responsiveHidden]   | <code>Boolean</code>                         | hidden through responsive module (ResponsiveGrid module)                                                     |
-| [filterType]         | <code>String</code>                          | defines a filter field type ("text" or "select" - defaults to "text")                                        |
-| [filterList]         | <code>Array</code>                           | defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]        |
-| [firstFilterOption]  | <code>Object</code>                          | defines an object for the first option element of the filter select field. defaults to {value: "", text: ""} |
-
-<a name="Action"></a>
+| Name                   | Type                                      | Description                                                        |
+|------------------------|-------------------------------------------|--------------------------------------------------------------------|
+| `field`                | `String`                                  | the key in the data                                                |
+| `title`                | `String`                                  | header title (defaults to `field`)                                 |
+| `id`                   | `String`                                  | stable identifier (defaults to `field`); plugin columns use `$...` |
+| `width`                | `Number`                                  | column width (auto otherwise)                                      |
+| `class`                | `String`                                  | class on the column (`th.class` / `td.class`)                      |
+| `attr`                 | `String`                                  | set a row attribute with the field value instead of rendering      |
+| `hidden`               | `Boolean`                                 | hide the column                                                    |
+| `noSort`               | `Boolean`                                 | disable sorting for this column                                    |
+| `format`               | `String \| Function`                      | legacy string interpolation or function                            |
+| `transform`            | `String`                                  | `uppercase` / `lowercase`                                          |
+| `editable` / `editableType` | `Boolean` / `String`                  | inline editing (see `docs/editing.md`)                             |
+| `validate`             | `Function`                                | `(value, ctx) => true | "error message"`                           |
+| `responsive`           | `Number`                                  | responsive priority (higher hides sooner, `0` disables)            |
+| `filterType`           | `"text" \| "select"`                      | filter field type                                                  |
+| `filterList`           | `FilterOption[]`                          | explicit select filter options                                     |
+| `firstFilterOption`    | `FilterOption`                            | first select option (defaults to `{ value: "", text: "" }`)        |
+| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`     | custom renderers (the core creates the `<th>`)                     |
+| `renderCell`           | `(ctx) => content`                        | custom cell renderer (primitive / Node / `{ html }`)               |
 
 ## Action
 
-| Name     | Type                 | Description                                          |
-|----------|----------------------|------------------------------------------------------|
-| name     | <code>String</code>  | the name of the action (button[data-action])         |
-| label    | <code>String</code>  | the label of the button                              |
-| intent   | <code>String</code>  | "default" / "primary" / "danger" (button[data-intent]) |
-| href     | <code>String | Function</code> | link for the action (string with {field} interpolation or (row) => string) |
-| visible  | <code>Function</code> | (row) => Boolean, hides the action when falsy       |
-| disabled | <code>Function</code> | (row) => Boolean, disables the button when truthy    |
-| render   | <code>Function</code> | ({ action, row, grid }) => content, replaces the button content |
-| confirm  | <code>Boolean</code> | needs confirmation                                    |
-| default  | <code>Boolean</code> | is the default row action                            |
-| title    | <code>String</code>  | DEPRECATED: use label                                |
-| class    | <code>String</code>  | DEPRECATED: use intent + CSS                         |
-| url      | <code>String</code>  | DEPRECATED: use href                                 |
-| html     | <code>String</code>  | DEPRECATED: use render                               |
+| Name       | Type                          | Description                                        |
+|------------|-------------------------------|----------------------------------------------------|
+| `name`     | `String`                      | the action name (`button[data-action]`)            |
+| `label`    | `String`                      | the button label                                   |
+| `intent`   | `"default" \| "primary" \| "danger"` | sets `data-intent`                         |
+| `href`     | `String \| Function`          | renders an `<a>`; `{field}` interpolation or function |
+| `visible`  | `(row) => Boolean`            | hide the action when falsy                         |
+| `disabled` | `(row) => Boolean`            | disable the action when truthy                     |
+| `render`   | `({ action, row, grid }) => content` | replace the button content                    |
+| `confirm`  | `Boolean`                     | ask for confirmation                               |
+| `default`  | `Boolean`                     | clicking the row triggers the action               |
 
-<a name="Plugins"></a>
-
-## Plugins
-
-Some features have been extracted as plugins to make base class lighter. You can
-find them in the `plugins` directory.
-
-| Name               | Type                                               | Description                                               |
-|--------------------|----------------------------------------------------|-----------------------------------------------------------|
-| [ColumnResizer]    | [<code>ColumnResizer</code>](#ColumnResizer)       | resize handlers in the headers                            |
-| [ContextMenu]      | [<code>ContextMenu</code>](#ContextMenu)           | menu to show/hide columns                                 |
-| [DraggableHeaders] | [<code>DraggableHeaders</code>](#DraggableHeaders) | draggable headers columns                                 |
-| [EditableColumn]   | [<code>EditableColumn</code>](#EditableColumn)     | editable headers columns                                 |
-| [TouchSupport]     | [<code>TouchSupport</code>](#TouchSupport)         | touch swipe                                               |
-| [SelectableRows]   | [<code>SelectableRows</code>](#SelectableRows)     | create a column with checkboxes to select rows            |
-| [FixedHeight]      | [<code>FixedHeight</code>](#FixedHeight)           | allows having fixed height tables                         |
-| [AutosizeColumn]   | [<code>AutosizeColumn</code>](#AutosizeColumn)     | compute ideal width based on column content               |
-| [ResponsiveGrid]   | [<code>ResponsiveGrid</code>](#ResponsiveGrid)     | hide/show column on the fly                               |
-| [RowActions]       | [<code>RowActions</code>](#RowActions)             | add action on rows                                        |
-| [SpinnerSupport]   | [<code>SpinnerSupport</code>](#SpinnerSupport)     | inserts a spinning icon element to indicate grid loading. |
-| [SaveState]        | [<code>SaveState</code>](#SaveState)               | stores grid filter, sort, and paging                      |
-
-<a name="ServerParams"></a>
-
-## ServerParams
-
-| Name                         | Type                |
-|------------------------------|---------------------|
-| serverParams.start           | <code>String</code> |
-| serverParams.length          | <code>String</code> |
-| serverParams.search          | <code>String</code> |
-| serverParams.sort            | <code>String</code> |
-| serverParams.sortDir         | <code>String</code> |
-| serverParams.dataKey         | <code>String</code> |
-| serverParams.metaKey         | <code>String</code> |
-| serverParams.metaTotalKey    | <code>String</code> |
-| serverParams.metaFilteredKey | <code>String</code> |
-| serverParams.optionsKey      | <code>String</code> |
-| serverParams.paramsKey       | <code>String</code> |
-
-## Other attributes
-
-| Option     | Required | Type    | Default   | Description    |
-|------------|:--------:|---------|-----------|----------------|
-| **sticky** |    No    | Boolean | **false** | Sticky headers |
-| **page**   |    No    | Number  | **1**     | Current page   |
-
-## Responsive
-
-This table provide two ways for responsive data.
-
-- A solution based on resizeObserver that will show/hide columns as needed (TODO: display collapsed content with a toggle)
-- A CSS Only solution based on media queries that will change the layout on smaller screens
-
-## Translations
-
-You can use when defined to set your own translations with `setLabels`
-
-```html
-<script type="module">
-  customElements.whenDefined("data-grid").then(() => {
-    customElements.get("data-grid").setLabels({
-      items: "rows",
-    });
-  });
-</script>
-```
-
-| Name          | Type                |
-|---------------|---------------------|
-| itemsPerPage  | <code>String</code> |
-| gotoPage      | <code>String</code> |
-| gotoFirstPage | <code>String</code> |
-| gotoPrevPage  | <code>String</code> |
-| gotoNextPage  | <code>String</code> |
-| gotoLastPage  | <code>String</code> |
-| of            | <code>String</code> |
-| items         | <code>String</code> |
-| resizeColumn  | <code>String</code> |
-| noData        | <code>String</code> |
-| areYouSure    | <code>String</code> |
-| networkError  | <code>String</code> |
-
-## Actions
-
-Define your actions as part of the options
-
-```js
-...
-    "actions": [
-      {
-        "name": "edit",
-        "label": "Edit",
-        "intent": "primary",
-        "href": (row) => `/users/${row.id}`
-      },
-      {
-        "name": "delete",
-        "label": "Delete",
-        "intent": "danger",
-        "confirm": true,
-        "visible": (row) => !row.protected
-      }
-    ],
-...
-```
-
-Then simply listen to them
-
-```js
-document.getElementById("demo2-grid").addEventListener("action", (ev) => {
-  // It contains data and action
-  console.log(ev.detail);
-});
-```
-
-You can add:
-
-- intent: "default" / "primary" / "danger" (sets button[data-intent], styled by the theme)
-- href: renders an `<a>` instead of a button (data between {} is interpolated, or pass a function)
-- visible: (row) => Boolean - hide the action for a given row
-- disabled: (row) => Boolean - disable the action for a given row
-- render: ({ action, row, grid }) => content - replace the button content (Node, string or { html })
-- `grid.actionRenderer` option applies a global renderer to every action
-
-Deprecated: `title`, `class`, `url`, `html` still work but should be replaced.
-
-## Inline editing
-
-Set your column as editable
-
-```js
-...
-  {
-      "field": "email",
-      "title": "Email",
-      "width": 200,
-      "editable": true
-  },
-```
-
-Then simply listen to changes
-
-```js
-document.getElementById("demo2-grid").addEventListener("edit", (ev) => {
-  // It contains data, value, field and column
-  console.log(ev.detail);
-  // Call ev.preventDefault() to reject the change (the row is reverted)
-});
-```
-
-You can validate the value before it is committed:
-
-```js
-{
-  "field": "email",
-  "title": "Email",
-  "editable": true,
-  "validate": (value) => {
-    return /\S+@\S+\.\S+/.test(value) ? true : "Invalid email";
-  }
-}
-```
-
-`validate` returns `true` (valid), `false` or an error message string. When
-validation fails, or when Escape is pressed, the edit is rejected and the
-original value is restored (`td[data-invalid]` is set on error). A grid-level
-`validate` option is used as a fallback for columns without one.
-
-You can check `demo/server.html` to get a sample usage with saving functionality
-
-## Api
-
-| Name             | Description                                                                                                  |
-|------------------|--------------------------------------------------------------------------------------------------------------|
-| **getFirst**     | goes to first page                                                                                           |
-| **getLast**      | goes to last page                                                                                            |
-| **getPrev**      | goes to previous page                                                                                        |
-| **getNext**      | goes to next page                                                                                            |
-| **getSelection** | gets selected data                                                                                           |
-| **clearData**    | clears loaded data                                                                                           |
-| **preload**      | preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time. |
-| **refresh**      | clears and reloads data from url that can be optionally specified as a parameter.                            |
-| **reload**       | reloads data from url that can be optionally specified as a parameter.                                       |
-| **clearFilters** | clears current filters                                                                                       |
-| **addRow**       | adds a new row                                                                                               |
-| **removeRow**    | removes a row                                                                                                |
-| **getData**      | gets data                                                                                                    |
-| **sortAsc**      | sorts data by column name in ascending order                                                                 |
-| **sortDesc**     | sorts data by column name in descending order                                                                |
-| **sortNone**     | resets column sort state                                                                                     |
-| **urlChanged**   | Loads data and configures the grid.                                                                          |
+See `docs/actions.md` for the full contract.
 
 ## Events
 
-| Name                 | Trigger                                                    |
-|----------------------|------------------------------------------------------------|
-| **edit**             | A row is edited                                            |
-| **action**           | An action is performed                                     |
-| **connected**        | The grid is connected                                      |
-| **disconnected**     | The grid is disconnected                                   |
-| **columnResized**    | A column is resized                                        |
-| **columnVisibility** | A column is hidden/shown                                   |
-| **columnReordered**  | A column is dragged                                        |
-| **rowsSelected**     | Any or all rows are selected                               |
-| **headerRendered**   | Column header (thead) render is complete                   |
-| **bodyRendered**     | Table body (tbody) render is complete                      |
-| **rowRendered**      | Table row (tr) render is complete and added to tbody       |
-| **loadDataFailed**   | loadData method catches error when options.server === true |
+| Name                | Detail                                             | Trigger                               |
+|---------------------|----------------------------------------------------|----------------------------------------|
+| `connected`         | -                                                  | the grid is connected                  |
+| `disconnected`      | -                                                  | the grid is disconnected               |
+| `loadError`         | error                                              | a load fails                           |
+| `selectionChange`   | `{ selectionState }`                               | the selection changes                  |
+| `columnVisibility`  | `{ col, visibility }`                              | a column is hidden/shown               |
+| `columnResized`     | `{ col, width }`                                   | a column is resized                    |
+| `columnReordered`   | `{ col, from, to }`                                | a column is dragged                    |
+| `headerRendered`    | -                                                  | the header is rendered                 |
+| `bodyRendered`      | -                                                  | the body is rendered                   |
+| `rowRendered`       | `{ rowData, tr }`                                  | a row is rendered                      |
+| `action`            | `{ data, action }`                                 | an action is performed                 |
+| `bulkAction`        | `{ action, selection, query }`                     | a bulk action is performed             |
+| `edit`              | `{ data, value, field, column }` (cancelable)      | an edit is committed                   |
 
 ## Server
 
-For large data set, you may need to use the pagination or filtering on the server.
+For large data sets, pagination, sorting and filtering happen on the server.
+See `docs/server-data.md`. The response contract is a `PageResult`:
 
-It works just the same way except the response should return a a `meta` key with
-
-- total: the total (unfiltered) number of rows (info only).
-- filtered: the total value of rows matching the current filter (used for pagination).
-
-Server parameters are sent as query string and are `start`, `length` and `search`.
-To enable server mode, use `server=true`. These can be changed to your own server
-settings with the `serverParams` option object.
-
-You can check `demo/server.html` and `demo/server.js` for an example (`bun demo/server.js`).
-
-## Demo
-
-<!--
+```json
+{
+    "rows": [...],
+    "total": 142,
+    "meta": { "filters": { "status": [{ "value": "active", "text": "Active" }] } }
+}
 ```
-<custom-element-demo>
-  <template>
-    <script type="module" src="https://cdn.jsdelivr.net/gh/lekoala/data-grid/data-grid.min.js"></script>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lekoala/data-grid/data-grid.min.css" />
-    <data-grid url="https://cdn.jsdelivr.net/gh/lekoala/data-grid/demo.json" sticky></data-grid>
-  </template>
-</custom-element-demo>
-```
--->
 
-This way -> https://codepen.io/lekoalabe/pen/NWvLByP
+`demo/server.js` (`bun demo/server.js`) is a working example using the same
+filter/sort helpers as the client.
+
+## Translations
+
+```js
+DataGrid.setLabels({ items: "rows" });
+```
+
+Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
+`gotoNextPage`, `gotoLastPage`, `of`, `items`, `selected`, `resizeColumn`,
+`noData`, `areYouSure`, `networkError`.
 
 ## Browser Support
 
-Only modern browsers (anything that supports js modules)
+Only modern browsers (anything that supports ES modules).
 
 ## Credits
 

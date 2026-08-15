@@ -17,6 +17,21 @@
  * @property {(enabled: boolean) => void} [responsiveChanged]
  */
 
+/**
+ * A plugin constructor: a class (or duck-typed factory) taking the grid.
+ * @typedef {new (grid: DataGrid) => Plugin} PluginConstructor
+ */
+
+/**
+ * Registered plugins keyed by registration name. Values are constructors.
+ * @typedef {Record<string, PluginConstructor>} PluginRegistry
+ */
+
+/**
+ * Instantiated plugins keyed by registration name. Values are instances.
+ * @typedef {Record<string, Plugin>} PluginInstances
+ */
+
 class BasePlugin {
     /**
      * @param {DataGrid} grid
@@ -59,8 +74,9 @@ class BasePlugin {
      * @param {Event} event
      */
     handleEvent(event) {
-        if (this[`on${event.type}`]) {
-            this[`on${event.type}`](event);
+        const handler = Reflect.get(this, `on${event.type}`);
+        if (typeof handler === "function") {
+            handler.call(this, event);
         }
     }
 }

@@ -20,8 +20,8 @@ const RESPONSIVE_CLASS = "dg-responsive";
  */
 function sortByPriority(list) {
     return list.sort((a, b) => {
-        const v1 = Number.parseInt(a.dataset.responsive) || 1;
-        const v2 = Number.parseInt(b.dataset.responsive) || 1;
+        const v1 = Number.parseInt(a.dataset.responsive ?? "") || 1;
+        const v2 = Number.parseInt(b.dataset.responsive ?? "") || 1;
         return v2 - v1;
     });
 }
@@ -30,6 +30,9 @@ function sortByPriority(list) {
  * Responsive data grid
  */
 class ResponsiveGrid extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
     constructor(grid) {
         super(grid);
 
@@ -165,7 +168,11 @@ class ResponsiveGrid extends BasePlugin {
     resize() {
         const grid = this.grid;
         const table = grid.table;
+        const headerRow = grid.headerRow;
         if (this.observerBlocked) {
+            return;
+        }
+        if (!table || !headerRow) {
             return;
         }
         const entry = this._lastEntry;
@@ -174,9 +181,9 @@ class ResponsiveGrid extends BasePlugin {
         }
         // check inlineSize (width) and not blockSize (height)
         const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
-        const size = Number.parseInt(contentBoxSize.inlineSize);
+        const size = Math.round(contentBoxSize.inlineSize);
         const tableWidth = table.offsetWidth;
-        const realTableWidth = findAll(grid.headerRow, "th").reduce((result, th) => {
+        const realTableWidth = findAll(headerRow, "th").reduce((result, th) => {
             return result + th.offsetWidth;
         }, 0);
         const diff = (realTableWidth || tableWidth) - size - 1;
@@ -184,7 +191,7 @@ class ResponsiveGrid extends BasePlugin {
         const prevAction = this.prevAction;
         // We have an array with the columns to show/hide are in order, most important first
         const headerCols = sortByPriority(
-            findAll(grid.headerRow, "th[field]")
+            findAll(headerRow, "th[field]")
                 .reverse() // Order takes precedence if no priority is set
                 .filter((col) => {
                     // Leave out unresponsive columns
@@ -246,7 +253,9 @@ class ResponsiveGrid extends BasePlugin {
                         return !col.hasAttribute("hidden");
                     })
                     .reduce((result, col) => {
-                        const width = col.dataset.minWidth ? Number.parseInt(col.dataset.minWidth) : col.offsetWidth;
+                        const width = col.dataset.minWidth
+                            ? Number.parseInt(col.dataset.minWidth ?? "")
+                            : col.offsetWidth;
                         return result + width;
                     }, 0) + minWidth; // Add an offset so that inserting column is smoother
 
@@ -264,7 +273,7 @@ class ResponsiveGrid extends BasePlugin {
                 if (remaining < minWidth) {
                     continue;
                 }
-                const colWidth = Number.parseInt(col.dataset.minWidth);
+                const colWidth = Number.parseInt(col.dataset.minWidth ?? "");
 
                 // We need to have enough space to restore it
                 if (colWidth > remaining) {
@@ -287,8 +296,11 @@ class ResponsiveGrid extends BasePlugin {
         }
 
         // Check footer
-        const footer = find(grid.table, "tfoot");
-        const realFooterWidth = findAll(grid.table, ".dg-footer > div").reduce((result, div) => {
+        const footer = find(table, "tfoot");
+        if (!footer) {
+            return;
+        }
+        const realFooterWidth = findAll(footer, ".dg-footer > div").reduce((result, div) => {
             return result + div.offsetWidth;
         }, 0);
         const availableFooterWidth = footer.offsetWidth - realFooterWidth;
@@ -304,7 +316,7 @@ class ResponsiveGrid extends BasePlugin {
         this.unblockTimeout = setTimeout(() => {
             this.prevAction = null;
         }, 1000);
-        grid.table.style.visibility = "visible";
+        table.style.visibility = "visible";
     }
 
     computeLabelWidth() {
@@ -336,15 +348,16 @@ class ResponsiveGrid extends BasePlugin {
 
         // target is the element that triggered the event (e.g., the user clicked on)
         // currentTarget is the element that the event listener is attached to.
-
-        /**
-         * @type {HTMLElement}
-         */
-        //@ts-expect-error
-        const cell = ev.currentTarget;
+        const cell = /** @type {HTMLElement} */ (ev.currentTarget);
         const tr = cell.closest("tr");
+        if (!tr) {
+            return;
+        }
         const open = find(cell, `.${RESPONSIVE_CLASS}-open`);
         const close = find(cell, `.${RESPONSIVE_CLASS}-close`);
+        if (!open || !close) {
+            return;
+        }
 
         this.blockObserver();
 
@@ -356,15 +369,17 @@ class ResponsiveGrid extends BasePlugin {
 
             // Move back rows and cleanup row
             const childRow = tr.nextElementSibling;
-            const hiddenCols = findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`);
+            if (childRow) {
+                const hiddenCols = findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`);
 
-            for (const col of hiddenCols) {
-                // We don't really need to care where we insert them since we are going to redraw anyway
-                tr.appendChild(col);
-                setAttribute(col, "hidden");
+                for (const col of hiddenCols) {
+                    // We don't really need to care where we insert them since we are going to redraw anyway
+                    tr.appendChild(col);
+                    setAttribute(col, "hidden");
+                }
+
+                childRow.parentElement?.removeChild(childRow);
             }
-
-            childRow.parentElement.removeChild(childRow);
         } else {
             addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
             open.style.display = "none";
@@ -392,7 +407,7 @@ class ResponsiveGrid extends BasePlugin {
                 const labelCol = ce("th", childTableRow);
                 // It looks much better when aligned with an actual col
                 labelCol.style.width = `${idealWidth}px`;
-                labelCol.innerHTML = label;
+                labelCol.innerHTML = label ?? "";
 
                 // Add actual row
                 childTableRow.appendChild(col);

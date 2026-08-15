@@ -17,6 +17,9 @@ import {
  * Allows to resize columns
  */
 class ColumnResizer extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
     constructor(grid) {
         super(grid);
         this.isResizing = false;
@@ -38,6 +41,9 @@ class ColumnResizer extends BasePlugin {
     renderResizer(resizeLabel) {
         const grid = this.grid;
         const table = grid.table;
+        if (!table) {
+            return;
+        }
         const cols = findAll(grid, "thead tr.dg-head-columns th");
 
         for (const col of cols) {
@@ -58,7 +64,7 @@ class ColumnResizer extends BasePlugin {
             let remainingSpace = 0;
             let max = 0;
 
-            const mouseMoveHandler = (e) => {
+            const mouseMoveHandler = (/** @type {MouseEvent} */ e) => {
                 if (e.clientX > max) {
                     return;
                 }
@@ -95,17 +101,17 @@ class ColumnResizer extends BasePlugin {
             };
 
             // Otherwise it could sort the col
-            on(resizer, "click", (e) => {
+            on(resizer, "click", (/** @type {MouseEvent} */ e) => {
                 e.stopPropagation();
             });
 
-            on(resizer, "mousedown", (e) => {
+            on(resizer, "mousedown", (/** @type {MouseEvent} */ e) => {
                 e.stopPropagation();
 
                 this.isResizing = true;
                 grid._isResizing = true;
 
-                const target = e.target;
+                const target = /** @type {HTMLElement} */ (e.target);
                 const currentCols = findAll(grid, "dg-head-columns th");
                 const visibleCols = currentCols.filter((col) => {
                     return !col.hasAttribute("hidden");
