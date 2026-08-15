@@ -250,10 +250,6 @@ data-grid .dg-bulk-actions {
   padding: 0.5rem 0;
 }
 
-data-grid .dg-bulk-actions[hidden] {
-  display: none;
-}
-
 data-grid .dg-bulk-count {
   margin-right: auto;
   font-weight: 600;

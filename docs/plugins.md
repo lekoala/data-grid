@@ -46,7 +46,7 @@ extendColumns(columns) {
         id: "$myColumn",
         virtual: true,
         position: "start",
-        noSort: true,
+        sortable: false,
         renderHeaderCell: (th) => (th.textContent = ""),
         renderCell: (ctx) => document.createTextNode(String(ctx.rowIndex + 1)),
     });

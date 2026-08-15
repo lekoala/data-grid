@@ -62,6 +62,10 @@ grid.setQuery({
 
 Any change to `filters` (via `setQuery`) resets the page to 1.
 
+A column can opt out of filtering with `filterable: false` (it keeps its empty
+filter cell so the row stays aligned, but renders no control). A column without
+`filterable` inherits the grid-wide `filterable` option.
+
 ## Filter options for select columns
 
 `getFilterOptions(column)` resolves the options of a select filter, in this order:
@@ -73,11 +77,27 @@ Any change to `filters` (via `setQuery`) resets the page to 1.
 It never derives options from the currently loaded page, so a server grid must
 either set `filterList` or return `meta.filters`.
 
-## Enter to filter
+## Live filtering
 
-By default filtering happens on Enter (`filterOnEnter: true`). Set
-`filterOnEnter: false` and adjust `filterKeypressDelay` (milliseconds) to filter
-as the user types.
+Text filters apply live, debounced by `filterDelay` (default 300 ms) so rapid
+typing triggers a single request. The `input` event drives the debounce; the
+value is only committed to the query (and the page reset to 1) when the filter
+is actually applied.
+
+```js
+new DataGrid({
+    filterable: true,
+    filterDelay: 300, // 0 = apply on every keystroke
+});
+```
+
+Shortcuts and special cases:
+
+- `Enter` applies the filter immediately, cancelling any pending debounce.
+- `Escape` clears the field and applies immediately.
+- Select filters apply immediately on `change`.
+- IME composition (CJK…) is ignored until `compositionend`, so no filter runs on
+  intermediate fragments.
 
 ## API
 

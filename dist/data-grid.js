@@ -477,7 +477,7 @@ function addSelectOption(el, value, label, checked = false) {
 // src/utils/debounce.js
 function debounce(handler, timeout = 300) {
   let timer = null;
-  return (...args) => {
+  const fn = (...args) => {
     if (timer !== null) {
       clearTimeout(timer);
     }
@@ -486,6 +486,17 @@ function debounce(handler, timeout = 300) {
       handler(...args);
     }, timeout);
   };
+  fn.cancel = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+  fn.flush = () => {
+    fn.cancel();
+    handler();
+  };
+  return fn;
 }
 
 // src/utils/getTextWidth.js
@@ -620,7 +631,7 @@ function applyColumnDefinition(el, column) {
       addClass(el, "dg-responsive-hidden");
     }
   }
-  if (column.noSort && el.tagName === "TH") {
+  if (column.sortable === false && el.tagName === "TH") {
     addClass(el, "dg-not-sortable");
   }
 }
@@ -628,45 +639,6 @@ function applyColumnDefinition(el, column) {
 class DataGrid extends base_element_default {
   _filterSelector = "[id^=dg-filter]";
   _excludedRowElementSelector = "a,button,input,select,textarea";
-  _excludedKeys = [
-    37,
-    39,
-    38,
-    40,
-    45,
-    36,
-    35,
-    33,
-    34,
-    27,
-    20,
-    16,
-    17,
-    91,
-    92,
-    18,
-    93,
-    144,
-    231,
-    "ArrowLeft",
-    "ArrowRight",
-    "ArrowUp",
-    "ArrowDown",
-    "Insert",
-    "Home",
-    "End",
-    "PageUp",
-    "PageDown",
-    "Escape",
-    "CapsLock",
-    "Shift",
-    "Control",
-    "Meta",
-    "Alt",
-    "ContextMenu",
-    "NumLock",
-    "Unidentified"
-  ];
   plugins = this._initPlugins();
   _initialQuery = normalizeQuery(this.options.initialQuery);
   _query = normalizeQuery(this._initialQuery);
@@ -841,7 +813,6 @@ class DataGrid extends base_element_default {
       attr: "",
       hidden: false,
       editable: false,
-      noSort: false,
       responsive: 1,
       responsiveHidden: false,
       transform: "",
@@ -879,8 +850,7 @@ class DataGrid extends base_element_default {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
-      filterOnEnter: true,
-      filterKeypressDelay: 500,
+      filterDelay: 300,
       spinnerClass: "",
       saveState: false,
       errorMessage: "",
@@ -1223,6 +1193,12 @@ class DataGrid extends base_element_default {
       return !isColumnHidden(col);
     });
   }
+  isColumnSortable(column) {
+    return Boolean(this.options.sortable && column.sortable !== false);
+  }
+  isColumnFilterable(column) {
+    return Boolean(this.options.filterable && column.filterable !== false);
+  }
   hiddenColumns() {
     return this.options.columns.filter((col) => {
       return isColumnHidden(col);
@@ -1461,7 +1437,8 @@ class DataGrid extends base_element_default {
     let col = baseCol;
     if (col) {
       const field = col.getAttribute("field");
-      if (field && this.getColProp(field, "noSort")) {
+      const column = field ? this.getCol(field) : null;
+      if (column && !this.isColumnSortable(column)) {
         this.log("sorting prevented because column is not sortable");
         return;
       }
@@ -1506,6 +1483,13 @@ class DataGrid extends base_element_default {
     return this.setQuery({ sort });
   }
   _sort(columnName, direction) {
+    if (direction !== "none") {
+      const column = this.getCol(columnName);
+      if (column && !this.isColumnSortable(column)) {
+        this.log("sorting prevented because column is not sortable");
+        return Promise.resolve();
+      }
+    }
     return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
   }
   sortAsc = (columnName) => this._sort(columnName, "asc");
@@ -1685,7 +1669,7 @@ class DataGrid extends base_element_default {
   }
   renderDefaultHeaderCell(th, ctx) {
     const { column, sampleTh } = ctx;
-    const sortable = this.options.sortable && !column.noSort;
+    const sortable = this.isColumnSortable(column);
     if (sortable) {
       th.classList.add("dg-sortable");
     }
@@ -1749,11 +1733,13 @@ class DataGrid extends base_element_default {
       }
       const th = ce("th");
       setAttribute(th, "data-column-id", column.id ?? column.field);
-      const ctx = { grid: this, column };
-      if (column.renderFilterCell) {
-        column.renderFilterCell(th, ctx);
-      } else {
-        this.renderDefaultFilterCell(th, column, relatedTh);
+      if (this.isColumnFilterable(column)) {
+        const ctx = { grid: this, column };
+        if (column.renderFilterCell) {
+          column.renderFilterCell(th, ctx);
+        } else {
+          this.renderDefaultFilterCell(th, column, relatedTh);
+        }
       }
       if (isColumnHidden(column)) {
         th.setAttribute("hidden", "");
@@ -1765,23 +1751,40 @@ class DataGrid extends base_element_default {
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
     }
-    if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
-      this.options.filterKeypressDelay = 0;
     const filteredRows = findAll(tr, this._filterSelector);
     for (const el of filteredRows) {
-      const isSelect = /select/i.test(el.tagName);
-      const eventName = isSelect ? "change" : "keyup";
-      const eventHandler = debounce((e) => {
-        const key = e.keyCode || e.key;
-        const isKeyPressFilter = !this.options.filterOnEnter && !this._excludedKeys.some((k) => k === key);
-        if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change" || e.type === "paste") {
-          this.filterData.call(this);
-        }
-      }, this.options.filterKeypressDelay);
-      el.addEventListener(eventName, eventHandler);
-      if (!isSelect) {
-        el.addEventListener("paste", eventHandler);
+      if (/select/i.test(el.tagName)) {
+        el.addEventListener("change", () => this.filterData());
+        continue;
       }
+      const input = el;
+      let composing = false;
+      const apply = debounce(() => this.filterData(), this.options.filterDelay);
+      input.addEventListener("input", () => {
+        if (!composing) {
+          apply();
+        }
+      });
+      input.addEventListener("compositionstart", () => {
+        composing = true;
+      });
+      input.addEventListener("compositionend", () => {
+        composing = false;
+        apply();
+      });
+      input.addEventListener("keydown", (e) => {
+        if (composing) {
+          return;
+        }
+        if (e.key === "Enter") {
+          e.preventDefault();
+          apply.flush();
+        } else if (e.key === "Escape" && input.value) {
+          input.value = "";
+          apply.cancel();
+          this.filterData();
+        }
+      });
     }
   }
   renderDefaultFilterCell(th, column, relatedTh) {
@@ -2352,7 +2355,7 @@ class SelectableRows extends base_plugin_default {
       id: "$selection",
       virtual: true,
       position: "start",
-      noSort: true,
+      sortable: false,
       title: "",
       class: SELECTABLE_CLASS,
       renderHeaderCell: (th) => this.createHeaderCell(th),
@@ -2477,16 +2480,48 @@ var selectable_rows_default = SelectableRows;
 
 // src/plugins/bulk-actions.js
 class BulkActions extends base_plugin_default {
+  bar = null;
+  countEl = null;
+  buttons = null;
   connected() {
     const grid = this.grid;
-    this.bar = document.createElement("div");
-    this.bar.className = "dg-bulk-actions";
-    this.bar.hidden = true;
+    const bulkActions = grid.options.bulkActions ?? [];
+    if (!bulkActions.length) {
+      return;
+    }
+    const bar = document.createElement("div");
+    bar.className = "dg-bulk-actions";
+    this.bar = bar;
+    this.countEl = document.createElement("span");
+    this.countEl.className = "dg-bulk-count";
+    bar.appendChild(this.countEl);
+    this.buttons = bulkActions.map((action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.dataset.action = action.name;
+      if (action.intent) {
+        button.dataset.intent = action.intent;
+      }
+      button.textContent = action.label ?? action.name;
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        if (button.disabled) {
+          return;
+        }
+        dispatch(grid, "bulkAction", {
+          action: action.name,
+          selection: grid.getSelectionState(),
+          query: grid.query
+        });
+      });
+      bar.appendChild(button);
+      return button;
+    });
     const table = grid.querySelector("table");
     if (table) {
-      grid.insertBefore(this.bar, table);
+      grid.insertBefore(bar, table);
     } else {
-      grid.appendChild(this.bar);
+      grid.appendChild(bar);
     }
     grid.addEventListener("selectionChange", this);
     this.render();
@@ -2509,42 +2544,15 @@ class BulkActions extends base_plugin_default {
     this.render();
   }
   render() {
+    if (!this.bar || !this.countEl || !this.buttons?.length) {
+      return;
+    }
     const grid = this.grid;
-    const bulkActions = grid.options.bulkActions ?? [];
-    if (!this.bar || !bulkActions.length) {
-      return;
-    }
     const selection = grid.getSelectionState();
-    const hasSelection = selection.mode === "all" || selection.ids.size > 0;
-    this.bar.hidden = !hasSelection;
-    if (!hasSelection) {
-      return;
-    }
-    while (this.bar.firstChild) {
-      this.bar.removeChild(this.bar.firstChild);
-    }
     const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
-    const countEl = document.createElement("span");
-    countEl.className = "dg-bulk-count";
-    countEl.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
-    this.bar.appendChild(countEl);
-    for (const action of bulkActions) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.dataset.action = action.name;
-      if (action.intent) {
-        button.dataset.intent = action.intent;
-      }
-      button.textContent = action.label ?? action.name;
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        dispatch(grid, "bulkAction", {
-          action: action.name,
-          selection: grid.getSelectionState(),
-          query: grid.query
-        });
-      });
-      this.bar.appendChild(button);
+    this.countEl.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+    for (const button of this.buttons) {
+      button.disabled = count === 0;
     }
   }
 }
@@ -2731,7 +2739,7 @@ class ResponsiveGrid extends base_plugin_default {
       id: "$responsive",
       virtual: true,
       position: "start",
-      noSort: true,
+      sortable: false,
       title: "",
       class: `${RESPONSIVE_CLASS}-toggle`,
       hidden: !this.hasHiddenColumns(),
@@ -2981,7 +2989,7 @@ class RowActions extends base_plugin_default {
       id: "$actions",
       virtual: true,
       position: "end",
-      noSort: true,
+      sortable: false,
       title: "",
       class: `dg-actions ${this.actionClass}`,
       renderHeaderCell: (th) => this.createHeaderCell(th),
@@ -3434,4 +3442,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=2E802093249D42CD64756E2164756E21
+//# debugId=70C13022774944B664756E2164756E21

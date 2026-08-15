@@ -41,7 +41,8 @@ import {
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} [hidden] - hide the column
- * @property {Boolean} [noSort] - allow disabling sort for a given column
+ * @property {Boolean} [sortable] - disable sorting for this column (defaults to the grid-wide `sortable`)
+ * @property {Boolean} [filterable] - disable filtering for this column (defaults to the grid-wide `filterable`)
  * @property {String} [transform] - custom value transformation
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
  * @property {String} [editableType] - type of input (EditableColumn module)
@@ -142,9 +143,8 @@ import {
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
- * @property {Boolean} filterOnEnter Toggles the ability to filter column data by pressing the Enter or Return key
+ * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
  * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
- * @property {Number} filterKeypressDelay Sets a keypress delay time in milliseconds before triggering filter operation.
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
@@ -344,7 +344,7 @@ function applyColumnDefinition(el, column) {
             addClass(el, "dg-responsive-hidden");
         }
     }
-    if (column.noSort && el.tagName === "TH") {
+    if (column.sortable === false && el.tagName === "TH") {
         addClass(el, "dg-not-sortable");
     }
 }
@@ -354,45 +354,6 @@ function applyColumnDefinition(el, column) {
 class DataGrid extends BaseElement {
     _filterSelector = "[id^=dg-filter]";
     _excludedRowElementSelector = "a,button,input,select,textarea";
-    _excludedKeys = [
-        37,
-        39,
-        38,
-        40,
-        45,
-        36,
-        35,
-        33,
-        34,
-        27,
-        20,
-        16,
-        17,
-        91,
-        92,
-        18,
-        93,
-        144,
-        231,
-        "ArrowLeft",
-        "ArrowRight",
-        "ArrowUp",
-        "ArrowDown",
-        "Insert",
-        "Home",
-        "End",
-        "PageUp",
-        "PageDown",
-        "Escape",
-        "CapsLock",
-        "Shift",
-        "Control",
-        "Meta",
-        "Alt",
-        "ContextMenu",
-        "NumLock",
-        "Unidentified",
-    ];
 
     /**
      * Instantiated plugins, keyed by their registration name.
@@ -721,7 +682,6 @@ class DataGrid extends BaseElement {
             attr: "",
             hidden: false,
             editable: false,
-            noSort: false,
             responsive: 1,
             responsiveHidden: false,
             transform: "",
@@ -763,8 +723,7 @@ class DataGrid extends BaseElement {
             autohidePager: false,
             responsive: false,
             responsiveToggle: true,
-            filterOnEnter: true,
-            filterKeypressDelay: 500,
+            filterDelay: 300,
             spinnerClass: "",
             saveState: false,
             errorMessage: "",
@@ -1272,6 +1231,26 @@ class DataGrid extends BaseElement {
         });
     }
 
+    /**
+     * Whether a column can be sorted: the grid-wide option must be on and the
+     * column must not explicitly opt out with `sortable: false`.
+     * @param {Column} column
+     * @returns {Boolean}
+     */
+    isColumnSortable(column) {
+        return Boolean(this.options.sortable && column.sortable !== false);
+    }
+
+    /**
+     * Whether a column can be filtered: the grid-wide option must be on and the
+     * column must not explicitly opt out with `filterable: false`.
+     * @param {Column} column
+     * @returns {Boolean}
+     */
+    isColumnFilterable(column) {
+        return Boolean(this.options.filterable && column.filterable !== false);
+    }
+
     hiddenColumns() {
         return this.options.columns.filter((col) => {
             return isColumnHidden(col);
@@ -1669,7 +1648,8 @@ class DataGrid extends BaseElement {
         // Early exit
         if (col) {
             const field = col.getAttribute("field");
-            if (field && this.getColProp(field, "noSort")) {
+            const column = field ? this.getCol(field) : null;
+            if (column && !this.isColumnSortable(column)) {
                 this.log("sorting prevented because column is not sortable");
                 return;
             }
@@ -1729,6 +1709,15 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     _sort(columnName, direction) {
+        // The capability is enforced on the programmatic API too: sorting can
+        // not bypass a column-level `sortable: false`. sortNone stays allowed.
+        if (direction !== "none") {
+            const column = this.getCol(columnName);
+            if (column && !this.isColumnSortable(column)) {
+                this.log("sorting prevented because column is not sortable");
+                return Promise.resolve();
+            }
+        }
         return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
     }
 
@@ -1973,7 +1962,7 @@ class DataGrid extends BaseElement {
      */
     renderDefaultHeaderCell(th, ctx) {
         const { column, sampleTh } = ctx;
-        const sortable = this.options.sortable && !column.noSort;
+        const sortable = this.isColumnSortable(column);
         if (sortable) {
             th.classList.add("dg-sortable");
         }
@@ -2059,11 +2048,15 @@ class DataGrid extends BaseElement {
             const th = ce("th");
             setAttribute(th, "data-column-id", column.id ?? column.field);
 
-            const ctx = { grid: this, column };
-            if (column.renderFilterCell) {
-                column.renderFilterCell(th, ctx);
-            } else {
-                this.renderDefaultFilterCell(th, column, relatedTh);
+            // A non-filterable column keeps its <th> so the filter row stays
+            // aligned with the header, but renders no control.
+            if (this.isColumnFilterable(column)) {
+                const ctx = { grid: this, column };
+                if (column.renderFilterCell) {
+                    column.renderFilterCell(th, ctx);
+                } else {
+                    this.renderDefaultFilterCell(th, column, relatedTh);
+                }
             }
 
             if (isColumnHidden(column)) {
@@ -2079,26 +2072,48 @@ class DataGrid extends BaseElement {
             thead.replaceChild(tr, oldRow);
         }
 
-        if (typeof this.options.filterKeypressDelay !== "number" || this.options.filterOnEnter)
-            this.options.filterKeypressDelay = 0;
-
-        // Filter content by field events
+        // Filter content by field events: live debounced text filtering,
+        // immediate discrete controls, Enter/Escape shortcuts, IME-aware.
         const filteredRows = findAll(tr, this._filterSelector);
         for (const el of filteredRows) {
-            const isSelect = /select/i.test(el.tagName);
-            const eventName = isSelect ? "change" : "keyup";
-            const eventHandler = debounce((/** @type {KeyboardEvent} */ e) => {
-                const key = e.keyCode || e.key;
-                const isKeyPressFilter = !this.options.filterOnEnter && !this._excludedKeys.some((k) => k === key);
-                if (key === 13 || key === "Enter" || isKeyPressFilter || e.type === "change" || e.type === "paste") {
-                    this.filterData.call(this);
-                }
-            }, this.options.filterKeypressDelay);
-            el.addEventListener(eventName, eventHandler);
-            if (!isSelect) {
-                // Add paste event support for text input filters
-                el.addEventListener("paste", eventHandler);
+            if (/select/i.test(el.tagName)) {
+                el.addEventListener("change", () => this.filterData());
+                continue;
             }
+
+            const input = /** @type {HTMLInputElement} */ (el);
+            /** @type {Boolean} */
+            let composing = false;
+            const apply = debounce(() => this.filterData(), this.options.filterDelay);
+
+            input.addEventListener("input", () => {
+                if (!composing) {
+                    apply();
+                }
+            });
+            // IME composition (CJK...): only filter once the composition ends,
+            // never on intermediate fragments.
+            input.addEventListener("compositionstart", () => {
+                composing = true;
+            });
+            input.addEventListener("compositionend", () => {
+                composing = false;
+                apply();
+            });
+            input.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
+                if (composing) {
+                    return;
+                }
+                if (e.key === "Enter") {
+                    // Immediate apply, cancelling any pending debounce
+                    e.preventDefault();
+                    apply.flush();
+                } else if (e.key === "Escape" && input.value) {
+                    input.value = "";
+                    apply.cancel();
+                    this.filterData();
+                }
+            });
         }
     }
 

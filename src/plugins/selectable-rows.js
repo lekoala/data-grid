@@ -45,7 +45,7 @@ class SelectableRows extends BasePlugin {
             id: "$selection",
             virtual: true,
             position: "start",
-            noSort: true,
+            sortable: false,
             title: "",
             class: SELECTABLE_CLASS,
             renderHeaderCell: (th) => this.createHeaderCell(th),

@@ -183,7 +183,7 @@ test("header and body checkboxes share the same centering box", async () => {
     document.body.removeChild(inst);
 });
 
-test("bulkActions render a bar and dispatch bulkAction", async () => {
+test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name" }],
         selectable: true,
@@ -192,21 +192,32 @@ test("bulkActions render a bar and dispatch bulkAction", async () => {
     });
 
     const bar = inst.querySelector(".dg-bulk-actions");
-    expect(bar.hidden).toBe(true);
-
-    toggle(firstCheckbox(inst));
+    const button = bar.querySelector('button[data-action="archive"]');
+    // The toolbar exists as soon as bulkActions are configured
     expect(bar.hidden).toBe(false);
-    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("1 selected");
+    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("0 selected");
+    expect(button.disabled).toBe(true);
 
+    // A disabled bulk action never dispatches
     let detail = null;
     inst.addEventListener("bulkAction", (event) => {
         detail = event.detail;
     });
-    bar.querySelector('button[data-action="archive"]').click();
+    button.click();
+    expect(detail).toBeNull();
 
+    toggle(firstCheckbox(inst));
+    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("1 selected");
+    expect(button.disabled).toBe(false);
+
+    button.click();
     expect(detail).toBeTruthy();
     expect(detail.action).toBe("archive");
     expect(detail.selection.ids.has("1")).toBe(true);
     expect(detail.query.page).toBe(1);
+
+    toggle(firstCheckbox(inst));
+    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("0 selected");
+    expect(button.disabled).toBe(true);
     document.body.removeChild(inst);
 });

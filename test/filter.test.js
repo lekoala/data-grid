@@ -17,6 +17,34 @@ async function makeReadyGrid(opts = {}, data = null) {
     return inst;
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const tick = () => sleep(0);
+
+/**
+ * Wrap a data source and count how many times its load() runs.
+ * @param {Array<Record<string, any>>} data
+ */
+function instrumentedSource(data) {
+    const ds = new ArrayDataSource(data);
+    const original = ds.load.bind(ds);
+    let loads = 0;
+    ds.load = (...args) => {
+        loads++;
+        return original(...args);
+    };
+    return { ds, count: () => loads };
+}
+
+/** Type into a text filter input, dispatching an input event per character. */
+function typeFilter(inst, field, text) {
+    const input = inst.querySelector(`.dg-head-filters input[data-name="${field}"]`);
+    for (const ch of text) {
+        input.value += ch;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    return input;
+}
+
 test("applyFilters implements all operators", () => {
     const rows = [
         { id: 1, name: "Alice", age: 30, active: true },
@@ -151,9 +179,10 @@ test("explicit filterList is used as-is and not mutated", async () => {
         { value: "", text: "All" },
         { value: "a", text: "A" },
     ];
-    const inst = await makeReadyGrid({ columns: [{ field: "name", filterType: "select", filterList: list }] }, [
-        { name: "a" },
-    ]);
+    const inst = await makeReadyGrid(
+        { columns: [{ field: "name", filterType: "select", filterList: list }], filterable: true },
+        [{ name: "a" }],
+    );
     expect(inst.getFilterOptions(inst.options.columns[0])).toBe(list);
     expect(inst.options.columns[0].filterList).toBe(list);
 
@@ -190,5 +219,172 @@ test("relational operators flow end to end through the grid", async () => {
     await inst.setQuery({ filters: { age: { operator: "gt", value: 30 } }, pageSize: 50 });
     expect(inst.rows.length).toBeGreaterThan(0);
     expect(inst.rows.every((r) => r.age > 30)).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("typing several characters triggers a single debounced filter", async () => {
+    const { ds, count } = instrumentedSource([{ name: "bru" }, { name: "br" }, { name: "x" }]);
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        filterable: true,
+        filterDelay: 20,
+        dataSource: ds,
+    });
+
+    const before = count();
+    typeFilter(inst, "name", "bru");
+    expect(count()).toBe(before); // nothing applied while the debounce is pending
+    await sleep(80);
+    expect(count()).toBe(before + 1); // one application after the last keystroke
+    expect(inst.query.filters.name).toEqual({ operator: "contains", value: "bru" });
+    document.body.removeChild(inst);
+});
+
+test("Enter applies immediately and cancels the pending debounce", async () => {
+    const { ds, count } = instrumentedSource([{ name: "b" }, { name: "br" }, { name: "x" }]);
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        filterable: true,
+        filterDelay: 100,
+        dataSource: ds,
+    });
+
+    const before = count();
+    const input = typeFilter(inst, "name", "br");
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+    expect(count()).toBe(before + 1); // applied immediately
+    await sleep(200); // longer than the debounce delay
+    expect(count()).toBe(before + 1); // no second, delayed application
+    expect(inst.query.filters.name).toEqual({ operator: "contains", value: "br" });
+    document.body.removeChild(inst);
+});
+
+test("select filters apply immediately on change", async () => {
+    const { ds, count } = instrumentedSource([{ status: "active" }, { status: "inactive" }]);
+    const inst = await makeReadyGrid({
+        columns: [{ field: "status", filterType: "select" }],
+        filterable: true,
+        dataSource: ds,
+    });
+
+    const before = count();
+    const select = inst.querySelector(".dg-head-filters select");
+    select.value = "active";
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(count()).toBe(before + 1);
+    expect(inst.query.filters.status).toEqual({ operator: "eq", value: "active" });
+    document.body.removeChild(inst);
+});
+
+test("IME composition is not filtered until compositionend", async () => {
+    const { ds, count } = instrumentedSource([{ name: "br" }, { name: "b" }]);
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        filterable: true,
+        filterDelay: 20,
+        dataSource: ds,
+    });
+
+    const before = count();
+    const input = inst.querySelector('.dg-head-filters input[data-name="name"]');
+    input.dispatchEvent(new Event("compositionstart"));
+    typeFilter(inst, "name", "br"); // inputs during composition are ignored
+    await sleep(80);
+    expect(count()).toBe(before);
+
+    input.dispatchEvent(new Event("compositionend"));
+    await sleep(80);
+    expect(count()).toBe(before + 1);
+    expect(inst.query.filters.name).toEqual({ operator: "contains", value: "br" });
+    document.body.removeChild(inst);
+});
+
+test("a new filter resets the page to 1", async () => {
+    const data = Array.from({ length: 30 }, (_, i) => ({ name: `row${i}` }));
+    const { ds } = instrumentedSource(data);
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        filterable: true,
+        pageSize: 10,
+        filterDelay: 20,
+        dataSource: ds,
+    });
+
+    await inst.setQuery({ page: 2 });
+    expect(inst.query.page).toBe(2);
+
+    typeFilter(inst, "name", "row2");
+    await sleep(80);
+    expect(inst.query.filters.name).toEqual({ operator: "contains", value: "row2" });
+    expect(inst.query.page).toBe(1);
+    document.body.removeChild(inst);
+});
+
+test("Escape clears a text filter and cancels the pending debounce", async () => {
+    const { ds, count } = instrumentedSource([{ name: "b" }, { name: "br" }]);
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        filterable: true,
+        filterDelay: 100,
+        dataSource: ds,
+    });
+
+    const before = count();
+    const input = typeFilter(inst, "name", "x"); // debounce pending (100 ms)
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(input.value).toBe("");
+    expect(count()).toBe(before + 1); // applied immediately with the cleared field
+    expect(inst.query.filters.name).toBeUndefined();
+    await sleep(200);
+    expect(count()).toBe(before + 1); // the cancelled debounce never applies "x"
+    expect(inst.query.filters.name).toBeUndefined();
+    document.body.removeChild(inst);
+});
+
+test("a column with filterable: false keeps its th but renders no control", async () => {
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }, { field: "email", filterable: false }],
+        filterable: true,
+        dataSource: new ArrayDataSource([{ name: "Alice", email: "a@x.com" }]),
+    });
+
+    const filterThs = inst.querySelectorAll(".dg-head-filters th");
+    expect(filterThs).toHaveLength(2); // both cells kept for alignment
+    const emailFilterTh = inst.querySelector('.dg-head-filters th[data-column-id="email"]');
+    expect(emailFilterTh).toBeTruthy();
+    expect(emailFilterTh.querySelector(".dg-filter")).toBeNull();
+    expect(inst.querySelector('.dg-head-filters th[data-column-id="name"] .dg-filter')).toBeTruthy();
+    document.body.removeChild(inst);
+});
+
+test("a stale server result cannot overwrite the latest filter", async () => {
+    /** @type {Array<{ query: QueryState, resolve: Function }>} */
+    const pending = [];
+    const ds = {
+        async load(query) {
+            return new Promise((resolve) => pending.push({ query, resolve }));
+        },
+    };
+
+    const inst = new DataGrid({ columns: [{ field: "name" }], dataSource: ds });
+    document.body.appendChild(inst);
+    await sleep(20); // let the initial load be dispatched
+    pending.shift().resolve({ rows: [], total: 0, meta: {} });
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+
+    inst.setQuery({ filters: { name: { operator: "contains", value: "b" } } });
+    const reqB = pending.shift();
+    inst.setQuery({ filters: { name: { operator: "contains", value: "br" } } });
+    const reqBr = pending.shift();
+
+    // Resolve the stale request last: it must be ignored
+    reqBr.resolve({ rows: [{ name: "br" }], total: 1, meta: {} });
+    reqB.resolve({ rows: [{ name: "b" }], total: 1, meta: {} });
+    await tick();
+
+    expect(inst.rows).toEqual([{ name: "br" }]);
     document.body.removeChild(inst);
 });

@@ -104,7 +104,7 @@ class ResponsiveGrid extends BasePlugin {
             id: "$responsive",
             virtual: true,
             position: "start",
-            noSort: true,
+            sortable: false,
             title: "",
             class: `${RESPONSIVE_CLASS}-toggle`,
             hidden: !this.hasHiddenColumns(),

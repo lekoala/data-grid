@@ -162,7 +162,8 @@ response protection).
 | `class`                                 | `String`             | class on the column (`th.class` / `td.class`)        |
 | `attr`                                  | `String`             | set a row attribute instead of rendering             |
 | `hidden`                                | `Boolean`            | hide the column                                      |
-| `noSort`                                | `Boolean`            | disable sorting for this column                      |
+| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)   |
+| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid) |
 | `transform`                             | `String`             | `uppercase` / `lowercase`                            |
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)               |
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`            |

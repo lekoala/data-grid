@@ -46,9 +46,13 @@ export type Column = {
      */
     hidden?: boolean;
     /**
-     * - allow disabling sort for a given column
+     * - disable sorting for this column (defaults to the grid-wide `sortable`)
      */
-    noSort?: boolean;
+    sortable?: boolean;
+    /**
+     * - disable filtering for this column (defaults to the grid-wide `filterable`)
+     */
+    filterable?: boolean;
     /**
      * - custom value transformation
      */
@@ -302,17 +306,13 @@ export type Options = {
      */
     responsiveToggle: boolean;
     /**
-     * Toggles the ability to filter column data by pressing the Enter or Return key
+     * Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
      */
-    filterOnEnter: boolean;
+    filterDelay: number;
     /**
      * Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
      */
     spinnerClass: string;
-    /**
-     * Sets a keypress delay time in milliseconds before triggering filter operation.
-     */
-    filterKeypressDelay: number;
     /**
      * Enable/disable save state plugin (SaveState module)
      */
@@ -367,7 +367,6 @@ declare class DataGrid extends BaseElement {
     #private;
     _filterSelector: string;
     _excludedRowElementSelector: string;
-    _excludedKeys: (string | number)[];
     /**
      * Instantiated plugins, keyed by their registration name.
      * @type {PluginInstances}
@@ -665,6 +664,20 @@ declare class DataGrid extends BaseElement {
      */
     setColProp(field: string, prop: string, val: any): void;
     visibleColumns(): Column[];
+    /**
+     * Whether a column can be sorted: the grid-wide option must be on and the
+     * column must not explicitly opt out with `sortable: false`.
+     * @param {Column} column
+     * @returns {Boolean}
+     */
+    isColumnSortable(column: Column): boolean;
+    /**
+     * Whether a column can be filtered: the grid-wide option must be on and the
+     * column must not explicitly opt out with `filterable: false`.
+     * @param {Column} column
+     * @returns {Boolean}
+     */
+    isColumnFilterable(column: Column): boolean;
     hiddenColumns(): Column[];
     /**
      * Reconcile the rendered cells (header, filters and body) with the current

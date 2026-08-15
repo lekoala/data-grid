@@ -25,7 +25,7 @@ class RowActions extends BasePlugin {
             id: "$actions",
             virtual: true,
             position: "end",
-            noSort: true,
+            sortable: false,
             title: "",
             class: `dg-actions ${this.actionClass}`,
             renderHeaderCell: (th) => this.createHeaderCell(th),

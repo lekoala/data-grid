@@ -5,7 +5,12 @@ import BasePlugin from "../core/base-plugin.js";
  * which operates on a single row.
  */
 declare class BulkActions extends BasePlugin {
-    bar: HTMLDivElement | undefined;
+    /** @type {HTMLDivElement|null} */
+    bar: HTMLDivElement | null;
+    /** @type {HTMLSpanElement|null} */
+    countEl: HTMLSpanElement | null;
+    /** @type {HTMLButtonElement[]|null} */
+    buttons: HTMLButtonElement[] | null;
     connected(): void;
     disconnected(): void;
     /**
@@ -18,7 +23,7 @@ declare class BulkActions extends BasePlugin {
     afterRender(context: import("../core/base-plugin.js").RenderContext): void;
     updateLabels(): void;
     /**
-     * Render the bulk action bar reflecting the current selection.
+     * Reflect the current selection on the toolbar state.
      */
     render(): void;
 }

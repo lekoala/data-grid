@@ -233,10 +233,6 @@ data-grid .dg-bulk-actions {
   padding: .5rem 0;
 }
 
-data-grid .dg-bulk-actions[hidden] {
-  display: none;
-}
-
 data-grid .dg-bulk-count {
   color: var(--dg-muted-color);
   margin-right: auto;

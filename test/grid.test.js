@@ -131,6 +131,32 @@ test("sortable header button is the tab stop and a click activates sorting", asy
     removeGrid(inst);
 });
 
+test("a column with sortable: false cannot be sorted, even programmatically", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                { field: "name", title: "Name" },
+                { field: "age", title: "Age", sortable: false },
+            ],
+            sortable: true,
+        },
+        [
+            { name: "b", age: 2 },
+            { name: "a", age: 1 },
+        ],
+    );
+
+    const headers = inst.querySelectorAll("thead tr.dg-head-columns th");
+    expect(headers[0].querySelector(".dg-sort")).toBeTruthy();
+    expect(headers[1].querySelector(".dg-sort")).toBeNull();
+    expect(headers[1].classList.contains("dg-not-sortable")).toBe(true);
+
+    // The programmatic API respects the column capability too
+    await inst.sortAsc("age");
+    expect(inst.query.sort).toEqual([]);
+    removeGrid(inst);
+});
+
 test("clearFilters clears the filter inputs", async () => {
     const inst = await makeReadyGrid(
         {

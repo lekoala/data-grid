@@ -58,10 +58,7 @@ test.skipIf(IS_WINDOWS)(
 
         await v.click('#server-grid .dg-head-filters input[data-name="company"]');
         await v.type("Acme");
-        await v.evaluate(`(() => {
-        const input = document.querySelector('#server-grid .dg-head-filters input[data-name="company"]');
-        input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true }));
-    })()`);
+        // Live filtering: the debounced request narrows the grid without Enter
         await waitFor(v, "window.sgrid.meta && window.sgrid.meta.filtered === 333");
         expect(await read(v, "window.sgrid.rows.every((r) => r.company === 'Acme')")).toBe(true);
     },
