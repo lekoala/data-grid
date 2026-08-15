@@ -57,9 +57,10 @@ class RowActions extends BasePlugin {
         const actionsToggle = document.createElement("button");
         actionsToggle.type = "button";
         actionsToggle.classList.add("dg-actions-toggle");
-        actionsToggle.innerHTML = "☰";
+        actionsToggle.textContent = "⋯";
         actionsToggle.setAttribute("aria-label", labels.toggleActions);
         actionsToggle.setAttribute("aria-expanded", "false");
+        actionsToggle.title = labels.toggleActions;
         on(actionsToggle, "click", (/** @type {MouseEvent} */ ev) => {
             ev.stopPropagation();
             const parent = /** @type {HTMLElement} */ (ev.target).parentElement;

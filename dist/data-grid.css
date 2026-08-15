@@ -11,30 +11,47 @@
 }
 
 data-grid {
+  --dg-space-1: 4px;
+  --dg-space-2: 8px;
+  --dg-space-3: 12px;
+  --dg-space-4: 16px;
   --dg-bg: #fff;
-  --dg-color: #212529;
-  --dg-border-color: #e9ecef;
+  --dg-color: #1f2937;
+  --dg-muted-color: #6b7280;
+  --dg-border-color: #d8e1eb;
   --dg-accent: #0d6efd;
-  --dg-accent-soft: #cfe2ff;
-  --dg-header-bg: #e9ecef;
-  --dg-header-color: #212529;
-  --dg-row-stripe-bg: #0000000d;
-  --dg-row-hover-bg: #fffcee;
-  --dg-row-selected-bg: #cfe2ff;
-  --dg-row-border-color: #f2f2f2;
+  --dg-accent-soft: #e8f1ff;
+  --dg-focus-ring: #0d6efd2e;
+  --dg-header-bg: #f6f8fb;
+  --dg-header-color: #111827;
+  --dg-filter-bg: #fbfcfe;
+  --dg-row-stripe-bg: transparent;
+  --dg-row-hover-bg: #f8fafc;
+  --dg-row-selected-bg: #eef4ff;
+  --dg-row-selected-hover-bg: #e7f0ff;
+  --dg-row-border-color: #edf2f7;
   --dg-control-bg: #fff;
-  --dg-control-color: #212529;
-  --dg-control-border-color: #e9ecef;
-  --dg-danger-bg: #f8d7da;
-  --dg-danger-color: #842029;
-  --dg-danger-border-color: #f5c2c7;
-  --dg-padding-x: .75rem;
-  --dg-padding-y: .5rem;
-  --dg-header-padding-y: .75rem;
-  --dg-radius: .25rem;
+  --dg-control-color: var(--dg-color);
+  --dg-control-border-color: #d4dde7;
+  --dg-danger-bg: #fef3f2;
+  --dg-danger-color: #b42318;
+  --dg-danger-border-color: #fecdca;
+  --dg-cell-padding-inline: var(--dg-space-3);
+  --dg-cell-padding-block: var(--dg-space-2);
+  --dg-padding-x: var(--dg-cell-padding-inline);
+  --dg-padding-y: var(--dg-cell-padding-block);
+  --dg-header-padding-y: var(--dg-space-2);
+  --dg-control-padding-inline: var(--dg-space-2);
+  --dg-control-height: 32px;
+  --dg-selection-column-width: 40px;
+  --dg-actions-column-width: 40px;
+  --dg-radius: 8px;
   --dg-padding-half: calc(var(--dg-padding-y) / 2);
   --dg-icon-scale: 1;
   --dg-responsive-width: 60%;
+  color: var(--dg-color);
+  font: inherit;
+  line-height: inherit;
   display: block;
   position: relative;
   min-height: 6rem;
@@ -53,15 +70,17 @@ data-grid .dg-status {
 }
 
 data-grid[density="compact"] {
-  --dg-padding-y: .25rem;
-  --dg-padding-x: .5rem;
-  --dg-header-padding-y: .375rem;
+  --dg-cell-padding-block: var(--dg-space-1);
+  --dg-cell-padding-inline: var(--dg-space-2);
+  --dg-header-padding-y: var(--dg-space-1);
+  --dg-control-height: 28px;
 }
 
 data-grid[density="comfortable"] {
-  --dg-padding-y: .75rem;
-  --dg-padding-x: 1rem;
-  --dg-header-padding-y: 1rem;
+  --dg-cell-padding-block: var(--dg-space-3);
+  --dg-cell-padding-inline: var(--dg-space-4);
+  --dg-header-padding-y: var(--dg-space-3);
+  --dg-control-height: 36px;
 }
 
 data-grid {
@@ -120,6 +139,10 @@ data-grid table {
   table-layout: fixed;
   white-space: normal;
   background: var(--dg-bg);
+  border: 1px solid var(--dg-border-color);
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--dg-radius);
   width: 100%;
   max-width: 100%;
 }
@@ -153,6 +176,7 @@ data-grid th, data-grid td {
   empty-cells: show;
   padding: var(--dg-padding-y) var(--dg-padding-x);
   text-align: left;
+  vertical-align: middle;
 }
 
 data-grid th[tabindex], data-grid td[tabindex] {
@@ -161,8 +185,11 @@ data-grid th[tabindex], data-grid td[tabindex] {
 }
 
 data-grid th {
+  color: var(--dg-header-color);
+  letter-spacing: .01em;
   padding: var(--dg-header-padding-y) var(--dg-padding-x);
-  font-weight: bold;
+  font-size: .875em;
+  font-weight: 600;
 }
 
 data-grid th, data-grid td {
@@ -188,6 +215,10 @@ data-grid .dg-expandable.dg-expanded td {
 }
 
 data-grid .dg-selectable {
+  padding-left: var(--dg-space-1);
+  padding-right: var(--dg-space-1);
+  text-align: center;
+  width: var(--dg-selection-column-width);
   font-size: 1em;
 }
 
@@ -204,14 +235,22 @@ data-grid .dg-bulk-actions[hidden] {
 }
 
 data-grid .dg-bulk-count {
+  color: var(--dg-muted-color);
   margin-right: auto;
   font-weight: 600;
 }
 
 data-grid .dg-selectable label {
   display: flex;
+  justify-content: center;
   align-items:  center;
   margin: 0;
+}
+
+data-grid .dg-select-all, data-grid .dg-selectable input[type="checkbox"], data-grid .dg-selectable input[type="radio"] {
+  accent-color: var(--dg-accent);
+  width: 16px;
+  height: 16px;
 }
 
 data-grid .dg-clickable-cell {
@@ -225,6 +264,10 @@ data-grid .dg-clickable-cell {
   margin: 0;
   top: 0;
   left: 0;
+}
+
+data-grid button, data-grid input, data-grid select {
+  font: inherit;
 }
 
 data-grid[sticky] table thead, data-grid[sticky] table tfoot {
@@ -247,8 +290,8 @@ data-grid .dg-nav-icon, data-grid .dg-skip-icon {
   position: absolute;
   display: block;
   transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
-  width: 22px;
-  height: 22px;
+  width: 18px;
+  height: 18px;
   top: 50%;
   left: 50%;
 }
@@ -261,31 +304,31 @@ data-grid .dg-nav-icon:before, data-grid .dg-nav-icon:after, data-grid .dg-skip-
 }
 
 data-grid .dg-nav-icon:before {
-  border-top: 5px solid #0000;
-  border-bottom: 5px solid #0000;
-  border-left: 6px solid;
+  border-top: 4px solid #0000;
+  border-bottom: 4px solid #0000;
+  border-left: 5px solid;
   width: 0;
-  height: 10px;
-  top: 6px;
-  left: 9px;
+  height: 8px;
+  top: 5px;
+  left: 7px;
 }
 
 data-grid .dg-skip-icon:before {
   background: currentColor;
-  width: 3px;
-  height: 10px;
-  top: 6px;
-  left: 14px;
+  width: 2px;
+  height: 8px;
+  top: 5px;
+  left: 12px;
 }
 
 data-grid .dg-skip-icon:after {
-  border-top: 5px solid #0000;
-  border-bottom: 5px solid #0000;
-  border-left: 6px solid;
+  border-top: 4px solid #0000;
+  border-bottom: 4px solid #0000;
+  border-left: 5px solid;
   width: 0;
-  height: 10px;
-  top: 6px;
-  left: 7px;
+  height: 8px;
+  top: 5px;
+  left: 5px;
 }
 
 data-grid .dg-rotate {
@@ -297,21 +340,26 @@ data-grid button {
   border: solid 1px var(--dg-control-border-color);
   border-radius: var(--dg-radius);
   color: var(--dg-control-color);
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items:  center;
+  gap: var(--dg-space-1);
+  height: var(--dg-control-height);
+  padding: 0 var(--dg-control-padding-inline);
   pointer-events: all;
   text-align: center;
-  cursor: pointer;
-  height: 2rem;
-  margin: 0 .2rem;
-  padding: 0 .5rem;
+  margin: 0;
+  transition: background-color .12s, border-color .12s, box-shadow .12s, color .12s;
 }
 
 data-grid button:hover {
-  opacity: .7;
+  background-color: var(--dg-row-hover-bg);
 }
 
 data-grid button:disabled:hover {
-  background-color: inherit;
-  border-color: inherit;
+  background-color: var(--dg-control-bg);
+  border-color: var(--dg-control-border-color);
 }
 
 data-grid input[type="checkbox"] {
@@ -325,10 +373,11 @@ data-grid input:not(:-webkit-any([type="checkbox"], [type="radio"])), data-grid 
   box-sizing: border-box;
   border: 1px solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
-  padding: 0 var(--dg-padding-y);
+  height: var(--dg-control-height);
+  padding: 0 var(--dg-control-padding-inline);
   max-width: none;
-  height: 2rem;
-  margin: 0 .2rem;
+  margin: 0;
+  transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
 data-grid input:not(:-moz-any([type="checkbox"], [type="radio"])), data-grid select {
@@ -337,10 +386,11 @@ data-grid input:not(:-moz-any([type="checkbox"], [type="radio"])), data-grid sel
   box-sizing: border-box;
   border: 1px solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
-  padding: 0 var(--dg-padding-y);
+  height: var(--dg-control-height);
+  padding: 0 var(--dg-control-padding-inline);
   max-width: none;
-  height: 2rem;
-  margin: 0 .2rem;
+  margin: 0;
+  transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
 data-grid input:not(:is([type="checkbox"], [type="radio"])), data-grid select {
@@ -349,44 +399,81 @@ data-grid input:not(:is([type="checkbox"], [type="radio"])), data-grid select {
   box-sizing: border-box;
   border: 1px solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
-  padding: 0 var(--dg-padding-y);
+  height: var(--dg-control-height);
+  padding: 0 var(--dg-control-padding-inline);
   max-width: none;
-  height: 2rem;
-  margin: 0 .2rem;
+  margin: 0;
+  transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
 data-grid input:not([type="checkbox"]):focus, data-grid select:focus, data-grid button:focus {
-  box-shadow: 0 0 0 var(--dg-padding-half) var(--dg-accent-soft);
+  border-color: var(--dg-accent);
+  box-shadow: 0 0 0 3px var(--dg-focus-ring);
   outline: 0;
 }
 
+data-grid input:not(:-webkit-any([type="checkbox"], [type="radio"]))::placeholder {
+  color: var(--dg-muted-color);
+  opacity: 1;
+}
+
+data-grid input:not(:-moz-any([type="checkbox"], [type="radio"]))::placeholder {
+  color: var(--dg-muted-color);
+  opacity: 1;
+}
+
+data-grid input:not(:is([type="checkbox"], [type="radio"]))::placeholder {
+  color: var(--dg-muted-color);
+  opacity: 1;
+}
+
 data-grid input:not([type="checkbox"])[disabled], data-grid input:not([type="checkbox"]):disabled, data-grid select[disabled], data-grid select:disabled, data-grid button[disabled], data-grid button:disabled {
-  opacity: .35;
+  cursor: default;
+  opacity: .45;
   pointer-events: none;
 }
 
-data-grid thead tr:nth-child(2) th {
-  background-color: #0000;
-  padding: 0 2px 0 0;
+data-grid thead tr.dg-head-columns th {
+  background-color: var(--dg-header-bg);
+  border-bottom: 1px solid var(--dg-border-color);
 }
 
-data-grid thead tr:nth-child(2) th > * {
-  border-radius: 0;
+data-grid thead tr.dg-head-filters {
+  background-color: var(--dg-header-bg);
+}
+
+data-grid thead tr.dg-head-filters th {
+  padding: var(--dg-space-1) var(--dg-padding-x) var(--dg-space-2);
+  background-color: var(--dg-header-bg);
+  border-bottom: 1px solid var(--dg-border-color);
+}
+
+data-grid thead tr.dg-head-filters th > * {
   width: 100%;
   margin: 0;
 }
 
-data-grid thead tr:nth-child(2) th input:focus {
-  box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
+data-grid .dg-filter {
+  width: 100%;
+}
+
+data-grid thead tr.dg-head-filters .dg-filter {
+  background-color: var(--dg-filter-bg);
+  border-radius: var(--dg-space-1);
+}
+
+data-grid thead tr.dg-head-filters th.dg-selectable, data-grid thead tr.dg-head-filters th.dg-actions {
+  padding-left: var(--dg-space-1);
+  padding-right: var(--dg-space-1);
 }
 
 data-grid tbody td.dg-editable-col {
-  height: 0;
   padding: 0;
 }
 
 data-grid tbody td input.dg-editable {
   box-shadow: none;
+  padding: 0 var(--dg-padding-x);
   background: none;
   border: 0;
   border-radius: 0;
@@ -396,43 +483,51 @@ data-grid tbody td input.dg-editable {
 }
 
 data-grid tbody td input.dg-editable:focus {
-  box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
+  box-shadow: inset 0 0 0 1px var(--dg-accent);
 }
 
 data-grid tbody td.dg-editable-col[data-editing] {
   background-color: var(--dg-accent-soft);
+  box-shadow: inset 2px 0 0 var(--dg-accent);
 }
 
 data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
-  box-shadow: inset 0px 0px 0px 1px var(--dg-danger-color);
+  background-color: var(--dg-danger-bg);
+  box-shadow: inset 0 0 0 1px var(--dg-danger-color);
 }
 
 data-grid tbody tr[data-selected] {
   background-color: var(--dg-row-selected-bg);
 }
 
+data-grid tbody tr[data-selected]:hover, data-grid tbody tr[data-selected]:focus-within {
+  background-color: var(--dg-row-selected-hover-bg);
+}
+
 data-grid .dg-empty-row td, data-grid .dg-error-row td {
+  color: var(--dg-muted-color);
+  padding: var(--dg-space-4);
   text-align: center;
-  opacity: .5;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  height: 4rem;
-  font-size: 1.5rem;
+  white-space: normal;
+  min-height: 4.5rem;
+  font-size: .9375em;
+  line-height: 1.5;
 }
 
 data-grid .dg-error-row td {
-  font-size: 1.2rem;
+  color: var(--dg-danger-color);
 }
 
 data-grid[data-error] table {
-  color: var(--dg-danger-color);
-  background-color: var(--dg-danger-bg);
-  border: 1px solid var(--dg-danger-border-color);
+  color: var(--dg-color);
+  background-color: var(--dg-bg);
+  border-color: var(--dg-border-color);
 }
 
 data-grid tbody tr {
   border-bottom: solid 1px var(--dg-row-border-color);
+  background-color: #0000;
+  transition: background-color .12s;
 }
 
 data-grid tbody tr:nth-child(2n) {
@@ -440,13 +535,12 @@ data-grid tbody tr:nth-child(2n) {
 }
 
 data-grid tbody tr:hover {
-  background-color: var(--dg-row-hover-bg) !important;
+  background-color: var(--dg-row-hover-bg);
 }
 
-data-grid tbody tr:focus {
+data-grid tbody tr:focus-within {
+  background-color: var(--dg-row-hover-bg);
   outline: none;
-  background-color: var(--dg-row-hover-bg) !important;
-  border-bottom-color: var(--dg-row-hover-bg) !important;
 }
 
 data-grid tfoot {
@@ -454,37 +548,58 @@ data-grid tfoot {
 }
 
 data-grid tfoot td {
-  padding: var(--dg-header-padding-y) var(--dg-padding-x);
+  border-top: 1px solid var(--dg-border-color);
+  padding: var(--dg-space-2) var(--dg-padding-x);
 }
 
 data-grid tfoot .dg-page-nav {
   display: flex;
   align-items:  center;
+  gap: var(--dg-space-2);
 }
 
 data-grid tfoot .dg-input-page {
-  width: 4rem;
+  text-align: center;
+  width: 3.5rem;
 }
 
 data-grid tfoot .dg-footer {
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
   align-items:  center;
+  gap: var(--dg-space-3);
+  flex-flow: wrap;
+  justify-content: flex-end;
 }
 
 data-grid tfoot .dg-pagination {
   display: flex;
+  gap: var(--dg-space-1);
   text-align: center;
 }
 
 data-grid tfoot .dg-pagination button {
+  color: var(--dg-muted-color);
   position: relative;
-  width: 2rem;
+  min-width: var(--dg-control-height);
+  width: var(--dg-control-height);
+  background-color: #0000;
+  border-color: #0000;
+  padding: 0;
+}
+
+data-grid tfoot .dg-pagination button:hover {
+  background-color: var(--dg-bg);
+  border-color: var(--dg-control-border-color);
+  color: var(--dg-color);
 }
 
 data-grid tfoot .dg-meta {
-  text-align: right;
+  color: var(--dg-muted-color);
+  text-align: left;
+  white-space: nowrap;
+  order: -1;
+  margin-right: auto;
+  font-size: .875em;
 }
 
 data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .dg-input-page {
@@ -493,18 +608,42 @@ data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .d
 
 data-grid th.dg-sortable {
   cursor: pointer;
-  padding-right: 1.5rem;
+  padding-right: calc(var(--dg-padding-x)  + 1rem);
+}
+
+data-grid th.dg-sortable > .dg-sort {
+  appearance: none;
+  box-shadow: none;
+  color: inherit;
+  display: flex;
+  font: inherit;
+  gap: var(--dg-space-1);
+  line-height: inherit;
+  text-align: inherit;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  justify-content: flex-start;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+data-grid th.dg-sortable:focus-within {
+  box-shadow: inset 0 -2px 0 var(--dg-accent);
 }
 
 data-grid [aria-sort="ascending"]:before, data-grid [aria-sort="descending"]:after {
+  right: var(--dg-padding-x);
   content: " ";
   position: absolute;
-  border: .25rem solid #0000;
+  border: .2rem solid #0000;
   width: 0;
   height: 0;
-  margin-left: -.25rem;
+  margin-left: -.2rem;
   top: calc(50% - .5rem);
-  right: .5rem;
 }
 
 data-grid [aria-sort="ascending"]:before {
@@ -525,17 +664,24 @@ data-grid[dir="rtl"] th, data-grid[dir="rtl"] td {
 }
 
 data-grid[dir="rtl"] th.dg-sortable {
-  padding-left: 1rem;
-  padding-right: .5rem;
+  padding-left: calc(var(--dg-padding-x)  + 1rem);
+  padding-right: var(--dg-padding-x);
 }
 
 data-grid[dir="rtl"] [aria-sort="ascending"]:before, data-grid[dir="rtl"] [aria-sort="descending"]:after {
-  left: .75rem;
+  left: var(--dg-padding-x);
   right: auto;
 }
 
 data-grid[dir="rtl"] tfoot .dg-meta {
-  text-align: left;
+  text-align: right;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+data-grid[dir="rtl"] .dg-resizer {
+  left: -4px;
+  right: auto;
 }
 
 /* css/_menu.css */
@@ -543,12 +689,15 @@ data-grid .dg-menu {
   position: absolute;
   z-index: 3;
   background: var(--dg-bg);
+  border: 1px solid var(--dg-border-color);
+  color: var(--dg-color);
   list-style: none;
-  padding: var(--dg-padding-y);
+  padding: var(--dg-space-2);
   border-radius: var(--dg-radius);
-  max-width: 150px;
+  min-width: 180px;
+  max-width: 220px;
   margin: 0;
-  box-shadow: 0 0 1rem #00000040;
+  box-shadow: 0 12px 24px #0f172a1a;
 }
 
 data-grid .dg-menu li {
@@ -558,19 +707,27 @@ data-grid .dg-menu li {
 
 data-grid .dg-menu label {
   display: flex;
+  border-radius: var(--dg-space-1);
   align-items:  center;
-  margin-bottom: .25em;
+  gap: var(--dg-space-2);
+  padding: var(--dg-space-1);
+  margin: 0;
+}
+
+data-grid .dg-menu label:hover {
+  background-color: var(--dg-row-hover-bg);
 }
 
 data-grid .dg-menu input {
-  margin-right: .5em;
+  margin: 0;
 }
 
 /* css/_actions.css */
 data-grid .dg-actions {
   text-overflow: initial;
+  overflow: visible;
   text-align: right;
-  width: 100px;
+  width: var(--dg-actions-column-width);
   white-space: nowrap !important;
 }
 
@@ -578,37 +735,51 @@ data-grid .dg-actions button, data-grid .dg-actions a {
   margin: 0;
 }
 
-data-grid .dg-actions a {
+data-grid .dg-actions button, data-grid .dg-actions a {
   display: inline-flex;
-  background-color: var(--dg-control-bg);
-  border: solid 1px var(--dg-control-border-color);
-  border-radius: var(--dg-radius);
-  color: var(--dg-control-color);
+  padding: 0 var(--dg-space-2);
+  border-radius: var(--dg-space-1);
+  color: inherit;
   text-decoration: none;
+  background-color: #0000;
+  border: 1px solid #0000;
+  justify-content: center;
   align-items:  center;
-  height: 2rem;
-  padding: 0 .5rem;
+  min-width: 28px;
+  height: 28px;
 }
 
-data-grid .dg-actions a:hover {
-  opacity: .7;
+data-grid .dg-actions button:hover, data-grid .dg-actions a:hover {
+  background-color: var(--dg-row-hover-bg);
+  opacity: 1;
 }
 
 data-grid .dg-actions button + button, data-grid .dg-actions button + a, data-grid .dg-actions a + button, data-grid .dg-actions a + a {
-  margin-left: .25rem;
+  margin-left: var(--dg-space-1);
 }
 
 data-grid .dg-actions .dg-actions-toggle {
   display: none;
-  width: calc(100px - var(--dg-padding-x) * 2);
+  color: var(--dg-muted-color);
+  width: 28px;
+  padding: 0;
+  font-size: 1.125em;
+  font-weight: 600;
+  line-height: 1;
 }
 
 data-grid .dg-actions.dg-actions-1 {
-  width: 100%;
+  min-width: var(--dg-actions-column-width);
+  width: auto;
 }
 
 data-grid .dg-actions.dg-actions-2 button, data-grid .dg-actions.dg-actions-2 a {
-  width: calc(50% - .25rem);
+  min-width: 32px;
+}
+
+data-grid .dg-actions.dg-actions-2 {
+  width: auto;
+  min-width: 68px;
 }
 
 data-grid .dg-actions.dg-actions-more button, data-grid .dg-actions.dg-actions-more a {
@@ -621,12 +792,22 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 
 data-grid .dg-actions.dg-actions-expand {
   position: absolute;
+  right: var(--dg-space-2);
   display: flex;
   justify-content: flex-end;
   align-items:  center;
-  width: 100%;
-  height: 100%;
-  right: 0;
+  gap: var(--dg-space-1);
+  padding: var(--dg-space-1);
+  background-color: var(--dg-bg);
+  border: 1px solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  z-index: 1;
+  width: auto;
+  max-width: none;
+  min-height: 32px;
+  top: 50%;
+  transform: translateY(-50%);
+  box-shadow: 0 10px 24px #0f172a14;
 }
 
 data-grid .dg-actions.dg-actions-expand.dg-actions-more {
@@ -644,9 +825,9 @@ data-grid button[data-intent="danger"], data-grid a[data-intent="danger"] {
 }
 
 data-grid button[data-intent="primary"], data-grid a[data-intent="primary"] {
-  background-color: var(--dg-accent);
-  border-color: var(--dg-accent);
-  color: var(--dg-bg);
+  background-color: var(--dg-accent-soft);
+  color: var(--dg-accent);
+  border-color: #0000;
 }
 
 data-grid tr.dg-actionable {
@@ -662,34 +843,41 @@ data-grid .dg-resizer {
   position: absolute;
   z-index: 2;
   cursor: col-resize;
+  touch-action: none;
   user-select: none;
-  width: 6px;
+  width: 8px;
+  height: 100%;
   top: 0;
-  right: 0;
+  right: -4px;
 }
 
 data-grid .dg-resizer:before {
   content: "";
   display: block;
   position: absolute;
-  top: var(--dg-header-padding-y);
-  background: var(--dg-color);
-  opacity: .2;
-  width: 2px;
-  height: 1.5rem;
-  right: 0;
+  background: var(--dg-border-color);
+  opacity: 0;
+  width: 1px;
+  height: 16px;
+  transition: background-color .12s, height .12s, opacity .12s, width .12s;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
-data-grid .dg-resizer:hover:before {
-  opacity: .6;
+data-grid th:hover > .dg-resizer:before, data-grid .dg-resizer:hover:before {
+  opacity: .7;
 }
 
 data-grid .dg-resizer.dg-resizer-active {
-  border-right: 1px dashed var(--dg-accent);
+  border-right: 0;
 }
 
 data-grid .dg-resizer.dg-resizer-active:before {
-  opacity: .6;
+  background: var(--dg-accent);
+  height: calc(100% - var(--dg-space-2));
+  opacity: 1;
+  width: 2px;
 }
 
 /* css/_responsive.css */
@@ -726,7 +914,7 @@ data-grid .dg-responsive-table th {
 
   data-grid[responsive] thead {
     display: flex;
-    border-bottom: 2px solid var(--dg-header-bg);
+    border-bottom: 1px solid var(--dg-border-color);
   }
 
   data-grid[responsive] thead > tr {
@@ -738,7 +926,9 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] tbody tr {
-    border: 1px solid var(--dg-header-bg);
+    border: 1px solid var(--dg-row-border-color);
+    border-radius: var(--dg-radius);
+    margin-bottom: var(--dg-space-2);
     padding: 0;
   }
 
@@ -754,13 +944,15 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] tbody td:before {
+    color: var(--dg-header-color);
     position: absolute;
     padding: var(--dg-padding-y);
     width: calc(100% - var(--dg-responsive-width)  - var(--dg-padding-y) * 4);
     content: attr(data-name);
     display: block;
     background-color: var(--dg-header-bg);
-    font-weight: bold;
+    font-size: .875em;
+    font-weight: 600;
     top: 0;
     left: 0;
   }
@@ -770,7 +962,8 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] .dg-selectable {
-    height: 28px;
+    height: var(--dg-control-height);
+    width: auto;
     margin: 2px 1px;
   }
 
@@ -779,12 +972,12 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] td.dg-selectable label {
-    padding: 5px;
+    padding: var(--dg-space-1);
   }
 
   data-grid[responsive] td {
+    min-height: calc(var(--dg-control-height)  + var(--dg-space-1));
     width: auto;
-    min-height: 35px;
   }
 
   data-grid[responsive] td[data-name]:before {
@@ -806,7 +999,7 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] tr.dg-head-columns th.dg-sortable {
-    padding: .36em 1.3em .36em .75em;
+    padding: var(--dg-space-1) calc(var(--dg-padding-x)  + 1rem) var(--dg-space-1) var(--dg-padding-x);
   }
 
   data-grid[responsive] tr.dg-head-filters {
@@ -817,15 +1010,15 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] .dg-head-filters th input:not(:-webkit-any([type="checkbox"], [type="radio"])) {
-    height: 2.25em;
+    height: var(--dg-control-height);
   }
 
   data-grid[responsive] .dg-head-filters th input:not(:-moz-any([type="checkbox"], [type="radio"])) {
-    height: 2.25em;
+    height: var(--dg-control-height);
   }
 
   data-grid[responsive] .dg-head-filters th input:not(:is([type="checkbox"], [type="radio"])) {
-    height: 2.25em;
+    height: var(--dg-control-height);
   }
 
   data-grid[responsive] .dg-head-filters th.dg-selectable {

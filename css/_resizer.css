@@ -1,10 +1,12 @@
 data-grid .dg-resizer {
   position: absolute;
   top: 0;
-  right: 0;
-  width: 6px;
+  right: -4px;
+  width: 8px;
+  height: 100%;
   z-index: 2;
   cursor: col-resize;
+  touch-action: none;
   user-select: none;
 }
 
@@ -12,22 +14,28 @@ data-grid .dg-resizer:before {
   content: "";
   display: block;
   position: absolute;
-  top: var(--dg-header-padding-y);
-  height: 1.5rem;
-  right: 0;
-  width: 2px;
-  background: var(--dg-color);
-  opacity: 0.2;
+  top: 50%;
+  left: 50%;
+  width: 1px;
+  height: 16px;
+  background: var(--dg-border-color);
+  opacity: 0;
+  transform: translate(-50%, -50%);
+  transition: background-color 120ms ease, height 120ms ease, opacity 120ms ease, width 120ms ease;
 }
 
+data-grid th:hover > .dg-resizer:before,
 data-grid .dg-resizer:hover:before {
-  opacity: 0.6;
+  opacity: 0.7;
 }
 
 data-grid .dg-resizer.dg-resizer-active {
-  border-right: 1px dashed var(--dg-accent);
+  border-right: 0;
 }
 
 data-grid .dg-resizer.dg-resizer-active:before {
-  opacity: 0.6;
+  background: var(--dg-accent);
+  height: calc(100% - var(--dg-space-2));
+  opacity: 1;
+  width: 2px;
 }

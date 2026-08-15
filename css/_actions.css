@@ -1,8 +1,9 @@
 data-grid .dg-actions {
   text-overflow: initial;
-  width: 100px;
+  overflow: visible;
   text-align: right;
   white-space: nowrap !important;
+  width: var(--dg-actions-column-width);
 }
 
 data-grid .dg-actions button,
@@ -10,41 +11,57 @@ data-grid .dg-actions a {
   margin: 0;
 }
 
+data-grid .dg-actions button,
 data-grid .dg-actions a {
   display: inline-flex;
   align-items: center;
-  height: 2rem;
-  padding: 0 0.5rem;
-  background-color: var(--dg-control-bg);
-  border: solid 1px var(--dg-control-border-color);
-  border-radius: var(--dg-radius);
-  color: var(--dg-control-color);
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 var(--dg-space-2);
+  background-color: transparent;
+  border: solid 1px transparent;
+  border-radius: var(--dg-space-1);
+  color: inherit;
   text-decoration: none;
 }
 
+data-grid .dg-actions button:hover,
 data-grid .dg-actions a:hover {
-  opacity: 0.7;
+  background-color: var(--dg-row-hover-bg);
+  opacity: 1;
 }
 
 data-grid .dg-actions button + button,
 data-grid .dg-actions button + a,
 data-grid .dg-actions a + button,
 data-grid .dg-actions a + a {
-  margin-left: 0.25rem;
+  margin-left: var(--dg-space-1);
 }
 
 data-grid .dg-actions .dg-actions-toggle {
   display: none;
-  width: calc(100px - var(--dg-padding-x) * 2);
+  color: var(--dg-muted-color);
+  font-size: 1.125em;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0;
+  width: 28px;
 }
 
 data-grid .dg-actions.dg-actions-1 {
-  width: 100%;
+  min-width: var(--dg-actions-column-width);
+  width: auto;
 }
 
 data-grid .dg-actions.dg-actions-2 button,
 data-grid .dg-actions.dg-actions-2 a {
-  width: calc(50% - 0.25rem);
+  min-width: 32px;
+}
+
+data-grid .dg-actions.dg-actions-2 {
+  min-width: 68px;
+  width: auto;
 }
 
 data-grid .dg-actions.dg-actions-more button,
@@ -58,12 +75,22 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 
 data-grid .dg-actions.dg-actions-expand {
   position: absolute;
-  right: 0;
+  right: var(--dg-space-2);
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  width: 100%;
-  height: 100%;
+  gap: var(--dg-space-1);
+  width: auto;
+  max-width: none;
+  min-height: 32px;
+  padding: var(--dg-space-1);
+  background-color: var(--dg-bg);
+  border: 1px solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 8%);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
 }
 
 data-grid .dg-actions.dg-actions-expand.dg-actions-more {
@@ -84,9 +111,9 @@ data-grid a[data-intent="danger"] {
 
 data-grid button[data-intent="primary"],
 data-grid a[data-intent="primary"] {
-  background-color: var(--dg-accent);
-  border-color: var(--dg-accent);
-  color: var(--dg-bg);
+  background-color: var(--dg-accent-soft);
+  border-color: transparent;
+  color: var(--dg-accent);
 }
 
 data-grid tr.dg-actionable {

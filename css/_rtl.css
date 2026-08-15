@@ -4,16 +4,23 @@ data-grid[dir="rtl"] td {
 }
 
 data-grid[dir="rtl"] th.dg-sortable {
-  padding-left: 1rem;
-  padding-right: 0.5rem;
+  padding-left: calc(var(--dg-padding-x) + 1rem);
+  padding-right: var(--dg-padding-x);
 }
 
 data-grid[dir="rtl"] [aria-sort="ascending"]:before,
 data-grid[dir="rtl"] [aria-sort="descending"]:after {
-  left: 0.75rem;
+  left: var(--dg-padding-x);
   right: auto;
 }
 
 data-grid[dir="rtl"] tfoot .dg-meta {
-  text-align: left;
+  margin-left: auto;
+  margin-right: 0;
+  text-align: right;
+}
+
+data-grid[dir="rtl"] .dg-resizer {
+  left: -4px;
+  right: auto;
 }

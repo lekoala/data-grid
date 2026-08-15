@@ -1857,6 +1857,7 @@ class DataGrid extends BaseElement {
             }
             const button = ce("button");
             button.type = "button";
+            button.classList.add("dg-sort");
             button.textContent = column.title ?? "";
             th.appendChild(button);
         } else {
@@ -1966,6 +1967,7 @@ class DataGrid extends BaseElement {
     createFilterElement(column, relatedTh) {
         const isSelect = column.filterType === "select";
         const filter = isSelect ? ce("select") : ce("input");
+        filter.classList.add("dg-filter");
         if (isSelect) {
             for (const e of this.getFilterOptions(column)) {
                 const opt = ce("option");
@@ -1981,6 +1983,7 @@ class DataGrid extends BaseElement {
             input.type = "text";
             input.inputMode = "search";
             input.autocomplete = "off";
+            input.placeholder = "Filter…";
             input.spellcheck = false;
         }
         // Allows binding filter to this column

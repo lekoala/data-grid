@@ -45,7 +45,7 @@ data-grid .dg-responsive-table th {
 
   data-grid[responsive] thead {
     display: flex;
-    border-bottom: 2px solid var(--dg-header-bg);
+    border-bottom: 1px solid var(--dg-border-color);
   }
 
   data-grid[responsive] thead > tr {
@@ -58,7 +58,9 @@ data-grid .dg-responsive-table th {
 
   data-grid[responsive] tbody tr {
     padding: 0;
-    border: 1px solid var(--dg-header-bg);
+    border: 1px solid var(--dg-row-border-color);
+    border-radius: var(--dg-radius);
+    margin-bottom: var(--dg-space-2);
   }
 
   data-grid[responsive] tbody td {
@@ -73,6 +75,7 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] tbody td:before {
+    color: var(--dg-header-color);
     position: absolute;
     top: 0;
     left: 0;
@@ -80,7 +83,8 @@ data-grid .dg-responsive-table th {
     width: calc(100% - var(--dg-responsive-width) - var(--dg-padding-y) * 4);
     content: attr(data-name);
     display: block;
-    font-weight: bold;
+    font-size: 0.875em;
+    font-weight: 600;
     background-color: var(--dg-header-bg);
   }
 
@@ -89,8 +93,9 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] .dg-selectable {
-    height: 28px;
+    height: var(--dg-control-height);
     margin: 2px 1px 2px;
+    width: auto;
   }
 
   data-grid[responsive] td.dg-selectable::before,
@@ -99,11 +104,11 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] td.dg-selectable label {
-    padding: 5px;
+    padding: var(--dg-space-1);
   }
 
   data-grid[responsive] td {
-    min-height: 35px;
+    min-height: calc(var(--dg-control-height) + var(--dg-space-1));
     width: auto;
   }
 
@@ -126,7 +131,7 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] tr.dg-head-columns th.dg-sortable {
-    padding: 0.36em 1.3em 0.36em 0.75em;
+    padding: var(--dg-space-1) calc(var(--dg-padding-x) + 1rem) var(--dg-space-1) var(--dg-padding-x);
   }
 
   data-grid[responsive] tr.dg-head-filters {
@@ -137,7 +142,7 @@ data-grid .dg-responsive-table th {
   }
 
   data-grid[responsive] .dg-head-filters th input:not([type="checkbox"], [type="radio"]) {
-    height: 2.25em;
+    height: var(--dg-control-height);
   }
 
   data-grid[responsive] .dg-head-filters th.dg-selectable {

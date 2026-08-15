@@ -46,65 +46,131 @@
       document.getElementById("basic-demo"),
       "demo.json",
       {
+        sortable: true,
+        initialQuery: { pageSize: 10, sort: [{ field: "company", direction: "asc" }] },
+      },
+      ["sticky"],
+    );
+
+    const denseDemo = await createStaticGrid(
+      document.getElementById("dense-demo"),
+      "demo.json",
+      {
+        filterable: true,
+        sortable: true,
+        initialQuery: { pageSize: 12 },
+      },
+      ["sticky"],
+    );
+
+    const filtersDemo = await createStaticGrid(
+      document.getElementById("filters-demo"),
+      "demo-simple.json",
+      {
+        filterable: true,
+        sortable: true,
+        columns: [
+          { field: "id", title: "ID", width: 72 },
+          { field: "first_name", title: "First Name" },
+          { field: "last_name", title: "Last Name" },
+          {
+            field: "country",
+            title: "Country",
+            filterType: "select",
+            filterList: [
+              { value: "", text: "All countries" },
+              { value: "BE", text: "Belgium" },
+              { value: "FR", text: "France" },
+            ],
+          },
+          { field: "income", title: "Income" },
+        ],
+        initialQuery: { pageSize: 8 },
+      },
+      ["sticky"],
+    );
+
+    const selectionActionsDemo = await createStaticGrid(
+      document.getElementById("selection-actions-demo"),
+      "demo-actions2.json",
+      {
+        selectable: true,
+        actions: [
+          {
+            name: "open",
+            label: "Open profile",
+            intent: "primary",
+            href: (row) => `/users/${row.id}`,
+            render: () => ({ html: "<l-i name='external-link'></l-i>" }),
+          },
+          {
+            name: "archive",
+            label: "Archive",
+            render: () => ({ html: "<l-i name='archive'></l-i>" }),
+          },
+          {
+            name: "delete",
+            label: "Delete",
+            intent: "danger",
+            confirm: true,
+            render: () => ({ html: "<l-i name='trash'></l-i>" }),
+          },
+        ],
+        bulkActions: [{ name: "export", label: "Export selection" }],
+        initialQuery: { pageSize: 8 },
+      },
+      ["sticky"],
+    );
+
+    const fullDemo = await createStaticGrid(
+      document.getElementById("full-demo"),
+      "demo-actions2.json",
+      {
         expand: true,
-        singleSelect: true,
+        selectable: true,
         menu: true,
         filterable: true,
         resizable: true,
         autosize: true,
         reorder: true,
         sortable: true,
-        debug: true,
         saveState: true,
-        initialQuery: { pageSize: 50 },
-      },
-      ["sticky"],
-    );
-
-    basicDemo.addEventListener("columnReordered", (e) => {
-      console.log(e.type, e.detail);
-    });
-    basicDemo.addEventListener("columnResized", (e) => {
-      console.log(e.type, e.detail);
-    });
-    basicDemo.addEventListener("columnVisibility", (e) => {
-      console.log(e.type, e.detail);
-    });
-    basicDemo.addEventListener("rowsSelected", (e) => {
-      console.log(e.type, e.detail);
-    });
-
-    document.getElementById("get-selection").addEventListener("click", (e) => {
-      alert(JSON.stringify(basicDemo.getSelection("id")));
-    });
-
-    const fixedDemo = await createStaticGrid(
-      document.getElementById("fixed-demo"),
-      "demo-simple.json",
-      {
-        expand: true,
-        selectable: true,
-        debug: true,
-        initialQuery: { pageSize: 25 },
-        columns: [
-          { field: "id" },
-          { field: "first_name" },
-          { field: "last_name" },
+        bulkActions: [{ name: "archive", label: "Archive selection" }],
+        actions: [
           {
-            field: "country",
-            renderCell: ({ value }) =>
-              value ? { html: `<l-i name='${String(value).toLowerCase()}' set='fl'></l-i>` } : "",
+            name: "edit",
+            label: "Edit",
+            intent: "primary",
+            render: () => ({ html: "<l-i name='edit'></l-i>" }),
           },
           {
-            field: "income",
-            renderCell: ({ value }) => ({
-              html: `<format-number type='currency' currency='EUR' value='${value || 0}'></format-number>`,
-            }),
+            name: "duplicate",
+            label: "Duplicate",
+            render: () => ({ html: "<l-i name='copy'></l-i>" }),
+          },
+          {
+            name: "delete",
+            label: "Delete",
+            intent: "danger",
+            confirm: true,
+            render: () => ({ html: "<l-i name='trash'></l-i>" }),
           },
         ],
+        initialQuery: { pageSize: 10 },
       },
       ["sticky"],
     );
+
+    document.getElementById("get-selection").addEventListener("click", (e) => {
+      alert(JSON.stringify(selectionActionsDemo.getSelection("id")));
+    });
+
+    denseDemo.addEventListener("columnVisibility", (event) => {
+      console.log(event.type, event.detail);
+    });
+    fullDemo.addEventListener("columnReordered", (event) => {
+      console.log(event.type, event.detail);
+    });
   </script>
 </head>
 
@@ -133,35 +199,51 @@
     </ul>
 
     <p>
-      Use a <code>dataSource</code> to feed the grid. A plain array or a json response with a <code>data</code> key both work.
+      Use a <code>dataSource</code> to feed the grid. A plain array or a json response with a <code>data</code> key both work. The default
+      skin below is intended to stand on its own without relying on Bootstrap utility classes or a host design system.
     </p>
 
-    <ul>
-      <li><code>sticky</code> to enable stick headers and footers (usable with fixed height)</li>
-      <li><code>expand=true</code> to allow cell content to spawn over multiple lines</li>
-      <li><code>resizable=true</code> to make resizable columns</li>
-      <li><code>autosize=true</code> to compute column sizes automatically</li>
-      <li><code>sortable=true</code> to make sortable columns</li>
-      <li><code>selectable=true</code> to allow multi-row selections</li>
-      <li><code>single-select=true</code> to allow single-row selection - no need to set <code>selectable=true</code></li>
-      <li><code>save-state=true</code> to save grid state</li>
-    </ul>
+    <section class="demo-grid">
+      <p class="demo-kicker">Reference scene</p>
+      <h2>Basic</h2>
+      <p class="demo-lead">A clean five-column grid for the default visual contract: flat headers, integrated filters, quiet pagination.</p>
+      <div class="demo-frame" id="basic-demo"></div>
+    </section>
 
-    <div class="container g-0 mb-4 mw-100">
-      <button id="get-selection" class="btn btn-primary mb-3">Get selection</button>
-      <div id="basic-demo"></div>
-    </div>
-    <div class="container g-0 mb-4 mw-100">
-      <p>
-        Fixed height with basic data. This looks odd if you set a height bigger than the number of rows per page. It works better with
-        <code>sticky</code>.
-      </p>
-      <ul>
-        <li><code>transform</code> Can transform row content</li>
-        <li><code>renderCell</code> Use custom rendering (eg: display a flag, use custom element for number formatting)</li>
-      </ul>
-      <div id="fixed-demo" style="height: 400px"></div>
-    </div>
+    <section class="demo-grid">
+      <p class="demo-kicker">Torture test</p>
+      <h2>Dense</h2>
+      <p class="demo-lead">Long strings, many visible rows and no zebra dependency. This is the main scanability check for the default theme.</p>
+      <div class="demo-frame is-fixed" id="dense-demo" style="height: 520px"></div>
+      <p class="demo-note">The dense scene keeps sticky header/footer and enough rows on screen to validate the default density.</p>
+    </section>
+
+    <section class="demo-grid">
+      <p class="demo-kicker">Filters</p>
+      <h2>Integrated filter row</h2>
+      <p class="demo-lead">Text and select filters should read as part of the table, not as a detached form sitting above it.</p>
+      <div class="demo-frame" id="filters-demo"></div>
+    </section>
+
+    <section class="demo-grid">
+      <div class="demo-toolbar">
+        <div>
+          <p class="demo-kicker">Selection + actions</p>
+          <h2>Selection actions</h2>
+        </div>
+        <button id="get-selection" class="btn btn-primary">Get selection</button>
+        <span class="demo-meta">Bulk actions, subtle checkbox column and row-level overflow actions.</span>
+      </div>
+      <div class="demo-frame" id="selection-actions-demo"></div>
+    </section>
+
+    <section class="demo-grid">
+      <p class="demo-kicker">Full feature pass</p>
+      <h2>Full</h2>
+      <p class="demo-lead">Resize, reorder, filters, pagination, selection and row actions all combined in a single visual validation scene.</p>
+      <div class="demo-frame is-fixed" id="full-demo" style="height: 520px"></div>
+    </section>
+
     <button id="darkmode">Toggle dark mode</button>
   </main>
   <footer class="container">

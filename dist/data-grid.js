@@ -1606,6 +1606,7 @@ class DataGrid extends base_element_default {
       }
       const button = ce("button");
       button.type = "button";
+      button.classList.add("dg-sort");
       button.textContent = column.title ?? "";
       th.appendChild(button);
     } else {
@@ -1681,6 +1682,7 @@ class DataGrid extends base_element_default {
   createFilterElement(column, relatedTh) {
     const isSelect = column.filterType === "select";
     const filter = isSelect ? ce("select") : ce("input");
+    filter.classList.add("dg-filter");
     if (isSelect) {
       for (const e of this.getFilterOptions(column)) {
         const opt = ce("option");
@@ -1695,6 +1697,7 @@ class DataGrid extends base_element_default {
       input.type = "text";
       input.inputMode = "search";
       input.autocomplete = "off";
+      input.placeholder = "Filter…";
       input.spellcheck = false;
     }
     filter.dataset.name = column.field ?? "";
@@ -2216,7 +2219,6 @@ var touch_support_default = TouchSupport;
 // src/plugins/selectable-rows.js
 var SELECTABLE_CLASS = "dg-selectable";
 var SELECT_ALL_CLASS = "dg-select-all";
-var CHECKBOX_CLASS = "form-check-input";
 
 class SelectableRows extends base_plugin_default {
   get isSingleSelect() {
@@ -2309,7 +2311,7 @@ class SelectableRows extends base_plugin_default {
     th.classList.add("dg-not-resizable", "dg-not-sortable");
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
-    this.selectAll.classList.add(SELECT_ALL_CLASS, CHECKBOX_CLASS);
+    this.selectAll.classList.add(SELECT_ALL_CLASS);
     this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
     this.selectAll.addEventListener("change", () => {
       if (this.selectAll?.checked) {
@@ -2329,7 +2331,6 @@ class SelectableRows extends base_plugin_default {
     const grid = this.grid;
     const input = document.createElement("input");
     input.type = this.isSingleSelect ? "radio" : "checkbox";
-    input.classList.add(CHECKBOX_CLASS);
     input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
     input.setAttribute("aria-label", `Select ${grid.getRowLabel(row ?? {}, rowIndex ?? 0)}`);
     if (this.isSingleSelect) {
@@ -2880,9 +2881,10 @@ class RowActions extends base_plugin_default {
     const actionsToggle = document.createElement("button");
     actionsToggle.type = "button";
     actionsToggle.classList.add("dg-actions-toggle");
-    actionsToggle.innerHTML = "☰";
+    actionsToggle.textContent = "⋯";
     actionsToggle.setAttribute("aria-label", labels2.toggleActions);
     actionsToggle.setAttribute("aria-expanded", "false");
+    actionsToggle.title = labels2.toggleActions;
     on(actionsToggle, "click", (ev) => {
       ev.stopPropagation();
       const parent = ev.target.parentElement;
@@ -3211,4 +3213,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=390F68C7CD4F1AB264756E2164756E21
+//# debugId=E5A293DADA86A8D864756E2164756E21

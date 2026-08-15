@@ -1,22 +1,26 @@
 /**
- * Optional Bootstrap 5 theme for data-grid.
- * Maps the neutral --dg-* tokens onto Bootstrap's CSS variables.
+ * Bootstrap 5 theme for data-grid.
+ * DataGrid keeps its density and geometry; Bootstrap provides the visual language.
  * Load this AFTER css/data-grid.css (same specificity, source order wins).
  */
 data-grid {
   --dg-bg: var(--bs-body-bg, #fff);
   --dg-color: var(--bs-body-color, #212529);
+  --dg-muted-color: var(--bs-secondary-color, #6c757d);
   --dg-border-color: var(--bs-border-color, #dee2e6);
 
   --dg-accent: var(--bs-primary, #0d6efd);
   --dg-accent-soft: var(--bs-primary-bg-subtle, #cfe2ff);
+  --dg-focus-ring: var(--bs-focus-ring-color, rgb(13 110 253 / 25%));
 
   --dg-header-bg: var(--bs-tertiary-bg, #f8f9fa);
-  --dg-header-color: var(--bs-body-color, #212529);
+  --dg-header-color: var(--bs-emphasis-color, #212529);
+  --dg-filter-bg: var(--bs-body-bg, #fff);
 
-  --dg-row-stripe-bg: var(--bs-table-striped-bg, rgba(0, 0, 0, 0.05));
-  --dg-row-hover-bg: var(--bs-table-hover-bg, #f5f5f5);
+  --dg-row-stripe-bg: transparent;
+  --dg-row-hover-bg: var(--bs-tertiary-bg, #f8f9fa);
   --dg-row-selected-bg: var(--bs-primary-bg-subtle, #cfe2ff);
+  --dg-row-selected-hover-bg: var(--bs-primary-bg-subtle, #b6d4fe);
   --dg-row-border-color: var(--bs-border-color, #dee2e6);
 
   --dg-control-bg: var(--bs-body-bg, #fff);
@@ -33,17 +37,21 @@ data-grid {
 [data-bs-theme="dark"] data-grid {
   --dg-bg: var(--bs-body-bg, #212529);
   --dg-color: var(--bs-body-color, #dee2e6);
+  --dg-muted-color: var(--bs-secondary-color, #adb5bd);
   --dg-border-color: var(--bs-border-color, #495057);
 
   --dg-accent: var(--bs-primary, #6ea8fe);
   --dg-accent-soft: var(--bs-primary-bg-subtle, #031633);
+  --dg-focus-ring: var(--bs-focus-ring-color, rgb(110 168 254 / 25%));
 
   --dg-header-bg: var(--bs-gray-800, #34373b);
-  --dg-header-color: var(--bs-light, #e9ecef);
+  --dg-header-color: var(--bs-emphasis-color, #f8f9fa);
+  --dg-filter-bg: var(--bs-tertiary-bg, #34373b);
 
-  --dg-row-stripe-bg: #2c3034;
-  --dg-row-hover-bg: #43423e;
+  --dg-row-stripe-bg: transparent;
+  --dg-row-hover-bg: #343a40;
   --dg-row-selected-bg: var(--bs-primary-bg-subtle, #031633);
+  --dg-row-selected-hover-bg: #0b2447;
   --dg-row-border-color: var(--bs-gray-900, #212325);
 
   --dg-control-bg: var(--bs-body-bg, #212529);
