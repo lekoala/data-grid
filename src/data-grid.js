@@ -6,10 +6,8 @@
  */
 
 import BaseElement from "./core/base-element.js";
+import { ArrayDataSource, FetchDataSource } from "./data-source.js";
 import addSelectOption from "./utils/addSelectOption.js";
-import appendParamsToUrl from "./utils/appendParamsToUrl.js";
-import camelize from "./utils/camelize.js";
-import convertArray from "./utils/convertArray.js";
 import debounce from "./utils/debounce.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import interpolate from "./utils/interpolate.js";
@@ -21,13 +19,17 @@ import {
     dispatch,
     find,
     findAll,
-    getAttribute,
     hasClass,
     on,
     removeAttribute,
     setAttribute,
     toggleClass,
 } from "./utils/shortcuts.js";
+
+/** @typedef {import("./data-source.js").DataSource} DataSource */
+/** @typedef {import("./data-source.js").QueryState} QueryState */
+/** @typedef {import("./data-source.js").PageResult} PageResult */
+/** @typedef {import("./data-source.js").FilterState} FilterState */
 
 /**
  * Column definition
@@ -95,41 +97,22 @@ import {
  */
 
 /**
- * Parameters to pass along or receive from the server
- * @typedef ServerParams
- * @property {String} serverParams.start
- * @property {String} serverParams.length
- * @property {String} serverParams.search
- * @property {String} serverParams.sort
- * @property {String} serverParams.sortDir
- * @property {String} serverParams.dataKey
- * @property {String} serverParams.metaKey
- * @property {String} serverParams.metaTotalKey
- * @property {String} serverParams.metaFilteredKey
- * @property {String} serverParams.optionsKey
- * @property {String} serverParams.paramsKey
- */
-
-/**
  * Available data grid options, plugins included
  * @typedef Options
  * @property {?String} id Custom id for the grid
- * @property {?String} url An URL with data to display in JSON format
+ * @property {?String} src An URL to a server-side endpoint (FetchDataSource)
+ * @property {Object} params Extra constant HTTP params passed to FetchDataSource
+ * @property {DataSource} [dataSource] Custom data source (defaults to FetchDataSource or ArrayDataSource)
  * @property {Boolean} debug Log actions in DevTools console
- * @property {Boolean} filter Allows a filtering functionality
- * @property {Boolean} sort Allows a sort by column functionality
- * @property {String} defaultSort Default sort field if sorting is enabled
- * @property {Boolean} server Is a server side powered grid
- * @property {ServerParams} serverParams Describe keys passed to the server backend
+ * @property {Boolean} sortable Allows a sort by column functionality
+ * @property {Boolean} filterable Allows a filtering functionality
  * @property {String} dir Dir
- * @property {Array} perPageValues Available per page options
- * @property {Boolean} hidePerPage Hides the page size select element
+ * @property {Array} pageSizes Available page size options
+ * @property {Boolean} showPageSize Shows the page size select element
  * @property {Column[]} columns Available columns
- * @property {Number} defaultPage Starting page
- * @property {Number} perPage Number of records displayed per page (page size)
- * @property {Boolean} expand  Allow cell content to spawn over multiple lines
  * @property {Action[]} actions Row actions (RowActions module)
  * @property {Boolean} collapseActions Group actions (RowActions module)
+ * @property {Boolean} expand  Allow cell content to spawn over multiple lines
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
  * @property {Boolean} selectable Allow multi-selecting rows with a checkboxes (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
@@ -147,6 +130,8 @@ import {
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
+ * @property {QueryState} [initialQuery] Initial runtime query state
+ * @property {PageResult} [initialResult] Initial result to display without loading the data source
  */
 
 /**
@@ -189,6 +174,35 @@ let labels = {
     areYouSure: "Are you sure?",
     networkError: "Network response error",
 };
+
+/**
+ * Build a fresh, normalized QueryState.
+ * @param {QueryState} [query]
+ * @returns {QueryState}
+ */
+function normalizeQuery(query) {
+    const q = /** @type {QueryState} */ (query || {});
+    const page = Math.floor(Number(q.page)) || 1;
+    const pageSize = Math.floor(Number(q.pageSize)) || 10;
+    const sort = Array.isArray(q.sort)
+        ? q.sort
+              .filter((s) => s?.field)
+              .map((s) => ({
+                  field: String(s.field),
+                  direction: /** @type {"asc"|"desc"} */ (s.direction === "desc" ? "desc" : "asc"),
+              }))
+        : [];
+    /** @type {Record<string, FilterState>} */
+    const filters = {};
+    if (q.filters && typeof q.filters === "object") {
+        for (const [key, filter] of Object.entries(q.filters)) {
+            if (filter && typeof filter === "object" && "value" in filter) {
+                filters[key] = { operator: filter.operator ?? "contains", value: filter.value };
+            }
+        }
+    }
+    return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), sort, filters };
+}
 
 /**
  * Column definition will update some props on the html element
@@ -261,17 +275,6 @@ class DataGrid extends BaseElement {
     _ready() {
         setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
 
-        /**
-         * The grid displays that data
-         * @type {Array}
-         */
-        this.data = [];
-        /**
-         * We store the original data in this
-         * @type {Array}
-         */
-        this.originalData; // declared uninitialized to allow data preloading before fetch.
-
         // Make the IDE happy
         /**
          * @type {Options}
@@ -281,9 +284,7 @@ class DataGrid extends BaseElement {
 
         // Init values
         this.fireEvents = false;
-        this.page = this.options.defaultPage || 1;
-        this.pages = 0;
-        this.meta; // declared uninitialized to allow data preloading before fetch.
+
         /**
          * @type {Plugins}
          */
@@ -294,13 +295,53 @@ class DataGrid extends BaseElement {
             this.plugins[pluginName] = new pluginClass(this);
         }
 
-        // Expose options as observed attributes in the dom
-        // Do it when fireEvents is disabled to avoid firing change callbacks
-        for (const attr of DataGrid.observedAttributes) {
-            if (attr.indexOf("data-") === 0) {
-                setAttribute(this, attr, this.options[camelize(attr.slice(5))]);
-            }
-        }
+        /**
+         * Initial query used by resetQuery()
+         * @type {QueryState}
+         */
+        this._initialQuery = normalizeQuery(this.options.initialQuery);
+        /**
+         * Runtime query state, single source of truth
+         * @type {QueryState}
+         */
+        this._query = normalizeQuery(this._initialQuery);
+
+        this._requestSeq = 0;
+        this._controller = null;
+        /**
+         * Optional initial result, can be set as a property before connection
+         * @type {PageResult|null}
+         */
+        this.initialResult = null;
+        this._initialResult = this.options.initialResult || this.initialResult || null;
+
+        /**
+         * Rows of the current page
+         * @type {Array}
+         */
+        this.rows = [];
+        /**
+         * Total number of rows matching the current query
+         * @type {Number}
+         */
+        this.total = 0;
+        /**
+         * Meta information returned by the data source
+         * @type {Object}
+         */
+        this.meta = {};
+        /**
+         * @type {Number}
+         */
+        this.pages = 0;
+        /**
+         * @type {Boolean}
+         */
+        this.loading = false;
+        /**
+         * @type {?Error}
+         */
+        this.error = null;
     }
 
     static template() {
@@ -408,38 +449,22 @@ class DataGrid extends BaseElement {
     get defaultOptions() {
         return {
             id: null,
-            url: "",
-            perPage: 10,
+            src: "",
+            params: {},
             debug: false,
-            filter: false,
+            sortable: false,
+            filterable: false,
             menu: false,
-            sort: false,
-            server: false,
-            serverParams: {
-                start: "start",
-                length: "length",
-                search: "search",
-                sort: "sort",
-                sortDir: "sortDir",
-                dataKey: "data",
-                metaKey: "meta",
-                metaTotalKey: "total",
-                metaFilteredKey: "filtered",
-                optionsKey: "options",
-                paramsKey: "params",
-            },
-            defaultSort: "",
             reorder: false,
             dir: "ltr",
-            perPageValues: [10, 25, 50, 100, 250],
-            hidePerPage: false,
+            pageSizes: [10, 25, 50, 100, 250],
+            showPageSize: true,
             columns: [],
             actions: [],
             collapseActions: false,
             selectable: false,
             selectVisibleOnly: true,
             singleSelect: false,
-            defaultPage: 1,
             resizable: false,
             autosize: true,
             expand: false,
@@ -453,6 +478,9 @@ class DataGrid extends BaseElement {
             saveState: false,
             errorMessage: "",
             noData: "",
+            initialQuery: null,
+            initialResult: null,
+            dataSource: null,
         };
     }
 
@@ -469,7 +497,23 @@ class DataGrid extends BaseElement {
      * @returns {Boolean}
      */
     get hasDataError() {
-        return this.classList.contains("dg-network-error");
+        return Boolean(this.error);
+    }
+
+    /**
+     * Snapshot of the current query state.
+     * @returns {QueryState}
+     */
+    get query() {
+        return normalizeQuery(this._query);
+    }
+
+    /**
+     * Convenience read-only accessor for the current page.
+     * @returns {Number}
+     */
+    get page() {
+        return this._query.page;
     }
 
     /**
@@ -540,27 +584,23 @@ class DataGrid extends BaseElement {
      */
     static get observedAttributes() {
         return [
-            "page",
-            "data-filter",
-            "data-sort",
-            "data-debug",
-            "data-reorder",
-            "data-menu",
-            "data-selectable",
-            "data-single-select",
-            "data-url",
-            "data-per-page",
-            "data-responsive",
+            "src",
+            "sortable",
+            "filterable",
+            "responsive",
+            "selectable",
+            "single-select",
+            "reorder",
+            "menu",
+            "expand",
+            "autosize",
+            "resizable",
+            "autoheight",
+            "autohide-pager",
+            "show-page-size",
+            "debug",
+            "dir",
         ];
-    }
-
-    get transformAttributes() {
-        return {
-            columns: (v) => this.convertColumns(convertArray(v)),
-            actions: (v) => convertArray(v),
-            defaultPage: (v) => Number.parseInt(v),
-            perPage: (v) => Number.parseInt(v),
-        };
     }
 
     /** @returns {HTMLTableSectionElement} */
@@ -581,60 +621,161 @@ class DataGrid extends BaseElement {
         return $("tfoot", this);
     }
 
-    get page() {
-        return Number.parseInt(this.getAttribute("page"));
-    }
-
-    set page(val) {
-        setAttribute(this, "page", this.constrainPageValue(val));
+    /**
+     * Pick the data source based on configuration.
+     */
+    setupDataSource() {
+        if (this.options.dataSource) {
+            this.dataSource = this.options.dataSource;
+        } else if (this.options.src) {
+            this.dataSource = new FetchDataSource(this.options.src, { params: this.options.params });
+        } else {
+            this.dataSource = new ArrayDataSource([]);
+        }
     }
 
     /**
-     * Loads data and configures the grid.
-     * @param {Boolean} initOnly
+     * Seed the initial query from optional page / page-size attributes.
      */
-    urlChanged(initOnly = false) {
-        if (initOnly && !this.isInit) return this;
-        this.reconfig();
-        return this.loadData().then(() => this.configureUi());
+    setupInitialState() {
+        if (!this._initialResult) {
+            this._initialResult = this.options.initialResult || this.initialResult || null;
+        }
+        if (this.options.initialQuery) {
+            return;
+        }
+        if (this.hasAttribute("page-size")) {
+            const pageSize = Number.parseInt(this.getAttribute("page-size"));
+            if (pageSize) {
+                this._query.pageSize = pageSize;
+                this._initialQuery.pageSize = pageSize;
+            }
+        }
+        if (this.hasAttribute("page")) {
+            const page = Number.parseInt(this.getAttribute("page"));
+            if (page) {
+                this._query.page = page;
+                this._initialQuery.page = page;
+            }
+        }
     }
 
     /**
-     * Clears columns, re-renders table, and repopulates columns to ensure consistent column widths rendering.
+     * Merge a patch into the query state and reload.
+     * Changing filters, sort or pageSize resets the page to 1 unless an explicit
+     * page is provided in the patch.
+     * @param {Object} patch
+     * @returns {Promise}
      */
-    reconfig() {
-        const cols = this.options.columns;
-        this.options.columns = [];
-        this.configureUi();
-        this.options.columns = cols;
-        return this;
+    setQuery(patch) {
+        const next = normalizeQuery(this._query);
+        const touchesPopulation =
+            patch.filters !== undefined || patch.sort !== undefined || patch.pageSize !== undefined;
+        if (patch.pageSize !== undefined) next.pageSize = patch.pageSize;
+        if (patch.sort !== undefined) next.sort = patch.sort;
+        if (patch.filters !== undefined) next.filters = patch.filters;
+        if (touchesPopulation && patch.page === undefined) next.page = 1;
+        if (patch.page !== undefined) next.page = patch.page;
+        this._query = normalizeQuery(next);
+        return this.refresh();
     }
 
-    constrainPageValue(v) {
-        let pv = v;
-        if (this.pages < pv) {
-            pv = this.pages;
+    /**
+     * Reset the query to its initial state and reload.
+     * @returns {Promise}
+     */
+    resetQuery() {
+        this._query = normalizeQuery(this._initialQuery);
+        return this.refresh();
+    }
+
+    /**
+     * Reload the result matching the current query.
+     * @returns {Promise}
+     */
+    refresh() {
+        return this.load();
+    }
+
+    /**
+     * Single load path: abort previous request, load the current query,
+     * protect against stale responses, then render.
+     * @returns {Promise}
+     */
+    async load() {
+        const requestId = ++this._requestSeq;
+        this._controller?.abort();
+        const controller = new AbortController();
+        this._controller = controller;
+
+        this.loading = true;
+        this.error = null;
+        this.classList.add("dg-loading");
+        this.classList.remove("dg-empty", "dg-network-error");
+
+        try {
+            let result;
+            if (this._initialResult) {
+                result = this._initialResult;
+                this._initialResult = null;
+            } else {
+                result = await this.dataSource.load(this.query, { signal: controller.signal });
+            }
+            if (requestId !== this._requestSeq) return;
+            this.applyResult(result);
+        } catch (err) {
+            if (requestId !== this._requestSeq) return;
+            if (err?.name === "AbortError" || controller.signal.aborted) return;
+            this.error = err;
+            this.classList.add("dg-empty", "dg-network-error");
+            this.tbody?.setAttribute(
+                "data-empty",
+                this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
+            );
+            dispatch(this, "loadError", err);
+        } finally {
+            if (requestId === this._requestSeq) {
+                this.loading = false;
+                this.classList.remove("dg-loading");
+            }
         }
-        if (pv < 1 || !pv) {
-            pv = 1;
+    }
+
+    /**
+     * Apply a PageResult and render.
+     * @param {PageResult|Array} result
+     */
+    applyResult(result) {
+        const page = Array.isArray(result) ? { rows: result, total: result.length, meta: {} } : result;
+        this.rows = page.rows || [];
+        this.total = page.total ?? this.rows.length;
+        this.meta = page.meta || {};
+
+        // Make sure we have a proper set of columns
+        if (this.options.columns.length === 0 && this.rows.length) {
+            this.options.columns = this.convertColumns(Object.keys(this.rows[0]));
+        } else {
+            this.options.columns = this.convertColumns(this.options.columns);
         }
-        return pv;
+
+        this.fixPage();
+        this.renderBody();
     }
 
-    fixPage() {
-        if (!this.inputPage) return this;
-        this.pages = this.totalPages();
-        this.page = this.constrainPageValue(this.page);
-
-        // Show current page in input
-        setAttribute(this.inputPage, "max", this.pages);
-        this.inputPage.value = `${this.page}`;
-        this.inputPage.disabled = this.pages < 2;
-        return this;
+    /**
+     * Pick the data source based on configuration.
+     */
+    srcChanged() {
+        this.setupDataSource();
+        return this.refresh();
     }
 
-    pageChanged() {
-        this.reload();
+    dirChanged() {
+        setAttribute(this, "dir", this.options.dir);
+    }
+
+    showPageSizeChanged() {
+        this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
     }
 
     responsiveChanged() {
@@ -652,63 +793,34 @@ class DataGrid extends BaseElement {
         this.renderHeader();
     }
 
-    /**
-     * This is the callback for the select control
-     */
-    changePerPage() {
-        this.options.perPage = Number.parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value);
-        this.perPageChanged();
+    selectableChanged() {
+        this.renderTable();
+    }
+
+    reorderChanged() {
+        this.renderTable();
+    }
+
+    sortableChanged() {
+        this.renderTable();
+    }
+
+    filterableChanged() {
+        this.renderTable();
     }
 
     /**
-     * This is the actual event triggered on attribute change
+     * Populate the page size select according to options
      */
-    perPageChanged() {
-        // Refresh UI
-        if (
-            this.options.perPage !== Number.parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value)
-        ) {
-            this.perPageValuesChanged();
-        }
-        // Make sure current page is still valid
-        let updatePage = this.page;
-        while (updatePage > 1 && this.page * this.options.perPage > this.totalRecords()) {
-            updatePage--;
-        }
-        if (updatePage !== this.page) {
-            // Triggers pageChanged, which will trigger reload
-            this.page = updatePage;
-        } else {
-            // Simply reload current page
-            this.reload(() => {
-                // Preserve distance between top of page and select control if no fixed height
-                if (!this.plugins.FixedHeight?.hasFixedHeight) {
-                    this.selectPerPage.scrollIntoView();
-                }
-            });
-        }
-    }
-
-    dirChanged() {
-        setAttribute(this, "dir", this.options.dir);
-    }
-
-    defaultSortChanged() {
-        this.sortChanged();
-    }
-
-    /**
-     * Populate the select dropdown according to options
-     */
-    perPageValuesChanged() {
+    populatePageSizes() {
         if (!this.selectPerPage) {
             return;
         }
         while (this.selectPerPage.lastChild) {
             this.selectPerPage.removeChild(this.selectPerPage.lastChild);
         }
-        for (const v of this.options.perPageValues) {
-            addSelectOption(this.selectPerPage, v, v, v === this.options.perPage);
+        for (const v of this.options.pageSizes) {
+            addSelectOption(this.selectPerPage, v, v, v === this._query.pageSize);
         }
     }
 
@@ -754,8 +866,11 @@ class DataGrid extends BaseElement {
         this.btnNext.addEventListener("click", this.getNext);
         this.btnLast.addEventListener("click", this.getLast);
         this.selectPerPage.addEventListener("change", this.changePerPage);
-        this.selectPerPage.toggleAttribute("hidden", this.options.hidePerPage);
+        this.selectPerPage.toggleAttribute("hidden", !this.options.showPageSize);
         this.inputPage.addEventListener("input", this.gotoPage);
+
+        this.setupDataSource();
+        this.setupInitialState();
 
         for (const plugin of Object.values(this.plugins)) {
             await plugin.connected();
@@ -763,12 +878,13 @@ class DataGrid extends BaseElement {
 
         // Display even if we don't have data
         this.dirChanged();
-        this.perPageValuesChanged();
+        this.populatePageSizes();
 
         await this.init();
     }
 
     _disconnected() {
+        this._controller?.abort();
         this.btnFirst?.removeEventListener("click", this.getFirst);
         this.btnPrev?.removeEventListener("click", this.getPrev);
         this.btnNext?.removeEventListener("click", this.getNext);
@@ -782,18 +898,10 @@ class DataGrid extends BaseElement {
     }
 
     init() {
-        return this.loadData().finally(() => {
+        return this.load().finally(() => {
             this.configureUi();
 
-            this.sortChanged();
             this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
-
-            this.filterChanged();
-            this.reorderChanged();
-
-            this.dirChanged();
-            this.perPageValuesChanged();
-            this.pageChanged();
 
             this.fireEvents = true; // We can now fire attributeChangedCallback events
 
@@ -941,92 +1049,6 @@ class DataGrid extends BaseElement {
         return this.fixPage();
     }
 
-    filterChanged() {
-        const row = this.querySelector("thead tr.dg-head-filters");
-        if (this.options.filter) {
-            removeAttribute(row, "hidden");
-        } else {
-            this.clearFilters();
-            setAttribute(row, "hidden", "");
-        }
-    }
-
-    reorderChanged() {
-        const headers = findAll(this, "thead tr.dg-head-columns th");
-        for (const th of headers) {
-            if (th.classList.contains("dg-selectable") || th.classList.contains("dg-actions")) {
-                continue;
-            }
-            if (this.options.reorder && this.plugins.DraggableHeaders) {
-                th.draggable = true;
-            } else {
-                th.removeAttribute("draggable");
-            }
-        }
-    }
-
-    sortChanged() {
-        this.log("toggle sort");
-
-        const headers = findAll(this, "thead tr.dg-head-columns th");
-        for (const th of headers) {
-            const fieldName = th.getAttribute("field");
-            if (
-                th.classList.contains("dg-not-sortable") ||
-                (!this.fireEvents && fieldName === this.options.defaultSort)
-            ) {
-                continue;
-            }
-            if (this.options.sort && !this.getColProp(fieldName, "noSort")) {
-                setAttribute(th, "aria-sort", "none");
-            } else {
-                removeAttribute(th, "aria-sort");
-            }
-        }
-    }
-
-    selectableChanged() {
-        this.renderTable();
-    }
-
-    addRow(row) {
-        if (!Array.isArray(this.originalData)) {
-            return;
-        }
-        this.log("add row");
-        this.originalData.push(row);
-        this.data = this.originalData.slice();
-        this.sortData();
-    }
-
-    /**
-     * @param {any} value Value to remove. Defaults to last row.
-     * @param {String} key The key of the item to remove. Defaults to first column
-     */
-    removeRow(value = null, key = null) {
-        if (!Array.isArray(this.originalData)) {
-            return;
-        }
-
-        let v = value;
-        let k = key;
-        if (k === null) {
-            k = this.options.columns[0].field;
-        }
-        if (v === null) {
-            v = this.originalData[this.originalData.length - 1][k];
-        }
-        this.log(`remove row ${k}:${v}`);
-        for (let i = 0; i < this.originalData.length; i++) {
-            if (this.originalData[i][k] === v) {
-                this.originalData.splice(i, 1);
-                break;
-            }
-        }
-        this.data = this.originalData.slice();
-        this.sortData();
-    }
-
     /**
      * Get selected rows or specific fields from selected rows.
      * If no keys are provided, returns the full row objects.
@@ -1043,172 +1065,32 @@ class DataGrid extends BaseElement {
         return this.plugins.SelectableRows.getSelection(...keys);
     }
 
-    getData() {
-        return this.originalData;
-    }
-
-    clearData(force = false) {
-        // Already empty
-        if (!force && this.data.length === 0) {
-            return;
-        }
-        this.classList.remove("dg-empty", "dg-network-error");
-        this.tbody?.setAttribute("data-empty", this.noData);
-        this.data = this.originalData = [];
-        this.renderBody();
-    }
-
-    /**
-     * Preloads the data intended to bypass the initial fetch operation, allowing for faster intial page load time.
-     * Subsequent grid actions after initialization will operate as normal.
-     * @param {Object} data - an object with meta ({total, filtered, start}) and data (array of objects) properties.
-     */
-    preload(data) {
-        const metaKey = this.options.serverParams.metaKey;
-        const dataKey = this.options.serverParams.dataKey;
-        if (data?.[metaKey]) {
-            this.meta = data[metaKey];
-        }
-        if (data?.[dataKey]) {
-            this.data = this.originalData = data[dataKey];
-        }
-    }
-
-    /**
-     * Clears and reloads data from url.
-     * @param {Function|String} callbackOrUrl
-     * @returns {DataGrid}
-     */
-    refresh(callbackOrUrl = null) {
-        this.data = this.originalData = [];
-        return this.reload(callbackOrUrl);
-    }
-
-    /**
-     * Reloads data from url.
-     * @param {Function|String} callbackOrUrl
-     * @returns {DataGrid}
-     */
-    reload(callbackOrUrl = null) {
-        this.log("reload");
-        if (typeof callbackOrUrl === "string") {
-            this.options.url = callbackOrUrl;
-        }
-        // If the data was cleared, we need to render again
-        const needRender = !this.originalData?.length;
-        this.fixPage();
-        // @ts-expect-error
-        return this.loadData()
-            .finally(() => {
-                if (this.hasDataError) return;
-                // If we load data from the server, we redraw the table body
-                // Otherwise, we just need to paginate
-                this.options.server || needRender ? this.renderBody() : this.paginate();
-                if (typeof callbackOrUrl === "function") {
-                    callbackOrUrl();
-                }
-            })
-            .then(() => this);
-    }
-
-    /**
-     * @returns {Promise}
-     */
-    loadData() {
-        const flagEmpty = () => !this.data.length && this.classList.add("dg-empty");
-        const tbody = this.tbody;
-
-        // We already have some data
-        if (this.meta || this.originalData || this.isInit) {
-            // We don't use server side data
-            if (!this.options.server || (this.options.server && !this.fireEvents)) {
-                this.log("skip loadData");
-                flagEmpty();
-                return new Promise((resolve) => {
-                    resolve();
-                });
-            }
-        }
-        this.log("loadData");
-        this.loading = true;
-        this.classList.add("dg-loading");
-        this.classList.remove("dg-empty", "dg-network-error");
-        return this.fetchData()
-            .then((response) => {
-                // We can get a straight array or an object
-                if (Array.isArray(response)) {
-                    this.data = response;
-                } else {
-                    // Object must contain data key
-                    if (!response[this.options.serverParams.dataKey]) {
-                        console.error(
-                            "Invalid response, it should contain a data key with an array or be a plain array",
-                            response,
-                        );
-                        this.options.url = null;
-                        return;
-                    }
-
-                    // We may have a config object
-                    this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
-                    // It should return meta data (see metaFilteredKey)
-                    this.meta = response[this.options.serverParams.metaKey] ?? {};
-                    this.data = response[this.options.serverParams.dataKey];
-                }
-                this.originalData = this.data.slice();
-                this.fixPage();
-
-                // Make sure we have a proper set of columns
-                if (this.options.columns.length === 0 && this.originalData.length) {
-                    this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
-                } else {
-                    this.options.columns = this.convertColumns(this.options.columns);
-                }
-            })
-            .catch((err) => {
-                this.log(err);
-                tbody.setAttribute(
-                    "data-empty",
-                    this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
-                );
-                this.classList.add("dg-empty", "dg-network-error");
-                dispatch(this, "loadDataFailed", err);
-            })
-            .finally(() => {
-                flagEmpty();
-                this.#setNoData(tbody);
-                this.classList.remove("dg-loading");
-                setAttribute(this.table, "aria-rowcount", this.data.length);
-                this.loading = false;
-            });
-    }
-
     getFirst() {
         if (this.loading) {
             return;
         }
-        this.page = 1;
+        return this.setQuery({ page: 1 });
     }
 
     getLast() {
         if (this.loading) {
             return;
         }
-        this.page = this.pages;
+        return this.setQuery({ page: this.pages });
     }
 
     getPrev() {
         if (this.loading) {
             return;
         }
-        this.page = this.page - 1;
+        return this.setQuery({ page: Math.max(1, this._query.page - 1) });
     }
 
     getNext() {
         if (this.loading) {
             return;
         }
-        this.page = this.page + 1;
+        return this.setQuery({ page: this._query.page + 1 });
     }
 
     gotoPage(event) {
@@ -1220,77 +1102,35 @@ class DataGrid extends BaseElement {
                 return;
             }
         }
-        this.page = Number.parseInt(this.inputPage.value);
-    }
-
-    getSort() {
-        const col = this.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
-        if (col) {
-            return col.getAttribute("field");
-        }
-        return this.options.defaultSort;
-    }
-
-    getSortDir() {
-        const col = this.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
-        if (col) {
-            return col.getAttribute("aria-sort") || "";
-        }
-        return "";
-    }
-
-    getFilters() {
-        const filters = [];
-        const inputs = findAll(this, this._filterSelector);
-        for (const input of inputs) {
-            filters[input.dataset.name] = input.value;
-        }
-        return filters;
-    }
-
-    clearFilters() {
-        const inputs = findAll(this, this._filterSelector);
-        for (const input of inputs) {
-            input.value = "";
-        }
-        this.filterData();
-    }
-
-    filterData() {
-        this.log("filter data");
-
-        this.page = 1;
-
-        if (this.options.server) {
-            this.reload();
-        } else {
-            this.data = this.originalData?.slice() ?? [];
-
-            // Look for rows matching the filters
-            const inputs = findAll(this, this._filterSelector);
-            for (const input of inputs) {
-                const value = input.value;
-                if (value) {
-                    const name = input.dataset.name;
-                    this.data = this.data.filter((item) => {
-                        const str = `${item[name]}`;
-                        return str.toLowerCase().indexOf(value.toLowerCase()) !== -1;
-                    });
-                }
-            }
-            this.pageChanged();
-
-            const col = this.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
-            if (this.options.sort && col) {
-                this.sortData();
-            } else {
-                this.renderBody();
-            }
+        const page = Number.parseInt(this.inputPage.value);
+        if (page) {
+            return this.setQuery({ page });
         }
     }
 
     /**
-     * Data will be sorted then rendered using renderBody
+     * This is the callback for the select control
+     */
+    changePerPage() {
+        const pageSize = Number.parseInt(this.selectPerPage.options[this.selectPerPage.selectedIndex].value);
+        return this.setQuery({ pageSize });
+    }
+
+    /**
+     * Compute the aria-sort value for a column based on the current query.
+     * @param {String} field
+     * @returns {"ascending"|"descending"|"none"}
+     */
+    getColumnSort(field) {
+        const s = (this._query.sort || []).find((x) => x.field === field);
+        if (!s) {
+            return "none";
+        }
+        return s.direction === "asc" ? "ascending" : "descending";
+    }
+
+    /**
+     * Trigger sort based on the current header state.
      * @param {Element} baseCol The column that was clicked or null to use current sort
      */
     sortData(baseCol = null) {
@@ -1307,148 +1147,79 @@ class DataGrid extends BaseElement {
             this.log("sorting prevented because resizing");
             return;
         }
-        if (this.loading) {
-            this.log("sorting prevented because loading");
-            return;
-        }
 
         // We clicked on a column, update sort state
-        if (col !== null) {
-            // Remove active sort if any
-            const haveClasses = (c) => ["dg-selectable", "dg-actions", "dg-responsive-toggle"].includes(c);
-
-            const headers = findAll(this, "thead tr:first-child th");
-            for (const th of headers) {
-                // @ts-expect-error
-                if ([...th.classList].some(haveClasses) || !th.hasAttribute("aria-sort")) {
-                    continue;
-                }
-                if (th !== col) {
-                    th.setAttribute("aria-sort", "none");
-                }
-            }
-
-            // Set tristate col
-            if (!col.hasAttribute("aria-sort") || col.getAttribute("aria-sort") === "none") {
-                col.setAttribute("aria-sort", "ascending");
-            } else if (col.getAttribute("aria-sort") === "ascending") {
-                col.setAttribute("aria-sort", "descending");
-            } else if (col.getAttribute("aria-sort") === "descending") {
-                col.setAttribute("aria-sort", "none");
-            }
-        } else {
+        if (col === null) {
             // Or fetch current sort
             col = this.querySelector("thead tr.dg-head-columns th[aria-sort$='scending']");
         }
-
-        if (this.options.server) {
-            // Reload data with updated sort
-            this.loadData().finally(() => {
-                this.renderBody();
-            });
-        } else {
-            const sort = col ? col.getAttribute("aria-sort") : "none";
-            if (sort === "none") {
-                const stack = [];
-
-                // Restore order while keeping filters
-                this.originalData?.some((itemA) => {
-                    this.data.some((itemB) => {
-                        if (JSON.stringify(itemA) === JSON.stringify(itemB)) {
-                            stack.push(itemB);
-                            return true;
-                        }
-                        return false;
-                    });
-                    return stack.length === this.data.length;
-                });
-
-                this.data = stack;
-            } else {
-                const field = col.getAttribute("field");
-                this.data.sort((a, b) => {
-                    if (!isNaN(a[field]) && !isNaN(b[field])) {
-                        return sort === "ascending" ? a[field] - b[field] : b[field] - a[field];
-                    }
-                    const valA = sort === "ascending" ? a[field].toUpperCase() : b[field].toUpperCase();
-                    const valB = sort === "ascending" ? b[field].toUpperCase() : a[field].toUpperCase();
-
-                    switch (true) {
-                        case valA > valB:
-                            return 1;
-                        case valA < valB:
-                            return -1;
-                        case valA === valB:
-                            return 0;
-                        default:
-                            return 0;
-                    }
-                });
-            }
-            this.renderBody();
+        if (!col) {
+            return;
         }
+
+        const current = col.getAttribute("aria-sort");
+        let next;
+        if (!current || current === "none") {
+            next = "ascending";
+        } else if (current === "ascending") {
+            next = "descending";
+        } else {
+            next = "none";
+        }
+
+        const sort =
+            next === "none"
+                ? []
+                : [{ field: col.getAttribute("field"), direction: next === "ascending" ? "asc" : "desc" }];
+
+        // Reflect the sort state on the headers immediately
+        const headers = findAll(this, "thead tr.dg-head-columns th");
+        for (const th of headers) {
+            if (!th.hasAttribute("aria-sort")) {
+                continue;
+            }
+            const match = sort.find((s) => s.field === th.getAttribute("field"));
+            th.setAttribute("aria-sort", match ? (match.direction === "asc" ? "ascending" : "descending") : "none");
+        }
+
+        return this.setQuery({ sort });
     }
 
-    _sort(columnName, sortDir) {
-        const col = this.querySelector(`.dg-head-columns th[field=${columnName}]`);
-        const dir = sortDir === "ascending" ? "none" : sortDir === "descending" ? "ascending" : "descending";
-        col?.setAttribute("aria-sort", dir);
-        this.sortData(col);
+    _sort(columnName, direction) {
+        return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
     }
 
-    sortAsc = (columnName) => this._sort(columnName, "ascending");
-    sortDesc = (columnName) => this._sort(columnName, "descending");
+    sortAsc = (columnName) => this._sort(columnName, "asc");
+    sortDesc = (columnName) => this._sort(columnName, "desc");
     sortNone = (columnName) => this._sort(columnName, "none");
 
-    fetchData() {
-        if (!this.options.url) {
-            return new Promise((resolve, reject) => reject("No url set"));
+    clearFilters() {
+        const inputs = findAll(this, this._filterSelector);
+        for (const input of inputs) {
+            input.value = "";
         }
+        return this.filterData();
+    }
 
-        let base = window.location.href;
-        // Fix trailing slash if no extension is present
-        if (!base.split("/").pop().includes(".")) {
-            base += base.endsWith("/") ? "" : "/";
-        }
-        const url = new URL(this.options.url, base);
-        let params = {
-            r: Date.now(),
-        };
-        if (this.options.server) {
-            // 0 based
-            params[this.options.serverParams.start] = this.page - 1;
-            params[this.options.serverParams.length] = this.options.perPage;
-            if (this.options.filter) params[this.options.serverParams.search] = this.getFilters();
-            params[this.options.serverParams.sort] = this.getSort() || "";
-            params[this.options.serverParams.sortDir] = this.getSortDir();
+    /**
+     * Collect current filter inputs into the query and reload.
+     */
+    filterData() {
+        this.log("filter data");
 
-            // extra params ?
-            if (this.meta?.[this.options.serverParams.paramsKey]) {
-                params = Object.assign(params, this.meta[this.options.serverParams.paramsKey]);
+        const filters = {};
+        const inputs = findAll(this, this._filterSelector);
+        for (const input of inputs) {
+            const value = input.value;
+            if (value) {
+                const isSelect = /select/i.test(input.tagName);
+                filters[input.dataset.name] = {
+                    operator: isSelect ? "eq" : "contains",
+                    value,
+                };
             }
         }
-
-        appendParamsToUrl(url, params);
-
-        return fetch(url).then((response) => {
-            const newError = new Error(response.statusText || labels.networkError);
-            if (!response.ok) {
-                // @ts-expect-error
-                newError.response = response;
-                throw newError;
-            }
-            return response
-                .clone()
-                .json()
-                .catch((err) => {
-                    let error = err;
-                    if (!this.options.debug) {
-                        error = newError;
-                    }
-                    error.response = response;
-                    throw error;
-                });
-        });
+        return this.setQuery({ filters });
     }
 
     renderTable() {
@@ -1458,20 +1229,7 @@ class DataGrid extends BaseElement {
             this.plugins.ContextMenu.createMenu();
         }
 
-        let sortedColumn;
-
         this.renderHeader();
-        if (this.options.defaultSort) {
-            // We can have a default sort even with sort disabled
-            sortedColumn = this.querySelector(`thead tr.dg-head-columns th[field="${this.options.defaultSort}"]`);
-        }
-
-        if (sortedColumn) {
-            this.sortData(sortedColumn);
-        } else {
-            this.renderBody();
-        }
-
         this.renderFooter();
     }
 
@@ -1554,8 +1312,8 @@ class DataGrid extends BaseElement {
             th.setAttribute("role", "columnheader");
             th.setAttribute("aria-colindex", `${colIdx}`);
             th.setAttribute("id", randstr("dg-col-"));
-            if (this.options.sort && !column.noSort) {
-                th.setAttribute("aria-sort", "none");
+            if (this.options.sortable && !column.noSort) {
+                th.setAttribute("aria-sort", this.getColumnSort(column.field));
             }
             th.setAttribute("field", column.field);
             if (this.plugins.ResponsiveGrid && this.options.responsive) {
@@ -1672,11 +1430,10 @@ class DataGrid extends BaseElement {
 
         // Create row for filters
         tr = ce("tr");
-        this.filterRow = tr;
         tr.setAttribute("role", "row");
         tr.setAttribute("aria-rowindex", "2");
         tr.setAttribute("class", "dg-head-filters");
-        if (!this.options.filter) {
+        if (!this.options.filterable) {
             tr.setAttribute("hidden", "");
         }
 
@@ -1702,7 +1459,7 @@ class DataGrid extends BaseElement {
             th.setAttribute("aria-colindex", `${colIdx}`);
 
             const filter = this.createFilterElement(column, relatedTh);
-            if (!this.options.filter) {
+            if (!this.options.filterable) {
                 th.tabIndex = 0;
             } else {
                 filter.tabIndex = 0;
@@ -1710,6 +1467,12 @@ class DataGrid extends BaseElement {
 
             if (column.hidden) {
                 th.setAttribute("hidden", "");
+            }
+
+            // Reflect the current query filters into the input
+            const filterState = this._query.filters?.[column.field];
+            if (filterState) {
+                filter.value = filterState.value ?? "";
             }
 
             th.appendChild(filter);
@@ -1752,8 +1515,9 @@ class DataGrid extends BaseElement {
         const filter = isSelect ? ce("select") : ce("input");
         if (isSelect) {
             if (!Array.isArray(column.filterList)) {
-                // Gets unique values from column records
-                const uniqueValues = [...new Set((this.data ?? []).map((e) => e[column.field]))]
+                // Gets unique values from the full local collection when available
+                const sourceRows = this.dataSource instanceof ArrayDataSource ? this.dataSource.rows : this.rows;
+                const uniqueValues = [...new Set((sourceRows ?? []).map((e) => e[column.field]))]
                     .filter((v) => v)
                     .sort();
                 column.filterList = [column.firstFilterOption || this.defaultColumn.firstFilterOption].concat(
@@ -1786,7 +1550,7 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Render the data as rows in tbody
+     * Render the rows of the current page into tbody
      * It will call paginate() at the end
      */
     renderBody() {
@@ -1796,10 +1560,10 @@ class DataGrid extends BaseElement {
         let idx;
         const tbody = ce("tbody");
 
-        this.data.forEach((item, i) => {
+        let i = 0;
+        for (const item of this.rows) {
             tr = ce("tr");
             setAttribute(tr, "role", "row");
-            setAttribute(tr, "hidden", "");
             setAttribute(tr, "aria-rowindex", i + 1);
             tr.tabIndex = 0;
 
@@ -1908,7 +1672,8 @@ class DataGrid extends BaseElement {
             tbody.appendChild(tr);
 
             dispatch(this, "rowRendered", { rowData: item, tr });
-        });
+            i++;
+        }
 
         tbody.setAttribute("role", "rowgroup");
 
@@ -1927,7 +1692,9 @@ class DataGrid extends BaseElement {
             this.plugins.SelectableRows.shouldSelectAll(tbody);
         }
 
-        this.classList.toggle("dg-empty", !this.data.length);
+        this.classList.toggle("dg-empty", !this.rows.length);
+
+        setAttribute(this.table, "aria-rowcount", this.rows.length);
 
         dispatch(this, "bodyRendered");
     }
@@ -1935,19 +1702,16 @@ class DataGrid extends BaseElement {
     paginate() {
         this.log("paginate");
 
-        const total = this.totalRecords();
-        const p = this.page || 1;
-        const tbody = this.tbody;
+        const total = this.total;
+        const p = this._query.page || 1;
         const tfoot = this.tfoot;
-        if (!tbody || !tfoot) return;
-        const bodyRows = findAll(tbody, "tr");
+        if (!tfoot) return;
 
         // Refresh page count in case we added/removed a page
         this.pages = this.totalPages();
 
-        let index;
-        let high = p * this.options.perPage;
-        let low = high - this.options.perPage + 1;
+        let high = p * this._query.pageSize;
+        let low = high - this._query.pageSize + 1;
 
         if (high > total) {
             high = total;
@@ -1956,24 +1720,8 @@ class DataGrid extends BaseElement {
             low = 0;
         }
 
-        // Display all rows within the set indexes
-        // For server side paginated grids, we display everything
-        // since the server is taking care of actual pagination
-        for (const tr of bodyRows) {
-            if (this.options.server) {
-                removeAttribute(tr, "hidden");
-                continue;
-            }
-            index = Number(getAttribute(tr, "aria-rowindex"));
-            if (index > high || index < low) {
-                setAttribute(tr, "hidden", "");
-            } else {
-                removeAttribute(tr, "hidden");
-            }
-        }
-
         if (this.options.selectable && this.plugins.SelectableRows) {
-            this.plugins.SelectableRows.clearCheckboxes(tbody);
+            this.plugins.SelectableRows.clearCheckboxes(this.tbody);
         }
 
         // Store default height and update styles if needed
@@ -1983,32 +1731,41 @@ class DataGrid extends BaseElement {
 
         // Enable/disable buttons if shown
         if (this.btnFirst) {
-            this.btnFirst.disabled = this.page <= 1;
-            this.btnPrev.disabled = this.page <= 1;
-            this.btnNext.disabled = this.page >= this.pages;
-            this.btnLast.disabled = this.page >= this.pages;
+            this.btnFirst.disabled = this._query.page <= 1;
+            this.btnPrev.disabled = this._query.page <= 1;
+            this.btnNext.disabled = this._query.page >= this.pages;
+            this.btnLast.disabled = this._query.page >= this.pages;
         }
         tfoot.querySelector(".dg-low").textContent = low.toString();
         tfoot.querySelector(".dg-high").textContent = high.toString();
-        tfoot.querySelector(".dg-total").textContent = `${this.totalRecords()}`;
-        tfoot.toggleAttribute("hidden", this.options.autohidePager && this.options.perPage > this.totalRecords());
+        tfoot.querySelector(".dg-total").textContent = `${this.total}`;
+        tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
     }
 
     /**
      * @returns {number}
      */
     totalPages() {
-        return Math.ceil(this.totalRecords() / this.options.perPage);
+        return Math.ceil(this.total / (this._query.pageSize || 1));
     }
 
     /**
-     * @returns {number}
+     * Make sure the current page is still valid
      */
-    totalRecords() {
-        if (this.options.server) {
-            return this.meta?.[this.options.serverParams.metaFilteredKey] || 0;
+    fixPage() {
+        if (!this.inputPage) return this;
+        this.pages = this.totalPages();
+        if (this._query.page > this.pages) {
+            this._query.page = Math.max(1, this.pages);
         }
-        return this.data.length;
+        if (this._query.page < 1) {
+            this._query.page = 1;
+        }
+        // Show current page in input
+        this.inputPage.max = `${this.pages}`;
+        this.inputPage.value = `${this._query.page}`;
+        this.inputPage.disabled = this.pages < 2;
+        return this;
     }
 }
 

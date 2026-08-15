@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
+import { ArrayDataSource } from "../src/data-source.js";
 
 /**
  * Create a connected grid instance, ready for assertions
@@ -8,10 +9,11 @@ import DataGrid from "../data-grid.js";
  * @returns {Promise<DataGrid>}
  */
 async function makeReadyGrid(opts = {}, data = null) {
-    const inst = new DataGrid(opts);
+    const options = { ...opts };
     if (data !== null) {
-        inst.preload({ data });
+        options.dataSource = new ArrayDataSource(data);
     }
+    const inst = new DataGrid(options);
     document.body.appendChild(inst);
     await new Promise((resolve) => {
         inst.addEventListener("connected", resolve, { once: true });
@@ -24,6 +26,8 @@ async function makeReadyGrid(opts = {}, data = null) {
 function removeGrid(inst) {
     document.body.removeChild(inst);
 }
+
+const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 test("it is registered", () => {
     const inst = customElements.get("data-grid");
@@ -70,7 +74,7 @@ test("clicking a sortable header toggles aria-sort and sorts rows", async () => 
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
-            sort: true,
+            sortable: true,
         },
         [{ name: "b" }, { name: "a" }],
     );
@@ -80,10 +84,12 @@ test("clicking a sortable header toggles aria-sort and sorts rows", async () => 
 
     th.click();
     expect(th.getAttribute("aria-sort")).toBe("ascending");
+    await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("a");
 
     th.click();
     expect(th.getAttribute("aria-sort")).toBe("descending");
+    await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("b");
     removeGrid(inst);
 });
@@ -92,7 +98,7 @@ test("sortable header reacts to Enter and Space", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
-            sort: true,
+            sortable: true,
         },
         [{ name: "b" }, { name: "a" }],
     );
@@ -109,7 +115,7 @@ test("clearFilters clears the filter inputs", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
-            filter: true,
+            filterable: true,
         },
         [{ name: "Alice" }],
     );
@@ -119,5 +125,28 @@ test("clearFilters clears the filter inputs", async () => {
     input.value = "zzz";
     inst.clearFilters();
     expect(input.value).toBe("");
+    removeGrid(inst);
+});
+
+test("setQuery resets page to 1 on population change unless page is provided", async () => {
+    const inst = await makeReadyGrid(
+        { initialQuery: { pageSize: 10 } },
+        Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `row${i}` })),
+    );
+
+    await inst.setQuery({ page: 3 });
+    expect(inst.query.page).toBe(3);
+
+    // pageSize change resets to page 1
+    await inst.setQuery({ pageSize: 5 });
+    expect(inst.query.page).toBe(1);
+
+    // page-only change keeps the page
+    await inst.setQuery({ page: 2 });
+    expect(inst.query.page).toBe(2);
+
+    // explicit page is respected alongside a filter change
+    await inst.setQuery({ filters: { name: { operator: "contains", value: "row" } }, page: 4 });
+    expect(inst.query.page).toBe(4);
     removeGrid(inst);
 });

@@ -42,7 +42,7 @@ class SelectableRows extends BasePlugin {
 
         for (const checkbox of inputs) {
             const idx = Number.parseInt(checkbox.dataset.id);
-            const item = grid.data[idx - 1];
+            const item = grid.rows[idx - 1];
             if (!item) {
                 console.warn(`Item ${idx} not found`);
                 continue;

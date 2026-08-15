@@ -1,7 +1,7 @@
 {
   "options": {
-    "perPageValues": [10, 100, 1000],
-    "actionsCollapse": true,
+    "pageSizes": [10, 100, 1000],
+    "collapseActions": true,
     "actions": [
       {
         "name": "edit",

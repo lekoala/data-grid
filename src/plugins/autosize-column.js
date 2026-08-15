@@ -19,11 +19,11 @@ class AutosizeColumn extends BasePlugin {
         if (hasAttribute(th, "width")) {
             return getAttribute(th, "width");
         }
-        if (!grid.data.length) {
+        if (!grid.rows.length) {
             return;
         }
-        const firstVal = grid.data[0];
-        const lastVal = grid.data[grid.data.length - 1];
+        const firstVal = grid.rows[0];
+        const lastVal = grid.rows[grid.rows.length - 1];
         let v = firstVal[column.field] ? firstVal[column.field].toString() : "";
         const v2 = lastVal[column.field] ? lastVal[column.field].toString() : "";
         if (v2.length > v.length) {

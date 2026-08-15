@@ -2,23 +2,14 @@
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: *");
 
-// Filters as key => value
-$q = [];
-if (isset($_GET["search"]) && is_array($_GET["search"])) {
-    $q = filter_var_array($_GET["search"]);
-}
-$start = intval($_GET["start"] ?? 0); // 0 based
-$length = intval($_GET["length"] ?? 10);
-$sort = $_GET["sort"] ?? null;
-$sortDir = $_GET["sortDir"] ?? null;
+$page = intval($_GET["page"] ?? 1);
+$pageSize = intval($_GET["pageSize"] ?? 10);
+$sort = $_GET["sort"][0]["field"] ?? null;
+$sortDir = $_GET["sort"][0]["direction"] ?? null;
+$filters = $_GET["filters"] ?? [];
 $action = $_GET["action"] ?? null;
-$sid = $_GET["sid"] ?? null;
 
-if ($sid) {
-    session_id($sid);
-}
 session_start();
-$sid = session_id();
 if (empty($_SESSION["data"])) {
     $_SESSION["data"] = [];
 }
@@ -53,21 +44,14 @@ foreach (range(1, 998) as $i) {
             "id" => $i,
             "first_name" => "First name " . $i,
             "last_name" => "Last name " . $i,
-            "company" => $companies[$i % 3]
+            "company" => $companies[$i % 3],
         ];
     }
 }
 
 // That would be an order by clause
-if ($sort && $sortDir) {
-    switch ($sortDir) {
-        case "ascending":
-            $dir = SORT_ASC;
-            break;
-        case "descending":
-            $dir = SORT_DESC;
-            break;
-    }
+if ($sort) {
+    $dir = $sortDir === "desc" ? SORT_DESC : SORT_ASC;
     array_multisort(array_column($data, $sort), $dir, $data);
 }
 
@@ -76,64 +60,54 @@ if ($sort && $sortDir) {
 $filteredData = [];
 foreach ($data as $row) {
     $found = true;
-    foreach ($q as $col => $val) {
-        if (!$val) {
+    foreach ($filters as $col => $filter) {
+        $value = $filter["value"] ?? "";
+        if ($value === "") {
             continue;
         }
         if (!isset($row[$col])) {
             continue;
         }
-        if (stripos($row[$col], $val) === false) {
-            $found = false;
+        $operator = $filter["operator"] ?? "contains";
+        if ($operator === "eq") {
+            if ($row[$col] != $value) {
+                $found = false;
+            }
+        } elseif ($operator === "neq") {
+            if ($row[$col] == $value) {
+                $found = false;
+            }
+        } elseif ($operator === "startsWith") {
+            if (stripos($row[$col], $value) !== 0) {
+                $found = false;
+            }
+        } else {
+            if (stripos($row[$col], $value) === false) {
+                $found = false;
+            }
         }
     }
     if ($found) {
         $filteredData[] = $row;
     }
 }
-// a query with limit clause
-// cap to max amount, 0 based
-if ($start * $length > count($filteredData)) {
-    $start = floor(count($filteredData) / $length);
+
+// a query with limit clause, 1 based pages
+$totalPages = max(1, ceil(count($filteredData) / $pageSize));
+if ($page > $totalPages) {
+    $page = $totalPages;
 }
-if ($start < 0) {
-    $start = 0;
+if ($page < 1) {
+    $page = 1;
 }
-$chunk = array_slice($filteredData, $start * $length, $length);
+$offset = ($page - 1) * $pageSize;
+$chunk = array_slice($filteredData, $offset, $pageSize);
 
 $arr = [
     "meta" => [
         // probably some count query on the db
         "total" => count($data),
         "filtered" => count($filteredData),
-        "start" => $start,
-        // these are passed back by the grid
-        "params" => [
-            "sid" => $sid,
-        ]
-    ],
-    "options" => [
-        "columns" => [
-            [
-                "field" => "id",
-                "title" => "#",
-                "width" => 60,
-            ],
-            [
-                "field" => "first_name",
-                "title" => "First Name",
-            ],
-            [
-                "field" => "last_name",
-                "title" => "Last Name",
-            ],
-            [
-                "field" => "company",
-                "title" => "Company",
-                "noSort" => true,
-                "editable" => true,
-            ],
-        ],
     ],
     "data" => $chunk,
 ];

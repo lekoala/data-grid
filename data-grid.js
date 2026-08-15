@@ -5,6 +5,7 @@
  */
 
 import DataGrid from "./src/data-grid.js";
+import { ArrayDataSource, FetchDataSource } from "./src/data-source.js";
 // Optional plugins
 import ColumnResizer from "./src/plugins/column-resizer.js";
 import ContextMenu from "./src/plugins/context-menu.js";
@@ -42,8 +43,10 @@ if (!customElements.get("data-grid")) {
   customElements.define("data-grid", DataGrid);
 }
 
-export { DataGrid };
+export { DataGrid, ArrayDataSource, FetchDataSource };
 export default DataGrid;
 
 const global = typeof globalThis !== "undefined" ? globalThis : self;
 global.DataGrid = DataGrid;
+global.ArrayDataSource = ArrayDataSource;
+global.FetchDataSource = FetchDataSource;

@@ -46,18 +46,18 @@ class FixedHeight extends BasePlugin {
         }
 
         // We don't need a fake row if we display everything
-        if (grid.options.perPage > grid.totalRecords()) {
+        if (grid.query.pageSize > grid.total) {
             return;
         }
         // We are not on last page
-        if (grid.page !== grid.totalPages()) {
+        if (grid.query.page !== grid.totalPages()) {
             return;
         }
         if (!grid.options.autoheight) {
             return;
         }
         // Find remaining missing height
-        const max = grid.options.perPage * grid.rowHeight;
+        const max = grid.query.pageSize * grid.rowHeight;
         const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
         const fakeHeight = visibleRows > 1 ? max - visibleRows * grid.rowHeight : max;
         if (fakeHeight > 0) {

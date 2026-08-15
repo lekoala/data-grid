@@ -26,13 +26,13 @@ test("it is registered", () => {
     expect(makeInst() instanceof DataGrid).toBeTruthy();
 });
 
-test("options are registed", () => {
+test("options are registered", () => {
     const inst = makeInst({
-        perPage: 20,
+        src: "/api/users",
     });
-    expect(inst.options.perPage).toBe(20);
+    expect(inst.options.src).toBe("/api/users");
     const inst2 = makeInst();
-    expect(inst2.options.perPage).toBe(10);
+    expect(inst2.query.pageSize).toBe(10);
 });
 
 test("it can set labels", async () => {

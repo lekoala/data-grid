@@ -1,12 +1,12 @@
 import camelize from "../utils/camelize.js";
 import normalizeData from "../utils/normalizeData.js";
-import { dispatch, getAttribute, setAttribute } from "../utils/shortcuts.js";
+import { dispatch, getAttribute } from "../utils/shortcuts.js";
 
 /** @typedef {import('../data-grid').Options} Options */
 
 /**
  * Base element that does not contain any specific logic
- * related to this project but makes HTMLElemnt usable
+ * related to this project but makes HTMLElement usable
  */
 class BaseElement extends HTMLElement {
     /**
@@ -16,7 +16,7 @@ class BaseElement extends HTMLElement {
         super();
 
         /** @type {Options} */
-        this.options = Object.assign({}, this.defaultOptions, this.normalizedDataset, options);
+        this.options = /** @type {Options} */ (Object.assign({}, this.defaultOptions, options));
 
         this.log("constructor");
 
@@ -28,49 +28,18 @@ class BaseElement extends HTMLElement {
         this.log("ready");
     }
 
+    /**
+     * @returns {Object}
+     */
     get defaultOptions() {
         return {};
     }
 
     /**
-     * @param {String} opt
-     * @returns {any}
+     * @returns {Array}
      */
-    getOption(opt) {
-        return this.options[opt];
-    }
-
-    /**
-     * @param {String} opt
-     * @param {any} v
-     */
-    setOption(opt, v) {
-        setAttribute(this, `data-${opt}`, v);
-    }
-
-    /**
-     * @param {String} opt
-     */
-    toggleOption(opt) {
-        setAttribute(this, `data-${opt}`, !this.getOption(opt));
-    }
-
-    get normalizedDataset() {
-        const jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
-        const data = { ...this.dataset };
-        for (const key in data) {
-            if (
-                key === "config" ||
-                !Object.prototype.hasOwnProperty.call(data, key) ||
-                typeof data[key] === "function"
-            ) {
-                continue;
-            }
-            data[key] = normalizeData(data[key]);
-        }
-        // Once normalized, merge into json config
-        Object.assign(data, jsonConfig);
-        return data;
+    static get observedAttributes() {
+        return [];
     }
 
     /**
@@ -84,6 +53,16 @@ class BaseElement extends HTMLElement {
      * This is called at the end of constructor. Extend in subclass if needed.
      */
     _ready() {}
+
+    /**
+     * This is called when connected. Extend in subclass if needed.
+     */
+    _connected() {}
+
+    /**
+     * This is called when disconnected. Extend in subclass if needed.
+     */
+    _disconnected() {}
 
     /**
      * @param {any[]} data
@@ -104,11 +83,6 @@ class BaseElement extends HTMLElement {
             this[`on${event.type}`](event);
         }
     }
-
-    /**
-     * This is called when connected. Extend in subclass if needed.
-     */
-    _connected() {}
 
     connectedCallback() {
         // already connected
@@ -139,11 +113,6 @@ class BaseElement extends HTMLElement {
     }
 
     /**
-     * This is called when disconnected. Extend in subclass if needed.
-     */
-    _disconnected() {}
-
-    /**
      * @link https://nolanlawson.com/2024/12/01/avoiding-unnecessary-cleanup-work-in-disconnectedcallback/
      */
     disconnectedCallback() {
@@ -159,7 +128,7 @@ class BaseElement extends HTMLElement {
     }
 
     /**
-     * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#a-props-like-accessor
+     * Custom transformers per attribute name.
      * @returns {Object}
      */
     get transformAttributes() {
@@ -167,9 +136,8 @@ class BaseElement extends HTMLElement {
     }
 
     /**
-     * This is only meant to work with data attributes
-     * This allows us to have properties that reflect automatically in the component
-     * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#reflected-dataset-attributes
+     * Observed attributes map to options (kebab-case -> camelCase).
+     * An attribute without a value means "true".
      * @param {String} attributeName
      * @param {String} oldValue
      * @param {String} newValue
@@ -182,21 +150,10 @@ class BaseElement extends HTMLElement {
 
         this.log(`attributeChangedCallback: ${attributeName}`);
 
-        let isOption = false;
         const transformer = this.transformAttributes[attributeName] ?? normalizeData;
-
-        let attr = attributeName;
-        // Data attributes are mapped to options while other attributes are mapped as properties
-        if (attr.indexOf("data-") === 0) {
-            attr = attr.slice(5);
-            isOption = true;
-        }
-        attr = camelize(attr);
-        if (isOption) {
-            this.options[attr] = transformer(newValue);
-        } else {
-            this[attr] = transformer(newValue);
-        }
+        const attr = camelize(attributeName);
+        const raw = newValue === "" ? "true" : newValue;
+        this.options[attr] = transformer(raw);
 
         // Fire internal event
         if (this.fireEvents && this[`${attr}Changed`]) {
