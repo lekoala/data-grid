@@ -1053,14 +1053,20 @@ class DataGrid extends BaseElement {
         this.total = result.total ?? this.rows.length;
         this.meta = result.meta || {};
 
-        // Make sure we have a proper set of columns
-        if (this.options.columns.length === 0 && this.rows.length) {
+        // When the grid was created without declared columns, the first loaded
+        // row infers the schema. Rebuild the structural part (header, footer,
+        // plugin columns) once, so it matches the freshly inferred columns.
+        const inferredColumns = this.options.columns.length === 0 && this.rows.length > 0;
+        if (inferredColumns) {
             this.options.columns = this.convertColumns(Object.keys(this.rows[0]));
         } else {
             this.options.columns = this.convertColumns(this.options.columns);
         }
 
         this.fixPage();
+        if (inferredColumns) {
+            this.renderTable();
+        }
         this.renderBody();
     }
 
@@ -1834,7 +1840,8 @@ class DataGrid extends BaseElement {
         const td = tfoot.querySelector("td");
         if (!td) return;
         tfoot.removeAttribute("hidden");
-        setAttribute(td, "colspan", this.columnsLength(true));
+        // Never emit a colspan of 0 (invalid, collapses to one column)
+        td.colSpan = Math.max(1, this.columnsLength(true));
         tfoot.style.display = "";
     }
 
@@ -2051,6 +2058,7 @@ class DataGrid extends BaseElement {
             // A non-filterable column keeps its <th> so the filter row stays
             // aligned with the header, but renders no control.
             if (this.isColumnFilterable(column)) {
+                th.classList.add("dg-filter-cell");
                 const ctx = { grid: this, column };
                 if (column.renderFilterCell) {
                     column.renderFilterCell(th, ctx);
@@ -2147,6 +2155,7 @@ class DataGrid extends BaseElement {
         const isSelect = column.filterType === "select";
         const filter = isSelect ? ce("select") : ce("input");
         filter.classList.add("dg-filter");
+        filter.classList.add("dg-filter-control");
         if (isSelect) {
             for (const e of this.getFilterOptions(column)) {
                 const opt = ce("option");

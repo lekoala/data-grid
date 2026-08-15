@@ -151,6 +151,13 @@
       alert(JSON.stringify(selectionActionsDemo.getSelection("id")));
     });
 
+    const onBulkAction = (event) => {
+      const { action, selection } = event.detail;
+      alert(`${action}: ${selection.ids.size} row(s) selected`);
+    };
+    selectionActionsDemo.addEventListener("bulkAction", onBulkAction);
+    fullDemo.addEventListener("bulkAction", onBulkAction);
+
     denseDemo.addEventListener("columnVisibility", (event) => {
       console.log(event.type, event.detail);
     });

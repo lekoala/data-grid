@@ -79,9 +79,15 @@
           ev.target.disabled = false;
         });
       });
-      document.getElementById("remove-row").addEventListener("click", () => {
-        demo4.dataSource.remove();
-        demo4.refresh();
+      document.getElementById("remove-row").addEventListener("click", async () => {
+        const row = demo4.rows[0];
+
+        if (!row) {
+          return;
+        }
+
+        demo4.dataSource.remove(row.id, "id");
+        await demo4.refresh();
       });
 
       // dom api
@@ -112,11 +118,22 @@
         ev.target.disabled = true;
       });
 
+      document.getElementById("dom-toggle-selectable").addEventListener("click", () => {
+        const grid = document.getElementById("test-grid");
+        if (!grid) {
+          return;
+        }
+        if (grid.hasAttribute("selectable")) {
+          grid.removeAttribute("selectable");
+        } else {
+          grid.setAttribute("selectable", "");
+        }
+      });
+
       const toggles = [
         ["more-toggle-sort", "sortable"],
         ["toggle", "filterable"],
         ["more-toggle-selectable", "selectable"],
-        ["dom-toggle-selectable", "selectable"],
       ];
       for (const [id, attr] of toggles) {
         document.getElementById(id)?.addEventListener("click", () => toggleAttr(demo2, attr));
@@ -167,7 +184,9 @@
         <div id="demo3-grid"></div>
       </div>
 
-      <h2>Grid manipulation</h2>
+      <h2>ArrayDataSource manipulation</h2>
+
+      <p>Local data can be mutated through <code>ArrayDataSource</code>, then <code>grid.refresh()</code> reapplies the current query.</p>
 
       <div class="demo-grid">
         <div class="demo-toolbar">

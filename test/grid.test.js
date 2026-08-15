@@ -196,3 +196,36 @@ test("setQuery resets page to 1 on population change unless page is provided", a
     expect(inst.query.page).toBe(4);
     removeGrid(inst);
 });
+
+test("inferring columns from the first load rebuilds the table structure", async () => {
+    const inst = await makeReadyGrid({}, []);
+
+    // Initial empty state: no columns, but never an invalid colspan
+    expect(inst.options.columns).toHaveLength(0);
+    expect(inst.tfoot?.querySelector("td")?.colSpan).toBeGreaterThanOrEqual(1);
+
+    // First load infers the schema and rebuilds header + footer
+    inst.dataSource = new ArrayDataSource([
+        { id: 1, name: "a" },
+        { id: 2, name: "b" },
+    ]);
+    await inst.refresh();
+
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["id", "name"]);
+    expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(2);
+    expect(inst.querySelector("tbody tr").querySelectorAll("td")).toHaveLength(2);
+    expect(inst.tfoot?.querySelector("td")?.colSpan).toBe(2);
+
+    // Clearing the data keeps the schema and the structure
+    inst.dataSource = new ArrayDataSource([]);
+    await inst.refresh();
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["id", "name"]);
+    expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(2);
+
+    // Reloading again keeps the same structure, no duplicate columns
+    inst.dataSource = new ArrayDataSource([{ id: 3, name: "c" }]);
+    await inst.refresh();
+    expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(2);
+    expect(inst.querySelectorAll('thead tr.dg-head-columns th[data-column-id="id"]')).toHaveLength(1);
+    removeGrid(inst);
+});

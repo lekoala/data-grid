@@ -392,17 +392,18 @@ export class ArrayDataSource {
     }
 
     /**
+     * Remove the first row whose `key` field equals `value`.
+     * The key is explicit: there is no magic "first field" fallback.
      * @param {any} value
-     * @param {String} [key] Field to match. Defaults to the first field.
+     * @param {String} key Field to match
+     * @returns {Boolean} Whether a row was removed
      */
     remove(value, key) {
-        const k = key ?? (this.rows[0] && Object.keys(this.rows[0])[0]);
-        if (k === undefined) {
-            return;
+        const idx = this.rows.findIndex((row) => row[key] === value);
+        if (idx === -1) {
+            return false;
         }
-        const idx = this.rows.findIndex((row) => row[k] === value);
-        if (idx !== -1) {
-            this.rows.splice(idx, 1);
-        }
+        this.rows.splice(idx, 1);
+        return true;
     }
 }

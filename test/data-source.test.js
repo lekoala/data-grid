@@ -69,6 +69,31 @@ test("paginate slices a page", () => {
     expect(paginate(rows, 2, 2)).toEqual([{ v: 3 }, { v: 4 }]);
 });
 
+test("ArrayDataSource.remove removes by explicit key and reports success", () => {
+    const ds = new ArrayDataSource([
+        { id: 1, name: "a" },
+        { id: 2, name: "b" },
+    ]);
+
+    expect(ds.remove(2, "id")).toBe(true);
+    expect(ds.rows).toEqual([{ id: 1, name: "a" }]);
+});
+
+test("ArrayDataSource.remove returns false when nothing matches", () => {
+    const ds = new ArrayDataSource([{ id: 1, name: "a" }]);
+
+    expect(ds.remove(999, "id")).toBe(false);
+    expect(ds.remove("nope", "name")).toBe(false);
+    expect(ds.rows).toHaveLength(1);
+});
+
+test("ArrayDataSource.add pushes a row", () => {
+    const ds = new ArrayDataSource([{ id: 1 }]);
+
+    ds.add({ id: 2 });
+    expect(ds.rows).toEqual([{ id: 1 }, { id: 2 }]);
+});
+
 test("ArrayDataSource loads a page with filter and sort", async () => {
     const ds = new ArrayDataSource([{ name: "b" }, { name: "a" }, { name: "b2" }]);
     const result = await ds.load({

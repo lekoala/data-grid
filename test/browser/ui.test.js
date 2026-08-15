@@ -178,3 +178,31 @@ test.skipIf(IS_WINDOWS)(
     },
     TIMEOUT,
 );
+
+test.skipIf(IS_WINDOWS)(
+    "a selected row keeps its background over the stripe",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        const rowBg = (n) =>
+            `getComputedStyle(document.querySelectorAll('#local-grid tbody tr')[${n}]).backgroundColor`;
+
+        await v.evaluate("window.grid.selectAll()");
+        // Wait for the 120ms background transition to settle
+        await waitFor(v, `${rowBg(0)} !== 'rgba(0, 0, 0, 0)'`);
+        await new Promise((resolve) => setTimeout(resolve, 200));
+
+        const bgs = await read(v, `JSON.stringify([${rowBg(0)}, ${rowBg(1)}, ${rowBg(2)}])`);
+        const [first, second, third] = JSON.parse(bgs);
+        expect(second).toBe(first);
+        expect(third).toBe(first);
+
+        // Deselecting restores the normal (transparent) row background
+        await v.evaluate("window.grid.clearSelection()");
+        await waitFor(v, `${rowBg(0)} === 'rgba(0, 0, 0, 0)'`);
+        expect(await read(v, rowBg(1))).toBe("rgba(0, 0, 0, 0)");
+    },
+    TIMEOUT,
+);

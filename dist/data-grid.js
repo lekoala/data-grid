@@ -452,14 +452,12 @@ class ArrayDataSource {
     this.rows.push(row);
   }
   remove(value, key) {
-    const k = key ?? (this.rows[0] && Object.keys(this.rows[0])[0]);
-    if (k === undefined) {
-      return;
+    const idx = this.rows.findIndex((row) => row[key] === value);
+    if (idx === -1) {
+      return false;
     }
-    const idx = this.rows.findIndex((row) => row[k] === value);
-    if (idx !== -1) {
-      this.rows.splice(idx, 1);
-    }
+    this.rows.splice(idx, 1);
+    return true;
   }
 }
 
@@ -1067,12 +1065,16 @@ class DataGrid extends base_element_default {
     this.rows = result.rows || [];
     this.total = result.total ?? this.rows.length;
     this.meta = result.meta || {};
-    if (this.options.columns.length === 0 && this.rows.length) {
+    const inferredColumns = this.options.columns.length === 0 && this.rows.length > 0;
+    if (inferredColumns) {
       this.options.columns = this.convertColumns(Object.keys(this.rows[0]));
     } else {
       this.options.columns = this.convertColumns(this.options.columns);
     }
     this.fixPage();
+    if (inferredColumns) {
+      this.renderTable();
+    }
     this.renderBody();
   }
   srcChanged() {
@@ -1576,7 +1578,7 @@ class DataGrid extends base_element_default {
     if (!td)
       return;
     tfoot.removeAttribute("hidden");
-    setAttribute(td, "colspan", this.columnsLength(true));
+    td.colSpan = Math.max(1, this.columnsLength(true));
     tfoot.style.display = "";
   }
   createColumnHeaders(thead) {
@@ -1734,6 +1736,7 @@ class DataGrid extends base_element_default {
       const th = ce("th");
       setAttribute(th, "data-column-id", column.id ?? column.field);
       if (this.isColumnFilterable(column)) {
+        th.classList.add("dg-filter-cell");
         const ctx = { grid: this, column };
         if (column.renderFilterCell) {
           column.renderFilterCell(th, ctx);
@@ -1802,6 +1805,7 @@ class DataGrid extends base_element_default {
     const isSelect = column.filterType === "select";
     const filter = isSelect ? ce("select") : ce("input");
     filter.classList.add("dg-filter");
+    filter.classList.add("dg-filter-control");
     if (isSelect) {
       for (const e of this.getFilterOptions(column)) {
         const opt = ce("option");
@@ -3442,4 +3446,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=70C13022774944B664756E2164756E21
+//# debugId=262BFB2574F1BED764756E2164756E21

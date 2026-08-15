@@ -204,9 +204,12 @@ export declare class ArrayDataSource {
      */
     add(row: Record<string, any>): void;
     /**
+     * Remove the first row whose `key` field equals `value`.
+     * The key is explicit: there is no magic "first field" fallback.
      * @param {any} value
-     * @param {String} [key] Field to match. Defaults to the first field.
+     * @param {String} key Field to match
+     * @returns {Boolean} Whether a row was removed
      */
-    remove(value: any, key?: string): void;
+    remove(value: any, key: string): boolean;
 }
 //# sourceMappingURL=data-source.d.ts.map
