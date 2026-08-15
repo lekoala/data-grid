@@ -516,6 +516,62 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
   outline: 0;
 }
 
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select) {
+  position: relative;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell select.dg-filter-control {
+  appearance: none;
+  padding-inline-end: 32px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  opacity: .65;
+  border-block-end: 1.5px solid;
+  border-inline-end: 1.5px solid;
+  width: 6px;
+  height: 6px;
+  top: 50%;
+  transform: translateY(-70%)rotate(45deg);
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):not(:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))):after {
+  right: 12px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):not(:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))):after {
+  right: 12px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):not(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))):after {
+  right: 12px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)):after {
+  left: 12px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)):after {
+  left: 12px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)):after {
+  left: 12px;
+}
+
+@media (forced-colors: active) {
+  data-grid thead tr.dg-head-filters th.dg-filter-cell select.dg-filter-control {
+    appearance: auto;
+  }
+
+  data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select):after {
+    display: none;
+  }
+}
+
 data-grid thead tr.dg-head-filters th.dg-selectable, data-grid thead tr.dg-head-filters th.dg-actions {
   padding-left: var(--dg-space-1);
   padding-right: var(--dg-space-1);

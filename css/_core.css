@@ -502,6 +502,42 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
   outline: 0;
 }
 
+/* Select filters: keep the control 100% native but replace only its caret so
+   the text stays clear of the right edge, aligned with the control padding. */
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select) {
+  position: relative;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell select.dg-filter-control {
+  appearance: none;
+  padding-inline-end: 32px;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select)::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+  opacity: 0.65;
+}
+
+/* In forced-colors mode, hand the appearance back to the native control. */
+@media (forced-colors: active) {
+  data-grid thead tr.dg-head-filters th.dg-filter-cell select.dg-filter-control {
+    appearance: auto;
+  }
+
+  data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select)::after {
+    display: none;
+  }
+}
+
 data-grid thead tr.dg-head-filters th.dg-selectable,
 data-grid thead tr.dg-head-filters th.dg-actions {
   padding-left: var(--dg-space-1);
