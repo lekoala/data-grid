@@ -1,13 +1,13 @@
 {
     "$schema": "https://biomejs.dev/schemas/2.5.8/schema.json",
     "vcs": {
-        "enabled": false,
+        "enabled": true,
         "clientKind": "git",
-        "useIgnoreFile": false
+        "useIgnoreFile": true
     },
     "files": {
-        "ignoreUnknown": false,
-        "includes": ["**", "!**/dist/**/*.js", "!**/*.d.ts"]
+        "ignoreUnknown": true,
+        "includes": ["src/**/*.js", "test/**/*.js"]
     },
     "formatter": {
         "enabled": true,
@@ -28,11 +28,23 @@
                 "noGlobalIsNan": "off"
             }
         },
-        "includes": ["src/**/*.js"]
+        "includes": ["src/**/*.js", "test/**/*.js"]
     },
     "javascript": {
         "formatter": {
             "quoteStyle": "double"
         }
-    }
+    },
+    "overrides": [
+        {
+            "includes": ["src/**/*.js"],
+            "linter": {
+                "rules": {
+                    "suspicious": {
+                        "noPrototypeBuiltins": "off"
+                    }
+                }
+            }
+        }
+    ]
 }

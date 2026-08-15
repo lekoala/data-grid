@@ -169,7 +169,7 @@ var BaseElement = class extends HTMLElement {
     const jsonConfig = this.dataset.config ? JSON.parse(this.dataset.config) : {};
     const data = { ...this.dataset };
     for (const key in data) {
-      if (key === "config" || !Object.hasOwn(data, key) || typeof data[key] === "function") {
+      if (key === "config" || !Object.prototype.hasOwnProperty.call(data, key) || typeof data[key] === "function") {
         continue;
       }
       data[key] = normalizeData(data[key]);
@@ -329,9 +329,16 @@ function convertArray(v) {
   return v;
 }
 
-// src/utils/interpolate.js
-function interpolate(str, data) {
-  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2]);
+// src/utils/debounce.js
+function debounce(handler, timeout = 300) {
+  let timer = null;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      handler(...args);
+    }, timeout);
+  };
 }
 
 // src/utils/getTextWidth.js
@@ -356,21 +363,14 @@ function getTextWidth(text, el = document.body, withPadding = false) {
   return Number.parseInt(metrics.width) + padding;
 }
 
+// src/utils/interpolate.js
+function interpolate(str, data) {
+  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2]);
+}
+
 // src/utils/randstr.js
 function randstr(prefix) {
   return Math.random().toString(36).replace("0.", prefix || "");
-}
-
-// src/utils/debounce.js
-function debounce(handler, timeout = 300) {
-  let timer = null;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      timer = null;
-      handler(...args);
-    }, timeout);
-  };
 }
 
 // src/data-grid.js
@@ -1176,10 +1176,7 @@ var DataGrid = class _DataGrid extends base_element_default {
           this.options.url = null;
           return;
         }
-        this.options = Object.assign(
-          this.options,
-          response[this.options.serverParams.optionsKey] ?? {}
-        );
+        this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
         this.meta = response[this.options.serverParams.metaKey] ?? {};
         this.data = response[this.options.serverParams.dataKey];
       }
@@ -1770,7 +1767,6 @@ var DataGrid = class _DataGrid extends base_element_default {
             }
             if (typeof column.format === "string" && tv) {
               td.innerHTML = interpolate(
-                // @ts-expect-error
                 column.format,
                 Object.assign(
                   {
@@ -1971,7 +1967,7 @@ var ColumnResizer = class extends base_plugin_default {
         const visibleCols = currentCols.filter((col2) => {
           return !col2.hasAttribute("hidden");
         });
-        const columnIndex = visibleCols.indexOf(target.parentNode);
+        const columnIndex = visibleCols.findIndex((col2) => col2 === target.parentNode);
         grid.log("resize column");
         addClass(resizer, "dg-resizer-active");
         removeAttribute(col, "draggable");

@@ -10,23 +10,23 @@ import addSelectOption from "./utils/addSelectOption.js";
 import appendParamsToUrl from "./utils/appendParamsToUrl.js";
 import camelize from "./utils/camelize.js";
 import convertArray from "./utils/convertArray.js";
-import interpolate from "./utils/interpolate.js";
-import getTextWidth from "./utils/getTextWidth.js";
-import randstr from "./utils/randstr.js";
 import debounce from "./utils/debounce.js";
+import getTextWidth from "./utils/getTextWidth.js";
+import interpolate from "./utils/interpolate.js";
+import randstr from "./utils/randstr.js";
 import {
     $,
+    addClass,
+    ce,
     dispatch,
     find,
     findAll,
-    hasClass,
-    removeAttribute,
     getAttribute,
-    setAttribute,
-    addClass,
-    toggleClass,
+    hasClass,
     on,
-    ce,
+    removeAttribute,
+    setAttribute,
+    toggleClass,
 } from "./utils/shortcuts.js";
 
 /**
@@ -1133,62 +1133,54 @@ class DataGrid extends BaseElement {
         this.loading = true;
         this.classList.add("dg-loading");
         this.classList.remove("dg-empty", "dg-network-error");
-        return (
-            this.fetchData()
-                .then((response) => {
-                    // We can get a straight array or an object
-                    if (Array.isArray(response)) {
-                        this.data = response;
-                    } else {
-                        // Object must contain data key
-                        if (!response[this.options.serverParams.dataKey]) {
-                            console.error(
-                                "Invalid response, it should contain a data key with an array or be a plain array",
-                                response,
-                            );
-                            this.options.url = null;
-                            return;
-                        }
-
-                        // We may have a config object
-                        this.options = Object.assign(
-                            this.options,
-                            response[this.options.serverParams.optionsKey] ?? {},
+        return this.fetchData()
+            .then((response) => {
+                // We can get a straight array or an object
+                if (Array.isArray(response)) {
+                    this.data = response;
+                } else {
+                    // Object must contain data key
+                    if (!response[this.options.serverParams.dataKey]) {
+                        console.error(
+                            "Invalid response, it should contain a data key with an array or be a plain array",
+                            response,
                         );
-                        // It should return meta data (see metaFilteredKey)
-                        this.meta = response[this.options.serverParams.metaKey] ?? {};
-                        this.data = response[this.options.serverParams.dataKey];
+                        this.options.url = null;
+                        return;
                     }
-                    this.originalData = this.data.slice();
-                    this.fixPage();
 
-                    // Make sure we have a proper set of columns
-                    if (this.options.columns.length === 0 && this.originalData.length) {
-                        this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
-                    } else {
-                        this.options.columns = this.convertColumns(this.options.columns);
-                    }
-                })
-                .catch((err) => {
-                    this.log(err);
-                    tbody.setAttribute(
-                        "data-empty",
-                        this.options.errorMessage ||
-                            err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") ||
-                            labels.networkError,
-                    );
-                    this.classList.add("dg-empty", "dg-network-error");
-                    dispatch(this, "loadDataFailed", err);
-                })
-                // @ts-expect-error
-                .finally(() => {
-                    flagEmpty();
-                    this.#setNoData(tbody);
-                    this.classList.remove("dg-loading");
-                    setAttribute(this.table, "aria-rowcount", this.data.length);
-                    this.loading = false;
-                })
-        );
+                    // We may have a config object
+                    this.options = Object.assign(this.options, response[this.options.serverParams.optionsKey] ?? {});
+                    // It should return meta data (see metaFilteredKey)
+                    this.meta = response[this.options.serverParams.metaKey] ?? {};
+                    this.data = response[this.options.serverParams.dataKey];
+                }
+                this.originalData = this.data.slice();
+                this.fixPage();
+
+                // Make sure we have a proper set of columns
+                if (this.options.columns.length === 0 && this.originalData.length) {
+                    this.options.columns = this.convertColumns(Object.keys(this.originalData[0]));
+                } else {
+                    this.options.columns = this.convertColumns(this.options.columns);
+                }
+            })
+            .catch((err) => {
+                this.log(err);
+                tbody.setAttribute(
+                    "data-empty",
+                    this.options.errorMessage || err.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || labels.networkError,
+                );
+                this.classList.add("dg-empty", "dg-network-error");
+                dispatch(this, "loadDataFailed", err);
+            })
+            .finally(() => {
+                flagEmpty();
+                this.#setNoData(tbody);
+                this.classList.remove("dg-loading");
+                setAttribute(this.table, "aria-rowcount", this.data.length);
+                this.loading = false;
+            });
     }
 
     getFirst() {
@@ -1887,7 +1879,6 @@ class DataGrid extends BaseElement {
                         }
                         if (typeof column.format === "string" && tv) {
                             td.innerHTML = interpolate(
-                                // @ts-expect-error
                                 column.format,
                                 Object.assign(
                                     {

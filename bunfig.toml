@@ -1,0 +1,2 @@
+[test]
+preload = ["./test/_setup-browser-env.js"]

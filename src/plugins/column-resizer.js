@@ -98,7 +98,8 @@ class ColumnResizer extends BasePlugin {
                 const visibleCols = currentCols.filter((col) => {
                     return !col.hasAttribute("hidden");
                 });
-                const columnIndex = visibleCols.indexOf(target.parentNode);
+                // biome-ignore lint/complexity/useIndexOf: indexOf requires a FlexibleHTMLElement arg; target.parentNode is a broader ParentNode
+                const columnIndex = visibleCols.findIndex((col) => col === target.parentNode);
                 grid.log("resize column");
 
                 addClass(resizer, "dg-resizer-active");

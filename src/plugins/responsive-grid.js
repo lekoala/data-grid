@@ -37,7 +37,6 @@ const callback = debounce((entries) => {
         /**
          * @type {import("../data-grid").default}
          */
-        // @ts-expect-error
         const grid = entry.target;
         const table = grid.table;
         if (grid.plugins.ResponsiveGrid.observerBlocked) {
