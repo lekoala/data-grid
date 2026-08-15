@@ -27,12 +27,29 @@ export function stopServer() {
 }
 
 /**
- * Create a WebView. Backend is left to the platform (Chrome on Linux CI,
- * WKWebView on macOS) so the same tests run on both. Tall viewport so the
- * multiple fixture grids (and their footers) fit without scrolling.
+ * Create a WebView. On Linux the Chrome backend is requested explicitly with
+ * the path from BUN_CHROME_PATH (when set) and the subprocess output is
+ * inherited so a silently crashing Chrome surfaces its stderr. macOS keeps the
+ * platform default WKWebView. Tall viewport so the multiple fixture grids (and
+ * their footers) fit without scrolling.
  * @returns {Bun.WebView}
  */
 export function view() {
+    const chromePath = process.env.BUN_CHROME_PATH;
+
+    if (process.platform === "linux" && chromePath) {
+        return new Bun.WebView({
+            width: 1280,
+            height: 3000,
+            backend: {
+                type: "chrome",
+                path: chromePath,
+                stdout: "inherit",
+                stderr: "inherit",
+            },
+        });
+    }
+
     return new Bun.WebView({ width: 1280, height: 3000 });
 }
 
