@@ -13,60 +13,72 @@
 }
 
 data-grid {
-  --padding: 0.5rem;
-  --padding-x: 0.75rem;
-  --padding-y: 0.5rem;
-  --padding-y-header: 0.75rem;
-  --padding-half: calc(var(--padding) / 2);
-  --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
-  --color: rgb(var(--color-rgb));
+  /* surfaces & text */
+  --dg-bg: #fff;
+  --dg-color: #212529;
+  --dg-border-color: #e9ecef;
 
-  --highlight-color: #fffcee;
-  --selected-bgcolor: var(--bs-primary-bg-subtle, #cfe2ff);
-  --body-background: var(--bs-table-bg, #fff);
-  --striped-background: rgba(0, 0, 0, 0.05);
-  --header-background: var(--bs-gray-200, #e9ecef);
-  --header-color: var(--bs-dark, #212529);
-  --input-background: var(--bs-body-bg, #ffffff);
-  --input-border-color: var(--bs-border-color, #e9ecef);
-  --btn-background: var(--bs-body-bg, #ffffff);
-  --btn-color: var(--color);
-  --btn-border-color: var(--bs-border-color, #e9ecef);
-  --body-bg: var(--bs-body-bg, #212529);
-  --body-color: var(--bs-body-color, #212529);
-  --icon-scale: 1;
-  --border-radius: 0.25rem;
-  --row-border-color: #f2f2f2;
-  --responsive-width: 60%;
+  /* accent */
+  --dg-accent: #0d6efd;
+  --dg-accent-soft: #cfe2ff;
 
-  --black: var(--bs-black, #000);
-  --white: var(--bs-white, #fff);
-  --gray: var(--bs-gray, #6c757d);
-  --gray-dark: var(--bs-gray-dark, #343a40);
-  --gray-100: var(--bs-gray-100, #f8f9fa);
-  --gray-200: var(--bs-gray-200, #e9ecef);
-  --gray-300: var(--bs-gray-300, #dee2e6);
-  --gray-400: var(--bs-gray-400, #ced4da);
-  --gray-500: var(--bs-gray-500, #adb5bd);
-  --gray-600: var(--bs-gray-600, #6c757d);
-  --gray-700: var(--bs-gray-700, #495057);
-  --gray-800: var(--bs-gray-800, #343a40);
-  --gray-900: var(--bs-gray-900, #212529);
+  /* header */
+  --dg-header-bg: #e9ecef;
+  --dg-header-color: #212529;
+
+  /* rows */
+  --dg-row-stripe-bg: rgba(0, 0, 0, 0.05);
+  --dg-row-hover-bg: #fffcee;
+  --dg-row-selected-bg: #cfe2ff;
+  --dg-row-border-color: #f2f2f2;
+
+  /* controls (buttons / inputs / selects) */
+  --dg-control-bg: #fff;
+  --dg-control-color: #212529;
+  --dg-control-border-color: #e9ecef;
+
+  /* states (error) */
+  --dg-danger-bg: #f8d7da;
+  --dg-danger-color: #842029;
+  --dg-danger-border-color: #f5c2c7;
+
+  /* spacing & radius */
+  --dg-padding-x: 0.75rem;
+  --dg-padding-y: 0.5rem;
+  --dg-header-padding-y: 0.75rem;
+  --dg-radius: 0.25rem;
+
+  /* internal tokens */
+  --dg-padding-half: calc(var(--dg-padding-y) / 2);
+  --dg-icon-scale: 1;
+  --dg-responsive-width: 60%;
 
   display: block;
   min-height: 6rem;
   position: relative;
 }
 
+data-grid[density="compact"] {
+  --dg-padding-y: 0.25rem;
+  --dg-padding-x: 0.5rem;
+  --dg-header-padding-y: 0.375rem;
+}
+
+data-grid[density="comfortable"] {
+  --dg-padding-y: 0.75rem;
+  --dg-padding-x: 1rem;
+  --dg-header-padding-y: 1rem;
+}
+
 data-grid {
-  --scroller-color: 0, 0%;
-  --scroller-color-lightness: 80%;
-  --scroller-hover-factor: 0.8;
-  --scroller-thumb: hsl(var(--scroller-color), var(--scroller-color-lightness));
+  --dg-scroller-color: 0, 0%;
+  --dg-scroller-color-lightness: 80%;
+  --dg-scroller-hover-factor: 0.8;
+  --dg-scroller-thumb: hsl(var(--dg-scroller-color), var(--dg-scroller-color-lightness));
   /* Replicate hover for webkit */
-  --scroller-thumb-hover: hsl(var(--scroller-color), calc(var(--scroller-color-lightness) * var(--scroller-hover-factor)));
-  --scroller-background: transparent;
-  scrollbar-color: var(--scroller-thumb) var(--scroller-background);
+  --dg-scroller-thumb-hover: hsl(var(--dg-scroller-color), calc(var(--dg-scroller-color-lightness) * var(--dg-scroller-hover-factor)));
+  --dg-scroller-background: transparent;
+  scrollbar-color: var(--dg-scroller-thumb) var(--dg-scroller-background);
   scrollbar-width: thin;
 }
 
@@ -80,11 +92,11 @@ data-grid::-webkit-scrollbar-track {
 }
 
 data-grid::-webkit-scrollbar-thumb {
-  background: var(--scroller-thumb);
+  background: var(--dg-scroller-thumb);
 }
 
 data-grid::-webkit-scrollbar-thumb:hover {
-  background: var(--scroller-thumb-hover);
+  background: var(--dg-scroller-thumb-hover);
 }
 
 data-grid > table tr.dg-head-columns:is(:empty, :has(> :first-child:not([scope="col"]))) {
@@ -108,13 +120,13 @@ data-grid table {
   width: 100%;
   max-width: 100%;
   white-space: normal;
-  background: var(--body-background);
+  background: var(--dg-bg);
 }
 
 data-grid thead,
 data-grid tfoot {
-  background-color: var(--header-background);
-  color: var(--header-color);
+  background-color: var(--dg-header-bg);
+  color: var(--dg-header-color);
 }
 
 data-grid[data-loading]:not(.dg-initialized) thead,
@@ -141,7 +153,7 @@ data-grid tr {
 data-grid th,
 data-grid td {
   empty-cells: show;
-  padding: var(--padding-y) var(--padding-x);
+  padding: var(--dg-padding-y) var(--dg-padding-x);
   text-align: left;
 }
 
@@ -153,7 +165,7 @@ data-grid td[tabindex] {
 
 data-grid th {
   font-weight: bold;
-  padding: var(--padding-y-header) var(--padding-x);
+  padding: var(--dg-header-padding-y) var(--dg-padding-x);
 }
 
 data-grid th,
@@ -245,7 +257,7 @@ data-grid .dg-skip-icon {
   display: block;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) scale(var(--icon-scale, 1));
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
 }
 
 data-grid .dg-nav-icon:before,
@@ -291,10 +303,10 @@ data-grid .dg-rotate {
 }
 
 data-grid button {
-  background-color: var(--btn-background);
-  border: solid 1px var(--btn-border-color);
-  border-radius: var(--border-radius);
-  color: var(--body-color);
+  background-color: var(--dg-control-bg);
+  border: solid 1px var(--dg-control-border-color);
+  border-radius: var(--dg-radius);
+  color: var(--dg-control-color);
   height: 2rem;
   margin: 0 0.2rem;
   padding: 0 0.5rem;
@@ -319,21 +331,21 @@ data-grid input[type="checkbox"] {
 
 data-grid input:not([type="checkbox"], [type="radio"]),
 data-grid select {
-  background-color: var(--input-background, #fff);
+  background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
-  border: 1px solid var(--input-border-color, #f0f0f0);
-  border-radius: var(--border-radius);
+  border: 1px solid var(--dg-control-border-color);
+  border-radius: var(--dg-radius);
   height: 2rem;
   margin: 0 0.2rem;
-  padding: 0 var(--padding);
+  padding: 0 var(--dg-padding-y);
   max-width: none;
 }
 
 data-grid input:not([type="checkbox"]):focus,
 data-grid select:focus,
 data-grid button:focus {
-  box-shadow: 0 0 0 var(--padding-half) rgba(var(--color-rgb), 0.25);
+  box-shadow: 0 0 0 var(--dg-padding-half) var(--dg-accent-soft);
   outline: 0;
 }
 
@@ -359,7 +371,7 @@ data-grid thead tr:nth-child(2) th > * {
 }
 
 data-grid thead tr:nth-child(2) th input:focus {
-  box-shadow: inset 0px 0px 0px 1px var(--color);
+  box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
 }
 
 data-grid tbody td.dg-editable-col {
@@ -378,11 +390,11 @@ data-grid tbody td input.dg-editable {
 }
 
 data-grid tbody td input.dg-editable:focus {
-  box-shadow: inset 0px 0px 0px 1px var(--color);
+  box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
 }
 
 data-grid tbody tr[data-selected] {
-  background-color: var(--selected-bgcolor);
+  background-color: var(--dg-row-selected-bg);
 }
 
 data-grid[data-empty] tbody,
@@ -413,9 +425,9 @@ data-grid[data-empty] tr.dg-fake-row {
 }
 
 data-grid[data-error] table {
-  color: #842029;
-  background-color: #f8d7da;
-  border: 1px solid #f5c2c7;
+  color: var(--dg-danger-color);
+  background-color: var(--dg-danger-bg);
+  border: 1px solid var(--dg-danger-border-color);
 }
 
 data-grid[data-error] tbody {
@@ -431,20 +443,20 @@ data-grid[data-error] tbody tr:not(.dg-fake-row) {
 }
 
 data-grid tbody tr {
-  border-bottom: solid 1px var(--row-border-color);
+  border-bottom: solid 1px var(--dg-row-border-color);
 }
 
 data-grid tbody tr:nth-child(even) {
-  background-color: var(--striped-background);
+  background-color: var(--dg-row-stripe-bg);
 }
 
 data-grid tbody tr:hover {
-  background-color: var(--highlight-color) !important;
+  background-color: var(--dg-row-hover-bg) !important;
 }
 
 data-grid tbody tr:focus {
-  background-color: var(--highlight-color) !important;
-  border-bottom-color: var(--highlight-color) !important;
+  background-color: var(--dg-row-hover-bg) !important;
+  border-bottom-color: var(--dg-row-hover-bg) !important;
   outline: none;
 }
 
@@ -453,7 +465,7 @@ data-grid tfoot {
 }
 
 data-grid tfoot td {
-  padding: var(--padding-y-header) var(--padding-x);
+  padding: var(--dg-header-padding-y) var(--dg-padding-x);
 }
 
 data-grid tfoot .dg-page-nav {
@@ -516,25 +528,13 @@ data-grid [aria-sort="descending"]:after {
 }
 
 data-grid [aria-sort="ascending"]:before {
-  border-bottom-color: var(--body-color);
+  border-bottom-color: var(--dg-color);
   opacity: 0.75;
 }
 
 data-grid [aria-sort="descending"]:after {
-  border-top-color: var(--body-color);
+  border-top-color: var(--dg-color);
   opacity: 0.75;
   bottom: calc(50% - 0.5rem);
   top: auto;
-}
-
-[data-bs-theme="dark"] data-grid {
-  --scroller-color-lightness: 20%;
-  --highlight-color: #43423e;
-  --selected-bgcolor: var(--bs-primary-bg-subtle, #031633);
-  --body-background: #212529;
-  --striped-background: #2c3034;
-  --header-background: var(--bs-gray-800, #34373b);
-  --header-color: var(--bs-light, #e9ecef);
-  --body-color: var(--bs-body-color, #494e53);
-  --row-border-color: var(--bs-gray-900, #212325);
 }

@@ -832,6 +832,7 @@ var DataGrid = class extends base_element_default {
       menu: false,
       reorder: false,
       dir: "ltr",
+      density: "default",
       pageSizes: [10, 25, 50, 100, 250],
       showPageSize: true,
       columns: [],
@@ -992,7 +993,8 @@ var DataGrid = class extends base_element_default {
       "autohide-pager",
       "show-page-size",
       "debug",
-      "dir"
+      "dir",
+      "density"
     ];
   }
   /** @returns {HTMLTableSectionElement} */

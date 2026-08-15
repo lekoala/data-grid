@@ -108,6 +108,7 @@ import {
  * @property {Boolean} sortable Allows a sort by column functionality
  * @property {Boolean} filterable Allows a filtering functionality
  * @property {String} dir Dir
+ * @property {"compact"|"default"|"comfortable"} [density] Row density (maps to --dg-padding-* tokens)
  * @property {Array} pageSizes Available page size options
  * @property {Boolean} showPageSize Shows the page size select element
  * @property {Column[]} columns Available columns
@@ -517,6 +518,7 @@ class DataGrid extends BaseElement {
             menu: false,
             reorder: false,
             dir: "ltr",
+            density: "default",
             pageSizes: [10, 25, 50, 100, 250],
             showPageSize: true,
             columns: [],
@@ -691,6 +693,7 @@ class DataGrid extends BaseElement {
             "show-page-size",
             "debug",
             "dir",
+            "density",
         ];
     }
 

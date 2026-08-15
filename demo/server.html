@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mvp.css@1/mvp.css" />
   <link rel="stylesheet" href="../dist/data-grid.min.css" />
+  <link rel="stylesheet" href="../themes/bootstrap.css" />
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2/dist/js/bootstrap.bundle.min.js" type="module"></script>
   <script type="module">
     import DataGrid from '../dist/data-grid.min.js';
@@ -52,6 +53,8 @@
       sortable: true,
       debug: true
     });
+    serverDemo.setAttribute("sticky", "");
+    serverDemo.setAttribute("density", "compact");
     serverDemo.setAttribute("sticky", "");
     serverDemo.addEventListener("edit", (ev) => {
       postJson("demo-server.php?action=edit", ev.detail);

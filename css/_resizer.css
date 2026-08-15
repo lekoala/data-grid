@@ -12,11 +12,11 @@ data-grid .dg-resizer:before {
   content: "";
   display: block;
   position: absolute;
-  top: var(--padding-y-header);
+  top: var(--dg-header-padding-y);
   height: 1.5rem;
   right: 0;
   width: 2px;
-  background: var(--body-color);
+  background: var(--dg-color);
   opacity: 0.2;
 }
 
@@ -25,7 +25,7 @@ data-grid .dg-resizer:hover:before {
 }
 
 data-grid .dg-resizer.dg-resizer-active {
-  border-right: 1px dashed var(--color);
+  border-right: 1px dashed var(--dg-accent);
 }
 
 data-grid .dg-resizer.dg-resizer-active:before {

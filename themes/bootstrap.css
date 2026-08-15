@@ -1,0 +1,58 @@
+/**
+ * Optional Bootstrap 5 theme for data-grid.
+ * Maps the neutral --dg-* tokens onto Bootstrap's CSS variables.
+ * Load this AFTER css/data-grid.css (same specificity, source order wins).
+ */
+data-grid {
+  --dg-bg: var(--bs-body-bg, #fff);
+  --dg-color: var(--bs-body-color, #212529);
+  --dg-border-color: var(--bs-border-color, #dee2e6);
+
+  --dg-accent: var(--bs-primary, #0d6efd);
+  --dg-accent-soft: var(--bs-primary-bg-subtle, #cfe2ff);
+
+  --dg-header-bg: var(--bs-tertiary-bg, #f8f9fa);
+  --dg-header-color: var(--bs-body-color, #212529);
+
+  --dg-row-stripe-bg: var(--bs-table-striped-bg, rgba(0, 0, 0, 0.05));
+  --dg-row-hover-bg: var(--bs-table-hover-bg, #f5f5f5);
+  --dg-row-selected-bg: var(--bs-primary-bg-subtle, #cfe2ff);
+  --dg-row-border-color: var(--bs-border-color, #dee2e6);
+
+  --dg-control-bg: var(--bs-body-bg, #fff);
+  --dg-control-color: var(--bs-body-color, #212529);
+  --dg-control-border-color: var(--bs-border-color, #dee2e6);
+
+  --dg-danger-bg: var(--bs-danger-bg-subtle, #f8d7da);
+  --dg-danger-color: var(--bs-danger-text-emphasis, #842029);
+  --dg-danger-border-color: var(--bs-danger-border-subtle, #f5c2c7);
+
+  --dg-radius: var(--bs-border-radius, 0.375rem);
+}
+
+[data-bs-theme="dark"] data-grid {
+  --dg-bg: var(--bs-body-bg, #212529);
+  --dg-color: var(--bs-body-color, #dee2e6);
+  --dg-border-color: var(--bs-border-color, #495057);
+
+  --dg-accent: var(--bs-primary, #6ea8fe);
+  --dg-accent-soft: var(--bs-primary-bg-subtle, #031633);
+
+  --dg-header-bg: var(--bs-gray-800, #34373b);
+  --dg-header-color: var(--bs-light, #e9ecef);
+
+  --dg-row-stripe-bg: #2c3034;
+  --dg-row-hover-bg: #43423e;
+  --dg-row-selected-bg: var(--bs-primary-bg-subtle, #031633);
+  --dg-row-border-color: var(--bs-gray-900, #212325);
+
+  --dg-control-bg: var(--bs-body-bg, #212529);
+  --dg-control-color: var(--bs-body-color, #dee2e6);
+  --dg-control-border-color: var(--bs-border-color, #495057);
+
+  --dg-danger-bg: var(--bs-danger-bg-subtle, #2c0b0e);
+  --dg-danger-color: var(--bs-danger-text-emphasis, #ea868f);
+  --dg-danger-border-color: var(--bs-danger-border-subtle, #58151c);
+
+  --dg-scroller-color-lightness: 20%;
+}

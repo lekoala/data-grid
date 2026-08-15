@@ -15,7 +15,7 @@ data-grid .dg-actions button + button {
 
 data-grid .dg-actions .dg-actions-toggle {
   display: none;
-  width: calc(100px - var(--padding-x) * 2);
+  width: calc(100px - var(--dg-padding-x) * 2);
 }
 
 data-grid .dg-actions.dg-actions-1 {
@@ -57,5 +57,5 @@ data-grid tr.dg-actionable {
 }
 
 data-grid tr.dg-actionable:hover td {
-  background-color: var(--highlight-color);
+  background-color: var(--dg-row-hover-bg);
 }

@@ -1,13 +1,13 @@
 data-grid .dg-menu {
   position: absolute;
   z-index: 3;
-  background: var(--body-bg);
+  background: var(--dg-bg);
   list-style: none;
   max-width: 150px;
   margin: 0;
-  padding: var(--padding);
+  padding: var(--dg-padding-y);
   box-shadow: 0 0 1rem rgba(0, 0, 0, 0.25);
-  border-radius: var(--border-radius);
+  border-radius: var(--dg-radius);
 }
 
 data-grid .dg-menu li {

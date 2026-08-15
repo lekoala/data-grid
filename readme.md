@@ -71,24 +71,54 @@ Grid customizations are possible via attributes.
 
 ### Styling
 
-Data Grid inherits wherever possible from Bootstrap 5 styles (including dark mode support).
-
-You can also override the following variables (see css/\_core.css).
+The core stylesheet (`css/data-grid.css`) is neutral and dependency-free. All
+themeable values are exposed as `--dg-*` custom properties, so the grid follows
+the application's design system instead of carrying its own.
 
 ```css
 data-grid {
-  --padding: 0.5rem;
-  --header-scale: 1.5;
-  --color-rgb: var(--bs-primary-rgb, 13, 110, 253);
-  --color: rgb(var(--color-rgb));
-  --highlight-color: #fffcee;
-  --header-background: var(--bs-gray-200, #e9ecef);
-  --header-color: var(--bs-dark, #212529);
-  --btn-background: var(--white, #ffffff);
-  --btn-color: var(--color);
-  --body-color: var(--bs-body-color, #212529);
+  --dg-bg: #fff;                /* table + menu surfaces */
+  --dg-color: #212529;          /* text */
+  --dg-border-color: #e9ecef;   /* default border */
+  --dg-accent: #0d6efd;         /* interactive accent */
+  --dg-accent-soft: #cfe2ff;    /* focus ring */
+  --dg-header-bg: #e9ecef;
+  --dg-header-color: #212529;
+  --dg-row-stripe-bg: rgba(0, 0, 0, 0.05);
+  --dg-row-hover-bg: #fffcee;
+  --dg-row-selected-bg: #cfe2ff;
+  --dg-row-border-color: #f2f2f2;
+  --dg-control-bg: #fff;        /* buttons / inputs / selects */
+  --dg-control-color: #212529;
+  --dg-control-border-color: #e9ecef;
+  --dg-danger-bg: #f8d7da;      /* error state */
+  --dg-danger-color: #842029;
+  --dg-danger-border-color: #f5c2c7;
+  --dg-padding-x: 0.75rem;
+  --dg-padding-y: 0.5rem;
+  --dg-header-padding-y: 0.75rem;
+  --dg-radius: 0.25rem;
 }
 ```
+
+#### Bootstrap theme
+
+`themes/bootstrap.css` maps these tokens onto Bootstrap 5 variables, including
+dark mode via `[data-bs-theme="dark"]`. Load it after `data-grid.css`:
+
+```html
+<link rel="stylesheet" href="dist/data-grid.css" />
+<link rel="stylesheet" href="themes/bootstrap.css" />
+```
+
+#### Density
+
+```html
+<data-grid density="compact"></data-grid>
+```
+
+Density is `compact`, `default` or `comfortable` and only adjusts the
+`--dg-padding-*` tokens.
 
 ### Options attributes
 
