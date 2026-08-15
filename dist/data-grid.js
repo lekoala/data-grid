@@ -3280,14 +3280,14 @@ var EditableColumn = class extends base_plugin_default {
     }
   }
   /**
-   *
    * @param {HTMLElement} td
    * @param {import("../data-grid").Column} column
    * @param {Object} item
    * @param {number} i
    */
   makeEditableInput(td, column, item, i) {
-    const gridId = this.grid.getAttribute("id");
+    const grid = this.grid;
+    const gridId = grid.getAttribute("id");
     const input = document.createElement("input");
     input.type = column.editableType || "text";
     if (input.type === "email") {
@@ -3303,27 +3303,74 @@ var EditableColumn = class extends base_plugin_default {
     input.name = `${gridId.replace("-", "_")}[${i + 1}][${column.field}]`;
     input.value = item[column.field];
     input.dataset.field = column.field;
-    input.addEventListener("click", (ev) => ev.stopPropagation());
-    input.addEventListener("keypress", (ev) => {
-      if (ev.type === "keypress") {
-        const key = ev.keyCode || ev.key;
-        if (key === 13 || key === "Enter") {
-          input.blur();
-          ev.preventDefault();
-        }
+    const previous = () => item[column.field];
+    const startEditing = () => {
+      td.dataset.editing = "";
+      delete td.dataset.invalid;
+      delete td.title;
+    };
+    const endEditing = () => {
+      delete td.dataset.editing;
+    };
+    const reject = (message) => {
+      input.value = previous();
+      endEditing();
+      if (message) {
+        td.dataset.invalid = "";
+        td.title = message;
       }
-    });
-    input.addEventListener("blur", () => {
-      if (input.value === item[input.dataset.field]) {
+    };
+    const commit = () => {
+      const value = input.value;
+      if (value === previous()) {
+        endEditing();
         return;
       }
-      item[input.dataset.field] = input.value;
-      dispatch(this.grid, "edit", {
-        data: item,
-        value: input.value
+      const error = this.validate(column, value, item);
+      if (error) {
+        reject(error);
+        return;
+      }
+      const prev = previous();
+      item[column.field] = value;
+      const ev = new CustomEvent("edit", {
+        detail: { data: item, value, field: column.field, column },
+        cancelable: true
       });
+      grid.dispatchEvent(ev);
+      if (ev.defaultPrevented) {
+        item[column.field] = prev;
+      }
+      endEditing();
+    };
+    input.addEventListener("click", (ev) => ev.stopPropagation());
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        input.blur();
+      } else if (ev.key === "Escape") {
+        reject();
+        input.blur();
+      }
     });
+    input.addEventListener("focus", startEditing);
+    input.addEventListener("blur", commit);
     td.replaceChildren(input);
+  }
+  /**
+   * Run the column validator, then the grid-level one.
+   * @param {import("../data-grid").Column} column
+   * @param {*} value
+   * @param {Object} row
+   * @returns {?String} error message or null when valid
+   */
+  validate(column, value, row) {
+    const ctx = { row, column, grid: this.grid };
+    const res = column.validate?.(value, ctx) ?? this.grid.options.validate?.(value, ctx);
+    if (typeof res === "string") {
+      return res;
+    }
+    return res === false ? "Invalid value" : null;
   }
 };
 var editable_column_default = EditableColumn;

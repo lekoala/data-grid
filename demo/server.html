@@ -43,7 +43,13 @@
       { field: "id", title: "#", width: 60 },
       { field: "first_name", title: "First Name" },
       { field: "last_name", title: "Last Name" },
-      { field: "company", title: "Company", noSort: true, editable: true }
+      {
+        field: "company",
+        title: "Company",
+        noSort: true,
+        editable: true,
+        validate: (value) => (value.trim().length >= 3 ? true : "Company must be at least 3 characters")
+      }
     ];
 
     const serverDemo = new DataGrid({

@@ -354,10 +354,29 @@ Then simply listen to changes
 
 ```js
 document.getElementById("demo2-grid").addEventListener("edit", (ev) => {
-  // It contains data and value
+  // It contains data, value, field and column
   console.log(ev.detail);
+  // Call ev.preventDefault() to reject the change (the row is reverted)
 });
 ```
+
+You can validate the value before it is committed:
+
+```js
+{
+  "field": "email",
+  "title": "Email",
+  "editable": true,
+  "validate": (value) => {
+    return /\S+@\S+\.\S+/.test(value) ? true : "Invalid email";
+  }
+}
+```
+
+`validate` returns `true` (valid), `false` or an error message string. When
+validation fails, or when Escape is pressed, the edit is rejected and the
+original value is restored (`td[data-invalid]` is set on error). A grid-level
+`validate` option is used as a fallback for columns without one.
 
 You can check `demo-server.html` to get a sample usage with saving functionnality
 

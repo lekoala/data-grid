@@ -393,6 +393,14 @@ data-grid tbody td input.dg-editable:focus {
   box-shadow: inset 0px 0px 0px 1px var(--dg-accent);
 }
 
+data-grid tbody td.dg-editable-col[data-editing] {
+  background-color: var(--dg-accent-soft);
+}
+
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
+  box-shadow: inset 0px 0px 0px 1px var(--dg-danger-color);
+}
+
 data-grid tbody tr[data-selected] {
   background-color: var(--dg-row-selected-bg);
 }

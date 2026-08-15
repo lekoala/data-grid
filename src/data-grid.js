@@ -49,6 +49,7 @@ import {
  * @property {String} [transform] - custom value transformation
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
  * @property {String} [editableType] - type of input (EditableColumn module)
+ * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
  * @property {String} [filterType] - defines a filter field type ("text" or "select" - defaults to "text")
@@ -144,6 +145,7 @@ import {
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
  * @property {QueryState} [initialQuery] Initial runtime query state
  * @property {PageResult} [initialResult] Initial result to display without loading the data source
+ * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
  */
 
 /**
