@@ -169,13 +169,13 @@ test("the select-all checkbox carries a stable accessible name", async () => {
     document.body.removeChild(inst);
 });
 
-test("icon-only actions use label as their accessible name", async () => {
+test("icon-only custom content keeps label as the accessible name", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
             actions: [
-                { name: "edit", label: "Edit", html: "<i class='dg-edit-icon'></i>" },
-                { name: "delete", html: "<i class='dg-delete-icon'></i>" },
+                { name: "edit", label: "Edit", render: () => ({ html: "<i class='dg-edit-icon'></i>" }) },
+                { name: "delete", render: () => ({ html: "<i class='dg-delete-icon'></i>" }) },
             ],
         },
         [{ id: 7, name: "Alice" }],
@@ -186,6 +186,26 @@ test("icon-only actions use label as their accessible name", async () => {
     expect(buttons).toHaveLength(2);
     expect(buttons[0].getAttribute("aria-label")).toBe("Edit");
     expect(buttons[1].getAttribute("aria-label")).toBe("delete");
+    document.body.removeChild(inst);
+});
+
+test("the row actions toggle has an accessible name and aria-expanded state", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name", title: "Name" }],
+            actions: [{ name: "edit", label: "Edit" }],
+        },
+        [{ id: 7, name: "Alice" }],
+        { RowActions },
+    );
+
+    const toggle = inst.tbody.querySelector("td[data-column-id='$actions'] button.dg-actions-toggle");
+    expect(toggle.getAttribute("aria-label")).toBe("Toggle row actions");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    toggle.click();
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    toggle.click();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     document.body.removeChild(inst);
 });
 

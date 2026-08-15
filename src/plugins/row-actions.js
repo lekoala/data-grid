@@ -58,10 +58,13 @@ class RowActions extends BasePlugin {
         actionsToggle.type = "button";
         actionsToggle.classList.add("dg-actions-toggle");
         actionsToggle.innerHTML = "☰";
+        actionsToggle.setAttribute("aria-label", labels.toggleActions);
+        actionsToggle.setAttribute("aria-expanded", "false");
         on(actionsToggle, "click", (/** @type {MouseEvent} */ ev) => {
             ev.stopPropagation();
             const parent = /** @type {HTMLElement} */ (ev.target).parentElement;
-            parent?.classList.toggle("dg-actions-expand");
+            const expanded = parent?.classList.toggle("dg-actions-expand") ?? false;
+            actionsToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
         });
         fragment.appendChild(actionsToggle);
 
@@ -112,14 +115,14 @@ class RowActions extends BasePlugin {
                 /** @type {HTMLButtonElement} */ (el).type = "button";
             }
             if (content === null || content === undefined) {
-                if (action.html) {
-                    el.innerHTML = action.html;
-                    el.setAttribute("aria-label", action.label ?? action.name);
-                } else {
-                    el.textContent = action.label ?? action.title ?? action.name;
-                }
+                el.textContent = action.label ?? action.name;
             } else {
                 this.applyContent(el, content);
+                // Custom content (Node or { html }) may be icon-only: keep the
+                // label as the accessible name of the element RowActions creates.
+                if (content instanceof Node || (typeof content === "object" && content.html !== undefined)) {
+                    el.setAttribute("aria-label", action.label ?? action.name);
+                }
             }
         }
 
@@ -130,9 +133,6 @@ class RowActions extends BasePlugin {
         if (action.intent) {
             el.dataset.intent = action.intent;
             el.classList.add(`dg-intent-${action.intent}`);
-        }
-        if (action.title) {
-            el.title = action.title;
         }
         if (action.class) {
             el.classList.add(...action.class.split(" "));

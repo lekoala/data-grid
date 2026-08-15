@@ -162,7 +162,6 @@ response protection).
 | `attr`                                  | `String`             | set a row attribute instead of rendering             |
 | `hidden`                                | `Boolean`            | hide the column                                      |
 | `noSort`                                | `Boolean`            | disable sorting for this column                      |
-| `format`                                | `String \| Function` | legacy string interpolation or function              |
 | `transform`                             | `String`             | `uppercase` / `lowercase`                            |
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)               |
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`            |
@@ -178,12 +177,13 @@ response protection).
 | Name       | Type                                 | Description                                      |
 |------------|--------------------------------------|--------------------------------------------------|
 | `name`     | `String`                             | the action name (`button[data-action]`)          |
-| `label`    | `String`                             | the button label; accessible name when icon-only |
+| `label`    | `String`                             | the button label and accessible name             |
 | `intent`   | `"default" \| "primary" \| "danger"` | sets `data-intent`                               |
 | `href`     | `String \| Function`                 | renders an `<a>` link                            |
+| `class`    | `String`                             | class on the button                              |
 | `visible`  | `(row) => Boolean`                   | hide the action when falsy                       |
 | `disabled` | `(row) => Boolean`                   | disable the action when truthy                   |
-| `render`   | `({ action, row, grid }) => content` | replace the button content                       |
+| `render`   | `({ action, row, grid }) => content` | replace the button content                      |
 | `confirm`  | `Boolean`                            | ask for confirmation                             |
 | `default`  | `Boolean`                            | clicking the row triggers the action             |
 
@@ -231,7 +231,8 @@ DataGrid.setLabels({ items: "rows" });
 
 Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `of`, `items`, `selected`, `selectAll`,
-`resizeColumn`, `noData`, `loading`, `areYouSure`, `networkError`.
+`toggleActions`, `resizeColumn`, `noData`, `loading`, `areYouSure`,
+`networkError`.
 
 ## Browser Support
 

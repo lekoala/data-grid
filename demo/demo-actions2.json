@@ -2,28 +2,6 @@
   "options": {
     "pageSizes": [10, 100, 1000],
     "collapseActions": true,
-    "actions": [
-      {
-        "name": "edit",
-        "html": "<l-i name='edit'></l-i>",
-        "default": true
-      },
-      {
-        "name": "some",
-        "html": "<l-i name='star'></l-i>"
-      },
-      {
-        "name": "action",
-        "html": "<l-i name='rocket'></l-i>"
-      },
-      {
-        "name": "delete",
-        "html": "<l-i name='trash'></l-i>",
-        "class": "is-danger",
-        "confirm": true,
-        "url": "/delete/{id}"
-      }
-    ],
     "columns": [
       {
         "field": "id",

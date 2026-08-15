@@ -32,9 +32,7 @@ test("extendColumns injects a virtual column rendered by renderCell", async () =
                 position: "end",
                 noSort: true,
                 title: "",
-                renderCell: (td, ctx) => {
-                    td.textContent = `x:${ctx.row.name}`;
-                },
+                renderCell: (ctx) => `x:${ctx.row.name}`,
             });
         }
         beforeRender() {

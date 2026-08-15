@@ -36,10 +36,11 @@ contract: the public artifacts (`data-grid.js`, `src/`, `dist/types/*`,
 (`test/`, `demo/`, `css/`, `scripts/`, `.github/`) are absent, and every
 `exports` target resolves inside the tarball. It needs `npm` (not just Bun).
 
-`bun run dev` serves the whole repo on `http://localhost:8002` (root -> the
-demo pages) plus a mock server-side API (`/api/users`, `/api/errors`) that
-simulates pagination, sort, filters, latency and errors. `demo/server.js`
-reuses the same filter/sort helpers as the client (`src/data-source.js`).
+`bun run dev` serves the whole repo on `http://localhost:8002` (`/` redirects to
+the demo pages under `/demo/`) plus a mock server-side API (`/api/users`,
+`/api/errors`) that simulates pagination, sort, filters, latency and errors.
+`demo/server.js` reuses the same filter/sort helpers as the client
+(`src/data-source.js`).
 
 `bun run test:browser` needs a real browser: `Bun.WebView` uses Chrome/Chromium
 on Linux and WKWebView on macOS. It does not run on Windows (skipped). The CI

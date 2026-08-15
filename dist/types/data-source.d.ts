@@ -24,12 +24,18 @@
  * @property {any} [value]
  */
 /**
+ * Accepted public filter values. A scalar is a shorthand for
+ * `{ operator: "contains", value }`; the structured form allows choosing
+ * the operator (`empty`/`notEmpty` have no value).
+ * @typedef {FilterState | String | Number | Boolean} FilterInput
+ */
+/**
  * Runtime query state. Single source of truth for pagination, sort and filters.
  * @typedef {Object} QueryState
  * @property {Number} page
  * @property {Number} pageSize
  * @property {SortState[]} sort
- * @property {Record<string, FilterState>} filters
+ * @property {Record<string, FilterInput>} filters
  */
 /**
  * Result of a data source load
@@ -75,10 +81,10 @@ export function encodeSearchParams(value: any, prefix?: string, out?: URLSearchP
  * - between requires a 2-value array, in requires an array
  * - empty/invalid filter values are ignored, not treated as "match nothing"
  * @param {Array<Record<string, any>>} rows
- * @param {Record<string, FilterState>} [filters]
+ * @param {Record<string, FilterInput>} [filters]
  * @returns {Array<Record<string, any>>}
  */
-export function applyFilters(rows: Array<Record<string, any>>, filters?: Record<string, FilterState>): Array<Record<string, any>>;
+export function applyFilters(rows: Array<Record<string, any>>, filters?: Record<string, FilterInput>): Array<Record<string, any>>;
 /**
  * Apply the first sort state to an array (single sort for now).
  * @param {Array<Record<string, any>>} rows
@@ -186,13 +192,19 @@ export type FilterState = {
     value?: any;
 };
 /**
+ * Accepted public filter values. A scalar is a shorthand for
+ * `{ operator: "contains", value }`; the structured form allows choosing
+ * the operator (`empty`/`notEmpty` have no value).
+ */
+export type FilterInput = FilterState | string | number | boolean;
+/**
  * Runtime query state. Single source of truth for pagination, sort and filters.
  */
 export type QueryState = {
     page: number;
     pageSize: number;
     sort: SortState[];
-    filters: Record<string, FilterState>;
+    filters: Record<string, FilterInput>;
 };
 /**
  * Result of a data source load

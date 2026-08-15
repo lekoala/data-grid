@@ -10,7 +10,6 @@ import { ArrayDataSource, FetchDataSource } from "./data-source.js";
 import addSelectOption from "./utils/addSelectOption.js";
 import debounce from "./utils/debounce.js";
 import getTextWidth from "./utils/getTextWidth.js";
-import interpolate from "./utils/interpolate.js";
 import randstr from "./utils/randstr.js";
 import {
     $,
@@ -45,8 +44,6 @@ import {
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} [hidden] - hide the column
  * @property {Boolean} [noSort] - allow disabling sort for a given column
- * @property {String | Function} [format] - legacy string interpolation or function returning HTML
- * @property {String} [defaultFormatValue] - default value to use for formatting
  * @property {String} [transform] - custom value transformation
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
  * @property {String} [editableType] - type of input (EditableColumn module)
@@ -58,7 +55,7 @@ import {
  * @property {FilterOption} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
- * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML). Legacy renderCell(td, ctx) is still supported (arity-based)
+ * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
  */
 
 /**
@@ -80,18 +77,15 @@ import {
  * Row action
  * @typedef Action
  * @property {String} name - the name of the action (button[data-action])
- * @property {String} [label] - the label of the button
+ * @property {String} [label] - the button label and accessible name
  * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
  * @property {String | Function} [href] - link for the action (string with {field} interpolation or (row) => string)
  * @property {Function} [visible] - (row) => Boolean, hides the action when falsy
  * @property {Function} [disabled] - (row) => Boolean, disables the button when truthy
- * @property {Function} [render] - ({ action, row, grid }) => content, replaces the button content
+ * @property {Function} [render] - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
  * @property {Boolean} [confirm] - needs confirmation
  * @property {Boolean} [default] - is the default row action
- * @property {String} [title] - the title of the button
  * @property {String} [class] - the class for the button
- * @property {String} [url] - link for the action
- * @property {String} [html] - custom button data
  */
 
 /**
@@ -175,6 +169,7 @@ import {
  * @property {String} items
  * @property {String} selected
  * @property {String} selectAll
+ * @property {String} toggleActions
  * @property {String} resizeColumn
  * @property {String} noData
  * @property {String} loading
@@ -202,6 +197,7 @@ let labels = {
     items: "items",
     selected: "selected",
     selectAll: "Select all rows",
+    toggleActions: "Toggle row actions",
     resizeColumn: "Resize column",
     noData: "No data",
     loading: "Loading…",
@@ -236,10 +232,14 @@ function normalizeQuery(query) {
             let operator;
             let value;
             if (typeof filter === "object") {
-                operator = filter.operator ?? "contains";
+                // Structured form: the operator is explicit.
+                operator = filter.operator;
+                if (!operator) {
+                    continue;
+                }
                 value = filter.value;
             } else {
-                // Legacy shorthand: { field: value } -> contains
+                // Shorthand: a scalar value means the default operator.
                 operator = "contains";
                 value = filter;
             }
@@ -451,12 +451,6 @@ class DataGrid extends BaseElement {
     _columns = [];
 
     /**
-     * Set by the ColumnResizer plugin while resizing, checked by sortData
-     * @type {Boolean}
-     */
-    _isResizing = false;
-
-    /**
      * The active data source, set by setupDataSource().
      * @type {DataSource|null}
      */
@@ -624,7 +618,6 @@ class DataGrid extends BaseElement {
             noSort: false,
             responsive: 1,
             responsiveHidden: false,
-            format: "",
             transform: "",
             filterType: "text",
             firstFilterOption: { value: "", text: "" },
@@ -986,13 +979,12 @@ class DataGrid extends BaseElement {
 
     /**
      * Apply a PageResult and render.
-     * @param {PageResult|Array<any>} result
+     * @param {PageResult} result
      */
     applyResult(result) {
-        const page = Array.isArray(result) ? { rows: result, total: result.length, meta: {} } : result;
-        this.rows = page.rows || [];
-        this.total = page.total ?? this.rows.length;
-        this.meta = page.meta || {};
+        this.rows = result.rows || [];
+        this.total = result.total ?? this.rows.length;
+        this.meta = result.meta || {};
 
         // Make sure we have a proper set of columns
         if (this.options.columns.length === 0 && this.rows.length) {
@@ -1393,8 +1385,8 @@ class DataGrid extends BaseElement {
 
     /**
      * Get selected rows or specific fields from selected rows.
-     * Only reflects the currently loaded page (compat). For a server-side
-     * selection spanning pages, use getSelectionState().
+     * Only reflects the currently loaded page.
+     * For cross-page/server-side selection, use getSelectionState().
      * If no keys are provided, returns the full row objects.
      * If one key is provided, returns an array of values for that key.
      * If multiple keys are provided, returns an array of objects with those keys and values.
@@ -1551,10 +1543,6 @@ class DataGrid extends BaseElement {
                 this.log("sorting prevented because column is not sortable");
                 return;
             }
-        }
-        if (this._isResizing) {
-            this.log("sorting prevented because resizing");
-            return;
         }
 
         // We clicked on a column, update sort state
@@ -1961,7 +1949,7 @@ class DataGrid extends BaseElement {
         // Reflect the current query filters into the input
         const field = column.field;
         if (field) {
-            const filterState = this._query.filters?.[field];
+            const filterState = /** @type {FilterState|undefined} */ (this._query.filters?.[field]);
             if (filterState) {
                 filter.value = filterState.value ?? "";
             }
@@ -2015,7 +2003,7 @@ class DataGrid extends BaseElement {
         const field = column.field;
         const firstFilterOption = column.firstFilterOption ||
             this.defaultColumn.firstFilterOption || { value: "", text: "" };
-        // An explicit list is authoritative and used as-is (backward compat)
+        // An explicit filter list is authoritative and returned as-is
         if (Array.isArray(column.filterList)) {
             return column.filterList;
         }
@@ -2088,13 +2076,7 @@ class DataGrid extends BaseElement {
 
                 const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
                 if (column.renderCell) {
-                    if (column.renderCell.length > 1) {
-                        // Legacy renderer: fills the td itself
-                        // @ts-expect-error legacy renderCell(td, ctx) signature
-                        column.renderCell(td, ctx);
-                    } else {
-                        applyCellContent(td, column.renderCell(ctx));
-                    }
+                    applyCellContent(td, column.renderCell(ctx));
                 } else {
                     this.renderDefaultCell(td, ctx);
                 }
@@ -2147,7 +2129,7 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Default cell renderer for base columns (transform / format).
+     * Default cell renderer for base columns (transform).
      * Editable cells are marked for the EditableColumn plugin.
      * @param {HTMLTableCellElement} td
      * @param {CellContext} ctx
@@ -2165,7 +2147,6 @@ class DataGrid extends BaseElement {
             td.dataset.rowIndex = `${i}`;
         }
 
-        // ... or formatting
         const v = item[field] ?? "";
         let tv;
         // TODO: make this modular
@@ -2180,29 +2161,7 @@ class DataGrid extends BaseElement {
                 tv = v;
                 break;
         }
-        if (column.format) {
-            // Only use formatting with values or if defaultFormatValue is set
-            if (column.defaultFormatValue !== undefined && (tv === "" || tv === null)) {
-                tv = `${column.defaultFormatValue}`;
-            }
-            if (typeof column.format === "string" && tv) {
-                td.innerHTML = interpolate(
-                    column.format,
-                    Object.assign(
-                        {
-                            _v: v,
-                            _tv: tv,
-                        },
-                        item,
-                    ),
-                );
-            } else if (column.format instanceof Function) {
-                const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr: td.parentElement });
-                td.innerHTML = val || tv || v;
-            }
-        } else {
-            td.textContent = tv;
-        }
+        td.textContent = tv;
     }
 
     paginate() {

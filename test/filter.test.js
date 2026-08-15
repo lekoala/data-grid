@@ -76,12 +76,25 @@ test("invalid between/in filters are ignored", () => {
     expect(applyFilters(rows, { id: { operator: "in", value: "1" } })).toEqual(rows);
 });
 
-test("legacy { field: value } filters normalize to contains", async () => {
+test("scalar shorthand filters normalize to contains", async () => {
     const inst = await makeReadyGrid(
         { columns: [{ field: "name" }], filterable: true, initialQuery: { filters: { name: "Alice" } } },
         [{ name: "Alice" }, { name: "Bob" }],
     );
     expect(inst.query.filters.name).toEqual({ operator: "contains", value: "Alice" });
+    document.body.removeChild(inst);
+});
+
+test("objects without an operator are ignored", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            filterable: true,
+            initialQuery: { filters: { age: { value: 3 }, name: { operator: "contains", value: "Alice" } } },
+        },
+        [{ name: "Alice" }, { name: "Bob" }],
+    );
+    expect(inst.query.filters).toEqual({ name: { operator: "contains", value: "Alice" } });
     document.body.removeChild(inst);
 });
 

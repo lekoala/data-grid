@@ -18,14 +18,6 @@ import {
  */
 class ColumnResizer extends BasePlugin {
     /**
-     * @param {import("../data-grid.js").default} grid
-     */
-    constructor(grid) {
-        super(grid);
-        this.isResizing = false;
-    }
-
-    /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
@@ -78,12 +70,6 @@ class ColumnResizer extends BasePlugin {
             const mouseUpHandler = () => {
                 grid.log("resized column");
 
-                // Prevent accidental sorting if mouse is not over resize handler
-                setTimeout(() => {
-                    this.isResizing = false;
-                    grid._isResizing = false;
-                }, 0);
-
                 removeClass(resizer, "dg-resizer-active");
                 if (grid.options.reorder) {
                     col.draggable = true;
@@ -108,11 +94,8 @@ class ColumnResizer extends BasePlugin {
             on(resizer, "mousedown", (/** @type {MouseEvent} */ e) => {
                 e.stopPropagation();
 
-                this.isResizing = true;
-                grid._isResizing = true;
-
                 const target = /** @type {HTMLElement} */ (e.target);
-                const currentCols = findAll(grid, "dg-head-columns th");
+                const currentCols = findAll(grid, "thead tr.dg-head-columns th");
                 const visibleCols = currentCols.filter((col) => {
                     return !col.hasAttribute("hidden");
                 });

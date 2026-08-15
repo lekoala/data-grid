@@ -12,15 +12,10 @@
       },
       {
         "field": "country",
-        "transform": "lowercase",
-        "format": "<l-i name='{_tv}' set='fl'></l-i>",
-        "notes": "icons with last icon"
+        "transform": "lowercase"
       },
       {
-        "field": "income",
-        "format": "<format-number type='currency' currency='EUR' value='{_v}'></format-number>",
-        "defaultFormatValue": "0",
-        "notes": "formatting using a custom element"
+        "field": "income"
       }
     ]
   },

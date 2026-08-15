@@ -26,10 +26,6 @@ class DraggableHeaders extends BasePlugin {
         const grid = this.grid;
         th.draggable = true;
         on(th, "dragstart", (/** @type {DragEvent} */ e) => {
-            if (grid._isResizing && e.preventDefault) {
-                e.preventDefault();
-                return;
-            }
             grid.log("reorder col");
             const dt = e.dataTransfer;
             if (!dt) {

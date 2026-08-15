@@ -29,14 +29,60 @@
     const actionDemo = await createStaticGrid(
       document.getElementById("action-demo"),
       "demo-actions.json",
-      { expand: true, responsive: true },
+      {
+        expand: true,
+        responsive: true,
+        actions: [
+          {
+            name: "edit",
+            label: "Edit",
+            default: true,
+            render: () => ({ html: "<l-i name='edit'></l-i>" }),
+          },
+          {
+            name: "delete",
+            label: "Delete",
+            class: "is-danger",
+            confirm: true,
+            href: "/delete/{id}",
+            render: () => ({ html: "<l-i name='trash'></l-i>" }),
+          },
+        ],
+      },
     );
     const action2Demo = await createStaticGrid(
       document.getElementById("action2-demo"),
       "demo-actions2.json",
-      { expand: true },
+      {
+        expand: true,
+        actions: [
+          {
+            name: "edit",
+            label: "Edit",
+            default: true,
+            render: () => ({ html: "<l-i name='edit'></l-i>" }),
+          },
+          {
+            name: "some",
+            label: "Some",
+            render: () => ({ html: "<l-i name='star'></l-i>" }),
+          },
+          {
+            name: "action",
+            label: "Action",
+            render: () => ({ html: "<l-i name='rocket'></l-i>" }),
+          },
+          {
+            name: "delete",
+            label: "Delete",
+            class: "is-danger",
+            confirm: true,
+            href: "/delete/{id}",
+            render: () => ({ html: "<l-i name='trash'></l-i>" }),
+          },
+        ],
+      },
     );
-
     actionDemo.addEventListener("action", (ev) => {
       let z = document.getElementById("debug-zone");
       z.innerText = JSON.stringify(ev.detail);

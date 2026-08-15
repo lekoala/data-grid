@@ -28,12 +28,19 @@
  */
 
 /**
+ * Accepted public filter values. A scalar is a shorthand for
+ * `{ operator: "contains", value }`; the structured form allows choosing
+ * the operator (`empty`/`notEmpty` have no value).
+ * @typedef {FilterState | String | Number | Boolean} FilterInput
+ */
+
+/**
  * Runtime query state. Single source of truth for pagination, sort and filters.
  * @typedef {Object} QueryState
  * @property {Number} page
  * @property {Number} pageSize
  * @property {SortState[]} sort
- * @property {Record<string, FilterState>} filters
+ * @property {Record<string, FilterInput>} filters
  */
 
 /**
@@ -119,7 +126,7 @@ function isNumericValue(value) {
  * - between requires a 2-value array, in requires an array
  * - empty/invalid filter values are ignored, not treated as "match nothing"
  * @param {Array<Record<string, any>>} rows
- * @param {Record<string, FilterState>} [filters]
+ * @param {Record<string, FilterInput>} [filters]
  * @returns {Array<Record<string, any>>}
  */
 export function applyFilters(rows, filters) {
@@ -128,8 +135,9 @@ export function applyFilters(rows, filters) {
     }
     return rows.filter((item) => {
         for (const [field, filter] of Object.entries(filters)) {
-            const operator = filter?.operator ?? "contains";
-            const value = filter?.value;
+            const state = typeof filter === "object" ? filter : { operator: "contains", value: filter };
+            const operator = state.operator ?? "contains";
+            const value = state.value;
             const cell = item[field];
             if (operator === "empty") {
                 if (cell !== "" && cell !== null && cell !== undefined) {

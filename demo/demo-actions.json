@@ -1,20 +1,6 @@
 {
   "options": {
     "pageSizes": [10, 100, 1000],
-    "actions": [
-      {
-        "name": "edit",
-        "html": "<l-i name='edit'></l-i>",
-        "default": true
-      },
-      {
-        "name": "delete",
-        "html": "<l-i name='trash'></l-i>",
-        "class": "is-danger",
-        "confirm": true,
-        "url": "/delete/{id}"
-      }
-    ],
     "columns": [
       {
         "field": "id",

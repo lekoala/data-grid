@@ -3,7 +3,6 @@ export default ColumnResizer;
  * Allows to resize columns
  */
 declare class ColumnResizer extends BasePlugin {
-    isResizing: boolean;
     /**
      * @param {String} resizeLabel
      */

@@ -248,8 +248,9 @@ function applyFilters(rows, filters) {
   }
   return rows.filter((item) => {
     for (const [field, filter] of Object.entries(filters)) {
-      const operator = filter?.operator ?? "contains";
-      const value = filter?.value;
+      const state = typeof filter === "object" ? filter : { operator: "contains", value: filter };
+      const operator = state.operator ?? "contains";
+      const value = state.value;
       const cell = item[field];
       if (operator === "empty") {
         if (cell !== "" && cell !== null && cell !== undefined) {
@@ -504,11 +505,6 @@ function getTextWidth(text, el = document.body, withPadding = false) {
   return Math.floor(metrics.width) + padding;
 }
 
-// src/utils/interpolate.js
-function interpolate(str, data) {
-  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2]);
-}
-
 // src/utils/randstr.js
 function randstr(prefix) {
   return Math.random().toString(36).replace("0.", prefix || "");
@@ -527,6 +523,7 @@ var labels = {
   items: "items",
   selected: "selected",
   selectAll: "Select all rows",
+  toggleActions: "Toggle row actions",
   resizeColumn: "Resize column",
   noData: "No data",
   loading: "Loading…",
@@ -550,7 +547,10 @@ function normalizeQuery(query) {
       let operator;
       let value;
       if (typeof filter === "object") {
-        operator = filter.operator ?? "contains";
+        operator = filter.operator;
+        if (!operator) {
+          continue;
+        }
         value = filter.value;
       } else {
         operator = "contains";
@@ -668,7 +668,6 @@ class DataGrid extends base_element_default {
   loading = false;
   error = null;
   _columns = [];
-  _isResizing = false;
   dataSource = null;
   table = null;
   btnFirst = null;
@@ -770,7 +769,6 @@ class DataGrid extends base_element_default {
       noSort: false,
       responsive: 1,
       responsiveHidden: false,
-      format: "",
       transform: "",
       filterType: "text",
       firstFilterOption: { value: "", text: "" }
@@ -1021,10 +1019,9 @@ class DataGrid extends base_element_default {
     }
   }
   applyResult(result) {
-    const page = Array.isArray(result) ? { rows: result, total: result.length, meta: {} } : result;
-    this.rows = page.rows || [];
-    this.total = page.total ?? this.rows.length;
-    this.meta = page.meta || {};
+    this.rows = result.rows || [];
+    this.total = result.total ?? this.rows.length;
+    this.meta = result.meta || {};
     if (this.options.columns.length === 0 && this.rows.length) {
       this.options.columns = this.convertColumns(Object.keys(this.rows[0]));
     } else {
@@ -1377,10 +1374,6 @@ class DataGrid extends base_element_default {
         this.log("sorting prevented because column is not sortable");
         return;
       }
-    }
-    if (this._isResizing) {
-      this.log("sorting prevented because resizing");
-      return;
     }
     if (col === null) {
       col = this.querySelector("thead tr.dg-head-columns th[aria-sort]");
@@ -1766,11 +1759,7 @@ class DataGrid extends base_element_default {
         td.setAttribute("data-name", column.title ?? "");
         const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
         if (column.renderCell) {
-          if (column.renderCell.length > 1) {
-            column.renderCell(td, ctx);
-          } else {
-            applyCellContent(td, column.renderCell(ctx));
-          }
+          applyCellContent(td, column.renderCell(ctx));
         } else {
           this.renderDefaultCell(td, ctx);
         }
@@ -1835,22 +1824,7 @@ class DataGrid extends base_element_default {
         tv = v;
         break;
     }
-    if (column.format) {
-      if (column.defaultFormatValue !== undefined && (tv === "" || tv === null)) {
-        tv = `${column.defaultFormatValue}`;
-      }
-      if (typeof column.format === "string" && tv) {
-        td.innerHTML = interpolate(column.format, Object.assign({
-          _v: v,
-          _tv: tv
-        }, item));
-      } else if (column.format instanceof Function) {
-        const val = column.format.call(this, { column, rowData: item, cellData: tv, td, tr: td.parentElement });
-        td.innerHTML = val || tv || v;
-      }
-    } else {
-      td.textContent = tv;
-    }
+    td.textContent = tv;
   }
   paginate() {
     this.log("paginate");
@@ -1938,10 +1912,6 @@ function elementOffset(el) {
 
 // src/plugins/column-resizer.js
 class ColumnResizer extends base_plugin_default {
-  constructor(grid) {
-    super(grid);
-    this.isResizing = false;
-  }
   afterRender(context) {
     if (context !== "table") {
       return;
@@ -1978,10 +1948,6 @@ class ColumnResizer extends base_plugin_default {
       };
       const mouseUpHandler = () => {
         grid.log("resized column");
-        setTimeout(() => {
-          this.isResizing = false;
-          grid._isResizing = false;
-        }, 0);
         removeClass(resizer, "dg-resizer-active");
         if (grid.options.reorder) {
           col.draggable = true;
@@ -1999,10 +1965,8 @@ class ColumnResizer extends base_plugin_default {
       });
       on(resizer, "mousedown", (e) => {
         e.stopPropagation();
-        this.isResizing = true;
-        grid._isResizing = true;
         const target = e.target;
-        const currentCols = findAll(grid, "dg-head-columns th");
+        const currentCols = findAll(grid, "thead tr.dg-head-columns th");
         const visibleCols = currentCols.filter((col2) => {
           return !col2.hasAttribute("hidden");
         });
@@ -2152,10 +2116,6 @@ class DraggableHeaders extends base_plugin_default {
     const grid = this.grid;
     th.draggable = true;
     on(th, "dragstart", (e) => {
-      if (grid._isResizing && e.preventDefault) {
-        e.preventDefault();
-        return;
-      }
       grid.log("reorder col");
       const dt = e.dataTransfer;
       if (!dt) {
@@ -2883,6 +2843,11 @@ class ResponsiveGrid extends base_plugin_default {
 }
 var responsive_grid_default = ResponsiveGrid;
 
+// src/utils/interpolate.js
+function interpolate(str, data) {
+  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2]);
+}
+
 // src/plugins/row-actions.js
 class RowActions extends base_plugin_default {
   hasActions() {
@@ -2916,10 +2881,13 @@ class RowActions extends base_plugin_default {
     actionsToggle.type = "button";
     actionsToggle.classList.add("dg-actions-toggle");
     actionsToggle.innerHTML = "☰";
+    actionsToggle.setAttribute("aria-label", labels2.toggleActions);
+    actionsToggle.setAttribute("aria-expanded", "false");
     on(actionsToggle, "click", (ev) => {
       ev.stopPropagation();
       const parent = ev.target.parentElement;
-      parent?.classList.toggle("dg-actions-expand");
+      const expanded = parent?.classList.toggle("dg-actions-expand") ?? false;
+      actionsToggle.setAttribute("aria-expanded", expanded ? "true" : "false");
     });
     fragment.appendChild(actionsToggle);
     for (const action of grid.options.actions) {
@@ -2949,14 +2917,12 @@ class RowActions extends base_plugin_default {
         el.type = "button";
       }
       if (content === null || content === undefined) {
-        if (action.html) {
-          el.innerHTML = action.html;
-          el.setAttribute("aria-label", action.label ?? action.name);
-        } else {
-          el.textContent = action.label ?? action.title ?? action.name;
-        }
+        el.textContent = action.label ?? action.name;
       } else {
         this.applyContent(el, content);
+        if (content instanceof Node || typeof content === "object" && content.html !== undefined) {
+          el.setAttribute("aria-label", action.label ?? action.name);
+        }
       }
     }
     if (href !== null && !el.hasAttribute("href")) {
@@ -2966,9 +2932,6 @@ class RowActions extends base_plugin_default {
     if (action.intent) {
       el.dataset.intent = action.intent;
       el.classList.add(`dg-intent-${action.intent}`);
-    }
-    if (action.title) {
-      el.title = action.title;
     }
     if (action.class) {
       el.classList.add(...action.class.split(" "));
@@ -3248,4 +3211,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=A9AA9EEFC7D40DE364756E2164756E21
+//# debugId=390F68C7CD4F1AB264756E2164756E21

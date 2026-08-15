@@ -116,7 +116,14 @@ export async function handleApi(req, url) {
  * @returns {Promise<Response>}
  */
 async function handleStatic(url) {
-    const path = url.pathname === "/" ? "/demo/index.html" : url.pathname;
+    let path = url.pathname;
+    if (path === "/") {
+        // Redirect so relative links of the demo pages resolve under /demo/.
+        return new NativeResponse(null, { status: 302, headers: { Location: "/demo/" } });
+    }
+    if (path.endsWith("/")) {
+        path += "index.html";
+    }
     const file = Bun.file(`.${path}`);
     if (await file.exists()) {
         return new NativeResponse(file);

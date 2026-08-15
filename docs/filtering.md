@@ -6,7 +6,26 @@ with `filterType: "select"`.
 
 ## Filter state
 
-Filters live in the query state as a structured map:
+Filters accept two forms. A scalar value is a shorthand for the default
+`contains` operator; the structured form lets you choose the operator
+(`empty`/`notEmpty` have no value):
+
+```js
+// shorthand (contains)
+filters: {
+    name: "alice",
+    active: true,
+}
+
+// explicit
+filters: {
+    name: { operator: "startsWith", value: "ali" },
+    deletedAt: { operator: "empty" },
+}
+```
+
+The public API accepts `FilterValue | FilterState`; internally the query state
+is always normalized to the structured `FilterState`, including `grid.query`:
 
 ```js
 grid.query.filters
@@ -37,7 +56,7 @@ You can set filters programmatically:
 
 ```js
 grid.setQuery({
-    filters: { status: { operator: "eq", value: "active" } },
+    filters: { status: { operator: "eq", value: "active" }, name: "alice" },
 });
 ```
 

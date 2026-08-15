@@ -49,14 +49,6 @@ export type Column = {
      */
     noSort?: boolean | undefined;
     /**
-     * - legacy string interpolation or function returning HTML
-     */
-    format?: string | Function | undefined;
-    /**
-     * - default value to use for formatting
-     */
-    defaultFormatValue?: string | undefined;
-    /**
      * - custom value transformation
      */
     transform?: string | undefined;
@@ -101,7 +93,7 @@ export type Column = {
      */
     renderFilterCell?: ((th: HTMLTableCellElement, ctx: Object) => void) | undefined;
     /**
-     * - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML). Legacy renderCell(td, ctx) is still supported (arity-based)
+     * - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
      */
     renderCell?: ((ctx: Object) => (any)) | undefined;
 };
@@ -129,7 +121,7 @@ export type Action = {
      */
     name: string;
     /**
-     * - the label of the button
+     * - the button label and accessible name
      */
     label?: string | undefined;
     /**
@@ -149,7 +141,7 @@ export type Action = {
      */
     disabled?: Function | undefined;
     /**
-     * - ({ action, row, grid }) => content, replaces the button content
+     * - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
      */
     render?: Function | undefined;
     /**
@@ -161,21 +153,9 @@ export type Action = {
      */
     default?: boolean | undefined;
     /**
-     * - the title of the button
-     */
-    title?: string | undefined;
-    /**
      * - the class for the button
      */
     class?: string | undefined;
-    /**
-     * - link for the action
-     */
-    url?: string | undefined;
-    /**
-     * - custom button data
-     */
-    html?: string | undefined;
 };
 /**
  * Bulk action applied to the whole selection, server-first.
@@ -393,6 +373,7 @@ export type Labels = {
     items: string;
     selected: string;
     selectAll: string;
+    toggleActions: string;
     resizeColumn: string;
     noData: string;
     loading: string;
@@ -501,11 +482,6 @@ export class DataGrid extends BaseElement {
      * @type {Column[]}
      */
     _columns: Column[];
-    /**
-     * Set by the ColumnResizer plugin while resizing, checked by sortData
-     * @type {Boolean}
-     */
-    _isResizing: boolean;
     /**
      * The active data source, set by setupDataSource().
      * @type {DataSource|null}
@@ -646,9 +622,9 @@ export class DataGrid extends BaseElement {
     public load(): Promise<void>;
     /**
      * Apply a PageResult and render.
-     * @param {PageResult|Array<any>} result
+     * @param {PageResult} result
      */
-    applyResult(result: PageResult | Array<any>): void;
+    applyResult(result: PageResult): void;
     /**
      * Pick the data source based on configuration.
      */
@@ -803,8 +779,8 @@ export class DataGrid extends BaseElement {
     public clearSelection(): void;
     /**
      * Get selected rows or specific fields from selected rows.
-     * Only reflects the currently loaded page (compat). For a server-side
-     * selection spanning pages, use getSelectionState().
+     * Only reflects the currently loaded page.
+     * For cross-page/server-side selection, use getSelectionState().
      * If no keys are provided, returns the full row objects.
      * If one key is provided, returns an array of values for that key.
      * If multiple keys are provided, returns an array of objects with those keys and values.
@@ -910,7 +886,7 @@ export class DataGrid extends BaseElement {
      */
     renderBody(): void;
     /**
-     * Default cell renderer for base columns (transform / format).
+     * Default cell renderer for base columns (transform).
      * Editable cells are marked for the EditableColumn plugin.
      * @param {HTMLTableCellElement} td
      * @param {CellContext} ctx

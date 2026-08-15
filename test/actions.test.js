@@ -63,24 +63,6 @@ test("renderCell returning undefined leaves an empty cell", async () => {
     document.body.removeChild(inst);
 });
 
-test("legacy renderCell(td, ctx) still works (arity-based)", async () => {
-    const inst = await makeReadyGrid(
-        {
-            columns: [
-                {
-                    field: "name",
-                    renderCell: (td, ctx) => {
-                        td.textContent = `legacy ${ctx.value}`;
-                    },
-                },
-            ],
-        },
-        [{ name: "a" }],
-    );
-    expect(inst.querySelector("tbody td").textContent).toBe("legacy a");
-    document.body.removeChild(inst);
-});
-
 test("actions expose data-action and data-intent", async () => {
     const inst = await makeReadyGrid(
         {
@@ -103,19 +85,46 @@ test("actions expose data-action and data-intent", async () => {
     document.body.removeChild(inst);
 });
 
-test("legacy action fields (title/html/class/url) still work", async () => {
+test("action class is applied and label names a custom-rendered button", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name" }],
-            actions: [{ name: "edit", title: "Edit", html: "<i>e</i>", class: "is-danger", url: "/x/{id}" }],
+            actions: [{ name: "edit", label: "Edit", class: "is-danger", render: () => ({ html: "<i>e</i>" }) }],
         },
         [{ id: 1, name: "a" }],
         { RowActions },
     );
     const button = inst.querySelector('tbody td[data-column-id="$actions"] button[data-action]');
-    expect(button.title).toBe("Edit");
-    expect(button.querySelector("i")?.textContent).toBe("e");
     expect(button.classList.contains("is-danger")).toBe(true);
+    expect(button.querySelector("i")?.textContent).toBe("e");
+    expect(button.getAttribute("aria-label")).toBe("Edit");
+    document.body.removeChild(inst);
+});
+
+test("a renderer returning its own button keeps its semantics", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                {
+                    name: "edit",
+                    label: "Edit",
+                    render: () => {
+                        const b = document.createElement("button");
+                        b.type = "button";
+                        b.textContent = "custom";
+                        return b;
+                    },
+                },
+            ],
+        },
+        [{ id: 1, name: "a" }],
+        { RowActions },
+    );
+    const button = inst.querySelector('tbody td[data-column-id="$actions"] button[data-action]');
+    expect(button.textContent).toBe("custom");
+    expect(button.getAttribute("aria-label")).toBeNull();
+    expect(button.dataset.action).toBe("edit");
     document.body.removeChild(inst);
 });
 
