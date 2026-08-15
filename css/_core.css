@@ -632,6 +632,8 @@ data-grid tfoot.dg-footer-compact .dg-input-page {
 
 data-grid th.dg-sortable {
   cursor: pointer;
+  /* Let the button own the padding so the whole cell is interactive */
+  padding: 0;
 }
 
 data-grid th.dg-sortable > .dg-sort,
@@ -652,7 +654,7 @@ data-grid th.dg-sortable > .dg-sort:focus {
   line-height: inherit;
   margin: 0;
   min-height: 0;
-  padding: 0;
+  padding: var(--dg-cell-padding-block) var(--dg-cell-padding-inline);
   text-align: inherit;
   text-decoration: none;
   width: 100%;
@@ -662,21 +664,15 @@ data-grid th.dg-sortable:focus-within {
   box-shadow: inset 0 -2px 0 var(--dg-accent);
 }
 
-data-grid th[aria-sort] > .dg-sort::after {
-  border: solid transparent;
-  content: " ";
-  height: 0;
-  width: 0;
-  border-width: 4px 5px;
+data-grid .dg-sort-indicator {
+  color: var(--dg-muted-color);
   flex: none;
+  font-size: 12px;
+  inline-size: 12px;
+  line-height: 1;
+  text-align: center;
 }
 
-data-grid th[aria-sort="ascending"] > .dg-sort::after {
-  border-top-width: 0;
-  border-bottom-color: var(--dg-accent);
-}
-
-data-grid th[aria-sort="descending"] > .dg-sort::after {
-  border-bottom-width: 0;
-  border-top-color: var(--dg-accent);
+data-grid th[aria-sort] .dg-sort-indicator {
+  color: var(--dg-accent);
 }

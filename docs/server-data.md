@@ -87,6 +87,10 @@ The server helpers (`applyFilters`, `applySort`, `paginate`, `parseResult`) are
 exported from `src/data-source.js` and reused by `demo/server.js` so the client
 and the server speak the same contract.
 
+`applySort` always places empty values (`null`, `undefined`, empty string) at the
+end of the page, whatever the direction. For `FetchDataSource`, the server
+remains responsible for its own sort semantics.
+
 ## Errors
 
 When a request fails, the grid sets `data-error`, clears `data-loading`, fills

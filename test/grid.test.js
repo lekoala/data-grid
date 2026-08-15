@@ -81,25 +81,34 @@ test("clicking the sort button toggles aria-sort/data-sort and sorts rows", asyn
 
     const th = inst.querySelector("thead tr.dg-head-columns th.dg-sortable");
     const button = th.querySelector("button");
+    const indicator = button.querySelector(".dg-sort-indicator");
     expect(button).toBeTruthy();
+    expect(indicator).toBeTruthy();
+    // Decorative glyph: always present, kept out of the accessibility tree
+    expect(indicator.getAttribute("aria-hidden")).toBe("true");
+    // Unsorted sortable column shows the neutral affordance
+    expect(indicator.textContent).toBe("↕");
     expect(th.hasAttribute("aria-sort")).toBe(false);
     expect(th.hasAttribute("data-sort")).toBe(false);
 
     button.click();
     expect(th.getAttribute("aria-sort")).toBe("ascending");
     expect(th.getAttribute("data-sort")).toBe("asc");
+    expect(indicator.textContent).toBe("↑");
     await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("a");
 
     button.click();
     expect(th.getAttribute("aria-sort")).toBe("descending");
     expect(th.getAttribute("data-sort")).toBe("desc");
+    expect(indicator.textContent).toBe("↓");
     await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("b");
 
     button.click();
     expect(th.hasAttribute("aria-sort")).toBe(false);
     expect(th.hasAttribute("data-sort")).toBe(false);
+    expect(indicator.textContent).toBe("↕");
     removeGrid(inst);
 });
 

@@ -352,6 +352,11 @@ function applySort(rows, sort) {
   const { field, direction } = sort[0];
   const dir = direction === "desc" ? -1 : 1;
   return rows.slice().sort((a, b) => {
+    const emptyA = a[field] === null || a[field] === undefined || a[field] === "";
+    const emptyB = b[field] === null || b[field] === undefined || b[field] === "";
+    if (emptyA !== emptyB) {
+      return emptyA ? 1 : -1;
+    }
     if (typeof a[field] === "number" && typeof b[field] === "number") {
       return (a[field] - b[field]) * dir;
     }
@@ -1485,12 +1490,17 @@ class DataGrid extends base_element_default {
     const headers = findAll(this, "thead tr.dg-head-columns th");
     for (const th of headers) {
       const match = sort.find((s) => s.field === th.getAttribute("field"));
+      const indicator = th.querySelector(".dg-sort-indicator");
       if (match) {
         th.setAttribute("aria-sort", match.direction === "asc" ? "ascending" : "descending");
         setAttribute(th, "data-sort", match.direction);
+        if (indicator)
+          indicator.textContent = match.direction === "asc" ? "↑" : "↓";
       } else {
         th.removeAttribute("aria-sort");
         th.removeAttribute("data-sort");
+        if (indicator)
+          indicator.textContent = "↕";
       }
     }
     return this.setQuery({ sort });
@@ -1700,7 +1710,20 @@ class DataGrid extends base_element_default {
       const button = ce("button");
       button.type = "button";
       button.classList.add("dg-sort");
-      button.textContent = column.title ?? "";
+      const label = ce("span");
+      label.classList.add("dg-sort-label");
+      label.textContent = column.title ?? "";
+      const indicator = ce("span");
+      indicator.classList.add("dg-sort-indicator");
+      indicator.setAttribute("aria-hidden", "true");
+      if (direction === "asc") {
+        indicator.textContent = "↑";
+      } else if (direction === "desc") {
+        indicator.textContent = "↓";
+      } else {
+        indicator.textContent = "↕";
+      }
+      button.append(label, indicator);
       th.appendChild(button);
     } else {
       th.textContent = column.title ?? "";
@@ -3411,4 +3434,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=BAACB66A928DB6CE64756E2164756E21
+//# debugId=2E802093249D42CD64756E2164756E21

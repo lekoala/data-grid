@@ -1708,12 +1708,15 @@ class DataGrid extends BaseElement {
         const headers = findAll(this, "thead tr.dg-head-columns th");
         for (const th of headers) {
             const match = sort.find((s) => s.field === th.getAttribute("field"));
+            const indicator = th.querySelector(".dg-sort-indicator");
             if (match) {
                 th.setAttribute("aria-sort", match.direction === "asc" ? "ascending" : "descending");
                 setAttribute(th, "data-sort", match.direction);
+                if (indicator) indicator.textContent = match.direction === "asc" ? "↑" : "↓";
             } else {
                 th.removeAttribute("aria-sort");
                 th.removeAttribute("data-sort");
+                if (indicator) indicator.textContent = "↕";
             }
         }
 
@@ -2000,7 +2003,26 @@ class DataGrid extends BaseElement {
             const button = ce("button");
             button.type = "button";
             button.classList.add("dg-sort");
-            button.textContent = column.title ?? "";
+
+            const label = ce("span");
+            label.classList.add("dg-sort-label");
+            label.textContent = column.title ?? "";
+
+            // Always-visible affordance: neutral glyph when unsorted, the
+            // direction glyph when active. Kept out of the accessibility tree
+            // (aria-hidden) so the accessible name stays just the column title.
+            const indicator = ce("span");
+            indicator.classList.add("dg-sort-indicator");
+            indicator.setAttribute("aria-hidden", "true");
+            if (direction === "asc") {
+                indicator.textContent = "↑";
+            } else if (direction === "desc") {
+                indicator.textContent = "↓";
+            } else {
+                indicator.textContent = "↕";
+            }
+
+            button.append(label, indicator);
             th.appendChild(button);
         } else {
             th.textContent = column.title ?? "";

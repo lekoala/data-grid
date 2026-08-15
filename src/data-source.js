@@ -231,6 +231,13 @@ export function applySort(rows, sort) {
     const { field, direction } = sort[0];
     const dir = direction === "desc" ? -1 : 1;
     return rows.slice().sort((a, b) => {
+        // Empty values (null/undefined/empty string) always go last, whatever
+        // the direction: they don't meaningfully compare with real values.
+        const emptyA = a[field] === null || a[field] === undefined || a[field] === "";
+        const emptyB = b[field] === null || b[field] === undefined || b[field] === "";
+        if (emptyA !== emptyB) {
+            return emptyA ? 1 : -1;
+        }
         if (typeof a[field] === "number" && typeof b[field] === "number") {
             return (a[field] - b[field]) * dir;
         }

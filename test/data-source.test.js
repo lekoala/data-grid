@@ -44,6 +44,26 @@ test("applySort sorts asc and desc", () => {
     expect(applySort(rows, [{ field: "n", direction: "desc" }]).map((r) => r.n)).toEqual([3, 2, 1]);
 });
 
+test("applySort always keeps null/undefined/empty values last", () => {
+    const rows = [{ name: "Bob" }, { name: "" }, { name: "Alice" }, { name: null }, { name: undefined }];
+    const names = (result) => result.map((r) => r.name);
+
+    expect(names(applySort(rows, [{ field: "name", direction: "asc" }]))).toEqual([
+        "Alice",
+        "Bob",
+        "",
+        null,
+        undefined,
+    ]);
+    expect(names(applySort(rows, [{ field: "name", direction: "desc" }]))).toEqual([
+        "Bob",
+        "Alice",
+        "",
+        null,
+        undefined,
+    ]);
+});
+
 test("paginate slices a page", () => {
     const rows = [1, 2, 3, 4, 5].map((v) => ({ v }));
     expect(paginate(rows, 2, 2)).toEqual([{ v: 3 }, { v: 4 }]);
