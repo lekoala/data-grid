@@ -410,12 +410,27 @@ data-grid select {
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-data-grid input:not([type="checkbox"]):focus,
-data-grid select:focus,
-data-grid button:focus {
+/* Form controls keep a full ring on keyboard focus */
+data-grid input:not([type="checkbox"]):focus-visible,
+data-grid select:focus-visible {
   border-color: var(--dg-accent);
   box-shadow: 0 0 0 3px var(--dg-focus-ring);
   outline: 0;
+}
+
+/* Regular buttons: accent border only */
+data-grid button:focus-visible {
+  border-color: var(--dg-accent);
+  outline: 0;
+}
+
+/* Small icon controls: an inset outline that stays inside the control */
+data-grid .dg-actions button:focus-visible,
+data-grid .dg-pagination button:focus-visible,
+data-grid .dg-responsive-toggle:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 data-grid input:not([type="checkbox"], [type="radio"])::placeholder {
@@ -658,10 +673,10 @@ data-grid th[aria-sort] > .dg-sort::after {
 
 data-grid th[aria-sort="ascending"] > .dg-sort::after {
   border-top-width: 0;
-  border-bottom-color: var(--dg-header-color);
+  border-bottom-color: var(--dg-accent);
 }
 
 data-grid th[aria-sort="descending"] > .dg-sort::after {
   border-bottom-width: 0;
-  border-top-color: var(--dg-header-color);
+  border-top-color: var(--dg-accent);
 }

@@ -1278,6 +1278,26 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Reconcile the rendered cells (header, filters and body) with the current
+     * column visibility without rebuilding the DOM. Used whenever only the
+     * visibility changed: showColumn/hideColumn and ResponsiveGrid adaptations.
+     * The column list is rebuilt so plugin columns (ex: the responsive toggle)
+     * reflect their fresh hidden state.
+     */
+    _syncColumnVisibility() {
+        this._columns = this.buildColumns();
+        for (const column of this.getColumns()) {
+            const id = column.id ?? column.field;
+            const hidden = isColumnHidden(column);
+            for (const cell of findAll(this, `[data-column-id="${id}"]`)) {
+                cell.toggleAttribute("hidden", hidden);
+                cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
+            }
+        }
+        this.renderFooter();
+    }
+
+    /**
      * @public
      * @param {String} field
      * @param {Boolean} [render]
@@ -1285,8 +1305,7 @@ class DataGrid extends BaseElement {
     showColumn(field, render = true) {
         this.setColProp(field, "hidden", false);
 
-        // We need to render the whole table otherwise layout fixed won't do its job
-        if (render) this.renderTable();
+        if (render) this._syncColumnVisibility();
 
         dispatch(this, "columnVisibility", {
             col: field,
@@ -1302,8 +1321,7 @@ class DataGrid extends BaseElement {
     hideColumn(field, render = true) {
         this.setColProp(field, "hidden", true);
 
-        // We need to render the whole table otherwise layout fixed won't do its job
-        if (render) this.renderTable();
+        if (render) this._syncColumnVisibility();
 
         dispatch(this, "columnVisibility", {
             col: field,
@@ -1879,6 +1897,9 @@ class DataGrid extends BaseElement {
             if (column.class) {
                 addClass(th, column.class);
             }
+            if (isColumnHidden(column)) {
+                th.setAttribute("hidden", "");
+            }
 
             tr.appendChild(th);
             if (!isColumnHidden(column)) {
@@ -2194,7 +2215,8 @@ class DataGrid extends BaseElement {
                 const td = ce("td");
                 setAttribute(td, "data-column-id", column.id ?? field);
                 applyColumnDefinition(td, column);
-                // This is required for pure css responsive layout
+                // Kept for ResponsiveGrid: the expanded child rows label each
+                // hidden value with the column title.
                 td.setAttribute("data-name", column.title ?? "");
 
                 const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };

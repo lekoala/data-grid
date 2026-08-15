@@ -43,6 +43,9 @@ export function view() {
  * @param {Number} ms
  */
 export async function waitFor(view, expr, ms = 8000) {
+    // Serialize so double quotes in the expression cannot break the generated
+    // `throw new Error(...)` string literal.
+    const timeoutMessage = JSON.stringify(`timeout waiting for: ${expr}`);
     await view.evaluate(`(async () => {
         const t0 = Date.now();
         while (true) {
@@ -51,7 +54,7 @@ export async function waitFor(view, expr, ms = 8000) {
             } catch {
                 // expression not defined yet
             }
-            if (Date.now() - t0 > ${ms}) throw new Error("timeout waiting for: ${expr}");
+            if (Date.now() - t0 > ${ms}) throw new Error(${timeoutMessage});
             await new Promise((r) => setTimeout(r, 50));
         }
     })()`);

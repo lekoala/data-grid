@@ -13,36 +13,39 @@
   <script type="module">
     import { ArrayDataSource, DataGrid } from "../data-grid.js";
 
+    const select = document.getElementById("locale");
+    const current = document.getElementById("current-locale");
+    /** @type {DataGrid|null} */
+    let grid = null;
+
+    /**
+     * Apply a locale. Works before or after the grid exists: setLabels()
+     * refreshes connected grids, and a grid created later renders translated.
+     * @param {String} locale
+     */
+    async function setLocale(locale) {
+      try {
+        const { default: labels } = await import(`../locales/${locale}.js`);
+        DataGrid.setLabels(labels);
+        document.documentElement.lang = locale;
+        grid?.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+        current.textContent = locale;
+      } catch (error) {
+        console.error(`Unable to load locale "${locale}"`, error);
+      }
+    }
+
+    select.addEventListener("change", () => setLocale(select.value));
+
     const data = await (await fetch("demo-simple.json")).json();
-    const grid = new DataGrid({
+    grid = new DataGrid({
       columns: data.options.columns,
       dataSource: new ArrayDataSource(data.data),
       selectable: true,
       bulkActions: [{ name: "export", label: "Export" }],
       initialQuery: { pageSize: 10 },
     });
-
-    const connected = new Promise((resolve) => {
-      grid.addEventListener("connected", resolve, { once: true });
-    });
-
     document.getElementById("i18n-demo").replaceChildren(grid);
-    await connected;
-
-    const select = document.getElementById("locale");
-
-    select.addEventListener("change", async () => {
-      const locale = select.value;
-
-      try {
-        const { default: labels } = await import(`../locales/${locale}.js`);
-        DataGrid.setLabels(labels);
-        document.documentElement.lang = locale;
-        grid.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
-      } catch (error) {
-        console.error(`Unable to load locale "${locale}"`, error);
-      }
-    });
   </script>
 </head>
 
@@ -88,6 +91,7 @@
       <option value="id">Bahasa Indonesia</option>
       <option value="pl">Polski</option>
     </select>
+    <output id="current-locale" class="demo-meta">en</output>
 
     <div class="demo-grid">
       <div id="i18n-demo"></div>

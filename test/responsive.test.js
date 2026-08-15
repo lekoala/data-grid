@@ -87,15 +87,15 @@ test("higher priority values are hidden first", async () => {
 test("a single render per changed cycle", async () => {
     const inst = await makeReadyGrid({ columns: COLS });
     let calls = 0;
-    const orig = inst.renderTable.bind(inst);
-    inst.renderTable = () => {
+    const orig = inst._syncColumnVisibility.bind(inst);
+    inst._syncColumnVisibility = () => {
         calls++;
         orig();
     };
-    // No change -> no render
+    // No change -> no sync
     forceResize(inst, 1000);
     expect(calls).toBe(0);
-    // Change -> exactly one render
+    // Change -> exactly one sync
     forceResize(inst, 100);
     expect(calls).toBe(1);
     document.body.removeChild(inst);
@@ -142,5 +142,30 @@ test("responsive works without a footer", async () => {
     inst.querySelector("tfoot")?.remove();
     expect(() => forceResize(inst, 100)).not.toThrow();
     expect(hiddenFields(inst)).toEqual(["b", "c", "d"]);
+    document.body.removeChild(inst);
+});
+
+test("hidden columns are reflected on header and body cells", async () => {
+    const inst = await makeReadyGrid({ columns: COLS });
+    forceResize(inst, 100);
+    const th = inst.querySelector('thead tr.dg-head-columns th[field="d"]');
+    const td = inst.querySelector('tbody td[data-column-id="d"]');
+    expect(th.hasAttribute("hidden")).toBe(true);
+    expect(td.hasAttribute("hidden")).toBe(true);
+    forceResize(inst, 1000);
+    expect(th.hasAttribute("hidden")).toBe(false);
+    expect(td.hasAttribute("hidden")).toBe(false);
+    document.body.removeChild(inst);
+});
+
+test("the responsive toggle column always exists and toggles visibility", async () => {
+    const inst = await makeReadyGrid({ columns: COLS });
+    const th = inst.querySelector('thead tr.dg-head-columns th[data-column-id="$responsive"]');
+    expect(th).toBeTruthy();
+    expect(th.hasAttribute("hidden")).toBe(true);
+    forceResize(inst, 100);
+    expect(th.hasAttribute("hidden")).toBe(false);
+    forceResize(inst, 1000);
+    expect(th.hasAttribute("hidden")).toBe(true);
     document.body.removeChild(inst);
 });

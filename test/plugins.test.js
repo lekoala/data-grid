@@ -120,3 +120,27 @@ test("plugins are disconnected once", async () => {
     await tick();
     expect(disconnectedCount).toBe(1);
 });
+
+test("hideColumn and showColumn sync header, body and footer", async () => {
+    const inst = await makeReadyGrid(
+        {},
+        {
+            columns: [
+                { field: "name", title: "Name" },
+                { field: "age", title: "Age" },
+            ],
+        },
+        [{ name: "a", age: 1 }],
+    );
+
+    inst.hideColumn("age");
+    expect(inst.querySelector('thead th[data-column-id="age"]').hasAttribute("hidden")).toBe(true);
+    expect(inst.querySelector('tbody td[data-column-id="age"]').hasAttribute("hidden")).toBe(true);
+    expect(inst.tfoot?.querySelector("td").colSpan).toBe(1);
+
+    inst.showColumn("age");
+    expect(inst.querySelector('thead th[data-column-id="age"]').hasAttribute("hidden")).toBe(false);
+    expect(inst.querySelector('tbody td[data-column-id="age"]').hasAttribute("hidden")).toBe(false);
+    expect(inst.tfoot?.querySelector("td").colSpan).toBe(2);
+    document.body.removeChild(inst);
+});

@@ -1222,10 +1222,22 @@ class DataGrid extends base_element_default {
       return isColumnHidden(col);
     });
   }
+  _syncColumnVisibility() {
+    this._columns = this.buildColumns();
+    for (const column of this.getColumns()) {
+      const id = column.id ?? column.field;
+      const hidden = isColumnHidden(column);
+      for (const cell of findAll(this, `[data-column-id="${id}"]`)) {
+        cell.toggleAttribute("hidden", hidden);
+        cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
+      }
+    }
+    this.renderFooter();
+  }
   showColumn(field, render = true) {
     this.setColProp(field, "hidden", false);
     if (render)
-      this.renderTable();
+      this._syncColumnVisibility();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "visible"
@@ -1234,7 +1246,7 @@ class DataGrid extends base_element_default {
   hideColumn(field, render = true) {
     this.setColProp(field, "hidden", true);
     if (render)
-      this.renderTable();
+      this._syncColumnVisibility();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "hidden"
@@ -1605,6 +1617,9 @@ class DataGrid extends base_element_default {
       }
       if (column.class) {
         addClass(th, column.class);
+      }
+      if (isColumnHidden(column)) {
+        th.setAttribute("hidden", "");
       }
       tr.appendChild(th);
       if (!isColumnHidden(column)) {
@@ -2631,6 +2646,7 @@ var autosize_column_default = AutosizeColumn;
 // src/plugins/responsive-grid.js
 var RESPONSIVE_CLASS = "dg-responsive";
 var RESPONSIVE_TOGGLE_WIDTH = 40;
+var RESTORE_HYSTERESIS = 8;
 function sortByPriority(list) {
   return list.sort((a, b) => {
     const v1 = Number.parseInt(a.dataset.responsive ?? "") || 1;
@@ -2645,6 +2661,7 @@ class ResponsiveGrid extends base_plugin_default {
     this.observerBlocked = false;
     this.unblockTimeout = null;
     this._lastEntry = null;
+    this._lastProcessedWidth = null;
     this._scheduleResize = debounce(() => this.resize(), 100);
     this.observer = new ResizeObserver((entries) => {
       this._lastEntry = entries[entries.length - 1];
@@ -2683,7 +2700,7 @@ class ResponsiveGrid extends base_plugin_default {
     this.grid.style.overflowX = "unset";
   }
   extendColumns(columns) {
-    if (!this.grid.options.responsiveToggle || !this.hasHiddenColumns()) {
+    if (!this.grid.options.responsive || !this.grid.options.responsiveToggle) {
       return;
     }
     columns.unshift({
@@ -2693,6 +2710,7 @@ class ResponsiveGrid extends base_plugin_default {
       noSort: true,
       title: "",
       class: `${RESPONSIVE_CLASS}-toggle`,
+      hidden: !this.hasHiddenColumns(),
       renderHeaderCell: (th) => this.createHeaderCell(th),
       renderFilterCell: () => this.createFilterCell(),
       renderCell: () => this.createDataCell()
@@ -2707,8 +2725,13 @@ class ResponsiveGrid extends base_plugin_default {
   unblockObserver() {
     this.unblockTimeout = setTimeout(() => {
       this.observerBlocked = false;
-      if (this._lastEntry) {
-        this.resize();
+      const entry = this._lastEntry;
+      if (entry) {
+        const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
+        const size = Math.round(contentBoxSize.inlineSize);
+        if (size !== this._lastProcessedWidth) {
+          this.resize();
+        }
       }
     }, 200);
   }
@@ -2756,6 +2779,10 @@ class ResponsiveGrid extends base_plugin_default {
     }
     const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
     const size = Math.round(contentBoxSize.inlineSize);
+    if (size === this._lastProcessedWidth) {
+      return;
+    }
+    this._lastProcessedWidth = size;
     const preferredWidth = (th) => {
       return Number.parseInt(th.dataset.preferredWidth ?? "") || Number.parseInt(th.getAttribute("width") ?? "") || Number.parseInt(th.dataset.minWidth ?? "") || Number.parseInt(getComputedStyle(th).minWidth || "") || 0;
     };
@@ -2816,7 +2843,7 @@ class ResponsiveGrid extends base_plugin_default {
           continue;
         }
         const width = preferredWidth(th);
-        if (requiredWidth(visible) + width > size) {
+        if (requiredWidth(visible) + width > size - RESTORE_HYSTERESIS) {
           break;
         }
         grid.setColProp(column.field, "responsiveHidden", false);
@@ -2826,7 +2853,7 @@ class ResponsiveGrid extends base_plugin_default {
     }
     if (changed) {
       this.blockObserver();
-      grid.renderTable();
+      grid._syncColumnVisibility();
       this.unblockObserver();
     }
     const footer = find(table, "tfoot");
@@ -3270,9 +3297,6 @@ class SpinnerSupport extends base_plugin_default {
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
   data-grid:not(.dg-loading) ${cls} { display: none; }
   data-grid:not(.dg-initialized).dg-loading ${cls} { top: 0; }
-  @media only screen and (max-width: 767px) {
-    data-grid[responsive] ${cls} { top: 8rem; left: 42%; }
-  }
 </style>
 `;
     if (!$("#dg-styles")) {
@@ -3382,4 +3406,4 @@ export {
   ArrayDataSource
 };
 
-//# debugId=2F73EB4DB7EC080A64756E2164756E21
+//# debugId=5A9C985C3D2A7AA364756E2164756E21

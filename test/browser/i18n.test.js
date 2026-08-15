@@ -32,17 +32,21 @@ test.skipIf(IS_WINDOWS)(
 
         await selectLocale(v, "fr");
         await waitFor(v, `${META}.textContent.includes("sur")`);
+        expect(await read(v, "document.documentElement.lang")).toBe("fr");
 
         await selectLocale(v, "de");
         await waitFor(v, `${META}.textContent.includes("von")`);
+        expect(await read(v, "document.documentElement.lang")).toBe("de");
 
         // Re-importing a cached module must re-apply the labels
         await selectLocale(v, "fr");
         await waitFor(v, `${META}.textContent.includes("sur")`);
+        expect(await read(v, "document.documentElement.lang")).toBe("fr");
 
         // Arabic flips the grid to RTL
         await selectLocale(v, "ar");
         await waitFor(v, `${META}.textContent.includes("من")`);
+        expect(await read(v, "document.documentElement.lang")).toBe("ar");
         expect(await read(v, "document.querySelector('#i18n-demo data-grid').getAttribute('dir')")).toBe("rtl");
     },
     TIMEOUT,

@@ -14,6 +14,9 @@ import {
 
 const RESPONSIVE_CLASS = "dg-responsive";
 const RESPONSIVE_TOGGLE_WIDTH = 40;
+// Restore only when there is real headroom: avoids hide/show flapping when the
+// width sits exactly on a priority threshold (grid geometry is 4px based).
+const RESTORE_HYSTERESIS = 8;
 
 /**
  * @param {Array<HTMLElement>} list
@@ -40,6 +43,7 @@ class ResponsiveGrid extends BasePlugin {
         this.observerBlocked = false;
         this.unblockTimeout = null;
         this._lastEntry = null;
+        this._lastProcessedWidth = /** @type {Number|null} */ (null);
         this._scheduleResize = /** @type {() => void} */ (debounce(() => this.resize(), 100));
         this.observer = new ResizeObserver((entries) => {
             this._lastEntry = entries[entries.length - 1];
@@ -87,11 +91,13 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /**
-     * Inject the responsive toggle column when columns are hidden.
+     * Inject the responsive toggle column. The column always exists when
+     * responsive is active so the row structure stays stable during resize;
+     * it is simply hidden until at least one column is responsiveHidden.
      * @param {import("../data-grid.js").Column[]} columns
      */
     extendColumns(columns) {
-        if (!this.grid.options.responsiveToggle || !this.hasHiddenColumns()) {
+        if (!this.grid.options.responsive || !this.grid.options.responsiveToggle) {
             return;
         }
         columns.unshift({
@@ -101,6 +107,7 @@ class ResponsiveGrid extends BasePlugin {
             noSort: true,
             title: "",
             class: `${RESPONSIVE_CLASS}-toggle`,
+            hidden: !this.hasHiddenColumns(),
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: () => this.createFilterCell(),
             renderCell: () => this.createDataCell(),
@@ -117,10 +124,18 @@ class ResponsiveGrid extends BasePlugin {
     unblockObserver() {
         this.unblockTimeout = setTimeout(() => {
             this.observerBlocked = false;
-            // Re-evaluate with the latest observed size: a resize that arrived
-            // while the observer was blocked would otherwise be lost.
-            if (this._lastEntry) {
-                this.resize();
+            // Re-evaluate only when a genuinely new inlineSize arrived while the
+            // observer was blocked; re-running for the same width is useless
+            // (the state is idempotent for a given width).
+            const entry = this._lastEntry;
+            if (entry) {
+                const contentBoxSize = Array.isArray(entry.contentBoxSize)
+                    ? entry.contentBoxSize[0]
+                    : entry.contentBoxSize;
+                const size = Math.round(contentBoxSize.inlineSize);
+                if (size !== this._lastProcessedWidth) {
+                    this.resize();
+                }
             }
         }, 200); // more than debounce
     }
@@ -190,6 +205,12 @@ class ResponsiveGrid extends BasePlugin {
         // check inlineSize (width) and not blockSize (height)
         const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
         const size = Math.round(contentBoxSize.inlineSize);
+        // The state is idempotent for a given width: skip duplicate evaluations
+        // (ex: a resize that merely re-renders after a visibility change).
+        if (size === this._lastProcessedWidth) {
+            return;
+        }
+        this._lastProcessedWidth = size;
 
         // Preferred (ideal) width of a header column, before any compression.
         // Falls back to the CSS min-width (plugin columns such as actions or
@@ -290,7 +311,7 @@ class ResponsiveGrid extends BasePlugin {
                     continue;
                 }
                 const width = preferredWidth(th);
-                if (requiredWidth(visible) + width > size) {
+                if (requiredWidth(visible) + width > size - RESTORE_HYSTERESIS) {
                     break;
                 }
                 grid.setColProp(column.field, "responsiveHidden", false);
@@ -301,7 +322,7 @@ class ResponsiveGrid extends BasePlugin {
 
         if (changed) {
             this.blockObserver();
-            grid.renderTable();
+            grid._syncColumnVisibility();
             this.unblockObserver();
         }
 

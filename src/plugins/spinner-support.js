@@ -31,9 +31,6 @@ class SpinnerSupport extends BasePlugin {
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
   data-grid:not(.dg-loading) ${cls} { display: none; }
   data-grid:not(.dg-initialized).dg-loading ${cls} { top: 0; }
-  @media only screen and (max-width: 767px) {
-    data-grid[responsive] ${cls} { top: 8rem; left: 42%; }
-  }
 </style>
 `;
         if (!$("#dg-styles")) {

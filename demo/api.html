@@ -146,10 +146,12 @@
       <p>Toggle boolean attributes (<code>sortable</code>, <code>filterable</code>, <code>selectable</code>) at runtime to reflect them.</p>
 
       <div class="demo-grid">
-        <button id="toggle" class="demo-button">Toggle filter on/off</button>
-        <button id="clear-filter" class="demo-button">Clear filter</button>
-        <button id="more-toggle-selectable" class="demo-button">Toggle selectable</button>
-        <button id="more-toggle-sort" class="demo-button">Toggle sort</button>
+        <div class="demo-toolbar">
+          <button id="toggle" class="demo-button">Toggle filter on/off</button>
+          <button id="clear-filter" class="demo-button">Clear filter</button>
+          <button id="more-toggle-selectable" class="demo-button">Toggle selectable</button>
+          <button id="more-toggle-sort" class="demo-button">Toggle sort</button>
+        </div>
 
         <div id="demo2-grid"></div>
       </div>
@@ -157,16 +159,21 @@
       <h2>Empty grid</h2>
 
       <div class="demo-grid">
-        <button id="load" class="demo-button">Load grid data</button> <button id="reload" class="demo-button">Reload data</button>
-        <button id="clear" class="demo-button">Clear data</button>
+        <div class="demo-toolbar">
+          <button id="load" class="demo-button">Load grid data</button>
+          <button id="reload" class="demo-button">Reload data</button>
+          <button id="clear" class="demo-button">Clear data</button>
+        </div>
         <div id="demo3-grid"></div>
       </div>
 
       <h2>Grid manipulation</h2>
 
       <div class="demo-grid">
-        <button id="add-row" class="demo-button">Add row</button>
-        <button id="remove-row" class="demo-button">Remove row</button>
+        <div class="demo-toolbar">
+          <button id="add-row" class="demo-button">Add row</button>
+          <button id="remove-row" class="demo-button">Remove row</button>
+        </div>
 
         <div id="demo4-grid"></div>
       </div>

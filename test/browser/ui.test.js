@@ -64,11 +64,17 @@ test.skipIf(IS_WINDOWS)(
             "parseFloat(getComputedStyle(window.grid).getPropertyValue('--dg-padding-y'))",
         );
         await v.evaluate(`(() => window.grid.setAttribute('density', 'compact'))()`);
-        await waitFor(v, "parseFloat(getComputedStyle(window.grid).getPropertyValue('--dg-padding-y')) < 0.4");
+        await waitFor(
+            v,
+            `parseFloat(getComputedStyle(window.grid).getPropertyValue('--dg-padding-y')) < ${defaultPad}`,
+        );
         const compactPad = await read(
             v,
             "parseFloat(getComputedStyle(window.grid).getPropertyValue('--dg-padding-y'))",
         );
+        // Density behavior plus the deliberate 4px-based geometry contract
+        expect(defaultPad).toBe(8);
+        expect(compactPad).toBe(4);
         expect(defaultPad).toBeGreaterThan(compactPad);
     },
     TIMEOUT,
@@ -126,12 +132,49 @@ test.skipIf(IS_WINDOWS)(
         await waitFor(v, `${hiddenFields()}.length > ${JSON.parse(at640).length}`);
         const at400 = await read(v, hiddenJson());
         expect(JSON.parse(at400).length).toBeGreaterThan(JSON.parse(at640).length);
+        // Header and body must agree on the hidden columns
+        expect(
+            await read(
+                v,
+                "document.querySelector('#local-grid thead th[data-column-id=\"company\"]').hasAttribute('hidden')",
+            ),
+        ).toBe(true);
+        expect(
+            await read(
+                v,
+                "document.querySelector('#local-grid tbody td[data-column-id=\"company\"]').hasAttribute('hidden')",
+            ),
+        ).toBe(true);
 
         await v.resize(640, 900);
         await waitFor(v, `${hiddenFields()}.length === ${JSON.parse(at640).length}`);
 
         await v.resize(1280, 900);
         await waitFor(v, `${hiddenJson()} === '[]'`);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "responsive state is idempotent at a fixed width",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+        await v.evaluate(`(() => window.grid.setAttribute('responsive', ''))()`);
+
+        const hiddenFields = () => "window.grid.options.columns.filter(c => c.responsiveHidden).map(c => c.field)";
+        const hiddenJson = () => `JSON.stringify(${hiddenFields()})`;
+
+        await v.resize(500, 900);
+        await waitFor(v, `${hiddenFields()}.length > 0`);
+        const snapshot = await read(v, hiddenJson());
+
+        // Hold the width: the hidden set must never change again
+        for (let i = 0; i < 12; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            expect(await read(v, hiddenJson())).toBe(snapshot);
+        }
     },
     TIMEOUT,
 );

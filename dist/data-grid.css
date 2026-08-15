@@ -409,10 +409,39 @@ data-grid input:not(:is([type="checkbox"], [type="radio"])), data-grid select {
   transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
-data-grid input:not([type="checkbox"]):focus, data-grid select:focus, data-grid button:focus {
+data-grid input:not([type="checkbox"]):focus-visible {
   border-color: var(--dg-accent);
   box-shadow: 0 0 0 3px var(--dg-focus-ring);
   outline: 0;
+}
+
+data-grid select:focus-visible {
+  border-color: var(--dg-accent);
+  box-shadow: 0 0 0 3px var(--dg-focus-ring);
+  outline: 0;
+}
+
+data-grid button:focus-visible {
+  border-color: var(--dg-accent);
+  outline: 0;
+}
+
+data-grid .dg-actions button:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+data-grid .dg-pagination button:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  box-shadow: none;
+}
+
+data-grid .dg-responsive-toggle:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 data-grid input:not(:-webkit-any([type="checkbox"], [type="radio"]))::placeholder {
@@ -649,12 +678,12 @@ data-grid th[aria-sort] > .dg-sort:after {
 
 data-grid th[aria-sort="ascending"] > .dg-sort:after {
   border-top-width: 0;
-  border-bottom-color: var(--dg-header-color);
+  border-bottom-color: var(--dg-accent);
 }
 
 data-grid th[aria-sort="descending"] > .dg-sort:after {
   border-bottom-width: 0;
-  border-top-color: var(--dg-header-color);
+  border-top-color: var(--dg-accent);
 }
 
 /* css/_rtl.css */
@@ -713,10 +742,14 @@ data-grid .dg-menu input {
 
 /* css/_actions.css */
 data-grid .dg-actions {
+  box-sizing: border-box;
   text-overflow: initial;
   overflow: visible;
-  text-align: right;
-  width: var(--dg-actions-column-width);
+  inline-size: var(--dg-actions-column-width);
+  min-inline-size: var(--dg-actions-column-width);
+  max-inline-size: var(--dg-actions-column-width);
+  padding-inline: var(--dg-space-1);
+  text-align: center;
   white-space: nowrap !important;
 }
 
@@ -751,6 +784,8 @@ data-grid .dg-actions .dg-actions-toggle {
   display: none;
   color: var(--dg-muted-color);
   width: 28px;
+  min-width: 28px;
+  height: 28px;
   padding: 0;
   font-size: 1.125em;
   font-weight: 600;
@@ -759,6 +794,7 @@ data-grid .dg-actions .dg-actions-toggle {
 
 data-grid .dg-actions.dg-actions-1 {
   min-width: var(--dg-actions-column-width);
+  max-inline-size: none;
   width: auto;
 }
 
@@ -767,6 +803,7 @@ data-grid .dg-actions.dg-actions-2 button, data-grid .dg-actions.dg-actions-2 a 
 }
 
 data-grid .dg-actions.dg-actions-2 {
+  max-inline-size: none;
   width: auto;
   min-width: 68px;
 }
@@ -820,7 +857,7 @@ data-grid .dg-actions-menu button, data-grid .dg-actions-menu a {
   border: 1px solid #0000;
   width: 100%;
   height: auto;
-  min-height: 28px;
+  min-height: 36px;
 }
 
 data-grid .dg-actions-menu button:hover, data-grid .dg-actions-menu a:hover {
@@ -830,11 +867,17 @@ data-grid .dg-actions-menu button:hover, data-grid .dg-actions-menu a:hover {
 data-grid .dg-actions-menu button[data-intent="primary"], data-grid .dg-actions-menu a[data-intent="primary"] {
   color: var(--dg-accent);
   background-color: #0000;
+  border-color: #0000;
 }
 
 data-grid .dg-actions-menu button[data-intent="danger"], data-grid .dg-actions-menu a[data-intent="danger"] {
   color: var(--dg-danger-color);
   background-color: #0000;
+  border-color: #0000;
+}
+
+data-grid .dg-actions-menu button[data-intent="danger"]:hover, data-grid .dg-actions-menu a[data-intent="danger"]:hover {
+  background-color: var(--dg-danger-bg);
 }
 
 data-grid button[data-intent="danger"], data-grid a[data-intent="danger"] {

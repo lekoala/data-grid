@@ -1,9 +1,13 @@
 data-grid .dg-actions {
+  box-sizing: border-box;
   text-overflow: initial;
   overflow: visible;
-  text-align: right;
+  inline-size: var(--dg-actions-column-width);
+  min-inline-size: var(--dg-actions-column-width);
+  max-inline-size: var(--dg-actions-column-width);
+  padding-inline: var(--dg-space-1);
+  text-align: center;
   white-space: nowrap !important;
-  width: var(--dg-actions-column-width);
 }
 
 data-grid .dg-actions button,
@@ -44,12 +48,15 @@ data-grid .dg-actions .dg-actions-toggle {
   color: var(--dg-muted-color);
   font-size: 1.125em;
   font-weight: 600;
+  height: 28px;
   line-height: 1;
+  min-width: 28px;
   padding: 0;
   width: 28px;
 }
 
 data-grid .dg-actions.dg-actions-1 {
+  max-inline-size: none;
   min-width: var(--dg-actions-column-width);
   width: auto;
 }
@@ -60,6 +67,7 @@ data-grid .dg-actions.dg-actions-2 a {
 }
 
 data-grid .dg-actions.dg-actions-2 {
+  max-inline-size: none;
   min-width: 68px;
   width: auto;
 }
@@ -108,7 +116,7 @@ data-grid .dg-actions-menu a {
   justify-content: flex-start;
   gap: var(--dg-space-2);
   width: 100%;
-  min-height: 28px;
+  min-height: 36px;
   height: auto;
   padding: 0 var(--dg-space-2);
   background-color: transparent;
@@ -126,13 +134,20 @@ data-grid .dg-actions-menu a:hover {
 data-grid .dg-actions-menu button[data-intent="primary"],
 data-grid .dg-actions-menu a[data-intent="primary"] {
   background-color: transparent;
+  border-color: transparent;
   color: var(--dg-accent);
 }
 
 data-grid .dg-actions-menu button[data-intent="danger"],
 data-grid .dg-actions-menu a[data-intent="danger"] {
   background-color: transparent;
+  border-color: transparent;
   color: var(--dg-danger-color);
+}
+
+data-grid .dg-actions-menu button[data-intent="danger"]:hover,
+data-grid .dg-actions-menu a[data-intent="danger"]:hover {
+  background-color: var(--dg-danger-bg);
 }
 
 data-grid button[data-intent="danger"],
