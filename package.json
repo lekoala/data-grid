@@ -9,6 +9,7 @@
     "build": "bun scripts/build.js",
     "test": "bun test --path-ignore-patterns 'test/browser/**'",
     "test:browser": "bun test test/browser",
+    "test:browser:wsl": "wsl -e bash scripts/test-browser-wsl.sh",
     "check": "biome check .",
     "typecheck": "tsc -p jsconfig.json",
     "ci": "bun run check && bun run typecheck && bun run test && bun run build"

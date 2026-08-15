@@ -28,11 +28,12 @@ export function stopServer() {
 
 /**
  * Create a WebView. Backend is left to the platform (Chrome on Linux CI,
- * WKWebView on macOS) so the same tests run on both.
+ * WKWebView on macOS) so the same tests run on both. Tall viewport so the
+ * multiple fixture grids (and their footers) fit without scrolling.
  * @returns {Bun.WebView}
  */
 export function view() {
-    return new Bun.WebView({ width: 1280, height: 900 });
+    return new Bun.WebView({ width: 1280, height: 3000 });
 }
 
 /**
