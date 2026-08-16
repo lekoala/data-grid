@@ -104,6 +104,7 @@ class ResponsiveGrid extends BasePlugin {
             id: "$responsive",
             virtual: true,
             position: "start",
+            width: 40,
             sortable: false,
             title: "",
             class: `${RESPONSIVE_CLASS}-toggle`,
@@ -158,7 +159,6 @@ class ResponsiveGrid extends BasePlugin {
      * @param {HTMLTableCellElement} th
      */
     createHeaderCell(th) {
-        setAttribute(th, "width", "40");
         th.classList.add("dg-not-resizable", "dg-not-sortable");
     }
 

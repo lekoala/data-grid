@@ -2503,14 +2503,10 @@ class DataGrid extends BaseElement {
                 this.renderDefaultHeaderCell(th, ctx);
             }
             // Plugin header renderers only add their structural classes; apply
-            // the column class (ex: dg-selectable, dg-actions, dg-responsive-toggle)
-            // so header and body share the same styling hooks.
-            if (column.class) {
-                addClass(th, column.class);
-            }
-            if (isColumnHidden(column)) {
-                th.setAttribute("hidden", "");
-            }
+            // the full column definition (width, class, hidden, dg-not-sortable)
+            // uniformly so header and body share the same geometry and styling
+            // hooks, including virtual columns carrying their own width.
+            applyColumnDefinition(th, column);
 
             tr.appendChild(th);
             if (!isColumnHidden(column)) {

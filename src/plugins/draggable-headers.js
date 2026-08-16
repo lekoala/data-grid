@@ -13,7 +13,7 @@ class DraggableHeaders extends BasePlugin {
         if (context !== "table") {
             return;
         }
-        const headers = findAll(this.grid, "thead tr.dg-head-columns th[data-column-id]");
+        const headers = findAll(this.grid, 'thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
         for (const th of headers) {
             this.makeHeaderDraggable(th);
         }

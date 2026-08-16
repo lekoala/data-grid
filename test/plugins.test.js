@@ -144,3 +144,87 @@ test("hideColumn and showColumn sync header, body and footer", async () => {
     expect(inst.tfoot?.querySelector("td").colSpan).toBe(2);
     document.body.removeChild(inst);
 });
+
+test("reorder keeps the $selection column pinned and fixed width", async () => {
+    const { default: DraggableHeaders } = await import("../src/plugins/draggable-headers.js");
+    const inst = await makeReadyGrid(
+        { SelectableRows, DraggableHeaders },
+        {
+            columns: [
+                { field: "first_name", title: "First" },
+                { field: "last_name", title: "Last" },
+            ],
+            selectable: true,
+            reorder: true,
+        },
+        [{ first_name: "Ada", last_name: "Lovelace" }],
+    );
+
+    const headerIds = () =>
+        Array.from(inst.querySelectorAll("thead tr.dg-head-columns th")).map((th) => th.getAttribute("data-column-id"));
+    const firstBodyRowIds = () =>
+        Array.from(inst.querySelectorAll("tbody tr td[data-column-id]")).map((td) => td.getAttribute("data-column-id"));
+
+    // $selection is first, carries its own fixed width and is not draggable
+    expect(headerIds()[0]).toBe("$selection");
+    expect(inst.querySelector('thead th[data-column-id="$selection"]').getAttribute("width")).toBe("40");
+    expect(firstBodyRowIds()[0]).toBe("$selection");
+    expect(inst.querySelector('tbody tr td[data-column-id="$selection"] input')).toBeTruthy();
+    expect(inst.querySelector('thead th[data-column-id="$selection"]').hasAttribute("draggable")).toBe(false);
+
+    const reorder = (draggedId, targetId) => {
+        const target = inst.querySelector(`thead th[data-column-id="${targetId}"]`);
+        const event = new window.Event("drop", { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "dataTransfer", { value: { getData: () => draggedId } });
+        target.dispatchEvent(event);
+    };
+
+    reorder("first_name", "last_name");
+    expect(headerIds()[0]).toBe("$selection");
+    expect(inst.querySelector('thead th[data-column-id="$selection"]').getAttribute("width")).toBe("40");
+    expect(firstBodyRowIds()[0]).toBe("$selection");
+    expect(inst.querySelector('thead th[data-column-id="$selection"]').hasAttribute("draggable")).toBe(false);
+
+    // Multiple reorders still keep it pinned
+    reorder("last_name", "first_name");
+    reorder("first_name", "last_name");
+    expect(headerIds()[0]).toBe("$selection");
+    expect(firstBodyRowIds()[0]).toBe("$selection");
+    document.body.removeChild(inst);
+});
+
+test("reorder pins both $selection and $actions at the extremes", async () => {
+    const { default: DraggableHeaders } = await import("../src/plugins/draggable-headers.js");
+    const inst = await makeReadyGrid(
+        { SelectableRows, RowActions, DraggableHeaders },
+        {
+            columns: [
+                { field: "first_name", title: "First" },
+                { field: "last_name", title: "Last" },
+            ],
+            selectable: true,
+            reorder: true,
+            actions: [{ name: "edit", title: "Edit" }],
+        },
+        [{ first_name: "Ada", last_name: "Lovelace" }],
+    );
+
+    const headerIds = () =>
+        Array.from(inst.querySelectorAll("thead tr.dg-head-columns th")).map((th) => th.getAttribute("data-column-id"));
+
+    const reorder = (draggedId, targetId) => {
+        const target = inst.querySelector(`thead th[data-column-id="${targetId}"]`);
+        const event = new window.Event("drop", { bubbles: true, cancelable: true });
+        Object.defineProperty(event, "dataTransfer", { value: { getData: () => draggedId } });
+        target.dispatchEvent(event);
+    };
+
+    expect(headerIds()[0]).toBe("$selection");
+    expect(headerIds()[headerIds().length - 1]).toBe("$actions");
+    expect(inst.querySelector('thead th[data-column-id="$selection"]').getAttribute("width")).toBe("40");
+
+    reorder("first_name", "last_name");
+    expect(headerIds()[0]).toBe("$selection");
+    expect(headerIds()[headerIds().length - 1]).toBe("$actions");
+    document.body.removeChild(inst);
+});

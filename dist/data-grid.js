@@ -2028,12 +2028,7 @@ class DataGrid extends base_element_default {
       } else {
         this.renderDefaultHeaderCell(th, ctx);
       }
-      if (column.class) {
-        addClass(th, column.class);
-      }
-      if (isColumnHidden(column)) {
-        th.setAttribute("hidden", "");
-      }
+      applyColumnDefinition(th, column);
       tr.appendChild(th);
       if (!isColumnHidden(column)) {
         totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
@@ -2640,7 +2635,7 @@ class DraggableHeaders extends base_plugin_default {
     if (context !== "table") {
       return;
     }
-    const headers = findAll(this.grid, "thead tr.dg-head-columns th[data-column-id]");
+    const headers = findAll(this.grid, 'thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
     for (const th of headers) {
       this.makeHeaderDraggable(th);
     }
@@ -2776,6 +2771,7 @@ class SelectableRows extends base_plugin_default {
       id: "$selection",
       virtual: true,
       position: "start",
+      width: 40,
       sortable: false,
       title: "",
       class: SELECTABLE_CLASS,
@@ -2842,7 +2838,6 @@ class SelectableRows extends base_plugin_default {
     this.selectAll.checked = visible.length > 0 && checked === visible.length;
   }
   createHeaderCell(th) {
-    setAttribute(th, "width", "40");
     th.classList.add("dg-not-resizable", "dg-not-sortable");
     this.selectAll = document.createElement("input");
     this.selectAll.type = "checkbox";
@@ -3193,6 +3188,7 @@ class ResponsiveGrid extends base_plugin_default {
       id: "$responsive",
       virtual: true,
       position: "start",
+      width: 40,
       sortable: false,
       title: "",
       class: `${RESPONSIVE_CLASS}-toggle`,
@@ -3231,7 +3227,6 @@ class ResponsiveGrid extends base_plugin_default {
     return flag;
   }
   createHeaderCell(th) {
-    setAttribute(th, "width", "40");
     th.classList.add("dg-not-resizable", "dg-not-sortable");
   }
   createFilterCell() {}

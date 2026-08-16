@@ -1,5 +1,4 @@
 import BasePlugin from "../core/base-plugin.js";
-import { setAttribute } from "../utils/shortcuts.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
@@ -45,6 +44,7 @@ class SelectableRows extends BasePlugin {
             id: "$selection",
             virtual: true,
             position: "start",
+            width: 40,
             sortable: false,
             title: "",
             class: SELECTABLE_CLASS,
@@ -133,7 +133,6 @@ class SelectableRows extends BasePlugin {
      * @param {HTMLTableCellElement} th
      */
     createHeaderCell(th) {
-        setAttribute(th, "width", "40");
         th.classList.add("dg-not-resizable", "dg-not-sortable");
 
         this.selectAll = document.createElement("input");
