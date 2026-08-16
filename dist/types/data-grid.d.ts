@@ -401,6 +401,16 @@ export type Labels = {
     areYouSure: string;
     networkError: string;
 };
+export type TextInputState = {
+    composing: boolean;
+    /**
+     * The debounced update, with cancel()/flush() control
+     */
+    apply: ((...args: any[]) => void) & {
+        cancel: () => void;
+        flush: () => void;
+    };
+};
 /**
  */
 declare class DataGrid extends BaseElement {
@@ -736,6 +746,58 @@ declare class DataGrid extends BaseElement {
     _adoptDeclarativeTable(): void;
     _connected(): Promise<void>;
     _disconnected(): void;
+    /**
+     * Route delegated core UI events to the matching handler. This overrides
+     * BaseElement's generic routing because the host (not a cached control) is
+     * now the listener target.
+     * @param {Event} event
+     * @returns {void}
+     */
+    handleEvent(event: Event): void;
+    /**
+     * A control is owned by this grid when it lives inside this host (not a
+     * nested grid), so bubbled events from an inner grid never affect the outer
+     * one.
+     * @param {Element|null|undefined} element
+     * @returns {Boolean}
+     */
+    _ownsControl(element: Element | null | undefined): boolean;
+    /**
+     * Cancel the pending text-input debounces of inputs within `root` and drop
+     * their state. Used before replacing a filter row so a stale update never
+     * fires on a detached element.
+     * @param {Element} root
+     */
+    _cancelTextInputs(root: Element): void;
+    /**
+     * @param {Event} event
+     * @param {Element} target
+     * @returns {*}
+     */
+    _handleClick(event: Event, target: Element): any;
+    /**
+     * @param {Event} event
+     * @param {Element} target
+     * @returns {*}
+     */
+    _handleChange(event: Event, target: Element): any;
+    /**
+     * @param {Element} target
+     * @returns {void}
+     */
+    _handleInput(target: Element): void;
+    /**
+     * @param {KeyboardEvent} event
+     * @param {Element} target
+     * @returns {*}
+     */
+    _handleKeydown(event: KeyboardEvent, target: Element): any;
+    /**
+     * @param {Element} target
+     * @param {Boolean} composing
+     * @returns {void}
+     */
+    _handleComposition(target: Element, composing: boolean): void;
     init(): Promise<void> | undefined;
     /**
      * Whether the initial data source load should be deferred until the grid

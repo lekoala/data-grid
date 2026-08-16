@@ -33,12 +33,12 @@ test("the page input only navigates on change and clamps out-of-range values", a
 
     // Typing alone must not trigger a request
     input.value = "12";
-    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
     expect(inst.query.page).toBe(1);
 
     // Change clamps to the last valid page
     input.value = "12";
-    input.dispatchEvent(new Event("change"));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
     await flush();
     expect(inst.query.page).toBe(3);
     expect(inst.rows[0].id).toBe(21);
@@ -46,7 +46,7 @@ test("the page input only navigates on change and clamps out-of-range values", a
 
     // Change back to page 1
     input.value = "1";
-    input.dispatchEvent(new Event("change"));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
     await flush();
     expect(inst.query.page).toBe(1);
     expect(inst.rows[0].id).toBe(1);
@@ -58,7 +58,7 @@ test("an invalid page value is discarded without navigating", async () => {
     const input = inst.querySelector(".dg-input-page");
 
     input.value = "abc";
-    input.dispatchEvent(new Event("change"));
+    input.dispatchEvent(new Event("change", { bubbles: true }));
     expect(inst.query.page).toBe(1);
     expect(input.value).toBe("1");
     removeGrid(inst);

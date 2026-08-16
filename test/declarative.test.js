@@ -242,7 +242,7 @@ test("local sort, search and pagination work on the declarative dataset", async 
     // Global search narrows locally.
     const input = inst.querySelector(".dg-search");
     input.value = "User E";
-    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(inst.rows.map((r) => r.name)).toEqual(["User E"]);
     removeGrid(inst);

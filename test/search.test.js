@@ -30,7 +30,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 20));
 
 function typeInto(input, value) {
     input.value = value;
-    input.dispatchEvent(new Event("input"));
+    input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 test("searchable renders a labelled search input in the topbar end", async () => {
@@ -128,7 +128,7 @@ test("Enter flushes the debounced search immediately", async () => {
 
     typeInto(input, "Person 3");
     expect(inst.query.search).toBe("");
-    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
     expect(inst.query.search).toBe("Person 3");
     await flush();
     expect(inst.total).toBe(1); // only "Person 3" matches (no row 30..39)
@@ -143,7 +143,7 @@ test("Escape clears the search", async () => {
     await flush();
     expect(inst.query.search).toBe("Person 5");
 
-    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(input.value).toBe("");
     expect(inst.query.search).toBe("");
     await flush();

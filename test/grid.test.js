@@ -126,7 +126,7 @@ test("sortable header button is the tab stop and a click activates sorting", asy
     expect(button.tabIndex).toBe(0); // native tab stop
 
     // Native buttons activate on Enter/Space by firing a click
-    button.dispatchEvent(new Event("click"));
+    button.dispatchEvent(new Event("click", { bubbles: true }));
     expect(th.getAttribute("aria-sort")).toBe("ascending");
     removeGrid(inst);
 });

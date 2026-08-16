@@ -208,6 +208,20 @@ let plugins = {};
 const connectedInstances = new Set();
 
 /**
+ * Transient per-input state (IME composition flag + debounce instance) for the
+ * core text controls (global search + text column filters). Keyed weakly by the
+ * input element so it never roots detached nodes.
+ * @typedef {Object} TextInputState
+ * @property {Boolean} composing
+ * @property {((...args: any[]) => void) & { cancel: () => void, flush: () => void }} apply The debounced update, with cancel()/flush() control
+ */
+
+/**
+ * @type {WeakMap<HTMLInputElement, TextInputState>}
+ */
+const textInputState = new WeakMap();
+
+/**
  * @type {Labels}
  */
 let labels = {
@@ -1489,34 +1503,12 @@ class DataGrid extends BaseElement {
         // The visible value can temporarily diverge from query.search: it is
         // only committed when it becomes valid (see commitSearch). The
         // selection is invalidated as soon as the value changes, so a bulk
-        // action never targets the population of a previous search.
-        let composing = false;
-        const apply = debounce(() => this.commitSearch(), this.options.searchDelay);
-        input.addEventListener("input", () => {
-            this._clearSelectionIfNeeded();
-            if (!composing) {
-                apply();
-            }
-        });
-        input.addEventListener("compositionstart", () => {
-            composing = true;
-        });
-        input.addEventListener("compositionend", () => {
-            composing = false;
-            apply();
-        });
-        input.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
-            if (composing) {
-                return;
-            }
-            if (e.key === "Enter") {
-                e.preventDefault();
-                apply.flush();
-            } else if (e.key === "Escape" && input.value) {
-                input.value = "";
-                apply.cancel();
-                this.commitSearch();
-            }
+        // action never targets the population of a previous search. Events are
+        // delegated to the host; only the per-input IME/debounce state lives
+        // here.
+        textInputState.set(input, {
+            composing: false,
+            apply: debounce(() => this.commitSearch(), this.options.searchDelay),
         });
 
         this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(input);
@@ -1634,20 +1626,17 @@ class DataGrid extends BaseElement {
         this.selectPerPage = this.querySelector(".dg-select-per-page");
         this.inputPage = this.querySelector(".dg-input-page");
 
-        this.getFirst = this.getFirst.bind(this);
-        this.getPrev = this.getPrev.bind(this);
-        this.getNext = this.getNext.bind(this);
-        this.getLast = this.getLast.bind(this);
-        this.changePerPage = this.changePerPage.bind(this);
-        this.gotoPage = this.gotoPage.bind(this);
-
-        this.btnFirst?.addEventListener("click", this.getFirst);
-        this.btnPrev?.addEventListener("click", this.getPrev);
-        this.btnNext?.addEventListener("click", this.getNext);
-        this.btnLast?.addEventListener("click", this.getLast);
-        this.selectPerPage?.addEventListener("change", this.changePerPage);
+        // Core UI is delegated to the host: the instance is its own event
+        // listener and routes bubbled events to the matching control. This
+        // keeps rerendered chrome (filters, sort headers) working without
+        // reinstalling per-element listeners.
+        this.addEventListener("click", this);
+        this.addEventListener("change", this);
+        this.addEventListener("input", this);
+        this.addEventListener("keydown", this);
+        this.addEventListener("compositionstart", this);
+        this.addEventListener("compositionend", this);
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
-        this.inputPage?.addEventListener("change", this.gotoPage);
 
         this.setupDataSource();
         this.setupInitialState();
@@ -1670,15 +1659,212 @@ class DataGrid extends BaseElement {
         this._loadObserver?.disconnect();
         this._loadObserver = null;
         this._controller?.abort();
-        this.btnFirst?.removeEventListener("click", this.getFirst);
-        this.btnPrev?.removeEventListener("click", this.getPrev);
-        this.btnNext?.removeEventListener("click", this.getNext);
-        this.btnLast?.removeEventListener("click", this.getLast);
-        this.selectPerPage?.removeEventListener("change", this.changePerPage);
-        this.inputPage?.removeEventListener("change", this.gotoPage);
+        // Cancel any pending per-input debounce before it can fire on a
+        // detached element.
+        for (const input of this.querySelectorAll("input")) {
+            textInputState.get(input)?.apply.cancel();
+            textInputState.delete(input);
+        }
+
+        this.removeEventListener("click", this);
+        this.removeEventListener("change", this);
+        this.removeEventListener("input", this);
+        this.removeEventListener("keydown", this);
+        this.removeEventListener("compositionstart", this);
+        this.removeEventListener("compositionend", this);
 
         for (const plugin of Object.values(this.plugins)) {
             plugin.disconnected?.();
+        }
+    }
+
+    /**
+     * Route delegated core UI events to the matching handler. This overrides
+     * BaseElement's generic routing because the host (not a cached control) is
+     * now the listener target.
+     * @param {Event} event
+     * @returns {void}
+     */
+    handleEvent(event) {
+        const target = event.target;
+        if (!(target instanceof Element)) {
+            return;
+        }
+        switch (event.type) {
+            case "click":
+                this._handleClick(event, target);
+                break;
+            case "change":
+                this._handleChange(event, target);
+                break;
+            case "input":
+                this._handleInput(target);
+                break;
+            case "keydown":
+                this._handleKeydown(/** @type {KeyboardEvent} */ (event), target);
+                break;
+            case "compositionstart":
+                this._handleComposition(target, true);
+                break;
+            case "compositionend":
+                this._handleComposition(target, false);
+                break;
+            default:
+                super.handleEvent(event);
+        }
+    }
+
+    /**
+     * A control is owned by this grid when it lives inside this host (not a
+     * nested grid), so bubbled events from an inner grid never affect the outer
+     * one.
+     * @param {Element|null|undefined} element
+     * @returns {Boolean}
+     */
+    _ownsControl(element) {
+        return Boolean(element && element.closest("data-grid") === this);
+    }
+
+    /**
+     * Cancel the pending text-input debounces of inputs within `root` and drop
+     * their state. Used before replacing a filter row so a stale update never
+     * fires on a detached element.
+     * @param {Element} root
+     */
+    _cancelTextInputs(root) {
+        for (const input of root.querySelectorAll("input")) {
+            textInputState.get(input)?.apply.cancel();
+            textInputState.delete(input);
+        }
+    }
+
+    /**
+     * @param {Event} event
+     * @param {Element} target
+     * @returns {*}
+     */
+    _handleClick(event, target) {
+        const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
+        if (pager && this._ownsControl(pager)) {
+            if (pager.classList.contains("dg-btn-first")) return this.getFirst();
+            if (pager.classList.contains("dg-btn-prev")) return this.getPrev();
+            if (pager.classList.contains("dg-btn-next")) return this.getNext();
+            if (pager.classList.contains("dg-btn-last")) return this.getLast();
+            return;
+        }
+
+        // Only the sort button itself delegates sorting, so a click on any other
+        // header control (resize handle, ...) never triggers a sort.
+        const sortButton = target.closest(".dg-sort");
+        if (sortButton && this._ownsControl(sortButton)) {
+            const th = /** @type {HTMLTableCellElement} */ (sortButton.closest("th.dg-sortable"));
+            if (th) {
+                return this.sortData(th);
+            }
+        }
+    }
+
+    /**
+     * @param {Event} event
+     * @param {Element} target
+     * @returns {*}
+     */
+    _handleChange(event, target) {
+        const pageSize = target.closest(".dg-select-per-page");
+        if (this._ownsControl(pageSize)) {
+            return this.changePerPage();
+        }
+
+        const page = target.closest(".dg-input-page");
+        if (this._ownsControl(page)) {
+            return this.gotoPage();
+        }
+
+        // Select column filters apply on change; text filters run through input.
+        const filter = /** @type {HTMLSelectElement|null} */ (target.closest(this._filterSelector));
+        if (filter && this._ownsControl(filter) && /select/i.test(filter.tagName)) {
+            return this.filterData();
+        }
+    }
+
+    /**
+     * @param {Element} target
+     * @returns {void}
+     */
+    _handleInput(target) {
+        const search = target.closest(".dg-search");
+        if (this._ownsControl(search)) {
+            this._clearSelectionIfNeeded();
+            const state = textInputState.get(/** @type {HTMLInputElement} */ (search));
+            if (state && !state.composing) {
+                state.apply();
+            }
+            return;
+        }
+
+        const filter = target.closest(this._filterSelector);
+        if (this._ownsControl(filter)) {
+            const state = textInputState.get(/** @type {HTMLInputElement} */ (filter));
+            if (state && !state.composing) {
+                state.apply();
+            }
+        }
+    }
+
+    /**
+     * @param {KeyboardEvent} event
+     * @param {Element} target
+     * @returns {*}
+     */
+    _handleKeydown(event, target) {
+        if (event.key === "Enter") {
+            const page = target.closest(".dg-input-page");
+            if (this._ownsControl(page)) {
+                event.preventDefault();
+                return this.gotoPage();
+            }
+            const state = textInputState.get(/** @type {HTMLInputElement} */ (target));
+            if (this._ownsControl(target) && state && !state.composing && !event.isComposing) {
+                event.preventDefault();
+                state.apply.flush();
+                return;
+            }
+        }
+
+        if (event.key === "Escape") {
+            const input = /** @type {HTMLInputElement} */ (target);
+            const state = textInputState.get(input);
+            if (this._ownsControl(target.closest(".dg-search")) && state && input.value) {
+                input.value = "";
+                state.apply.cancel();
+                return this.commitSearch();
+            }
+            const filter = /** @type {HTMLInputElement|null} */ (target.closest(this._filterSelector));
+            if (this._ownsControl(filter) && state && input.value) {
+                input.value = "";
+                state.apply.cancel();
+                return this.filterData();
+            }
+        }
+    }
+
+    /**
+     * @param {Element} target
+     * @param {Boolean} composing
+     * @returns {void}
+     */
+    _handleComposition(target, composing) {
+        const input = /** @type {HTMLInputElement} */ (target.closest(".dg-search, " + this._filterSelector));
+        if (!input || !this._ownsControl(input)) {
+            return;
+        }
+        const state = textInputState.get(input);
+        if (!state) {
+            return;
+        }
+        state.composing = composing;
+        if (!composing) {
+            state.apply();
         }
     }
 
@@ -2634,15 +2820,6 @@ class DataGrid extends BaseElement {
                 }
             }
         }
-
-        // Sort col on button click (native button handles Enter/Space)
-        const sortableHeaders = findAll(tr, "th.dg-sortable");
-        for (const th of sortableHeaders) {
-            const button = th.querySelector("button[type=button]");
-            if (button) {
-                button.addEventListener("click", () => this.sortData(th));
-            }
-        }
     }
 
     /**
@@ -2752,53 +2929,30 @@ class DataGrid extends BaseElement {
         }
 
         const oldRow = thead?.querySelector("tr.dg-head-filters");
+        // A replaced filter row must have its pending text-input debounces
+        // cancelled, or a stale update could fire on a detached element.
+        if (oldRow) {
+            this._cancelTextInputs(oldRow);
+        }
         if (thead && oldRow) {
             thead.replaceChild(tr, oldRow);
         } else if (thead && !tr.parentNode) {
             thead.appendChild(tr);
         }
 
-        // Filter content by field events: live debounced text filtering,
-        // immediate discrete controls, Enter/Escape shortcuts, IME-aware.
+        // Filter event handling is delegated to the host: select filters apply
+        // on change, text filters via live input. Only the per-input IME /
+        // debounce state is registered here so a rerender needs no listener
+        // re-attachment.
         const filteredRows = findAll(tr, this._filterSelector);
         for (const el of filteredRows) {
             if (/select/i.test(el.tagName)) {
-                el.addEventListener("change", () => this.filterData());
                 continue;
             }
-
             const input = /** @type {HTMLInputElement} */ (el);
-            /** @type {Boolean} */
-            let composing = false;
-            const apply = debounce(() => this.filterData(), this.options.filterDelay);
-
-            input.addEventListener("input", () => {
-                if (!composing) {
-                    apply();
-                }
-            });
-            // IME composition (CJK...): only filter once the composition ends,
-            // never on intermediate fragments.
-            input.addEventListener("compositionstart", () => {
-                composing = true;
-            });
-            input.addEventListener("compositionend", () => {
-                composing = false;
-                apply();
-            });
-            input.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
-                if (composing) {
-                    return;
-                }
-                if (e.key === "Enter") {
-                    // Immediate apply, cancelling any pending debounce
-                    e.preventDefault();
-                    apply.flush();
-                } else if (e.key === "Escape" && input.value) {
-                    input.value = "";
-                    apply.cancel();
-                    this.filterData();
-                }
+            textInputState.set(input, {
+                composing: false,
+                apply: debounce(() => this.filterData(), this.options.filterDelay),
             });
         }
     }

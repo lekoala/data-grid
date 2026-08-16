@@ -545,6 +545,7 @@ function randstr(prefix) {
 // src/data-grid.js
 var plugins = {};
 var connectedInstances = new Set;
+var textInputState = new WeakMap;
 var labels = {
   itemsPerPage: "Items per page",
   gotoPage: "Go to page",
@@ -1380,33 +1381,9 @@ class DataGrid extends base_element_default {
     input.setAttribute("placeholder", this.options.searchPlaceholder);
     input.setAttribute("aria-label", this.labels.search);
     input.value = this._query.search;
-    let composing = false;
-    const apply = debounce(() => this.commitSearch(), this.options.searchDelay);
-    input.addEventListener("input", () => {
-      this._clearSelectionIfNeeded();
-      if (!composing) {
-        apply();
-      }
-    });
-    input.addEventListener("compositionstart", () => {
-      composing = true;
-    });
-    input.addEventListener("compositionend", () => {
-      composing = false;
-      apply();
-    });
-    input.addEventListener("keydown", (e) => {
-      if (composing) {
-        return;
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        apply.flush();
-      } else if (e.key === "Escape" && input.value) {
-        input.value = "";
-        apply.cancel();
-        this.commitSearch();
-      }
+    textInputState.set(input, {
+      composing: false,
+      apply: debounce(() => this.commitSearch(), this.options.searchDelay)
     });
     this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(input);
     this.searchInput = input;
@@ -1484,19 +1461,13 @@ class DataGrid extends base_element_default {
     this.btnLast = this.querySelector(".dg-btn-last");
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
-    this.getFirst = this.getFirst.bind(this);
-    this.getPrev = this.getPrev.bind(this);
-    this.getNext = this.getNext.bind(this);
-    this.getLast = this.getLast.bind(this);
-    this.changePerPage = this.changePerPage.bind(this);
-    this.gotoPage = this.gotoPage.bind(this);
-    this.btnFirst?.addEventListener("click", this.getFirst);
-    this.btnPrev?.addEventListener("click", this.getPrev);
-    this.btnNext?.addEventListener("click", this.getNext);
-    this.btnLast?.addEventListener("click", this.getLast);
-    this.selectPerPage?.addEventListener("change", this.changePerPage);
+    this.addEventListener("click", this);
+    this.addEventListener("change", this);
+    this.addEventListener("input", this);
+    this.addEventListener("keydown", this);
+    this.addEventListener("compositionstart", this);
+    this.addEventListener("compositionend", this);
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
-    this.inputPage?.addEventListener("change", this.gotoPage);
     this.setupDataSource();
     this.setupInitialState();
     for (const plugin of Object.values(this.plugins)) {
@@ -1513,14 +1484,152 @@ class DataGrid extends base_element_default {
     this._loadObserver?.disconnect();
     this._loadObserver = null;
     this._controller?.abort();
-    this.btnFirst?.removeEventListener("click", this.getFirst);
-    this.btnPrev?.removeEventListener("click", this.getPrev);
-    this.btnNext?.removeEventListener("click", this.getNext);
-    this.btnLast?.removeEventListener("click", this.getLast);
-    this.selectPerPage?.removeEventListener("change", this.changePerPage);
-    this.inputPage?.removeEventListener("change", this.gotoPage);
+    for (const input of this.querySelectorAll("input")) {
+      textInputState.get(input)?.apply.cancel();
+      textInputState.delete(input);
+    }
+    this.removeEventListener("click", this);
+    this.removeEventListener("change", this);
+    this.removeEventListener("input", this);
+    this.removeEventListener("keydown", this);
+    this.removeEventListener("compositionstart", this);
+    this.removeEventListener("compositionend", this);
     for (const plugin of Object.values(this.plugins)) {
       plugin.disconnected?.();
+    }
+  }
+  handleEvent(event) {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+    switch (event.type) {
+      case "click":
+        this._handleClick(event, target);
+        break;
+      case "change":
+        this._handleChange(event, target);
+        break;
+      case "input":
+        this._handleInput(target);
+        break;
+      case "keydown":
+        this._handleKeydown(event, target);
+        break;
+      case "compositionstart":
+        this._handleComposition(target, true);
+        break;
+      case "compositionend":
+        this._handleComposition(target, false);
+        break;
+      default:
+        super.handleEvent(event);
+    }
+  }
+  _ownsControl(element) {
+    return Boolean(element && element.closest("data-grid") === this);
+  }
+  _cancelTextInputs(root) {
+    for (const input of root.querySelectorAll("input")) {
+      textInputState.get(input)?.apply.cancel();
+      textInputState.delete(input);
+    }
+  }
+  _handleClick(event, target) {
+    const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
+    if (pager && this._ownsControl(pager)) {
+      if (pager.classList.contains("dg-btn-first"))
+        return this.getFirst();
+      if (pager.classList.contains("dg-btn-prev"))
+        return this.getPrev();
+      if (pager.classList.contains("dg-btn-next"))
+        return this.getNext();
+      if (pager.classList.contains("dg-btn-last"))
+        return this.getLast();
+      return;
+    }
+    const sortButton = target.closest(".dg-sort");
+    if (sortButton && this._ownsControl(sortButton)) {
+      const th = sortButton.closest("th.dg-sortable");
+      if (th) {
+        return this.sortData(th);
+      }
+    }
+  }
+  _handleChange(event, target) {
+    const pageSize = target.closest(".dg-select-per-page");
+    if (this._ownsControl(pageSize)) {
+      return this.changePerPage();
+    }
+    const page = target.closest(".dg-input-page");
+    if (this._ownsControl(page)) {
+      return this.gotoPage();
+    }
+    const filter = target.closest(this._filterSelector);
+    if (filter && this._ownsControl(filter) && /select/i.test(filter.tagName)) {
+      return this.filterData();
+    }
+  }
+  _handleInput(target) {
+    const search = target.closest(".dg-search");
+    if (this._ownsControl(search)) {
+      this._clearSelectionIfNeeded();
+      const state = textInputState.get(search);
+      if (state && !state.composing) {
+        state.apply();
+      }
+      return;
+    }
+    const filter = target.closest(this._filterSelector);
+    if (this._ownsControl(filter)) {
+      const state = textInputState.get(filter);
+      if (state && !state.composing) {
+        state.apply();
+      }
+    }
+  }
+  _handleKeydown(event, target) {
+    if (event.key === "Enter") {
+      const page = target.closest(".dg-input-page");
+      if (this._ownsControl(page)) {
+        event.preventDefault();
+        return this.gotoPage();
+      }
+      const state = textInputState.get(target);
+      if (this._ownsControl(target) && state && !state.composing && !event.isComposing) {
+        event.preventDefault();
+        state.apply.flush();
+        return;
+      }
+    }
+    if (event.key === "Escape") {
+      const input = target;
+      const state = textInputState.get(input);
+      if (this._ownsControl(target.closest(".dg-search")) && state && input.value) {
+        input.value = "";
+        state.apply.cancel();
+        return this.commitSearch();
+      }
+      const filter = target.closest(this._filterSelector);
+      if (this._ownsControl(filter) && state && input.value) {
+        input.value = "";
+        state.apply.cancel();
+        return this.filterData();
+      }
+    }
+  }
+  _handleComposition(target, composing) {
+    const input = target.closest(".dg-search, " + this._filterSelector);
+    if (!input || !this._ownsControl(input)) {
+      return;
+    }
+    const state = textInputState.get(input);
+    if (!state) {
+      return;
+    }
+    state.composing = composing;
+    if (!composing) {
+      state.apply();
     }
   }
   init() {
@@ -2112,13 +2221,6 @@ class DataGrid extends base_element_default {
         }
       }
     }
-    const sortableHeaders = findAll(tr, "th.dg-sortable");
-    for (const th of sortableHeaders) {
-      const button = th.querySelector("button[type=button]");
-      if (button) {
-        button.addEventListener("click", () => this.sortData(th));
-      }
-    }
   }
   renderDefaultHeaderCell(th, ctx) {
     const { column, sampleTh } = ctx;
@@ -2195,6 +2297,9 @@ class DataGrid extends base_element_default {
       idx++;
     }
     const oldRow = thead?.querySelector("tr.dg-head-filters");
+    if (oldRow) {
+      this._cancelTextInputs(oldRow);
+    }
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
     } else if (thead && !tr.parentNode) {
@@ -2203,36 +2308,12 @@ class DataGrid extends base_element_default {
     const filteredRows = findAll(tr, this._filterSelector);
     for (const el of filteredRows) {
       if (/select/i.test(el.tagName)) {
-        el.addEventListener("change", () => this.filterData());
         continue;
       }
       const input = el;
-      let composing = false;
-      const apply = debounce(() => this.filterData(), this.options.filterDelay);
-      input.addEventListener("input", () => {
-        if (!composing) {
-          apply();
-        }
-      });
-      input.addEventListener("compositionstart", () => {
-        composing = true;
-      });
-      input.addEventListener("compositionend", () => {
-        composing = false;
-        apply();
-      });
-      input.addEventListener("keydown", (e) => {
-        if (composing) {
-          return;
-        }
-        if (e.key === "Enter") {
-          e.preventDefault();
-          apply.flush();
-        } else if (e.key === "Escape" && input.value) {
-          input.value = "";
-          apply.cancel();
-          this.filterData();
-        }
+      textInputState.set(input, {
+        composing: false,
+        apply: debounce(() => this.filterData(), this.options.filterDelay)
       });
     }
   }

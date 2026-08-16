@@ -287,12 +287,12 @@ test("IME composition is not filtered until compositionend", async () => {
 
     const before = count();
     const input = inst.querySelector('.dg-head-filters input[data-name="name"]');
-    input.dispatchEvent(new Event("compositionstart"));
+    input.dispatchEvent(new Event("compositionstart", { bubbles: true }));
     typeFilter(inst, "name", "br"); // inputs during composition are ignored
     await sleep(80);
     expect(count()).toBe(before);
 
-    input.dispatchEvent(new Event("compositionend"));
+    input.dispatchEvent(new Event("compositionend", { bubbles: true }));
     await sleep(80);
     expect(count()).toBe(before + 1);
     expect(inst.query.filters.name).toEqual({ operator: "contains", value: "br" });
