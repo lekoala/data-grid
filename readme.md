@@ -93,9 +93,36 @@ the global capabilities — `data-sortable` on a column only opts out, it never
 turns sorting on globally.
 
 The `<data-grid>` host takes the reflected attributes listed above
-(`select-visible-only`, `row-key`, `no-data`, `page-sizes`, ...): HTML covers
-structure, data and scalar configuration; functions, objects and behaviors
-(`renderCell`, validators, `dataSource`, `actions`) stay JavaScript.
+(`select-visible-only`, `row-key`, `no-data`, `page-sizes`, `row-actions`,
+...): HTML covers structure, data and scalar configuration; functions,
+objects and behaviors (`renderCell`, validators, `dataSource`, `actions`)
+stay JavaScript.
+
+Row actions can also come from the markup: a `<th data-actions>` column
+activates the capability, and each `<td data-actions>` cell is normalized into
+`row.$actions` descriptors:
+
+```html
+<data-grid row-actions>
+    <table>
+        <thead>
+            <tr>
+                <th data-field="name">Name</th>
+                <th data-actions>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr data-row-key="42">
+                <td>User One</td>
+                <td data-actions>
+                    <a data-action="view" href="/users/42">View</a>
+                    <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</data-grid>
+```
 
 When **no** `dataSource`/`src` is configured, the `<tbody>` rows become the
 local dataset: `<td>` maps to the columns by index, `td[data-value]` provides
@@ -128,7 +155,8 @@ Some options only work if the proper plugin is loaded.
 | `selectable`          | `Boolean`            | `false`              | Select rows with checkboxes                      |
 | `singleSelect`        | `Boolean`            | `false`              | Select a single row with radios                  |
 | `selectVisibleOnly`   | `Boolean`            | `true`               | `selectAll` only selects the visible rows        |
-| `actions`             | `Action[]`           | `[]`                 | Row actions                                      |
+| `actions`             | `Action[]`           | `[]`                 | Row actions (also resolved from `$actions` / `meta.actions`) |
+| `rowActions`          | `Boolean`            | `false`              | Show the actions column even without static `actions`        |
 | `actionRenderer`      | `Function`           | -                    | Global action renderer                           |
 | `collapseActions`     | `Boolean`            | `false`              | Group actions under a toggle                     |
 | `bulkActions`         | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection            |
@@ -212,6 +240,7 @@ response protection).
 | `selectAll()` / `clearSelection()`                       | select/reset the selection                      |
 | `getSelection(...keys)`                                  | page-local selected rows                        |
 | `setSearch(value)` / `clearSearch()`                     | set / clear the global search                   |
+| `updateRow(rowKey, patch)` / `removeRow(rowKey)`          | mutate / remove a row (see `docs/actions.md`)   |
 | `getFirst()` / `getPrev()` / `getNext()` / `getLast()`   | paging                                          |
 | `clearFilters()`                                         | clear the current filters                       |
 | `sortAsc(field)` / `sortDesc(field)` / `sortNone(field)` | sort helpers                                    |
@@ -244,18 +273,26 @@ response protection).
 
 ## Action
 
-| Name       | Type                                 | Description                                      |
-|------------|--------------------------------------|--------------------------------------------------|
-| `name`     | `String`                             | the action name (`button[data-action]`)          |
-| `label`    | `String`                             | the button label and accessible name             |
-| `intent`   | `"default" \| "primary" \| "danger"` | sets `data-intent`                               |
-| `href`     | `String \| Function`                 | renders an `<a>` link                            |
-| `class`    | `String`                             | class on the button                              |
-| `visible`  | `(row) => Boolean`                   | hide the action when falsy                       |
-| `disabled` | `(row) => Boolean`                   | disable the action when truthy                   |
-| `render`   | `({ action, row, grid }) => content` | replace the button content                      |
-| `confirm`  | `Boolean`                            | ask for confirmation                             |
-| `default`  | `Boolean`                            | clicking the row triggers the action             |
+| Name       | Type                                                | Description                                      |
+|------------|-----------------------------------------------------|--------------------------------------------------|
+| `name`     | `String`                                            | the action name (`button[data-action]`)          |
+| `label`    | `String`                                            | the button label and accessible name             |
+| `intent`   | `"default" \| "primary" \| "danger"`                | sets `data-intent`                               |
+| `href`     | `String \| Function`                                | renders an `<a>` link (`{field}` interpolation or `(row, ctx) => string`) |
+| `class`    | `String`                                            | class on the button                              |
+| `visible`  | `(row, ctx) => Boolean`                             | hide the action when falsy                       |
+| `disabled` | `Boolean \| (row, ctx) => Boolean`                  | blocks the action (`aria-disabled` + guarded click) |
+| `render`   | `({ action, row, grid }) => content`                | replace the button content                      |
+| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation (generic label, message, or resolver) |
+| `default`  | `Boolean`                                           | clicking the row triggers the action (first resolved default wins, interactive elements are ignored) |
+
+`visible`/`disabled`/`href`/`confirm` receive `(row, ctx)` with `ctx = { grid, action, rowKey }`.
+
+Actions can also be driven by the server: a `row.$actions` array lists which
+actions a row gets (strings are looked up by name, objects override the
+definition), and `meta.actions` provides server-side definitions. Set
+`rowActions: true` (or `row-actions`) to activate the column without static
+`actions`.
 
 See `docs/actions.md` for the full contract.
 
@@ -273,8 +310,8 @@ See `docs/actions.md` for the full contract.
 | `headerRendered`   | -                                             | the header is rendered     |
 | `bodyRendered`     | -                                             | the body is rendered       |
 | `rowRendered`      | `{ rowData, tr }`                             | a row is rendered          |
-| `action`           | `{ data, action }`                            | an action is performed     |
-| `bulkAction`       | `{ action, selection, query }`                | a bulk action is performed |
+| `action`           | `{ action, name, row, rowKey, rowIndex, trigger }` | an action is performed |
+| `bulkAction`       | `{ action, name, selection, query, trigger }`      | a bulk action is performed |
 | `edit`             | `{ data, value, field, column }` (cancelable) | an edit is committed       |
 
 ## Server

@@ -64,6 +64,9 @@
               "name": "page-sizes"
             },
             {
+              "name": "row-actions"
+            },
+            {
               "name": "reorder"
             },
             {
@@ -180,6 +183,16 @@
               "kind": "method",
               "name": "isRowSelected",
               "description": "Whether a row is part of the current selection."
+            },
+            {
+              "kind": "method",
+              "name": "updateRow",
+              "description": "Mutate a row of the current page in place and re-render the body. Works with any data source: it never reloads, so a server grid reflects a business mutation without a second request. With an ArrayDataSource the paginated rows are references to the source objects, so the source is updated too."
+            },
+            {
+              "kind": "method",
+              "name": "removeRow",
+              "description": "Remove a row from the local dataset. Only applies when the data source owns a mutable local collection (ArrayDataSource): the row is removed from the source and the query is re-applied. With a remote data source this returns false — refresh after a server-side deletion instead."
             },
             {
               "kind": "method",

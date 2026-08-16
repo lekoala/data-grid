@@ -114,6 +114,11 @@ export type CellContext = {
     availableWidth?: number;
     colMaxWidth?: number;
 };
+export type ActionContext = {
+    grid: DataGrid;
+    action: Action;
+    rowKey: string;
+};
 export type Action = {
     /**
      * - the name of the action (button[data-action])
@@ -128,27 +133,27 @@ export type Action = {
      */
     intent?: string;
     /**
-     * - link for the action (string with {field} interpolation or (row) => string)
+     * - link for the action (string with {field} interpolation or (row, ctx) => string)
      */
     href?: string | Function;
     /**
-     * - (row) => Boolean, hides the action when falsy
+     * - (row, ctx) => Boolean, hides the action when falsy
      */
     visible?: Function;
     /**
-     * - (row) => Boolean, disables the button when truthy
+     * - (row, ctx) => Boolean, disables the action when truthy (blocks the click)
      */
-    disabled?: Function;
+    disabled?: boolean | Function;
     /**
      * - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
      */
     render?: Function;
     /**
-     * - needs confirmation
+     * - boolean (generic label), message string, or (row, ctx) => Boolean | String
      */
-    confirm?: boolean;
+    confirm?: boolean | string | Function;
     /**
-     * - is the default row action
+     * - is the default row action (only the first resolved default per row applies)
      */
     default?: boolean;
     /**
@@ -169,6 +174,10 @@ export type BulkAction = {
      * - "default" | "primary" | "danger" (defaults to "default")
      */
     intent?: string;
+    /**
+     * - boolean (generic label), message string, or (selection, ctx) => Boolean | String
+     */
+    confirm?: boolean | string | Function;
 };
 export type SelectionState = {
     mode: "explicit" | "all";
@@ -238,6 +247,10 @@ export type Options = {
      * Row actions (RowActions module)
      */
     actions: Action[];
+    /**
+     * Activate the row actions column even without static `actions` (server/HTML driven $actions)
+     */
+    rowActions: boolean;
     /**
      * - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
      */
@@ -789,6 +802,45 @@ declare class DataGrid extends BaseElement {
      * @returns {Boolean}
      */
     isRowSelected(row: Record<string, any>, index?: number): boolean;
+    /**
+     * Find the row of the current page matching a row key.
+     * @param {String} rowKey
+     * @returns {Record<string, any>|undefined}
+     */
+    findRowByKey(rowKey: string): Record<string, any> | undefined;
+    /**
+     * Mutate a row of the current page in place and re-render the body.
+     * Works with any data source: it never reloads, so a server grid reflects
+     * a business mutation without a second request. With an ArrayDataSource the
+     * paginated rows are references to the source objects, so the source is
+     * updated too.
+     * @public
+     * @param {String} rowKey
+     * @param {Record<string, any>} patch
+     * @returns {Boolean} Whether a matching row was found
+     */
+    updateRow(rowKey: string, patch: Record<string, any>): boolean;
+    /**
+     * Remove a row from the local dataset. Only applies when the data source
+     * owns a mutable local collection (ArrayDataSource): the row is removed
+     * from the source and the query is re-applied. With a remote data source
+     * this returns false — refresh after a server-side deletion instead.
+     * @public
+     * @param {String} rowKey
+     * @returns {Boolean} Whether the row was removed
+     */
+    removeRow(rowKey: string): boolean;
+    /**
+     * Resolve the actions to render for a row. A `row.$actions` array is
+     * authoritative: it lists which actions are available and can override
+     * their descriptors (strings are looked up by name in the definitions,
+     * objects are merged over them). Without `$actions`, the static
+     * `options.actions` are used. Definitions combine `meta.actions` (server
+     * base) overridden by `options.actions` (client).
+     * @param {Record<string, any>} row
+     * @returns {Action[]}
+     */
+    getActionsForRow(row: Record<string, any>): Action[];
     /**
      * Snapshot of the current selection state.
      * @public

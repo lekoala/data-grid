@@ -44,10 +44,28 @@ class BulkActions extends BasePlugin {
                 if (button.disabled) {
                     return;
                 }
+                const selection = grid.getSelectionState();
+                let mustConfirm = Boolean(action.confirm);
+                let message = grid.labels.areYouSure;
+                if (typeof action.confirm === "string") {
+                    message = action.confirm;
+                } else if (typeof action.confirm === "function") {
+                    const result = action.confirm(selection, { grid, action });
+                    if (typeof result === "string") {
+                        message = result;
+                    } else if (result === false) {
+                        mustConfirm = false;
+                    }
+                }
+                if (mustConfirm && !window.confirm(message)) {
+                    return;
+                }
                 dispatch(grid, "bulkAction", {
-                    action: action.name,
-                    selection: grid.getSelectionState(),
+                    action,
+                    name: action.name,
+                    selection,
                     query: grid.query,
+                    trigger: button,
                 });
             });
             bar.appendChild(button);

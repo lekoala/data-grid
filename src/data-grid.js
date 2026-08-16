@@ -74,17 +74,25 @@ import {
  */
 
 /**
+ * Row action context passed to `visible`, `disabled`, `href` and `confirm`.
+ * @typedef {Object} ActionContext
+ * @property {DataGrid} grid
+ * @property {Action} action
+ * @property {String} rowKey
+ */
+
+/**
  * Row action
  * @typedef Action
  * @property {String} name - the name of the action (button[data-action])
  * @property {String} [label] - the button label and accessible name
  * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
- * @property {String | Function} [href] - link for the action (string with {field} interpolation or (row) => string)
- * @property {Function} [visible] - (row) => Boolean, hides the action when falsy
- * @property {Function} [disabled] - (row) => Boolean, disables the button when truthy
+ * @property {String | Function} [href] - link for the action (string with {field} interpolation or (row, ctx) => string)
+ * @property {Function} [visible] - (row, ctx) => Boolean, hides the action when falsy
+ * @property {Boolean | Function} [disabled] - (row, ctx) => Boolean, disables the action when truthy (blocks the click)
  * @property {Function} [render] - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
- * @property {Boolean} [confirm] - needs confirmation
- * @property {Boolean} [default] - is the default row action
+ * @property {Boolean | String | Function} [confirm] - boolean (generic label), message string, or (row, ctx) => Boolean | String
+ * @property {Boolean} [default] - is the default row action (only the first resolved default per row applies)
  * @property {String} [class] - the class for the button
  */
 
@@ -94,6 +102,7 @@ import {
  * @property {String} name - the name of the action
  * @property {String} label - the label of the button
  * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
+ * @property {Boolean | String | Function} [confirm] - boolean (generic label), message string, or (selection, ctx) => Boolean | String
  */
 
 /**
@@ -127,6 +136,7 @@ import {
  * @property {Boolean} showPageSize Shows the page size select element
  * @property {Column[]} columns Available columns
  * @property {Action[]} actions Row actions (RowActions module)
+ * @property {Boolean} rowActions Activate the row actions column even without static `actions` (server/HTML driven $actions)
  * @property {Function} [actionRenderer] - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
  * @property {Boolean} collapseActions Group actions (RowActions module)
  * @property {Boolean} expand  Allow cell content to spawn over multiple lines
@@ -361,6 +371,46 @@ function parseDeclarativeTable(table) {
 }
 
 /**
+ * Parse a `<td data-actions>` cell into row action descriptors.
+ * @param {HTMLTableCellElement} td
+ * @returns {Action[]}
+ */
+function parseActionsCell(td) {
+    const actions = [];
+    const elements = /** @type {NodeListOf<HTMLElement>} */ (td.querySelectorAll("[data-action]"));
+    for (const el of elements) {
+        const name = el.dataset.action;
+        if (!name) {
+            continue;
+        }
+        /** @type {Action} */
+        const action = { name };
+        const label = el.textContent.trim();
+        if (label) {
+            action.label = label;
+        }
+        const href = el.getAttribute("href");
+        if (href) {
+            action.href = href;
+        }
+        if (el.dataset.intent) {
+            action.intent = el.dataset.intent;
+        }
+        if (el.dataset.confirm !== undefined) {
+            action.confirm = el.dataset.confirm;
+        }
+        if (el.dataset.default !== undefined) {
+            action.default = parseDeclarativeBoolean(el.dataset.default);
+        }
+        if (el.hasAttribute("disabled")) {
+            action.disabled = true;
+        }
+        actions.push(action);
+    }
+    return actions;
+}
+
+/**
  * Extract the local dataset from a supplied table body. The first `<tbody>`
  * row maps to the columns by index: `value = td[data-value] ?? td.textContent`.
  * A `tr[data-row-key]` is the authoritative row identity and overrides the
@@ -381,7 +431,11 @@ function rowsFromTable(table, columns, rowKey = "id") {
     for (const tr of trs) {
         /** @type {Record<string, any>} */
         const row = {};
-        const tds = /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll(":scope > td"));
+        // `td[data-actions]` cells are consumed as actions, never as data, so
+        // they cannot shift the positional column mapping.
+        const tds = Array.from(
+            /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll(":scope > td")),
+        ).filter((td) => !td.hasAttribute("data-actions"));
         columns.forEach((column, index) => {
             if (!column.field) {
                 return;
@@ -392,6 +446,13 @@ function rowsFromTable(table, columns, rowKey = "id") {
             }
             row[column.field] = td.dataset.value ?? td.textContent.trim();
         });
+        const actionsCell = /** @type {HTMLTableCellElement|null} */ (tr.querySelector(":scope > td[data-actions]"));
+        if (actionsCell) {
+            const actions = parseActionsCell(actionsCell);
+            if (actions.length) {
+                row.$actions = actions;
+            }
+        }
         if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
             row[rowKey] = tr.dataset.rowKey;
         }
@@ -845,6 +906,7 @@ class DataGrid extends BaseElement {
             showPageSize: true,
             columns: [],
             actions: [],
+            rowActions: false,
             collapseActions: false,
             selectable: false,
             selectVisibleOnly: true,
@@ -1031,6 +1093,7 @@ class DataGrid extends BaseElement {
             "no-data",
             "error-message",
             "page-sizes",
+            "row-actions",
             "reorder",
             "menu",
             "expand",
@@ -1237,7 +1300,9 @@ class DataGrid extends BaseElement {
         // plugin columns) once, so it matches the freshly inferred columns.
         const inferredColumns = this.options.columns.length === 0 && this.rows.length > 0;
         if (inferredColumns) {
-            this.options.columns = this.convertColumns(Object.keys(this.rows[0]));
+            // `$actions` is reserved for per-row actions, never a data column.
+            const fields = Object.keys(this.rows[0]).filter((field) => field !== "$actions");
+            this.options.columns = this.convertColumns(fields);
         } else {
             this.options.columns = this.convertColumns(this.options.columns);
         }
@@ -1466,6 +1531,9 @@ class DataGrid extends BaseElement {
         const { columns, sort } = parseDeclarativeTable(supplied);
         if (columns.length) {
             this.options.columns = columns;
+        }
+        if (supplied.querySelector("thead th[data-actions]")) {
+            this.options.rowActions = true;
         }
         if (!this.options.initialQuery && sort.length) {
             this._initialQuery.sort = sort;
@@ -1782,6 +1850,98 @@ class DataGrid extends BaseElement {
         const key = this.resolveRowKey(row, index);
         const sel = this._selection;
         return sel.mode === "all" ? !sel.except.has(key) : sel.ids.has(key);
+    }
+
+    /**
+     * Find the row of the current page matching a row key.
+     * @param {String} rowKey
+     * @returns {Record<string, any>|undefined}
+     */
+    findRowByKey(rowKey) {
+        const wanted = String(rowKey);
+        return this.rows.find((row) => this.resolveRowKey(row) === wanted);
+    }
+
+    /**
+     * Mutate a row of the current page in place and re-render the body.
+     * Works with any data source: it never reloads, so a server grid reflects
+     * a business mutation without a second request. With an ArrayDataSource the
+     * paginated rows are references to the source objects, so the source is
+     * updated too.
+     * @public
+     * @param {String} rowKey
+     * @param {Record<string, any>} patch
+     * @returns {Boolean} Whether a matching row was found
+     */
+    updateRow(rowKey, patch) {
+        const row = this.findRowByKey(rowKey);
+        if (!row) {
+            return false;
+        }
+        Object.assign(row, patch);
+        this.renderBody();
+        return true;
+    }
+
+    /**
+     * Remove a row from the local dataset. Only applies when the data source
+     * owns a mutable local collection (ArrayDataSource): the row is removed
+     * from the source and the query is re-applied. With a remote data source
+     * this returns false — refresh after a server-side deletion instead.
+     * @public
+     * @param {String} rowKey
+     * @returns {Boolean} Whether the row was removed
+     */
+    removeRow(rowKey) {
+        const ds = /** @type {any} */ (this.dataSource);
+        if (!ds || !Array.isArray(ds.rows)) {
+            return false;
+        }
+        const wanted = String(rowKey);
+        const index = ds.rows.findIndex((/** @type {Record<string, any>} */ row) => this.resolveRowKey(row) === wanted);
+        if (index === -1) {
+            return false;
+        }
+        ds.rows.splice(index, 1);
+        this.refresh();
+        return true;
+    }
+
+    /**
+     * Resolve the actions to render for a row. A `row.$actions` array is
+     * authoritative: it lists which actions are available and can override
+     * their descriptors (strings are looked up by name in the definitions,
+     * objects are merged over them). Without `$actions`, the static
+     * `options.actions` are used. Definitions combine `meta.actions` (server
+     * base) overridden by `options.actions` (client).
+     * @param {Record<string, any>} row
+     * @returns {Action[]}
+     */
+    getActionsForRow(row) {
+        if (row.$actions === undefined) {
+            return this.options.actions;
+        }
+        /** @type {Record<string, Action>} */
+        const definitions = {};
+        for (const [name, definition] of Object.entries(this.meta?.actions ?? {})) {
+            definitions[name] = { name, ...definition };
+        }
+        for (const action of this.options.actions) {
+            definitions[action.name] = { ...definitions[action.name], ...action };
+        }
+        const resolved = [];
+        for (const item of row.$actions) {
+            if (typeof item === "string") {
+                const definition = definitions[item];
+                if (definition) {
+                    resolved.push(definition);
+                }
+            } else if (item && typeof item === "object") {
+                const base = definitions[item.name];
+                resolved.push(base ? { ...base, ...item } : item);
+            }
+        }
+        return resolved;
     }
 
     /**

@@ -665,6 +665,39 @@ function parseDeclarativeTable(table) {
   }
   return { columns, sort };
 }
+function parseActionsCell(td) {
+  const actions = [];
+  const elements = td.querySelectorAll("[data-action]");
+  for (const el of elements) {
+    const name = el.dataset.action;
+    if (!name) {
+      continue;
+    }
+    const action = { name };
+    const label = el.textContent.trim();
+    if (label) {
+      action.label = label;
+    }
+    const href = el.getAttribute("href");
+    if (href) {
+      action.href = href;
+    }
+    if (el.dataset.intent) {
+      action.intent = el.dataset.intent;
+    }
+    if (el.dataset.confirm !== undefined) {
+      action.confirm = el.dataset.confirm;
+    }
+    if (el.dataset.default !== undefined) {
+      action.default = parseDeclarativeBoolean(el.dataset.default);
+    }
+    if (el.hasAttribute("disabled")) {
+      action.disabled = true;
+    }
+    actions.push(action);
+  }
+  return actions;
+}
 function rowsFromTable(table, columns, rowKey = "id") {
   const tbody = table.querySelector("tbody");
   if (!tbody) {
@@ -674,7 +707,7 @@ function rowsFromTable(table, columns, rowKey = "id") {
   const trs = tbody.querySelectorAll(":scope > tr");
   for (const tr of trs) {
     const row = {};
-    const tds = tr.querySelectorAll(":scope > td");
+    const tds = Array.from(tr.querySelectorAll(":scope > td")).filter((td) => !td.hasAttribute("data-actions"));
     columns.forEach((column, index) => {
       if (!column.field) {
         return;
@@ -685,6 +718,13 @@ function rowsFromTable(table, columns, rowKey = "id") {
       }
       row[column.field] = td.dataset.value ?? td.textContent.trim();
     });
+    const actionsCell = tr.querySelector(":scope > td[data-actions]");
+    if (actionsCell) {
+      const actions = parseActionsCell(actionsCell);
+      if (actions.length) {
+        row.$actions = actions;
+      }
+    }
     if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
       row[rowKey] = tr.dataset.rowKey;
     }
@@ -947,6 +987,7 @@ class DataGrid extends base_element_default {
       showPageSize: true,
       columns: [],
       actions: [],
+      rowActions: false,
       collapseActions: false,
       selectable: false,
       selectVisibleOnly: true,
@@ -1066,6 +1107,7 @@ class DataGrid extends base_element_default {
       "no-data",
       "error-message",
       "page-sizes",
+      "row-actions",
       "reorder",
       "menu",
       "expand",
@@ -1208,7 +1250,8 @@ class DataGrid extends base_element_default {
     this.meta = result.meta || {};
     const inferredColumns = this.options.columns.length === 0 && this.rows.length > 0;
     if (inferredColumns) {
-      this.options.columns = this.convertColumns(Object.keys(this.rows[0]));
+      const fields = Object.keys(this.rows[0]).filter((field) => field !== "$actions");
+      this.options.columns = this.convertColumns(fields);
     } else {
       this.options.columns = this.convertColumns(this.options.columns);
     }
@@ -1370,6 +1413,9 @@ class DataGrid extends base_element_default {
     const { columns, sort } = parseDeclarativeTable(supplied);
     if (columns.length) {
       this.options.columns = columns;
+    }
+    if (supplied.querySelector("thead th[data-actions]")) {
+      this.options.rowActions = true;
     }
     if (!this.options.initialQuery && sort.length) {
       this._initialQuery.sort = sort;
@@ -1571,6 +1617,58 @@ class DataGrid extends base_element_default {
     const key = this.resolveRowKey(row, index);
     const sel = this._selection;
     return sel.mode === "all" ? !sel.except.has(key) : sel.ids.has(key);
+  }
+  findRowByKey(rowKey) {
+    const wanted = String(rowKey);
+    return this.rows.find((row) => this.resolveRowKey(row) === wanted);
+  }
+  updateRow(rowKey, patch) {
+    const row = this.findRowByKey(rowKey);
+    if (!row) {
+      return false;
+    }
+    Object.assign(row, patch);
+    this.renderBody();
+    return true;
+  }
+  removeRow(rowKey) {
+    const ds = this.dataSource;
+    if (!ds || !Array.isArray(ds.rows)) {
+      return false;
+    }
+    const wanted = String(rowKey);
+    const index = ds.rows.findIndex((row) => this.resolveRowKey(row) === wanted);
+    if (index === -1) {
+      return false;
+    }
+    ds.rows.splice(index, 1);
+    this.refresh();
+    return true;
+  }
+  getActionsForRow(row) {
+    if (row.$actions === undefined) {
+      return this.options.actions;
+    }
+    const definitions = {};
+    for (const [name, definition] of Object.entries(this.meta?.actions ?? {})) {
+      definitions[name] = { name, ...definition };
+    }
+    for (const action of this.options.actions) {
+      definitions[action.name] = { ...definitions[action.name], ...action };
+    }
+    const resolved = [];
+    for (const item of row.$actions) {
+      if (typeof item === "string") {
+        const definition = definitions[item];
+        if (definition) {
+          resolved.push(definition);
+        }
+      } else if (item && typeof item === "object") {
+        const base = definitions[item.name];
+        resolved.push(base ? { ...base, ...item } : item);
+      }
+    }
+    return resolved;
   }
   getSelectionState() {
     return {
@@ -2820,10 +2918,28 @@ class BulkActions extends base_plugin_default {
         if (button.disabled) {
           return;
         }
+        const selection = grid.getSelectionState();
+        let mustConfirm = Boolean(action.confirm);
+        let message = grid.labels.areYouSure;
+        if (typeof action.confirm === "string") {
+          message = action.confirm;
+        } else if (typeof action.confirm === "function") {
+          const result = action.confirm(selection, { grid, action });
+          if (typeof result === "string") {
+            message = result;
+          } else if (result === false) {
+            mustConfirm = false;
+          }
+        }
+        if (mustConfirm && !window.confirm(message)) {
+          return;
+        }
         dispatch(grid, "bulkAction", {
-          action: action.name,
-          selection: grid.getSelectionState(),
-          query: grid.query
+          action,
+          name: action.name,
+          selection,
+          query: grid.query,
+          trigger: button
         });
       });
       bar.appendChild(button);
@@ -3291,10 +3407,11 @@ function interpolate(str, data) {
 // src/plugins/row-actions.js
 class RowActions extends base_plugin_default {
   hasActions() {
-    return this.grid.options.actions.length > 0;
+    const grid = this.grid;
+    return grid.options.actions.length > 0 || grid.options.rowActions;
   }
   extendColumns(columns) {
-    if (!this.grid.options.actions.length) {
+    if (!this.hasActions()) {
       return;
     }
     columns.push({
@@ -3324,6 +3441,23 @@ class RowActions extends base_plugin_default {
   afterRender(context) {
     if (context === "table") {
       this.closeActionMenu();
+    } else if (context === "body") {
+      this.syncCellModes();
+    }
+  }
+  syncCellModes() {
+    const grid = this.grid;
+    const cells = findAll(grid, 'tbody td[data-column-id="$actions"]');
+    for (const cell of cells) {
+      const count = cell.querySelectorAll("[data-action]").length;
+      cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
+      if (count === 0) {
+        cell.classList.add("dg-actions-more");
+      } else if (!grid.options.collapseActions && count <= 2) {
+        cell.classList.add(`dg-actions-${count}`);
+      } else {
+        cell.classList.add("dg-actions-more");
+      }
     }
   }
   toggleActionMenu(cell, row) {
@@ -3336,6 +3470,7 @@ class RowActions extends base_plugin_default {
   openActionMenu(cell, row) {
     const grid = this.grid;
     const labels2 = grid.labels;
+    const rowIndex = grid.rows.indexOf(row);
     if (!this.menu) {
       this.menu = document.createElement("ul");
       this.menu.classList.add("dg-actions-menu");
@@ -3346,12 +3481,13 @@ class RowActions extends base_plugin_default {
     while (menu.lastChild) {
       menu.removeChild(menu.lastChild);
     }
-    for (const action of grid.options.actions) {
-      if (action.visible && !action.visible(row)) {
+    for (const action of grid.getActionsForRow(row)) {
+      const rowKey = grid.resolveRowKey(row, rowIndex);
+      if (action.visible && !action.visible(row, { grid, action, rowKey })) {
         continue;
       }
       const li = document.createElement("li");
-      const { el } = this.createActionElement(action, row, grid, labels2, true);
+      const { el } = this.createActionElement(action, row, rowIndex, grid, labels2, true);
       li.appendChild(el);
       menu.appendChild(li);
     }
@@ -3412,10 +3548,14 @@ class RowActions extends base_plugin_default {
     this.openCell = null;
     this.menu?.classList.remove("dg-actions-open");
   }
-  makeActionRow({ row, tr, grid }) {
+  makeActionRow({ row, tr, grid, rowIndex }) {
     const labels2 = grid.labels;
     const rowData = row ?? {};
+    const actions = grid.getActionsForRow(rowData);
     const fragment = document.createDocumentFragment();
+    if (!actions.length) {
+      return fragment;
+    }
     const actionsToggle = document.createElement("button");
     actionsToggle.type = "button";
     actionsToggle.classList.add("dg-actions-toggle");
@@ -3431,21 +3571,36 @@ class RowActions extends base_plugin_default {
       }
     });
     fragment.appendChild(actionsToggle);
-    for (const action of grid.options.actions) {
-      if (action.visible && !action.visible(rowData)) {
+    let defaultApplied = false;
+    for (const action of actions) {
+      const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
+      if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
         continue;
       }
-      const { el, dispatchAction } = this.createActionElement(action, rowData, grid, labels2);
+      const { el, dispatchAction } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels2);
       fragment.appendChild(el);
-      if (action.default && tr) {
-        tr.classList.add("dg-actionable");
-        on(tr, "click", dispatchAction);
+      if (action.default) {
+        if (defaultApplied) {
+          grid.log(`multiple default actions for row ${rowKey}, using the first one`);
+        } else if (tr) {
+          defaultApplied = true;
+          tr.classList.add("dg-actionable");
+          on(tr, "click", (ev) => {
+            const target = ev.target;
+            if (target.closest(grid._excludedRowElementSelector)) {
+              return;
+            }
+            dispatchAction(ev);
+          });
+        }
       }
     }
     return fragment;
   }
-  createActionElement(action, row, grid, labels2, menu = false) {
-    const href = action.href ? typeof action.href === "function" ? action.href(row) : interpolate(action.href, row) : null;
+  createActionElement(action, row, rowIndex, grid, labels2, menu = false) {
+    const rowKey = grid.resolveRowKey(row, rowIndex);
+    const ctx = { grid, action, rowKey };
+    const href = action.href ? typeof action.href === "function" ? action.href(row, ctx) : interpolate(action.href, row) : null;
     const render = action.render ?? grid.options.actionRenderer;
     const content = render ? render({ action, row, grid }) : null;
     let el;
@@ -3482,21 +3637,43 @@ class RowActions extends base_plugin_default {
     if (action.class) {
       el.classList.add(...action.class.split(" "));
     }
-    if (action.disabled?.(row)) {
-      el.disabled = true;
+    const isDisabled = typeof action.disabled === "function" ? action.disabled(row, ctx) : Boolean(action.disabled);
+    if (isDisabled) {
+      if (el.tagName === "BUTTON") {
+        el.disabled = true;
+      }
+      el.setAttribute("aria-disabled", "true");
+      el.classList.add("dg-disabled");
+    }
+    let mustConfirm = Boolean(action.confirm);
+    let message = labels2.areYouSure;
+    if (typeof action.confirm === "string") {
+      message = action.confirm;
+    } else if (typeof action.confirm === "function") {
+      const result = action.confirm(row, ctx);
+      if (typeof result === "string") {
+        message = result;
+      } else if (result === false) {
+        mustConfirm = false;
+      }
     }
     const dispatchAction = (ev) => {
       ev.stopPropagation();
-      if (action.confirm) {
-        const c = confirm(labels2.areYouSure);
-        if (!c) {
-          ev.preventDefault();
-          return;
-        }
+      if (isDisabled) {
+        ev.preventDefault();
+        return;
+      }
+      if (mustConfirm && !window.confirm(message)) {
+        ev.preventDefault();
+        return;
       }
       dispatch(grid, "action", {
-        data: row,
-        action: action.name
+        action,
+        name: action.name,
+        row,
+        rowKey,
+        rowIndex,
+        trigger: el
       });
     };
     el.addEventListener("click", dispatchAction);
@@ -3512,8 +3689,12 @@ class RowActions extends base_plugin_default {
     }
   }
   get actionClass() {
-    if (this.grid.options.actions.length < 3 && !this.grid.options.collapseActions) {
-      return `dg-actions-${this.grid.options.actions.length}`;
+    const { actions, collapseActions, rowActions } = this.grid.options;
+    if (rowActions && actions.length === 0) {
+      return "dg-actions-more";
+    }
+    if (actions.length < 3 && !collapseActions) {
+      return `dg-actions-${actions.length}`;
     }
     return "dg-actions-more";
   }

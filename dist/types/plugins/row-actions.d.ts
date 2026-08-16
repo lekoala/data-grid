@@ -8,6 +8,8 @@ declare class RowActions extends BasePlugin {
     _boundDocumentClick: ((ev: MouseEvent) => void) | null | undefined;
     _boundKeydown: ((ev: KeyboardEvent) => void) | null | undefined;
     /**
+     * Whether the actions column is active: static `options.actions`, the
+     * `rowActions` capability or a declarative `<th data-actions>`.
      * @returns {Boolean}
      */
     hasActions(): boolean;
@@ -23,10 +25,16 @@ declare class RowActions extends BasePlugin {
     createFilterCell(): void;
     updateLabels(): void;
     /**
-     * Close the popover on any full table render.
+     * Close the popover on any full table render and keep the per-row
+     * collapsed mode in sync with the resolved actions.
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context: import("../core/base-plugin.js").RenderContext): void;
+    /**
+     * The collapsed vs inline mode depends on the actions actually resolved
+     * for each row, which is only known at render time.
+     */
+    syncCellModes(): void;
     /**
      * Toggle the popover menu for a collapsed actions cell.
      * @param {HTMLElement} cell
@@ -51,22 +59,24 @@ declare class RowActions extends BasePlugin {
      */
     closeActionMenu(): void;
     /**
-     * Build the actions cell content: a toggle button plus one element per action.
+     * Build the actions cell content: a toggle button plus one element per
+     * resolved action. A row without actions gets an empty cell.
      * @param {import("../data-grid.js").CellContext} ctx
      * @returns {DocumentFragment}
      */
-    makeActionRow({ row, tr, grid }: import("../data-grid.js").CellContext): DocumentFragment;
+    makeActionRow({ row, tr, grid, rowIndex }: import("../data-grid.js").CellContext): DocumentFragment;
     /**
      * Create the button (or link) for a single action.
      * @param {import("../data-grid.js").Action} action
      * @param {Record<string, any>} row
+     * @param {Number} rowIndex
      * @param {import("../data-grid.js").default} grid
      * @param {import("../data-grid.js").Labels} labels
      * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
      * add a visible label next to it.
      * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
      */
-    createActionElement(action: import("../data-grid.js").Action, row: Record<string, any>, grid: import("../data-grid.js").default, labels: import("../data-grid.js").Labels, menu?: boolean): {
+    createActionElement(action: import("../data-grid.js").Action, row: Record<string, any>, rowIndex: number, grid: import("../data-grid.js").default, labels: import("../data-grid.js").Labels, menu?: boolean): {
         el: HTMLElement;
         dispatchAction: (ev: Event) => void;
     };

@@ -230,6 +230,35 @@ test("header and body checkboxes share the same centering box", async () => {
     document.body.removeChild(inst);
 });
 
+test("bulkActions dispatch the enriched contract with confirm", async () => {
+    const messages = [];
+    globalThis.confirm = (message) => {
+        messages.push(message);
+        return true;
+    };
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        selectable: true,
+        bulkActions: [{ name: "archive", label: "Archive", confirm: (selection) => `Archive ${selection.ids.size}?` }],
+    });
+
+    toggle(firstCheckbox(inst));
+    let detail = null;
+    inst.addEventListener("bulkAction", (event) => {
+        detail = event.detail;
+    });
+    const button = inst.querySelector('button[data-action="archive"]');
+    button.click();
+
+    expect(messages).toEqual(["Archive 1?"]);
+    expect(detail.name).toBe("archive");
+    expect(detail.action.name).toBe("archive");
+    expect(detail.selection.ids.has("1")).toBe(true);
+    expect(detail.trigger).toBe(button);
+    document.body.removeChild(inst);
+    globalThis.confirm = () => true;
+});
+
 test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name" }],
@@ -259,7 +288,7 @@ test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
 
     button.click();
     expect(detail).toBeTruthy();
-    expect(detail.action).toBe("archive");
+    expect(detail.name).toBe("archive");
     expect(detail.selection.ids.has("1")).toBe(true);
     expect(detail.query.page).toBe(1);
 

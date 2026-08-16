@@ -7,10 +7,13 @@ import { dispatch, findAll, off, on } from "../utils/shortcuts.js";
  */
 class RowActions extends BasePlugin {
     /**
+     * Whether the actions column is active: static `options.actions`, the
+     * `rowActions` capability or a declarative `<th data-actions>`.
      * @returns {Boolean}
      */
     hasActions() {
-        return this.grid.options.actions.length > 0;
+        const grid = this.grid;
+        return grid.options.actions.length > 0 || grid.options.rowActions;
     }
 
     /**
@@ -18,7 +21,7 @@ class RowActions extends BasePlugin {
      * @param {import("../data-grid.js").Column[]} columns
      */
     extendColumns(columns) {
-        if (!this.grid.options.actions.length) {
+        if (!this.hasActions()) {
             return;
         }
         columns.push({
@@ -53,12 +56,35 @@ class RowActions extends BasePlugin {
     }
 
     /**
-     * Close the popover on any full table render.
+     * Close the popover on any full table render and keep the per-row
+     * collapsed mode in sync with the resolved actions.
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
         if (context === "table") {
             this.closeActionMenu();
+        } else if (context === "body") {
+            this.syncCellModes();
+        }
+    }
+
+    /**
+     * The collapsed vs inline mode depends on the actions actually resolved
+     * for each row, which is only known at render time.
+     */
+    syncCellModes() {
+        const grid = this.grid;
+        const cells = findAll(grid, 'tbody td[data-column-id="$actions"]');
+        for (const cell of cells) {
+            const count = cell.querySelectorAll("[data-action]").length;
+            cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
+            if (count === 0) {
+                cell.classList.add("dg-actions-more");
+            } else if (!grid.options.collapseActions && count <= 2) {
+                cell.classList.add(`dg-actions-${count}`);
+            } else {
+                cell.classList.add("dg-actions-more");
+            }
         }
     }
 
@@ -83,6 +109,7 @@ class RowActions extends BasePlugin {
     openActionMenu(cell, row) {
         const grid = this.grid;
         const labels = grid.labels;
+        const rowIndex = grid.rows.indexOf(row);
         if (!this.menu) {
             this.menu = document.createElement("ul");
             this.menu.classList.add("dg-actions-menu");
@@ -94,12 +121,13 @@ class RowActions extends BasePlugin {
         while (menu.lastChild) {
             menu.removeChild(menu.lastChild);
         }
-        for (const action of grid.options.actions) {
-            if (action.visible && !action.visible(row)) {
+        for (const action of grid.getActionsForRow(row)) {
+            const rowKey = grid.resolveRowKey(row, rowIndex);
+            if (action.visible && !action.visible(row, { grid, action, rowKey })) {
                 continue;
             }
             const li = document.createElement("li");
-            const { el } = this.createActionElement(action, row, grid, labels, true);
+            const { el } = this.createActionElement(action, row, rowIndex, grid, labels, true);
             li.appendChild(el);
             menu.appendChild(li);
         }
@@ -173,14 +201,19 @@ class RowActions extends BasePlugin {
     }
 
     /**
-     * Build the actions cell content: a toggle button plus one element per action.
+     * Build the actions cell content: a toggle button plus one element per
+     * resolved action. A row without actions gets an empty cell.
      * @param {import("../data-grid.js").CellContext} ctx
      * @returns {DocumentFragment}
      */
-    makeActionRow({ row, tr, grid }) {
+    makeActionRow({ row, tr, grid, rowIndex }) {
         const labels = grid.labels;
         const rowData = row ?? {};
+        const actions = grid.getActionsForRow(rowData);
         const fragment = document.createDocumentFragment();
+        if (!actions.length) {
+            return fragment;
+        }
 
         // Add menu toggle
         const actionsToggle = document.createElement("button");
@@ -199,17 +232,31 @@ class RowActions extends BasePlugin {
         });
         fragment.appendChild(actionsToggle);
 
-        for (const action of grid.options.actions) {
-            if (action.visible && !action.visible(rowData)) {
+        let defaultApplied = false;
+        for (const action of actions) {
+            const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
+            if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
                 continue;
             }
-            const { el, dispatchAction } = this.createActionElement(action, rowData, grid, labels);
+            const { el, dispatchAction } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels);
             fragment.appendChild(el);
 
-            // Row action
-            if (action.default && tr) {
-                tr.classList.add("dg-actionable");
-                on(tr, "click", dispatchAction);
+            // Default row action: only the first resolved default applies, and
+            // interactive elements inside the row never trigger it.
+            if (action.default) {
+                if (defaultApplied) {
+                    grid.log(`multiple default actions for row ${rowKey}, using the first one`);
+                } else if (tr) {
+                    defaultApplied = true;
+                    tr.classList.add("dg-actionable");
+                    on(tr, "click", (/** @type {MouseEvent} */ ev) => {
+                        const target = /** @type {Element} */ (ev.target);
+                        if (target.closest(grid._excludedRowElementSelector)) {
+                            return;
+                        }
+                        dispatchAction(ev);
+                    });
+                }
             }
         }
 
@@ -220,16 +267,19 @@ class RowActions extends BasePlugin {
      * Create the button (or link) for a single action.
      * @param {import("../data-grid.js").Action} action
      * @param {Record<string, any>} row
+     * @param {Number} rowIndex
      * @param {import("../data-grid.js").default} grid
      * @param {import("../data-grid.js").Labels} labels
      * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
      * add a visible label next to it.
      * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
      */
-    createActionElement(action, row, grid, labels, menu = false) {
+    createActionElement(action, row, rowIndex, grid, labels, menu = false) {
+        const rowKey = grid.resolveRowKey(row, rowIndex);
+        const ctx = { grid, action, rowKey };
         const href = action.href
             ? typeof action.href === "function"
-                ? action.href(row)
+                ? action.href(row, ctx)
                 : interpolate(action.href, row)
             : null;
 
@@ -277,22 +327,49 @@ class RowActions extends BasePlugin {
         if (action.class) {
             el.classList.add(...action.class.split(" "));
         }
-        if (action.disabled?.(row)) {
-            /** @type {HTMLButtonElement} */ (el).disabled = true;
+
+        // Disabled actions must really block: a native `disabled` on buttons,
+        // `aria-disabled` on any element, a class hook and a guarded click.
+        const isDisabled = typeof action.disabled === "function" ? action.disabled(row, ctx) : Boolean(action.disabled);
+        if (isDisabled) {
+            if (el.tagName === "BUTTON") {
+                /** @type {HTMLButtonElement} */ (el).disabled = true;
+            }
+            el.setAttribute("aria-disabled", "true");
+            el.classList.add("dg-disabled");
+        }
+
+        // Confirmation: boolean, message string or a resolver.
+        let mustConfirm = Boolean(action.confirm);
+        let message = labels.areYouSure;
+        if (typeof action.confirm === "string") {
+            message = action.confirm;
+        } else if (typeof action.confirm === "function") {
+            const result = action.confirm(row, ctx);
+            if (typeof result === "string") {
+                message = result;
+            } else if (result === false) {
+                mustConfirm = false;
+            }
         }
 
         const dispatchAction = (/** @type {Event} */ ev) => {
             ev.stopPropagation();
-            if (action.confirm) {
-                const c = confirm(labels.areYouSure);
-                if (!c) {
-                    ev.preventDefault();
-                    return;
-                }
+            if (isDisabled) {
+                ev.preventDefault();
+                return;
+            }
+            if (mustConfirm && !window.confirm(message)) {
+                ev.preventDefault();
+                return;
             }
             dispatch(grid, "action", {
-                data: row,
-                action: action.name,
+                action,
+                name: action.name,
+                row,
+                rowKey,
+                rowIndex,
+                trigger: el,
             });
         };
         el.addEventListener("click", dispatchAction);
@@ -316,8 +393,12 @@ class RowActions extends BasePlugin {
     }
 
     get actionClass() {
-        if (this.grid.options.actions.length < 3 && !this.grid.options.collapseActions) {
-            return `dg-actions-${this.grid.options.actions.length}`;
+        const { actions, collapseActions, rowActions } = this.grid.options;
+        if (rowActions && actions.length === 0) {
+            return "dg-actions-more";
+        }
+        if (actions.length < 3 && !collapseActions) {
+            return `dg-actions-${actions.length}`;
         }
         return "dg-actions-more";
     }

@@ -2,9 +2,10 @@ import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource, FetchDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
+import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 
-DataGrid.registerPlugins({ SelectableRows, BulkActions });
+DataGrid.registerPlugins({ SelectableRows, BulkActions, RowActions });
 
 /**
  * Create a grid that adopts a declarative <table> from `markup`.
@@ -285,5 +286,60 @@ test("data-transform and data-editable-type map to column options", async () => 
     expect(columns[0].transform).toBe("uppercase");
     expect(columns[1].editable).toBe(true);
     expect(columns[1].editableType).toBe("textarea");
+    removeGrid(inst);
+});
+
+test("a td data-actions cell becomes row.$actions without shifting data cells", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead>
+        <tr>
+            <th data-field="name">Name</th>
+            <th data-field="email">Email</th>
+            <th data-actions>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr data-row-key="1">
+            <td>User One</td>
+            <td>user1@example.com</td>
+            <td data-actions>
+                <a data-action="view" href="/users/1" data-intent="primary">View</a>
+                <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+            </td>
+        </tr>
+    </tbody>
+</table>
+`,
+        {},
+    );
+
+    // The data cells map by index: the actions cell never shifts them.
+    const row = inst.dataSource.rows[0];
+    expect(row.name).toBe("User One");
+    expect(row.email).toBe("user1@example.com");
+    expect(row.id).toBe("1");
+    expect(row.$actions).toEqual([
+        { name: "view", label: "View", href: "/users/1", intent: "primary" },
+        { name: "delete", label: "Delete", confirm: "Delete this user?" },
+    ]);
+
+    // `<th data-actions>` activates the capability and renders the column.
+    expect(inst.options.rowActions).toBe(true);
+    const cell = inst.querySelector('tbody td[data-column-id="$actions"]');
+    expect(cell.querySelector('a[data-action="view"]').getAttribute("href")).toBe("/users/1");
+    expect(cell.querySelector('button[data-action="delete"]')).toBeTruthy();
+    removeGrid(inst);
+});
+
+test("column inference never turns $actions into a data column", async () => {
+    const inst = new DataGrid({ dataSource: new ArrayDataSource([{ name: "a", $actions: ["view"] }]) });
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["name"]);
     removeGrid(inst);
 });

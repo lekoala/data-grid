@@ -197,8 +197,11 @@ test("clicking an action dispatches the action event", async () => {
         detail = ev.detail;
     });
     inst.querySelector('tbody button[data-action="delete"]').click();
-    expect(detail.action).toBe("delete");
-    expect(detail.data.name).toBe("a");
+    expect(detail.name).toBe("delete");
+    expect(detail.action.name).toBe("delete");
+    expect(detail.row.name).toBe("a");
+    expect(detail.rowKey).toBe("0");
+    expect(detail.trigger).toBe(inst.querySelector('tbody button[data-action="delete"]'));
     document.body.removeChild(inst);
 });
 
@@ -218,7 +221,7 @@ test("default action makes the row clickable", async () => {
     const tr = inst.querySelector("tbody tr");
     expect(tr.classList.contains("dg-actionable")).toBe(true);
     tr.click();
-    expect(detail.action).toBe("view");
+    expect(detail.name).toBe("view");
     document.body.removeChild(inst);
 });
 
@@ -255,7 +258,7 @@ test("more than two actions collapse into a popover menu", async () => {
         detail = ev.detail;
     });
     menu.querySelector('button[data-action="two"]').click();
-    expect(detail.action).toBe("two");
+    expect(detail.name).toBe("two");
     expect(menu.classList.contains("dg-actions-open")).toBe(false);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
     document.body.removeChild(inst);
@@ -307,5 +310,278 @@ test("Escape closes the actions popover", async () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(menu.classList.contains("dg-actions-open")).toBe(false);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    document.body.removeChild(inst);
+});
+
+test("confirm supports a message string and a row resolver", async () => {
+    const calls = [];
+    globalThis.confirm = (message) => {
+        calls.push(message);
+        return true;
+    };
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "one", confirm: "Delete this?" },
+                { name: "two", confirm: (row) => `Delete ${row.name}?` },
+            ],
+        },
+        [{ name: "a" }],
+        { RowActions },
+    );
+    const buttons = inst.querySelectorAll('tbody td[data-column-id="$actions"] button[data-action]');
+    buttons[0].click();
+    buttons[1].click();
+    expect(calls).toEqual(["Delete this?", "Delete a?"]);
+    document.body.removeChild(inst);
+    globalThis.confirm = () => true;
+});
+
+test("a disabled action really blocks, including on links", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "view", label: "View", href: "/u/1", disabled: true }],
+        },
+        [{ id: 1, name: "a" }],
+        { RowActions },
+    );
+    const link = inst.querySelector('tbody td[data-column-id="$actions"] a[data-action="view"]');
+    expect(link.getAttribute("aria-disabled")).toBe("true");
+    expect(link.classList.contains("dg-disabled")).toBe(true);
+
+    let detail = null;
+    inst.addEventListener("action", (ev) => {
+        detail = ev.detail;
+    });
+    link.click();
+    expect(detail).toBeNull();
+    document.body.removeChild(inst);
+});
+
+test("visible, disabled and href receive the action context", async () => {
+    let seen;
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                {
+                    name: "ctx",
+                    label: "Ctx",
+                    visible: (row, ctx) => {
+                        seen = ctx;
+                        return Boolean(ctx.grid);
+                    },
+                    href: (row, ctx) => `/u/${ctx.rowKey}`,
+                },
+            ],
+        },
+        [{ id: 5, name: "a" }],
+        { RowActions },
+    );
+    expect(seen.grid).toBe(inst);
+    expect(seen.action.name).toBe("ctx");
+    expect(seen.rowKey).toBe("5");
+    expect(inst.querySelector('a[data-action="ctx"]').getAttribute("href")).toBe("/u/5");
+    document.body.removeChild(inst);
+});
+
+test("the default action ignores interactive elements inside the row", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "name",
+                    renderCell: () => Object.assign(document.createElement("a"), { href: "/pdf", textContent: "PDF" }),
+                },
+            ],
+            actions: [{ name: "view", label: "View", default: true }],
+        },
+        [{ name: "a" }],
+        { RowActions },
+    );
+    let detail = null;
+    inst.addEventListener("action", (ev) => {
+        detail = ev.detail;
+    });
+
+    inst.querySelector("tbody a").click();
+    expect(detail).toBeNull();
+
+    inst.querySelector("tbody tr").click();
+    expect(detail.name).toBe("view");
+    document.body.removeChild(inst);
+});
+
+test("updateRow mutates the current view without reloading", async () => {
+    let loads = 0;
+    const ds = {
+        load: async () => {
+            loads++;
+            return { rows: [{ id: 1, name: "a" }], total: 1, meta: {} };
+        },
+    };
+    const inst = new DataGrid({ dataSource: ds, columns: [{ field: "name" }] });
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+
+    expect(loads).toBe(1);
+    const ok = inst.updateRow("1", { name: "b" });
+    expect(ok).toBe(true);
+    expect(loads).toBe(1);
+    expect(inst.rows[0].name).toBe("b");
+    expect(inst.querySelector("tbody td").textContent).toBe("b");
+
+    expect(inst.updateRow("nope", { name: "x" })).toBe(false);
+    document.body.removeChild(inst);
+});
+
+test("updateRow works on an ArrayDataSource and keeps the source in sync", async () => {
+    const inst = await makeReadyGrid(
+        { columns: [{ field: "name" }] },
+        [
+            { id: 1, name: "a" },
+            { id: 2, name: "b" },
+        ],
+        { RowActions },
+    );
+    expect(inst.updateRow("2", { name: "renamed" })).toBe(true);
+    expect(inst.dataSource.rows[1].name).toBe("renamed");
+    expect(inst.rows[1].name).toBe("renamed");
+    document.body.removeChild(inst);
+});
+
+test("removeRow mutates a local dataset and returns false for remote sources", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }] }, [
+        { id: 1, name: "a" },
+        { id: 2, name: "b" },
+    ]);
+    expect(inst.removeRow("1")).toBe(true);
+    expect(inst.dataSource.rows).toEqual([{ id: 2, name: "b" }]);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(inst.rows).toHaveLength(1);
+    expect(inst.removeRow("missing")).toBe(false);
+
+    let loads = 0;
+    const remote = {
+        load: async () => {
+            loads++;
+            return { rows: [{ id: 1, name: "a" }], total: 1, meta: {} };
+        },
+    };
+    const inst2 = new DataGrid({ dataSource: remote, columns: [{ field: "name" }] });
+    document.body.appendChild(inst2);
+    await new Promise((resolve) => {
+        inst2.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+    expect(inst2.removeRow("1")).toBe(false);
+    expect(loads).toBe(1);
+    document.body.removeChild(inst2);
+    document.body.removeChild(inst);
+});
+
+test("row.$actions is authoritative and resolves references and overrides", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "view", label: "View", href: "/{id}" },
+                { name: "delete", label: "Delete" },
+            ],
+        },
+        [
+            { id: 1, name: "a", $actions: ["view"] },
+            { id: 2, name: "b", $actions: ["delete", { name: "view", label: "Custom View" }] },
+            { id: 3, name: "c" },
+        ],
+        { RowActions },
+    );
+    const cells = inst.querySelectorAll('tbody td[data-column-id="$actions"]');
+
+    const row1 = cells[0];
+    expect(row1.querySelectorAll("[data-action]")).toHaveLength(1);
+    expect(row1.querySelector('a[data-action="view"]').getAttribute("href")).toBe("/1");
+    expect(row1.querySelector('a[data-action="view"]').textContent).toBe("View");
+    expect(row1.querySelector('[data-action="delete"]')).toBeNull();
+
+    const row2 = cells[1];
+    expect(row2.querySelectorAll("[data-action]")).toHaveLength(2);
+    expect(row2.querySelector('a[data-action="view"]').getAttribute("href")).toBe("/2");
+    expect(row2.querySelector('a[data-action="view"]').textContent).toBe("Custom View");
+    expect(row2.querySelector('button[data-action="delete"]')).toBeTruthy();
+
+    // A row without $actions falls back to the static list.
+    const row3 = cells[2];
+    expect(row3.querySelectorAll("[data-action]")).toHaveLength(2);
+    document.body.removeChild(inst);
+});
+
+test("meta.actions provide server-driven definitions per load", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "download", label: "Client Download" }],
+        },
+        [{ id: 1, name: "a", $actions: ["download"] }],
+        { RowActions },
+    );
+    // No meta.actions: the client definition is used.
+    expect(inst.querySelector('button[data-action="download"]').textContent).toBe("Client Download");
+
+    inst.meta = {
+        actions: {
+            download: { label: "Server Download", intent: "primary" },
+        },
+    };
+    inst.renderBody();
+    const button = inst.querySelector('button[data-action="download"]');
+    expect(button.textContent).toBe("Client Download"); // options.actions override meta
+    expect(button.dataset.intent).toBe("primary");
+    document.body.removeChild(inst);
+});
+
+test("multiple resolved default actions only fire the first one", async () => {
+    const inst = await makeReadyGrid(
+        {
+            rowActions: true,
+            columns: [{ field: "name" }],
+        },
+        [
+            {
+                id: 1,
+                name: "a",
+                $actions: [
+                    { name: "first", default: true },
+                    { name: "second", default: true },
+                ],
+            },
+        ],
+        { RowActions },
+    );
+    let count = 0;
+    inst.addEventListener("action", () => count++);
+    inst.querySelector("tbody tr").click();
+    expect(count).toBe(1);
+    document.body.removeChild(inst);
+});
+
+test("a row without actions renders an empty cell without the toggle", async () => {
+    const inst = await makeReadyGrid(
+        { rowActions: true, columns: [{ field: "name" }] },
+        [
+            { id: 1, name: "a", $actions: [] },
+            { id: 2, name: "b", $actions: [{ name: "view" }] },
+        ],
+        { RowActions },
+    );
+    const cells = inst.querySelectorAll('tbody td[data-column-id="$actions"]');
+    expect(cells[0].querySelector(".dg-actions-toggle")).toBeNull();
+    expect(cells[0].querySelectorAll("[data-action]")).toHaveLength(0);
+    expect(cells[1].querySelector(".dg-actions-toggle")).toBeTruthy();
     document.body.removeChild(inst);
 });
