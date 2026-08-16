@@ -14,9 +14,9 @@ class FixedHeight extends BasePlugin {
         super(grid);
 
         this.hasFixedHeight = false;
-        // If we have a fixed height, make sure we have overflowY set
+        // The .dg-scroll wrapper owns overflow now; a host height only turns on
+        // the fixed-height behaviour.
         if (grid.style.height) {
-            grid.style.overflowY = "auto";
             this.hasFixedHeight = true;
         }
     }

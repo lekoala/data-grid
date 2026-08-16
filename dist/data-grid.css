@@ -51,9 +51,9 @@ data-grid {
   color: var(--dg-color);
   font: inherit;
   line-height: inherit;
-  display: block;
+  display: flex;
   position: relative;
-  overflow-x: auto;
+  flex-direction: column;
   min-height: 6rem;
 }
 
@@ -96,36 +96,39 @@ data-grid {
   --dg-scroller-thumb: hsl(var(--dg-scroller-color), var(--dg-scroller-color-lightness));
   --dg-scroller-thumb-hover: hsl(var(--dg-scroller-color), calc(var(--dg-scroller-color-lightness) * var(--dg-scroller-hover-factor)));
   --dg-scroller-background: transparent;
+}
+
+data-grid > .dg-scroll {
   scrollbar-color: var(--dg-scroller-thumb) var(--dg-scroller-background);
   scrollbar-width: thin;
 }
 
-data-grid::-webkit-scrollbar {
+data-grid > .dg-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-data-grid::-webkit-scrollbar-track {
+data-grid > .dg-scroll::-webkit-scrollbar-track {
   background: none;
 }
 
-data-grid::-webkit-scrollbar-thumb {
+data-grid > .dg-scroll::-webkit-scrollbar-thumb {
   background: var(--dg-scroller-thumb);
 }
 
-data-grid::-webkit-scrollbar-thumb:hover {
+data-grid > .dg-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--dg-scroller-thumb-hover);
 }
 
-data-grid > table tr.dg-head-columns:-webkit-any(:empty, :has( > :first-child:not([scope="col"]))) {
+data-grid > .dg-scroll > table tr.dg-head-columns:-webkit-any(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
 
-data-grid > table tr.dg-head-columns:-moz-any(:empty, :has( > :first-child:not([scope="col"]))) {
+data-grid > .dg-scroll > table tr.dg-head-columns:-moz-any(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
 
-data-grid > table tr.dg-head-columns:is(:empty, :has( > :first-child:not([scope="col"]))) {
+data-grid > .dg-scroll > table tr.dg-head-columns:is(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
 
@@ -140,15 +143,24 @@ data-grid [hidden] {
   display: none;
 }
 
-data-grid table {
+data-grid > .dg-scroll {
+  overflow: auto;
+  background: var(--dg-bg);
+  border: 1px solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  flex: auto;
+  min-height: 0;
+}
+
+data-grid > .dg-scroll > table {
   display: table;
   table-layout: fixed;
   white-space: normal;
   background: var(--dg-bg);
-  border: 1px solid var(--dg-border-color);
   border-collapse: separate;
   border-spacing: 0;
-  border-radius: var(--dg-radius);
+  border: 0;
+  border-radius: 0;
   width: 100%;
   max-width: 100%;
 }
@@ -318,19 +330,19 @@ data-grid button, data-grid input, data-grid select {
   font: inherit;
 }
 
-data-grid table thead, data-grid table tfoot {
+data-grid > .dg-scroll > table > thead, data-grid > .dg-scroll > table > tfoot {
   z-index: 2;
   position: sticky;
   border: 0;
   margin: 0;
 }
 
-data-grid table thead {
-  top: -1px;
+data-grid > .dg-scroll > table > thead {
+  top: 0;
 }
 
-data-grid table tfoot {
-  bottom: -1px;
+data-grid > .dg-scroll > table > tfoot {
+  bottom: 0;
 }
 
 data-grid .dg-nav-icon, data-grid .dg-skip-icon {
@@ -680,11 +692,11 @@ data-grid tbody tr {
   transition: background-color .12s;
 }
 
-data-grid > table > tbody > tr > td {
+data-grid > .dg-scroll > table > tbody > tr > td {
   border-bottom: 1px solid var(--dg-row-border-color);
 }
 
-data-grid > table > tbody > tr:last-child > td {
+data-grid > .dg-scroll > table > tbody > tr:last-child > td {
   border-bottom: 0;
 }
 

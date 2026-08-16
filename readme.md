@@ -222,10 +222,12 @@ The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`
 
 ## Scrollable grid
 
-The header (including the filter row) stays pinned to the top and the footer to
-the bottom of the **grid's own scroll area**. This is the default behavior —
-as soon as the grid is given a constrained height, it becomes its own scroll
-container and its chrome stays visible while rows scroll:
+The table lives inside a `.dg-scroll` viewport that owns its outer border,
+radius, scroll and the sticky anchor. The header (including the filter row)
+stays pinned to the top and the footer to the bottom of that viewport. This is
+the default behavior — as soon as the grid is given a constrained height, the
+viewport takes the remaining space and its chrome stays visible while rows
+scroll:
 
 ```css
 .results-grid {
@@ -237,9 +239,10 @@ container and its chrome stays visible while rows scroll:
 <data-grid class="results-grid"></data-grid>
 ```
 
-On an unconstrained grid nothing changes visually: the grid grows with its
-content, so there is nothing to stick against. Pin the height only when you
-want an internal vertical viewport.
+The host is a vertical flex column: an optional topbar sits above the viewport,
+which expands to fill the rest of the height. On an unconstrained grid the
+viewport grows with its content, so there is nothing to stick against. Pin the
+height only when you want an internal vertical viewport.
 
 ## Lazy initial load
 

@@ -78,15 +78,18 @@ class ResponsiveGrid extends BasePlugin {
         if (!this.grid.options.responsive) {
             return;
         }
-        this.observer.observe(this.grid);
-        this.grid.style.display = "block"; // Otherwise resize doesn't happen
-        this.grid.style.overflowX = "hidden"; // Prevent scrollbars from appearing
+        // The table viewport is the real horizontal constraint for responsive
+        // columns. The grid no longer owns the scroll (the .dg-scroll wrapper
+        // does), so no overflow/display mutation is needed.
+        this._observed = this.grid.scrollEl || this.grid;
+        this.observer.observe(this._observed);
     }
 
     unobserve() {
-        this.observer.unobserve(this.grid);
-        this.grid.style.display = "unset";
-        this.grid.style.overflowX = "unset";
+        if (this._observed) {
+            this.observer.unobserve(this._observed);
+            this._observed = null;
+        }
     }
 
     /**

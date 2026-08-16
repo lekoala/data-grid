@@ -807,6 +807,7 @@ class DataGrid extends base_element_default {
   _columns = [];
   dataSource = null;
   table = null;
+  scrollEl = document.createElement("div");
   btnFirst = null;
   btnPrev = null;
   btnNext = null;
@@ -1357,12 +1358,7 @@ class DataGrid extends base_element_default {
       const end = ce("div");
       end.className = "dg-topbar-end";
       topbar.append(start, end);
-      const table = this.table;
-      if (table) {
-        this.insertBefore(topbar, table);
-      } else {
-        this.appendChild(topbar);
-      }
+      this.insertBefore(topbar, this.scrollEl);
     }
     return topbar;
   }
@@ -1453,10 +1449,32 @@ class DataGrid extends base_element_default {
     }
     supplied.setAttribute("data-dg-table", "");
   }
+  _wrapScroll() {
+    const existing = this.querySelector(":scope > .dg-scroll");
+    if (existing) {
+      existing.className = "dg-scroll";
+      this.scrollEl = existing;
+      const table = existing.querySelector(":scope > table");
+      if (table) {
+        this.table = table;
+      }
+      return;
+    }
+    const scroll = ce("div");
+    scroll.className = "dg-scroll";
+    if (this.table) {
+      this.insertBefore(scroll, this.table);
+      scroll.appendChild(this.table);
+    } else {
+      this.appendChild(scroll);
+    }
+    this.scrollEl = scroll;
+  }
   async _connected() {
     connectedInstances.add(this);
     this._adoptDeclarativeTable();
     this.table = this.querySelector("table");
+    this._wrapScroll();
     this.btnFirst = this.querySelector(".dg-btn-first");
     this.btnPrev = this.querySelector(".dg-btn-prev");
     this.btnNext = this.querySelector(".dg-btn-next");
@@ -2139,7 +2157,7 @@ class DataGrid extends base_element_default {
     tfoot.style.display = "";
   }
   createColumnHeaders(thead) {
-    const availableWidth = this.clientWidth;
+    const availableWidth = this.scrollEl.clientWidth;
     const colMaxWidth = Math.round(availableWidth / this.columnsLength(true) * 2);
     const tr = ce("tr");
     this.headerRow = tr;
@@ -2198,7 +2216,7 @@ class DataGrid extends base_element_default {
     }
     if (thead && thead.offsetWidth > availableWidth) {
       this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
-      const scrollbarWidth = this.offsetWidth - this.clientWidth;
+      const scrollbarWidth = this.scrollEl.offsetWidth - this.scrollEl.clientWidth;
       let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
       if (this.options.responsive) {
         diff += scrollbarWidth;
@@ -3136,7 +3154,6 @@ class FixedHeight extends base_plugin_default {
     super(grid);
     this.hasFixedHeight = false;
     if (grid.style.height) {
-      grid.style.overflowY = "auto";
       this.hasFixedHeight = true;
     }
   }
@@ -3294,14 +3311,14 @@ class ResponsiveGrid extends base_plugin_default {
     if (!this.grid.options.responsive) {
       return;
     }
-    this.observer.observe(this.grid);
-    this.grid.style.display = "block";
-    this.grid.style.overflowX = "hidden";
+    this._observed = this.grid.scrollEl || this.grid;
+    this.observer.observe(this._observed);
   }
   unobserve() {
-    this.observer.unobserve(this.grid);
-    this.grid.style.display = "unset";
-    this.grid.style.overflowX = "unset";
+    if (this._observed) {
+      this.observer.unobserve(this._observed);
+      this._observed = null;
+    }
   }
   extendColumns(columns) {
     if (!this.grid.options.responsive || !this.grid.options.responsiveToggle) {

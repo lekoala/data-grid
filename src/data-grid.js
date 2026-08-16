@@ -664,6 +664,14 @@ class DataGrid extends BaseElement {
      */
     table = null;
 
+    /**
+     * The table viewport: a wrapper that owns the scroll, the outer border and
+     * radius, and is the sticky containing block for thead/tfoot. Guaranteed to
+     * exist as a direct child of the host after `_connected()`.
+     * @type {HTMLDivElement}
+     */
+    scrollEl = /** @type {HTMLDivElement} */ (document.createElement("div"));
+
     /** @type {HTMLInputElement|null} */
     btnFirst = null;
 
@@ -1471,12 +1479,8 @@ class DataGrid extends BaseElement {
             const end = ce("div");
             end.className = "dg-topbar-end";
             topbar.append(start, end);
-            const table = this.table;
-            if (table) {
-                this.insertBefore(topbar, table);
-            } else {
-                this.appendChild(topbar);
-            }
+            // The topbar lives outside the scroll viewport, above .dg-scroll.
+            this.insertBefore(topbar, this.scrollEl);
         }
         return topbar;
     }
@@ -1618,10 +1622,39 @@ class DataGrid extends BaseElement {
         supplied.setAttribute("data-dg-table", "");
     }
 
+    /**
+     * Make the table viewport an explicit structural invariant: a direct
+     * `.dg-scroll` child of the host that owns the scroll, the outer border and
+     * radius, and is the sticky containing block. Idempotent and reconnect-safe
+     * (a `.dg-scroll` from a previous connect is reused, its table re-located).
+     */
+    _wrapScroll() {
+        const existing = /** @type {HTMLDivElement|null} */ (this.querySelector(":scope > .dg-scroll"));
+        if (existing) {
+            existing.className = "dg-scroll";
+            this.scrollEl = existing;
+            const table = /** @type {HTMLTableElement|null} */ (existing.querySelector(":scope > table"));
+            if (table) {
+                this.table = table;
+            }
+            return;
+        }
+        const scroll = ce("div");
+        scroll.className = "dg-scroll";
+        if (this.table) {
+            this.insertBefore(scroll, this.table);
+            scroll.appendChild(this.table);
+        } else {
+            this.appendChild(scroll);
+        }
+        this.scrollEl = scroll;
+    }
+
     async _connected() {
         connectedInstances.add(this);
         this._adoptDeclarativeTable();
         this.table = this.querySelector("table");
+        this._wrapScroll();
         this.btnFirst = this.querySelector(".dg-btn-first");
         this.btnPrev = this.querySelector(".dg-btn-prev");
         this.btnNext = this.querySelector(".dg-btn-next");
@@ -2711,7 +2744,8 @@ class DataGrid extends BaseElement {
      */
     createColumnHeaders(thead) {
         // @link https://stackoverflow.com/questions/21064101/understanding-offsetwidth-clientwidth-scrollwidth-and-height-respectively
-        const availableWidth = this.clientWidth;
+        // The table fits in the scroll viewport, not the host.
+        const availableWidth = this.scrollEl.clientWidth;
         const colMaxWidth = Math.round((availableWidth / this.columnsLength(true)) * 2);
 
         // Create row
@@ -2796,7 +2830,7 @@ class DataGrid extends BaseElement {
         // Once columns are inserted, we have an actual dom to query
         if (thead && thead.offsetWidth > availableWidth) {
             this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
-            const scrollbarWidth = this.offsetWidth - this.clientWidth;
+            const scrollbarWidth = this.scrollEl.offsetWidth - this.scrollEl.clientWidth;
             let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
             if (this.options.responsive) {
                 diff += scrollbarWidth;

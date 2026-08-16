@@ -54,6 +54,7 @@ test("cells carry a stable data-column-id", async () => {
 test("reconnecting the element does not duplicate the template", async () => {
     const inst = await makeReadyGrid({}, []);
     expect(inst.querySelectorAll("table").length).toBe(1);
+    expect(inst.querySelectorAll(":scope > .dg-scroll").length).toBe(1);
 
     // Disconnect and wait for the disconnected callback to complete
     removeGrid(inst);
@@ -67,6 +68,10 @@ test("reconnecting the element does not duplicate the template", async () => {
     });
 
     expect(inst.querySelectorAll("table").length).toBe(1);
+    // The .dg-scroll viewport stays a single, stable invariant across reconnect
+    expect(inst.querySelectorAll(":scope > .dg-scroll").length).toBe(1);
+    expect(inst.scrollEl).toBe(inst.querySelector(":scope > .dg-scroll"));
+    expect(inst.scrollEl.querySelector(":scope > table")).toBe(inst.table);
     removeGrid(inst);
 });
 

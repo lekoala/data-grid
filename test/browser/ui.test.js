@@ -245,12 +245,41 @@ test.skipIf(IS_WINDOWS)(
         // Widen: details disappear, cells restored
         await v.evaluate("window.stacked.style.width = '1200px'");
         await waitFor(v, `${childRows()} === 0`);
-        expect(await read(v, hiddenFields())).toBe("[]");
+        expect(await read(v, hiddenFields())).toEqual([]);
 
         // Narrow again: details rebuild for the open rows
         await v.evaluate("window.stacked.style.width = '380px'");
         await waitFor(v, `${childRows()} > 0`);
         expect(await read(v, childRows())).toBeGreaterThan(0);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "the sticky header does not jump on the first pixel of scroll",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        // Constrain the host so the .dg-scroll viewport (the table's scroll
+        // area) is the vertical stick container for thead/tfoot.
+        await v.evaluate("window.grid.style.maxHeight = '200px'");
+        await new Promise((resolve) => setTimeout(resolve, 150));
+
+        const relTop = async () =>
+            await read(
+                v,
+                "Number((document.querySelector('#local-grid thead').getBoundingClientRect().top - window.grid.scrollEl.getBoundingClientRect().top).toFixed(2))",
+            );
+
+        const atTop = await relTop();
+        await v.evaluate("window.grid.scrollEl.scrollTop = 10");
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        const scrolled = await relTop();
+
+        // Subpixel: engaging the sticky state must not translate the header.
+        expect(Math.abs(scrolled - atTop)).toBeLessThan(0.5);
     },
     TIMEOUT,
 );

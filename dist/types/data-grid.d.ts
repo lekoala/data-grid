@@ -500,6 +500,13 @@ declare class DataGrid extends BaseElement {
      * @type {HTMLTableElement|null}
      */
     table: HTMLTableElement | null;
+    /**
+     * The table viewport: a wrapper that owns the scroll, the outer border and
+     * radius, and is the sticky containing block for thead/tfoot. Guaranteed to
+     * exist as a direct child of the host after `_connected()`.
+     * @type {HTMLDivElement}
+     */
+    scrollEl: HTMLDivElement;
     /** @type {HTMLInputElement|null} */
     btnFirst: HTMLInputElement | null;
     /** @type {HTMLInputElement|null} */
@@ -748,6 +755,13 @@ declare class DataGrid extends BaseElement {
      * re-parsed or re-seeded.
      */
     _adoptDeclarativeTable(): void;
+    /**
+     * Make the table viewport an explicit structural invariant: a direct
+     * `.dg-scroll` child of the host that owns the scroll, the outer border and
+     * radius, and is the sticky containing block. Idempotent and reconnect-safe
+     * (a `.dg-scroll` from a previous connect is reused, its table re-located).
+     */
+    _wrapScroll(): void;
     _connected(): Promise<void>;
     _disconnected(): void;
     /**

@@ -65,8 +65,9 @@ test("thead declares columns and the tbody becomes the local dataset", async () 
 test("the adopted table keeps its markup and the grid installs its structure", async () => {
     const inst = await makeDeclarativeGrid(DEMO_TABLE, { sortable: true });
 
-    // Exactly one direct table: the supplied one, enhanced.
-    expect(inst.querySelectorAll(":scope > table").length).toBe(1);
+    // Exactly one direct table under the .dg-scroll viewport: the supplied one,
+    // enhanced.
+    expect(inst.querySelectorAll(":scope > .dg-scroll > table").length).toBe(1);
     const table = inst.querySelector("table");
     expect(table.classList.contains("table-striped")).toBe(true);
     expect(table.querySelector("caption").textContent).toBe("Records");
@@ -163,7 +164,7 @@ test("without data-field the table is adopted and JS columns stay", async () => 
     );
 
     expect(inst.options.columns.map((c) => c.field)).toEqual(["name"]);
-    expect(inst.querySelectorAll(":scope > table").length).toBe(1);
+    expect(inst.querySelectorAll(":scope > .dg-scroll > table").length).toBe(1);
     expect(inst.dataSource).toBeInstanceOf(ArrayDataSource);
     expect(inst.dataSource.rows).toEqual([{ name: "User One" }]);
     removeGrid(inst);
@@ -261,7 +262,7 @@ test("reconnect is idempotent: one table, same data source, no re-seed", async (
         setTimeout(resolve, 2000);
     });
 
-    expect(inst.querySelectorAll(":scope > table").length).toBe(1);
+    expect(inst.querySelectorAll(":scope > .dg-scroll > table").length).toBe(1);
     expect(inst.dataSource).toBe(ds);
     expect(inst.options.columns.map((c) => c.field)).toEqual(["name", "email", "age"]);
     expect(inst.rows).toHaveLength(2);

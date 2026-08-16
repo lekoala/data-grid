@@ -9,6 +9,7 @@ declare class ResponsiveGrid extends BasePlugin {
     _lastProcessedWidth: number | null;
     _scheduleResize: () => void;
     observer: ResizeObserver;
+    _observed: HTMLDivElement | null | undefined;
     /**
      * @param {import("../data-grid.js").default} grid
      */
