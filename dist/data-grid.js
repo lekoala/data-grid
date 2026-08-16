@@ -604,6 +604,94 @@ function normalizeQuery(query) {
   }
   return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), search, sort, filters };
 }
+function parseDeclarativeBoolean(value) {
+  return value === "" || value === "true" || value === "1";
+}
+function parseDeclarativeTable(table) {
+  const columns = [];
+  const sort = [];
+  const headerRow = table.querySelector("thead > tr:first-child");
+  if (!headerRow) {
+    return { columns, sort };
+  }
+  const ths = headerRow.querySelectorAll(":scope > th[data-field]");
+  for (const th of ths) {
+    const field = th.dataset.field;
+    if (!field) {
+      continue;
+    }
+    const column = {
+      field,
+      title: th.textContent.trim()
+    };
+    if (th.dataset.sortable !== undefined) {
+      column.sortable = parseDeclarativeBoolean(th.dataset.sortable);
+    }
+    if (th.dataset.filterable !== undefined) {
+      column.filterable = parseDeclarativeBoolean(th.dataset.filterable);
+    }
+    if (th.dataset.filter) {
+      column.filterType = th.dataset.filter;
+    }
+    if (th.dataset.responsive !== undefined) {
+      const responsive = Number(th.dataset.responsive);
+      if (Number.isFinite(responsive)) {
+        column.responsive = responsive;
+      }
+    }
+    if (th.dataset.hidden !== undefined) {
+      column.hidden = parseDeclarativeBoolean(th.dataset.hidden);
+    }
+    if (th.dataset.editable !== undefined) {
+      column.editable = parseDeclarativeBoolean(th.dataset.editable);
+    }
+    if (th.dataset.editableType) {
+      column.editableType = th.dataset.editableType;
+    }
+    if (th.dataset.transform) {
+      column.transform = th.dataset.transform;
+    }
+    if (th.dataset.width !== undefined) {
+      const width = Number(th.dataset.width);
+      if (Number.isFinite(width)) {
+        column.width = width;
+      }
+    }
+    const direction = th.dataset.sort;
+    if (direction === "asc" || direction === "desc") {
+      sort.push({ field, direction });
+    }
+    columns.push(column);
+  }
+  return { columns, sort };
+}
+function rowsFromTable(table, columns, rowKey = "id") {
+  const tbody = table.querySelector("tbody");
+  if (!tbody) {
+    return [];
+  }
+  const rows = [];
+  const trs = tbody.querySelectorAll(":scope > tr");
+  for (const tr of trs) {
+    const row = {};
+    const tds = tr.querySelectorAll(":scope > td");
+    columns.forEach((column, index) => {
+      if (!column.field) {
+        return;
+      }
+      const td = tds[index];
+      if (!td) {
+        return;
+      }
+      row[column.field] = td.dataset.value ?? td.textContent.trim();
+    });
+    if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
+      row[rowKey] = tr.dataset.rowKey;
+    }
+    rows.push(row);
+  }
+  return rows;
+}
 function orderColumns(columns) {
   const start = [];
   const middle = [];
@@ -699,7 +787,7 @@ class DataGrid extends base_element_default {
   }
   static template() {
     return `
-<table>
+<table data-dg-generated-table>
     <thead>
         <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
         <tr class="dg-head-filters"></tr>
@@ -967,8 +1055,17 @@ class DataGrid extends base_element_default {
       "searchable",
       "min-search-length",
       "responsive",
+      "responsive-toggle",
       "selectable",
       "single-select",
+      "select-visible-only",
+      "row-key",
+      "row-label",
+      "collapse-actions",
+      "save-state",
+      "no-data",
+      "error-message",
+      "page-sizes",
       "reorder",
       "menu",
       "expand",
@@ -981,6 +1078,11 @@ class DataGrid extends base_element_default {
       "dir",
       "density"
     ];
+  }
+  get transformAttributes() {
+    return {
+      "page-sizes": (raw) => raw.split(",").map((value) => Number.parseInt(value, 10)).filter((value) => Number.isFinite(value))
+    };
   }
   get thead() {
     return $("thead", this);
@@ -1247,8 +1349,55 @@ class DataGrid extends base_element_default {
     }
     return this.setQuery({ search: value });
   }
+  _adoptDeclarativeTable() {
+    const adopted = this.querySelector(":scope > table[data-dg-table]");
+    const generated = this.querySelector(":scope > table[data-dg-generated-table]");
+    if (adopted) {
+      generated?.remove();
+      return;
+    }
+    if (!generated) {
+      return;
+    }
+    const supplied = Array.from(this.querySelectorAll(":scope > table")).find((table) => table !== generated);
+    if (!supplied) {
+      return;
+    }
+    const caption = supplied.querySelector("caption");
+    if (caption && !this.options.caption) {
+      this.options.caption = caption.textContent.trim();
+    }
+    const { columns, sort } = parseDeclarativeTable(supplied);
+    if (columns.length) {
+      this.options.columns = columns;
+    }
+    if (!this.options.initialQuery && sort.length) {
+      this._initialQuery.sort = sort;
+      this._query.sort = sort;
+    }
+    const effectiveColumns = columns.length ? columns : this.convertColumns(this.options.columns);
+    if (!this.options.dataSource && !this.options.src && effectiveColumns.length) {
+      this.options.dataSource = new ArrayDataSource(rowsFromTable(supplied, effectiveColumns, this.options.rowKey));
+    }
+    supplied.querySelector("thead > tr:first-child")?.remove();
+    if (generated) {
+      const tbody = generated.querySelector("tbody");
+      const tfoot = generated.querySelector("tfoot");
+      supplied.querySelector("tbody")?.remove();
+      supplied.querySelector("tfoot")?.remove();
+      if (tbody) {
+        supplied.appendChild(tbody);
+      }
+      if (tfoot) {
+        supplied.appendChild(tfoot);
+      }
+      generated.remove();
+    }
+    supplied.setAttribute("data-dg-table", "");
+  }
   async _connected() {
     connectedInstances.add(this);
+    this._adoptDeclarativeTable();
     this.table = this.querySelector("table");
     this.btnFirst = this.querySelector(".dg-btn-first");
     this.btnPrev = this.querySelector(".dg-btn-prev");
@@ -1732,11 +1881,19 @@ class DataGrid extends base_element_default {
     const tr = ce("tr");
     this.headerRow = tr;
     tr.setAttribute("class", "dg-head-columns");
-    let sampleTh = thead?.querySelector("tr.dg-head-columns th");
+    const oldRow = thead?.querySelector("tr.dg-head-columns") ?? null;
+    let sampleTh = oldRow?.querySelector("th") ?? null;
     this.log("createColumnHeaders - sampleTh", sampleTh);
+    let seededSample = false;
     if (!sampleTh) {
       sampleTh = ce("th");
-      thead?.querySelector("tr")?.appendChild(sampleTh);
+      if (oldRow) {
+        oldRow.appendChild(sampleTh);
+      } else {
+        seededSample = true;
+        tr.appendChild(sampleTh);
+        thead?.appendChild(tr);
+      }
     }
     let totalWidth = 0;
     this.log("createColumnHeaders - columns", this.getColumns());
@@ -1768,6 +1925,9 @@ class DataGrid extends base_element_default {
         totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
       }
     }
+    if (seededSample) {
+      sampleTh.remove();
+    }
     if (totalWidth < availableWidth) {
       const visibleCols = findAll(tr, "th:not([hidden],.dg-not-resizable)");
       if (visibleCols.length) {
@@ -1775,7 +1935,6 @@ class DataGrid extends base_element_default {
         removeAttribute(lastCol, "width");
       }
     }
-    const oldRow = thead?.querySelector("tr.dg-head-columns");
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
     }
@@ -1898,6 +2057,8 @@ class DataGrid extends base_element_default {
     const oldRow = thead?.querySelector("tr.dg-head-filters");
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
+    } else if (thead && !tr.parentNode) {
+      thead.appendChild(tr);
     }
     const filteredRows = findAll(tr, this._filterSelector);
     for (const el of filteredRows) {
@@ -2058,9 +2219,11 @@ class DataGrid extends base_element_default {
       tr.appendChild(td);
       tbody.appendChild(tr);
     }
+    tbody.setAttribute("data-empty-message", message);
     if (prev) {
-      tbody.setAttribute("data-empty-message", message);
       this.table?.replaceChild(tbody, prev);
+    } else {
+      this.table?.appendChild(tbody);
     }
     this.paginate();
     this.runPlugins("afterRender", this._renderContext);

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Grid Demo - Declarative HTML</title>
+
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+  <link rel="stylesheet" href="../dist/data-grid.css" />
+  <link rel="stylesheet" href="demo.css" />
+
+  <script type="module" src="../data-grid.js"></script>
+</head>
+
+<body>
+  <header>
+    <nav aria-label="Demo navigation">
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Home</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="declarative.html">Declarative HTML</a></li>
+      </ul>
+    </nav>
+    <h1>Declarative HTML facade</h1>
+    <p>A native <code>&lt;table&gt;</code> inside <code>&lt;data-grid&gt;</code> is adopted as-is: columns come from
+      <code>&lt;th data-field&gt;</code>, and when no <code>src</code> is configured, the <code>&lt;tbody&gt;</code> rows
+      become the local dataset. No application JavaScript required.</p>
+  </header>
+
+  <main>
+    <section class="demo-grid">
+      <h2>Fully autonomous HTML table</h2>
+      <p class="demo-lead">Sorting, filtering, global search and local pagination all work out of the box.</p>
+
+      <div class="demo-frame">
+        <data-grid sortable filterable searchable page-size="10">
+          <table>
+            <caption>Users</caption>
+            <colgroup>
+              <col style="width: 30%" />
+              <col style="width: 35%" />
+              <col style="width: 15%" />
+              <col style="width: 20%" />
+            </colgroup>
+            <thead>
+              <tr>
+                <th data-field="name" data-sort="asc">Name</th>
+                <th data-field="email">Email</th>
+                <th data-field="status" data-filter="select">Status</th>
+                <th data-field="age" data-sortable="false">Age</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td data-value="User One"><a href="/users/1">User One</a></td>
+                <td>user1@example.com</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+                <td>41</td>
+              </tr>
+              <tr data-row-key="2">
+                <td>User Two</td>
+                <td>user2@example.com</td>
+                <td data-value="pending"><span class="badge pending">Pending</span></td>
+                <td>32</td>
+              </tr>
+              <tr data-row-key="3">
+                <td>User Three</td>
+                <td>user3@example.com</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+                <td>58</td>
+              </tr>
+              <tr data-row-key="4">
+                <td>User Four</td>
+                <td>user4@example.com</td>
+                <td data-value="blocked"><span class="badge blocked">Blocked</span></td>
+                <td>27</td>
+              </tr>
+              <tr data-row-key="5">
+                <td>User Five</td>
+                <td>user5@example.com</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+                <td>45</td>
+              </tr>
+            </tbody>
+          </table>
+        </data-grid>
+      </div>
+      <p class="demo-note">The <code>caption</code>, <code>colgroup</code> and table classes are preserved; the grid
+        installs its own header rows, body and footer. <code>data-value</code> keeps a machine-readable value for
+        filter/sort/search while the initial markup stays rich.</p>
+    </section>
+
+    <section class="demo-grid">
+      <h2>HTML columns + server data</h2>
+      <p class="demo-lead">With <code>src</code>, the server stays authoritative and only the columns come from the
+        markup.</p>
+
+      <div class="demo-frame">
+        <data-grid src="/api/users" sortable filterable page-size="10">
+          <table>
+            <thead>
+              <tr>
+                <th data-field="id" data-sortable="false">#</th>
+                <th data-field="first_name">First Name</th>
+                <th data-field="last_name">Last Name</th>
+                <th data-field="company">Company</th>
+              </tr>
+            </thead>
+          </table>
+        </data-grid>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <hr />
+    <p>data-grid-component - declarative HTML facade demo</p>
+  </footer>
+</body>
+
+</html>

@@ -157,6 +157,34 @@ test("a column with sortable: false cannot be sorted, even programmatically", as
     removeGrid(inst);
 });
 
+test("scalar options are reflected as curated HTML attributes", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name", title: "Name" }],
+        },
+        [{ name: "a" }],
+    );
+
+    inst.setAttribute("row-key", "UserID");
+    inst.setAttribute("select-visible-only", "false");
+    inst.setAttribute("responsive-toggle", "false");
+    inst.setAttribute("collapse-actions", "");
+    inst.setAttribute("save-state", "");
+    inst.setAttribute("no-data", "No users");
+    inst.setAttribute("error-message", "Unable to load");
+    inst.setAttribute("page-sizes", "10,25,50");
+
+    expect(inst.options.rowKey).toBe("UserID");
+    expect(inst.options.selectVisibleOnly).toBe(false);
+    expect(inst.options.responsiveToggle).toBe(false);
+    expect(inst.options.collapseActions).toBe(true);
+    expect(inst.options.saveState).toBe(true);
+    expect(inst.options.noData).toBe("No users");
+    expect(inst.options.errorMessage).toBe("Unable to load");
+    expect(inst.options.pageSizes).toEqual([10, 25, 50]);
+    removeGrid(inst);
+});
+
 test("clearFilters clears the filter inputs", async () => {
     const inst = await makeReadyGrid(
         {

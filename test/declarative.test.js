@@ -1,0 +1,289 @@
+import { expect, test } from "bun:test";
+import DataGrid from "../data-grid.js";
+import { ArrayDataSource, FetchDataSource } from "../src/data-source.js";
+import BulkActions from "../src/plugins/bulk-actions.js";
+import SelectableRows from "../src/plugins/selectable-rows.js";
+
+DataGrid.registerPlugins({ SelectableRows, BulkActions });
+
+/**
+ * Create a grid that adopts a declarative <table> from `markup`.
+ * @param {String} markup
+ * @param {Object} [opts]
+ * @returns {Promise<DataGrid>}
+ */
+async function makeDeclarativeGrid(markup, opts = {}) {
+    const inst = new DataGrid(opts);
+    inst.innerHTML = markup;
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+    return inst;
+}
+
+function removeGrid(inst) {
+    document.body.removeChild(inst);
+}
+
+const DEMO_TABLE = `
+<table class="table-striped">
+    <caption>Records</caption>
+    <colgroup><col style="width:30%"><col><col></colgroup>
+    <thead>
+        <tr>
+            <th data-field="name" data-sort="asc">Name</th>
+            <th data-field="email">Email</th>
+            <th data-field="age" data-sortable="false">Age</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr data-row-key="42"><td>User One</td><td>user1@example.com</td><td>41</td></tr>
+        <tr data-row-key="53"><td>User Two</td><td>user2@example.com</td><td>32</td></tr>
+    </tbody>
+</table>
+`;
+
+test("thead declares columns and the tbody becomes the local dataset", async () => {
+    const inst = await makeDeclarativeGrid(DEMO_TABLE, { sortable: true });
+
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["name", "email", "age"]);
+    expect(inst.options.columns[0].title).toBe("Name");
+    expect(inst.options.columns[2].sortable).toBe(false);
+    expect(inst.query.sort).toEqual([{ field: "name", direction: "asc" }]);
+
+    expect(inst.dataSource).toBeInstanceOf(ArrayDataSource);
+    expect(inst.dataSource.rows).toEqual([
+        { name: "User One", email: "user1@example.com", age: "41", id: "42" },
+        { name: "User Two", email: "user2@example.com", age: "32", id: "53" },
+    ]);
+    removeGrid(inst);
+});
+
+test("the adopted table keeps its markup and the grid installs its structure", async () => {
+    const inst = await makeDeclarativeGrid(DEMO_TABLE, { sortable: true });
+
+    // Exactly one direct table: the supplied one, enhanced.
+    expect(inst.querySelectorAll(":scope > table").length).toBe(1);
+    const table = inst.querySelector("table");
+    expect(table.classList.contains("table-striped")).toBe(true);
+    expect(table.querySelector("caption").textContent).toBe("Records");
+    expect(table.querySelector("colgroup")).toBeTruthy();
+
+    // Grid-owned structure.
+    expect(table.querySelector("tfoot .dg-footer")).toBeTruthy();
+    expect(inst.querySelector("tbody tr").querySelectorAll("td").length).toBe(3);
+    expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="name"]').getAttribute("aria-sort")).toBe(
+        "ascending",
+    );
+    removeGrid(inst);
+});
+
+test("data-value keeps a machine value while the markup stays rich", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name">Name</th><th data-field="status" data-filter="select">Status</th></tr></thead>
+    <tbody>
+        <tr data-row-key="1"><td data-value="User One"><a href="/users/1">User One</a></td><td data-value="active">Active badge</td></tr>
+    </tbody>
+</table>
+`,
+        { sortable: true, filterable: true },
+    );
+
+    const row = inst.dataSource.rows[0];
+    expect(row.name).toBe("User One");
+    expect(row.status).toBe("active");
+
+    // data-filter="select" produces a select filter control.
+    const select = inst.querySelector('thead tr.dg-head-filters th[data-column-id="status"] select');
+    expect(select).toBeTruthy();
+    removeGrid(inst);
+});
+
+test("data-row-key is the authoritative row identity", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="id">Id</th><th data-field="name">Name</th></tr></thead>
+    <tbody><tr data-row-key="99"><td>1</td><td>User One</td></tr></tbody>
+</table>
+`,
+        {},
+    );
+    // The td says id=1, but data-row-key says 99.
+    expect(inst.dataSource.rows[0].id).toBe("99");
+    removeGrid(inst);
+});
+
+test("data-sortable alone never activates global sorting", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name" data-sortable>Name</th></tr></thead>
+    <tbody><tr><td>User One</td></tr></tbody>
+</table>
+`,
+        {}, // grid is NOT sortable
+    );
+    expect(inst.querySelector('th[data-column-id="name"] .dg-sort')).toBeNull();
+    removeGrid(inst);
+});
+
+test("without data-field the table is adopted and JS columns stay", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th>Name</th><th>Age</th></tr></thead>
+    <tbody><tr><td>User One</td><td>41</td></tr></tbody>
+</table>
+`,
+        { columns: [{ field: "name", title: "Name" }] },
+    );
+
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["name"]);
+    expect(inst.querySelectorAll(":scope > table").length).toBe(1);
+    expect(inst.dataSource).toBeInstanceOf(ArrayDataSource);
+    expect(inst.dataSource.rows).toEqual([{ name: "User One" }]);
+    removeGrid(inst);
+});
+
+test("data-sort never overrides an explicit initialQuery", async () => {
+    const inst = await makeDeclarativeGrid(DEMO_TABLE, {
+        initialQuery: { sort: [{ field: "email", direction: "desc" }] },
+    });
+    expect(inst.query.sort).toEqual([{ field: "email", direction: "desc" }]);
+    removeGrid(inst);
+});
+
+test("a user tbody/tfoot is replaced, never duplicated", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name">Name</th></tr></thead>
+    <tbody><tr><td>User One</td></tr><tr><td>User Two</td></tr></tbody>
+    <tfoot><tr><td>custom footer</td></tr></tfoot>
+</table>
+`,
+        {},
+    );
+
+    expect(inst.querySelectorAll("tbody").length).toBe(1);
+    expect(inst.querySelectorAll("tfoot").length).toBe(1);
+    expect(inst.querySelector("tfoot .dg-footer")).toBeTruthy();
+    expect(inst.querySelector("tfoot").textContent).not.toContain("custom footer");
+    expect(inst.dataSource.rows).toHaveLength(2);
+    removeGrid(inst);
+});
+
+test("with src the server source is authoritative and the tbody is ignored", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name">Name</th></tr></thead>
+    <tbody><tr><td>User One</td></tr></tbody>
+</table>
+`,
+        { src: "/api/users" },
+    );
+
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["name"]);
+    expect(inst.dataSource).toBeInstanceOf(FetchDataSource);
+    expect(inst.dataSource.rows).toBeUndefined();
+    removeGrid(inst);
+});
+
+test("local sort, search and pagination work on the declarative dataset", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name">Name</th><th data-field="age">Age</th></tr></thead>
+    <tbody>
+        <tr data-row-key="1"><td>User B</td><td>30</td></tr>
+        <tr data-row-key="2"><td>User A</td><td>20</td></tr>
+        <tr data-row-key="3"><td>User C</td><td>40</td></tr>
+        <tr data-row-key="4"><td>User D</td><td>25</td></tr>
+        <tr data-row-key="5"><td>User E</td><td>35</td></tr>
+    </tbody>
+</table>
+`,
+        { sortable: true, searchable: true, searchDelay: 0, initialQuery: { pageSize: 2 } },
+    );
+
+    // Sort by name ascending.
+    await inst.setQuery({ sort: [{ field: "name", direction: "asc" }] });
+    expect(inst.rows.map((r) => r.name)).toEqual(["User A", "User B"]);
+
+    // Local pagination.
+    await inst.setQuery({ page: 2 });
+    expect(inst.rows.map((r) => r.name)).toEqual(["User C", "User D"]);
+
+    // Global search narrows locally.
+    const input = inst.querySelector(".dg-search");
+    input.value = "User E";
+    input.dispatchEvent(new Event("input"));
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(inst.rows.map((r) => r.name)).toEqual(["User E"]);
+    removeGrid(inst);
+});
+
+test("reconnect is idempotent: one table, same data source, no re-seed", async () => {
+    const inst = await makeDeclarativeGrid(DEMO_TABLE, {});
+    const ds = inst.dataSource;
+    expect(ds).toBeInstanceOf(ArrayDataSource);
+
+    document.body.removeChild(inst);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+
+    expect(inst.querySelectorAll(":scope > table").length).toBe(1);
+    expect(inst.dataSource).toBe(ds);
+    expect(inst.options.columns.map((c) => c.field)).toEqual(["name", "email", "age"]);
+    expect(inst.rows).toHaveLength(2);
+    removeGrid(inst);
+});
+
+test("empty declarative tbody is still a local dataset", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name">Name</th></tr></thead>
+    <tbody></tbody>
+</table>
+`,
+        {},
+    );
+    expect(inst.dataSource).toBeInstanceOf(ArrayDataSource);
+    expect(inst.dataSource.rows).toEqual([]);
+    expect(inst.hasAttribute("data-empty")).toBe(true);
+    removeGrid(inst);
+});
+
+test("data-transform and data-editable-type map to column options", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead>
+        <tr>
+            <th data-field="name" data-transform="uppercase">Name</th>
+            <th data-field="note" data-editable data-editable-type="textarea">Note</th>
+        </tr>
+    </thead>
+    <tbody><tr><td>User One</td><td>hi</td></tr></tbody>
+</table>
+`,
+        {},
+    );
+
+    const columns = inst.options.columns;
+    expect(columns[0].transform).toBe("uppercase");
+    expect(columns[1].editable).toBe(true);
+    expect(columns[1].editableType).toBe("textarea");
+    removeGrid(inst);
+});

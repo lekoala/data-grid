@@ -57,11 +57,63 @@ const grid = new DataGrid({ src: "/api/users" });
 document.body.appendChild(grid);
 ```
 
+### Declarative HTML
+
+A native `<table>` inside `<data-grid>` is adopted as-is: the grid enhances the
+real table instead of creating its own. `caption`, `colgroup` and the table's
+own classes and attributes are preserved.
+
+```html
+<data-grid sortable filterable searchable page-size="10">
+    <table>
+        <thead>
+            <tr>
+                <th data-field="name" data-sort="asc">Name</th>
+                <th data-field="email">Email</th>
+                <th data-field="status" data-filter="select">Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr data-row-key="42">
+                <td>User One</td>
+                <td>user1@example.com</td>
+                <td data-value="active">Active</td>
+            </tr>
+        </tbody>
+    </table>
+</data-grid>
+```
+
+`<th data-field>` declares a column: `title` is the cell text, and
+`data-sortable`, `data-filterable`, `data-filter`, `data-responsive`,
+`data-hidden`, `data-editable`, `data-editable-type`, `data-transform` and
+`data-width` map to the matching column options. `data-sort="asc"|"desc"`
+seeds the initial sort (DOM order is the priority). The host still activates
+the global capabilities — `data-sortable` on a column only opts out, it never
+turns sorting on globally.
+
+The `<data-grid>` host takes the reflected attributes listed above
+(`select-visible-only`, `row-key`, `no-data`, `page-sizes`, ...): HTML covers
+structure, data and scalar configuration; functions, objects and behaviors
+(`renderCell`, validators, `dataSource`, `actions`) stay JavaScript.
+
+When **no** `dataSource`/`src` is configured, the `<tbody>` rows become the
+local dataset: `<td>` maps to the columns by index, `td[data-value]` provides
+a machine-readable value (display text otherwise), and `tr[data-row-key]` is
+the authoritative row key. With a `src`/`dataSource`, the source stays
+authoritative and the `<tbody>` is not consumed as data.
+
+Rule of thumb: **HTML = declarative configuration, JS = behavior.** For
+custom rendering (`renderCell`), validators or a custom data source, use the
+JavaScript API instead.
+
 ## Options
 
-Options are set as constructor options or reflected HTML attributes. The
-`data-*` attributes map to options (kebab-case -> camelCase, a bare attribute
-means `true`). Some options only work if the proper plugin is loaded.
+Options are set as constructor options or reflected HTML attributes. HTML
+attributes are an **intentionally curated declarative subset** of options
+(kebab-case -> camelCase, a bare attribute means `true`); complex or functional
+options (`dataSource`, `actions`, `renderCell`, ...) remain JavaScript-only.
+Some options only work if the proper plugin is loaded.
 
 | Option                | Type                 | Default              | Description                                      |
 |-----------------------|----------------------|----------------------|--------------------------------------------------|
@@ -115,12 +167,25 @@ described in `docs/plugins.md`.
 ### Attributes
 
 The main attributes are `src`, `sortable`, `filterable`, `searchable`,
-`min-search-length`, `responsive`, `selectable`, `single-select`, `reorder`,
-`menu`, `expand`, `autosize`, `resizable`, `autoheight`, `autohide-pager`,
-`show-page-size`, `debug`, `dir`, `density`. Example:
+`min-search-length`, `responsive`, `responsive-toggle`, `selectable`,
+`single-select`, `select-visible-only`, `row-key`, `row-label`,
+`collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`,
+`reorder`, `menu`, `expand`, `autosize`, `resizable`, `autoheight`,
+`autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
 
 ```html
-<data-grid src="/api/users" sortable filterable searchable min-search-length="3"></data-grid>
+<data-grid
+    src="/api/users"
+    sortable
+    filterable
+    searchable
+    selectable
+    select-visible-only="false"
+    row-key="UserID"
+    min-search-length="3"
+    page-sizes="10,25,50"
+    no-data="No users"
+></data-grid>
 ```
 
 ## API

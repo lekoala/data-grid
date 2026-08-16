@@ -31,10 +31,37 @@
               "name": "responsive"
             },
             {
+              "name": "responsive-toggle"
+            },
+            {
               "name": "selectable"
             },
             {
               "name": "single-select"
+            },
+            {
+              "name": "select-visible-only"
+            },
+            {
+              "name": "row-key"
+            },
+            {
+              "name": "row-label"
+            },
+            {
+              "name": "collapse-actions"
+            },
+            {
+              "name": "save-state"
+            },
+            {
+              "name": "no-data"
+            },
+            {
+              "name": "error-message"
+            },
+            {
+              "name": "page-sizes"
             },
             {
               "name": "reorder"

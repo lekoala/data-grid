@@ -8,6 +8,7 @@ export type QueryState = import("./data-source.js").QueryState;
 export type PageResult = import("./data-source.js").PageResult;
 export type FilterState = import("./data-source.js").FilterState;
 export type FilterOption = import("./data-source.js").FilterOption;
+export type SortState = import("./data-source.js").SortState;
 export type Column = {
     /**
      * - the key in the data
@@ -595,6 +596,11 @@ declare class DataGrid extends BaseElement {
      * @returns {Array<any>}
      */
     static get observedAttributes(): Array<any>;
+    /**
+     * Custom attribute transformers, keyed by attribute name.
+     * @returns {Record<string, (raw: string) => any>}
+     */
+    get transformAttributes(): Record<string, (raw: string) => any>;
     /** @returns {HTMLTableSectionElement} */
     get thead(): HTMLTableSectionElement;
     /** @returns {HTMLTableSectionElement} */
@@ -680,6 +686,17 @@ declare class DataGrid extends BaseElement {
      * @returns {Promise<void>|undefined}
      */
     commitSearch(): Promise<void> | undefined;
+    /**
+     * Adopt a supplied `<table>` (a direct child that is not the generated
+     * template table). The supplied table keeps its own attributes, caption
+     * and colgroup; the grid installs its generated header rows, tbody and
+     * tfoot. A declarative `<th data-field>` row defines the columns (it wins
+     * over `options.columns`); when no explicit data source exists, the
+     * declarative `<tbody>` becomes the local ArrayDataSource dataset.
+     * Idempotent: the adopted table is marked `data-dg-table` and is never
+     * re-parsed or re-seeded.
+     */
+    _adoptDeclarativeTable(): void;
     _connected(): Promise<void>;
     _disconnected(): void;
     init(): Promise<void>;

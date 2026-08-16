@@ -28,6 +28,7 @@ import {
 /** @typedef {import("./data-source.js").PageResult} PageResult */
 /** @typedef {import("./data-source.js").FilterState} FilterState */
 /** @typedef {import("./data-source.js").FilterOption} FilterOption */
+/** @typedef {import("./data-source.js").SortState} SortState */
 
 /**
  * Column definition
@@ -278,6 +279,128 @@ function normalizeQuery(query) {
 }
 
 /**
+ * Parse a declarative boolean attribute value. A bare attribute (empty string),
+ * "true" or "1" means true; "false" and "0" mean false.
+ * @param {String} value
+ * @returns {Boolean}
+ */
+function parseDeclarativeBoolean(value) {
+    return value === "" || value === "true" || value === "1";
+}
+
+/**
+ * Parse the declarative `<th data-field>` header row of a supplied table into
+ * column definitions and an optional initial sort. Column order follows the DOM
+ * order of the `<th>` elements; `data-sort` order is the sort priority.
+ *
+ * The parsed columns still go through convertColumns(): this helper only
+ * translates HTML, it never normalizes.
+ * @param {HTMLTableElement} table
+ * @returns {{ columns: Column[], sort: SortState[] }}
+ */
+function parseDeclarativeTable(table) {
+    /** @type {Column[]} */
+    const columns = [];
+    /** @type {SortState[]} */
+    const sort = [];
+    const headerRow = table.querySelector("thead > tr:first-child");
+    if (!headerRow) {
+        return { columns, sort };
+    }
+    const ths = /** @type {NodeListOf<HTMLTableCellElement>} */ (headerRow.querySelectorAll(":scope > th[data-field]"));
+    for (const th of ths) {
+        const field = th.dataset.field;
+        if (!field) {
+            continue;
+        }
+        /** @type {Column} */
+        const column = {
+            field,
+            title: th.textContent.trim(),
+        };
+        if (th.dataset.sortable !== undefined) {
+            column.sortable = parseDeclarativeBoolean(th.dataset.sortable);
+        }
+        if (th.dataset.filterable !== undefined) {
+            column.filterable = parseDeclarativeBoolean(th.dataset.filterable);
+        }
+        if (th.dataset.filter) {
+            column.filterType = th.dataset.filter;
+        }
+        if (th.dataset.responsive !== undefined) {
+            const responsive = Number(th.dataset.responsive);
+            if (Number.isFinite(responsive)) {
+                column.responsive = responsive;
+            }
+        }
+        if (th.dataset.hidden !== undefined) {
+            column.hidden = parseDeclarativeBoolean(th.dataset.hidden);
+        }
+        if (th.dataset.editable !== undefined) {
+            column.editable = parseDeclarativeBoolean(th.dataset.editable);
+        }
+        if (th.dataset.editableType) {
+            column.editableType = th.dataset.editableType;
+        }
+        if (th.dataset.transform) {
+            column.transform = th.dataset.transform;
+        }
+        if (th.dataset.width !== undefined) {
+            const width = Number(th.dataset.width);
+            if (Number.isFinite(width)) {
+                column.width = width;
+            }
+        }
+        const direction = th.dataset.sort;
+        if (direction === "asc" || direction === "desc") {
+            sort.push({ field, direction });
+        }
+        columns.push(column);
+    }
+    return { columns, sort };
+}
+
+/**
+ * Extract the local dataset from a supplied table body. The first `<tbody>`
+ * row maps to the columns by index: `value = td[data-value] ?? td.textContent`.
+ * A `tr[data-row-key]` is the authoritative row identity and overrides the
+ * parsed value of the `rowKey` field (when `rowKey` is a field name). Only
+ * used to seed an ArrayDataSource when no explicit source exists.
+ * @param {HTMLTableElement} table
+ * @param {Column[]} columns
+ * @param {String|Function|null} [rowKey] The configured rowKey option
+ * @returns {Array<Record<string, any>>}
+ */
+function rowsFromTable(table, columns, rowKey = "id") {
+    const tbody = table.querySelector("tbody");
+    if (!tbody) {
+        return [];
+    }
+    const rows = [];
+    const trs = /** @type {NodeListOf<HTMLTableRowElement>} */ (tbody.querySelectorAll(":scope > tr"));
+    for (const tr of trs) {
+        /** @type {Record<string, any>} */
+        const row = {};
+        const tds = /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll(":scope > td"));
+        columns.forEach((column, index) => {
+            if (!column.field) {
+                return;
+            }
+            const td = tds[index];
+            if (!td) {
+                return;
+            }
+            row[column.field] = td.dataset.value ?? td.textContent.trim();
+        });
+        if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
+            row[rowKey] = tr.dataset.rowKey;
+        }
+        rows.push(row);
+    }
+    return rows;
+}
+
+/**
  * Order columns: plugin "start" columns first (in plugin registration order),
  * then base columns, then plugin "end" columns.
  * Start columns are unshifted by plugins, so reversing restores registration order.
@@ -510,7 +633,7 @@ class DataGrid extends BaseElement {
 
     static template() {
         return `
-<table>
+<table data-dg-generated-table>
     <thead>
         <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
         <tr class="dg-head-filters"></tr>
@@ -897,8 +1020,17 @@ class DataGrid extends BaseElement {
             "searchable",
             "min-search-length",
             "responsive",
+            "responsive-toggle",
             "selectable",
             "single-select",
+            "select-visible-only",
+            "row-key",
+            "row-label",
+            "collapse-actions",
+            "save-state",
+            "no-data",
+            "error-message",
+            "page-sizes",
             "reorder",
             "menu",
             "expand",
@@ -911,6 +1043,20 @@ class DataGrid extends BaseElement {
             "dir",
             "density",
         ];
+    }
+
+    /**
+     * Custom attribute transformers, keyed by attribute name.
+     * @returns {Record<string, (raw: string) => any>}
+     */
+    get transformAttributes() {
+        return {
+            "page-sizes": (raw) =>
+                raw
+                    .split(",")
+                    .map((value) => Number.parseInt(value, 10))
+                    .filter((value) => Number.isFinite(value)),
+        };
     }
 
     /** @returns {HTMLTableSectionElement} */
@@ -1278,8 +1424,85 @@ class DataGrid extends BaseElement {
         return this.setQuery({ search: value });
     }
 
+    /**
+     * Adopt a supplied `<table>` (a direct child that is not the generated
+     * template table). The supplied table keeps its own attributes, caption
+     * and colgroup; the grid installs its generated header rows, tbody and
+     * tfoot. A declarative `<th data-field>` row defines the columns (it wins
+     * over `options.columns`); when no explicit data source exists, the
+     * declarative `<tbody>` becomes the local ArrayDataSource dataset.
+     * Idempotent: the adopted table is marked `data-dg-table` and is never
+     * re-parsed or re-seeded.
+     */
+    _adoptDeclarativeTable() {
+        const adopted = /** @type {HTMLTableElement|null} */ (this.querySelector(":scope > table[data-dg-table]"));
+        const generated = /** @type {HTMLTableElement|null} */ (
+            this.querySelector(":scope > table[data-dg-generated-table]")
+        );
+        if (adopted) {
+            // Already adopted on a previous connect: a re-injected generated
+            // table is redundant.
+            generated?.remove();
+            return;
+        }
+        if (!generated) {
+            return;
+        }
+        const supplied = /** @type {HTMLTableElement|undefined} */ (
+            Array.from(this.querySelectorAll(":scope > table")).find((table) => table !== generated)
+        );
+        if (!supplied) {
+            return;
+        }
+
+        // The supplied table is author-owned for attributes, caption and
+        // colgroup: keep an existing caption as the accessible name instead of
+        // letting updateTableLabel remove it.
+        const caption = supplied.querySelector("caption");
+        if (caption && !this.options.caption) {
+            this.options.caption = caption.textContent.trim();
+        }
+
+        const { columns, sort } = parseDeclarativeTable(supplied);
+        if (columns.length) {
+            this.options.columns = columns;
+        }
+        if (!this.options.initialQuery && sort.length) {
+            this._initialQuery.sort = sort;
+            this._query.sort = sort;
+        }
+
+        // Local dataset: declarative body rows become the data when no source
+        // is configured. A `<tr data-row-key>` is the authoritative row id.
+        const effectiveColumns = columns.length ? columns : this.convertColumns(this.options.columns);
+        if (!this.options.dataSource && !this.options.src && effectiveColumns.length) {
+            this.options.dataSource = new ArrayDataSource(
+                rowsFromTable(supplied, effectiveColumns, this.options.rowKey),
+            );
+        }
+
+        // Ownership: the declarative header row is consumed once, the grid
+        // installs its own tbody and tfoot (replacing any user-provided ones).
+        supplied.querySelector("thead > tr:first-child")?.remove();
+        if (generated) {
+            const tbody = generated.querySelector("tbody");
+            const tfoot = generated.querySelector("tfoot");
+            supplied.querySelector("tbody")?.remove();
+            supplied.querySelector("tfoot")?.remove();
+            if (tbody) {
+                supplied.appendChild(tbody);
+            }
+            if (tfoot) {
+                supplied.appendChild(tfoot);
+            }
+            generated.remove();
+        }
+        supplied.setAttribute("data-dg-table", "");
+    }
+
     async _connected() {
         connectedInstances.add(this);
+        this._adoptDeclarativeTable();
         this.table = this.querySelector("table");
         this.btnFirst = this.querySelector(".dg-btn-first");
         this.btnPrev = this.querySelector(".dg-btn-prev");
@@ -2047,11 +2270,23 @@ class DataGrid extends BaseElement {
         tr.setAttribute("class", "dg-head-columns");
 
         // We need a real th from the dom to compute the size
-        let sampleTh = /** @type {HTMLTableCellElement | null} */ (thead?.querySelector("tr.dg-head-columns th"));
+        const oldRow = /** @type {HTMLTableRowElement|null} */ (thead?.querySelector("tr.dg-head-columns") ?? null);
+        let sampleTh = /** @type {HTMLTableCellElement | null} */ (oldRow?.querySelector("th") ?? null);
         this.log("createColumnHeaders - sampleTh", sampleTh);
+        let seededSample = false;
         if (!sampleTh) {
             sampleTh = ce("th");
-            thead?.querySelector("tr")?.appendChild(sampleTh);
+            if (oldRow) {
+                // Keep the measurement cell in the row that will be replaced,
+                // so it is laid out while the new row is built.
+                oldRow.appendChild(sampleTh);
+            } else {
+                // Declarative table without the standard header row: seed the
+                // new row and attach it now; the cell is removed once measured.
+                seededSample = true;
+                tr.appendChild(sampleTh);
+                thead?.appendChild(tr);
+            }
         }
 
         // Create columns
@@ -2092,6 +2327,11 @@ class DataGrid extends BaseElement {
             }
         }
 
+        // The measurement cell seeded for a declarative table is not a column.
+        if (seededSample) {
+            sampleTh.remove();
+        }
+
         // There is too much available width, and we want to avoid fixed layout to split remaining amount
         if (totalWidth < availableWidth) {
             const visibleCols = findAll(tr, "th:not([hidden],.dg-not-resizable)");
@@ -2101,10 +2341,11 @@ class DataGrid extends BaseElement {
             }
         }
 
-        const oldRow = thead?.querySelector("tr.dg-head-columns");
         if (thead && oldRow) {
             thead.replaceChild(tr, oldRow);
         }
+        // When there was no standard header row, the row was already attached
+        // before the column cells were created.
 
         // Once columns are inserted, we have an actual dom to query
         if (thead && thead.offsetWidth > availableWidth) {
@@ -2263,6 +2504,8 @@ class DataGrid extends BaseElement {
         const oldRow = thead?.querySelector("tr.dg-head-filters");
         if (thead && oldRow) {
             thead.replaceChild(tr, oldRow);
+        } else if (thead && !tr.parentNode) {
+            thead.appendChild(tr);
         }
 
         // Filter content by field events: live debounced text filtering,
@@ -2487,9 +2730,11 @@ class DataGrid extends BaseElement {
         }
 
         // Keep data empty message
+        tbody.setAttribute("data-empty-message", message);
         if (prev) {
-            tbody.setAttribute("data-empty-message", message);
             this.table?.replaceChild(tbody, prev);
+        } else {
+            this.table?.appendChild(tbody);
         }
 
         this.paginate();
