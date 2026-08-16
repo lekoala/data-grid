@@ -1135,6 +1135,7 @@ data-grid .dg-responsive-child-row > td {
 data-grid .dg-responsive-table {
   table-layout: auto;
   border: 0;
+  width: 100%;
 }
 
 data-grid .dg-responsive-table td, data-grid .dg-responsive-table th {
@@ -1142,7 +1143,10 @@ data-grid .dg-responsive-table td, data-grid .dg-responsive-table th {
 }
 
 data-grid .dg-responsive-table th {
+  text-align: start;
+  color: var(--dg-muted-color);
   max-width: 40%;
+  font-weight: 600;
 }
 
 /* css/data-grid.css */

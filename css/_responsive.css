@@ -10,6 +10,7 @@ data-grid .dg-responsive-child-row > td {
 data-grid .dg-responsive-table {
   table-layout: auto;
   border: 0;
+  width: 100%;
 }
 
 data-grid .dg-responsive-table td,
@@ -19,5 +20,8 @@ data-grid .dg-responsive-table th {
 
 data-grid .dg-responsive-table th {
   max-width: 40%;
+  text-align: start;
+  color: var(--dg-muted-color);
+  font-weight: 600;
 }
 

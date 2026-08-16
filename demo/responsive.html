@@ -39,11 +39,39 @@
         console.log(e.type, e.detail);
       });
 
+      const stackedGrid = await createStaticGrid(
+        document.getElementById("stacked-demo"),
+        "demo.json",
+        {
+          searchable: true,
+          sortable: true,
+          filterable: true,
+          responsive: true,
+          responsiveStartOpen: true,
+          responsiveToggle: false,
+          initialQuery: { pageSize: 15 },
+          columns: [
+            { field: "id", title: "ID", width: 72, responsive: 0 },
+            { field: "first_name", title: "First Name", responsive: 0 },
+            { field: "last_name", title: "Last Name", responsive: 0 },
+            { field: "email", title: "Email", responsive: 1 },
+            { field: "company", title: "Company", responsive: 2 },
+            { field: "job_title", title: "Job Title", responsive: 3 },
+            { field: "city", title: "City", responsive: 4 },
+          ],
+        },
+      );
+
       const frame = document.getElementById("responsive-frame");
       const width = document.getElementById("width");
       new ResizeObserver(() => {
         width.textContent = `${Math.round(frame.getBoundingClientRect().width)}px`;
       }).observe(frame);
+      const stackedFrame = document.getElementById("stacked-frame");
+      const stackedWidth = document.getElementById("stacked-width");
+      new ResizeObserver(() => {
+        stackedWidth.textContent = `${Math.round(stackedFrame.getBoundingClientRect().width)}px`;
+      }).observe(stackedFrame);
     </script>
   </head>
 
@@ -88,6 +116,25 @@
           Drag the bottom-right handle to shrink the container. <code>City</code> goes first, then
           <code>Job Title</code>, <code>Company</code>, <code>Email</code>, and finally the names — while
           <code>ID</code> always survives. The <code>+</code> toggle reveals hidden values per row.
+        </p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-toolbar">
+          <div>
+            <p class="demo-kicker">Stacked</p>
+            <h2>Start-open details</h2>
+          </div>
+          <span class="demo-meta">width: <code id="stacked-width">—</code></span>
+        </div>
+        <div class="resize-me" id="stacked-frame">
+          <div id="stacked-demo"></div>
+        </div>
+        <p class="demo-note">
+          The same <code>responsive</code> behavior, but <code>responsive-start-open</code> shows the hidden
+          values immediately (with <code>responsive-toggle="false"</code> there is no <code>+</code> control),
+          giving a clean record layout. Search, sort and filters still work, and an actively sorted or filtered
+          column is never hidden.
         </p>
       </div>
     </main>

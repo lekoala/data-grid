@@ -1020,6 +1020,7 @@ class DataGrid extends base_element_default {
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
+      responsiveStartOpen: false,
       filterDelay: 300,
       searchable: false,
       searchPlaceholder: "",
@@ -1118,6 +1119,7 @@ class DataGrid extends base_element_default {
       "min-search-length",
       "responsive",
       "responsive-toggle",
+      "responsive-start-open",
       "selectable",
       "single-select",
       "select-visible-only",
@@ -1917,7 +1919,7 @@ class DataGrid extends base_element_default {
   _selectionChanged() {
     const tbody = this.tbody;
     if (tbody) {
-      const trs = Array.from(tbody.querySelectorAll("tr"));
+      const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
       for (let i = 0;i < this.rows.length; i++) {
         const tr = trs[i];
         if (!tr || tr.classList.contains("dg-fake-row")) {
@@ -2382,6 +2384,8 @@ class DataGrid extends base_element_default {
     let i = 0;
     for (const item of this.rows) {
       const tr = ce("tr");
+      tr.classList.add("dg-data-row");
+      tr.dataset.rowIndex = String(i);
       if (this.options.expand) {
         tr.classList.add("dg-expandable");
         on(tr, "click", (ev) => {
@@ -2921,7 +2925,7 @@ class SelectableRows extends base_plugin_default {
       return;
     }
     const inputs = Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`));
-    const trs = Array.from(tbody.querySelectorAll("tr"));
+    const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
     for (const input of inputs) {
       const tr = input.closest("tr");
       if (!tr) {
@@ -3171,7 +3175,7 @@ class FixedHeight extends base_plugin_default {
     }
     const rowHeight = grid.rowHeight ?? 0;
     const max = grid.query.pageSize * rowHeight;
-    const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
+    const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
     const fakeHeight = visibleRows > 1 ? max - visibleRows * rowHeight : max;
     if (fakeHeight > 0) {
       setAttribute(fakeRow, "height", fakeHeight);
@@ -3388,7 +3392,7 @@ class ResponsiveGrid extends base_plugin_default {
     };
     const items = sortByPriority(findAll(headerRow, "th[field]").reverse().filter((th) => {
       const column = grid.getCol(th.getAttribute("field") ?? "");
-      return column && column.responsive !== 0 && !column.hidden;
+      return column && this._isEssential(column) === false;
     })).map((th) => {
       return {
         th,
@@ -3453,7 +3457,7 @@ class ResponsiveGrid extends base_plugin_default {
     }
     if (changed) {
       this.blockObserver();
-      grid._syncColumnVisibility();
+      this._rebuildDetails();
       this.unblockObserver();
     }
     const footer = find(table, "tfoot");
@@ -3484,6 +3488,132 @@ class ResponsiveGrid extends base_plugin_default {
   onmousedown(ev) {
     ev.preventDefault();
   }
+  _dataRows() {
+    return Array.from(this.grid.querySelectorAll("tbody > tr.dg-data-row"));
+  }
+  _isEssential(column) {
+    if (!column?.field) {
+      return false;
+    }
+    if (column.responsive === 0 || column.hidden) {
+      return true;
+    }
+    if (this.grid.getColumnSortDirection(column.field)) {
+      return true;
+    }
+    if (this.grid._query?.filters?.[column.field]) {
+      return true;
+    }
+    return false;
+  }
+  _canonicalizeRow(tr) {
+    for (const column of this.grid.getColumns()) {
+      if (column.attr) {
+        continue;
+      }
+      const id = column.id ?? column.field;
+      const td = tr.querySelector(`:scope > td[data-column-id="${id}"]`);
+      if (td) {
+        tr.appendChild(td);
+      }
+    }
+  }
+  _setToggleIcon(tr, expanded) {
+    const open = find(tr, `.${RESPONSIVE_CLASS}-open`);
+    const close = find(tr, `.${RESPONSIVE_CLASS}-close`);
+    if (!open || !close) {
+      return;
+    }
+    open.style.display = expanded ? "none" : "unset";
+    close.style.display = expanded ? "unset" : "none";
+  }
+  _setRowExpanded(tr, expanded) {
+    tr.dataset.responsiveExpanded = String(expanded);
+    const childRow = tr.nextElementSibling;
+    const hasChildRow = childRow?.classList.contains(`${RESPONSIVE_CLASS}-child-row`);
+    if (expanded) {
+      if (hasChildRow) {
+        return;
+      }
+      const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
+      if (!hiddenCols.length) {
+        return;
+      }
+      this._canonicalizeRow(tr);
+      addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+      const detailRow = ce("tr");
+      insertAfter(detailRow, tr);
+      addClass(detailRow, `${RESPONSIVE_CLASS}-child-row`);
+      const detailTd = ce("td", detailRow);
+      setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
+      const childTable = ce("table", detailTd);
+      addClass(childTable, `${RESPONSIVE_CLASS}-table`);
+      const idealWidth = this.computeLabelWidth();
+      for (const col of findAll(tr, `.${RESPONSIVE_CLASS}-hidden`)) {
+        const childTableRow = ce("tr", childTable);
+        const labelCol = ce("th", childTableRow);
+        labelCol.style.width = `${idealWidth}px`;
+        labelCol.innerHTML = col.dataset.name ?? "";
+        childTableRow.appendChild(col);
+        removeAttribute(col, "hidden");
+      }
+      this._setToggleIcon(tr, true);
+      return;
+    }
+    if (childRow && hasChildRow) {
+      for (const col of findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`)) {
+        tr.appendChild(col);
+        setAttribute(col, "hidden");
+      }
+      childRow.remove();
+      this._canonicalizeRow(tr);
+    }
+    removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+    this._setToggleIcon(tr, false);
+  }
+  _restoreDetails() {
+    for (const childRow of findAll(this.grid, `tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
+      const tr = childRow.previousElementSibling;
+      if (tr) {
+        for (const col of findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`)) {
+          tr.appendChild(col);
+          setAttribute(col, "hidden");
+        }
+        this._canonicalizeRow(tr);
+        removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+      }
+      childRow.remove();
+    }
+  }
+  _rebuildDetails() {
+    this._restoreDetails();
+    this.grid._syncColumnVisibility();
+    if (!this.hasHiddenColumns()) {
+      return;
+    }
+    this._seedRows();
+  }
+  _seedRows() {
+    for (const tr of this._dataRows()) {
+      let expanded = tr.dataset.responsiveExpanded;
+      if (expanded === undefined) {
+        expanded = String(this.grid.options.responsiveStartOpen);
+        tr.dataset.responsiveExpanded = expanded;
+      }
+      if (expanded === "true") {
+        this._setRowExpanded(tr, true);
+      }
+    }
+  }
+  afterRender(context) {
+    if (context !== "body") {
+      return;
+    }
+    if (!this.grid.options.responsiveStartOpen || !this.hasHiddenColumns()) {
+      return;
+    }
+    this._seedRows();
+  }
   onclick(ev) {
     ev.stopPropagation();
     const cell = ev.currentTarget;
@@ -3497,43 +3627,7 @@ class ResponsiveGrid extends base_plugin_default {
       return;
     }
     this.blockObserver();
-    const isExpanded = hasClass(tr, `${RESPONSIVE_CLASS}-expanded`);
-    if (isExpanded) {
-      removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
-      open.style.display = "unset";
-      close.style.display = "none";
-      const childRow = tr.nextElementSibling;
-      if (childRow) {
-        const hiddenCols = findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`);
-        for (const col of hiddenCols) {
-          tr.appendChild(col);
-          setAttribute(col, "hidden");
-        }
-        childRow.parentElement?.removeChild(childRow);
-      }
-    } else {
-      addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
-      open.style.display = "none";
-      close.style.display = "unset";
-      const childRow = ce("tr");
-      insertAfter(childRow, tr);
-      addClass(childRow, `${RESPONSIVE_CLASS}-child-row`);
-      const childRowTd = ce("td", childRow);
-      setAttribute(childRowTd, "colspan", this.grid.columnsLength(true));
-      const childTable = ce("table", childRowTd);
-      addClass(childTable, `${RESPONSIVE_CLASS}-table`);
-      const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
-      const idealWidth = this.computeLabelWidth();
-      for (const col of hiddenCols) {
-        const childTableRow = ce("tr", childTable);
-        const label = col.dataset.name;
-        const labelCol = ce("th", childTableRow);
-        labelCol.style.width = `${idealWidth}px`;
-        labelCol.innerHTML = label ?? "";
-        childTableRow.appendChild(col);
-        removeAttribute(col, "hidden");
-      }
-    }
+    this._setRowExpanded(tr, tr.dataset.responsiveExpanded !== "true");
     this.unblockObserver();
   }
 }

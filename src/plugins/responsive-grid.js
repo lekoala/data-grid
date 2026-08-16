@@ -5,7 +5,6 @@ import {
     ce,
     find,
     findAll,
-    hasClass,
     insertAfter,
     removeAttribute,
     removeClass,
@@ -234,7 +233,9 @@ class ResponsiveGrid extends BasePlugin {
                 .reverse() // Order takes precedence if no priority is set
                 .filter((th) => {
                     const column = grid.getCol(th.getAttribute("field") ?? "");
-                    return column && column.responsive !== 0 && !column.hidden;
+                    // Essential columns (never hidden) are excluded from the
+                    // hideable candidates.
+                    return column && this._isEssential(column) === false;
                 }),
         ).map((th) => {
             return {
@@ -322,7 +323,7 @@ class ResponsiveGrid extends BasePlugin {
 
         if (changed) {
             this.blockObserver();
-            grid._syncColumnVisibility();
+            this._rebuildDetails();
             this.unblockObserver();
         }
 
@@ -363,14 +364,213 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /**
+     * The real rendered record rows (excludes responsive child rows and fake
+     * empty/error rows).
+     * @returns {HTMLTableRowElement[]}
+     */
+    _dataRows() {
+        return /** @type {HTMLTableRowElement[]} */ (Array.from(this.grid.querySelectorAll("tbody > tr.dg-data-row")));
+    }
+
+    /**
+     * A column is essential for the current view when it must never be hidden:
+     * `responsive: 0`, an actively sorted column, an actively filtered column,
+     * or one the author has manually hidden (already not rendered). Essential
+     * columns are excluded from the hideable candidates.
+     * @param {import("../data-grid.js").Column|null|undefined} column
+     * @returns {Boolean}
+     */
+    _isEssential(column) {
+        if (!column?.field) {
+            return false;
+        }
+        if (column.responsive === 0 || column.hidden) {
+            return true;
+        }
+        if (this.grid.getColumnSortDirection(column.field)) {
+            return true;
+        }
+        if (this.grid._query?.filters?.[column.field]) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Reorder a data row's direct cells to the canonical column order of
+     * `grid.getColumns()`, so cells restored from a detail row never end up in
+     * the wrong position.
+     * @param {HTMLTableRowElement} tr
+     */
+    _canonicalizeRow(tr) {
+        for (const column of this.grid.getColumns()) {
+            if (column.attr) {
+                continue;
+            }
+            const id = column.id ?? column.field;
+            const td = tr.querySelector(`:scope > td[data-column-id="${id}"]`);
+            if (td) {
+                tr.appendChild(td);
+            }
+        }
+    }
+
+    /**
+     * Reflect the expanded state on the toggle column icon (no-op when there is
+     * no toggle column, i.e. `responsiveToggle: false`).
+     * @param {HTMLTableRowElement} tr
+     * @param {Boolean} expanded
+     */
+    _setToggleIcon(tr, expanded) {
+        const open = find(tr, `.${RESPONSIVE_CLASS}-open`);
+        const close = find(tr, `.${RESPONSIVE_CLASS}-close`);
+        if (!open || !close) {
+            return;
+        }
+        open.style.display = expanded ? "none" : "unset";
+        close.style.display = expanded ? "unset" : "none";
+    }
+
+    /**
+     * Set a single row to the given expanded state. The row owns its state via
+     * the `data-responsive-expanded` attribute: `"true"` open, `"false"`
+     * collapsed, missing = undecided (seeded from `responsiveStartOpen`).
+     * @param {HTMLTableRowElement} tr
+     * @param {Boolean} expanded
+     */
+    _setRowExpanded(tr, expanded) {
+        tr.dataset.responsiveExpanded = String(expanded);
+
+        const childRow = tr.nextElementSibling;
+        const hasChildRow = childRow?.classList.contains(`${RESPONSIVE_CLASS}-child-row`);
+
+        if (expanded) {
+            if (hasChildRow) {
+                return; // already open
+            }
+            const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
+            if (!hiddenCols.length) {
+                return;
+            }
+            this._canonicalizeRow(tr);
+            addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+
+            const detailRow = ce("tr");
+            insertAfter(detailRow, tr);
+            addClass(detailRow, `${RESPONSIVE_CLASS}-child-row`);
+
+            const detailTd = ce("td", detailRow);
+            setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
+
+            const childTable = ce("table", detailTd);
+            addClass(childTable, `${RESPONSIVE_CLASS}-table`);
+
+            const idealWidth = this.computeLabelWidth();
+            for (const col of findAll(tr, `.${RESPONSIVE_CLASS}-hidden`)) {
+                const childTableRow = ce("tr", childTable);
+                const labelCol = ce("th", childTableRow);
+                labelCol.style.width = `${idealWidth}px`;
+                labelCol.innerHTML = col.dataset.name ?? "";
+                childTableRow.appendChild(col);
+                removeAttribute(col, "hidden");
+            }
+
+            this._setToggleIcon(tr, true);
+            return;
+        }
+
+        // Collapse: move real cells back into the data row (canonical order)
+        // and drop the wrapper.
+        if (childRow && hasChildRow) {
+            for (const col of findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`)) {
+                tr.appendChild(col);
+                setAttribute(col, "hidden");
+            }
+            childRow.remove();
+            this._canonicalizeRow(tr);
+        }
+        removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+        this._setToggleIcon(tr, false);
+    }
+
+    /**
+     * Normalize the table back to its canonical tabular representation: every
+     * cell moved into a detail row is returned to its owning data row, in
+     * column order, and the detail wrappers are removed. The row expansion
+     * state attribute is left untouched.
+     */
+    _restoreDetails() {
+        for (const childRow of findAll(this.grid, `tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
+            const tr = /** @type {HTMLTableRowElement} */ (childRow.previousElementSibling);
+            if (tr) {
+                for (const col of findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`)) {
+                    tr.appendChild(col);
+                    setAttribute(col, "hidden");
+                }
+                this._canonicalizeRow(tr);
+                removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+            }
+            childRow.remove();
+        }
+    }
+
+    /**
+     * Rebuild responsive detail rows from the canonical representation after
+     * the hidden-column set changes. Rows that are open (or seeded open by
+     * `responsiveStartOpen`) have their hidden values moved into a fresh detail
+     * row; user-collapsed rows stay collapsed.
+     */
+    _rebuildDetails() {
+        this._restoreDetails();
+        this.grid._syncColumnVisibility();
+
+        if (!this.hasHiddenColumns()) {
+            return;
+        }
+        this._seedRows();
+    }
+
+    /**
+     * Expand every data row whose (materialized) expansion state is open. Rows
+     * with no state yet are seeded from `responsiveStartOpen`.
+     */
+    _seedRows() {
+        for (const tr of this._dataRows()) {
+            let expanded = tr.dataset.responsiveExpanded;
+            if (expanded === undefined) {
+                expanded = String(this.grid.options.responsiveStartOpen);
+                tr.dataset.responsiveExpanded = expanded;
+            }
+            if (expanded === "true") {
+                this._setRowExpanded(tr, true);
+            }
+        }
+    }
+
+    /**
+     * @param {import("../core/base-plugin.js").RenderContext} context
+     */
+    afterRender(context) {
+        // A body render recreates the rows (filter/search/page change) and
+        // drops any existing detail rows, so start-open details must be
+        // re-applied here. No-op unless start-open is active with hidden
+        // columns, keeping the default collapsed behavior untouched.
+        if (context !== "body") {
+            return;
+        }
+        if (!this.grid.options.responsiveStartOpen || !this.hasHiddenColumns()) {
+            return;
+        }
+        this._seedRows();
+    }
+
+    /**
      * @param {Event} ev
      */
     onclick(ev) {
         // Prevent expandable
         ev.stopPropagation();
 
-        // target is the element that triggered the event (e.g., the user clicked on)
-        // currentTarget is the element that the event listener is attached to.
         const cell = /** @type {HTMLElement} */ (ev.currentTarget);
         const tr = cell.closest("tr");
         if (!tr) {
@@ -383,61 +583,7 @@ class ResponsiveGrid extends BasePlugin {
         }
 
         this.blockObserver();
-
-        const isExpanded = hasClass(tr, `${RESPONSIVE_CLASS}-expanded`);
-        if (isExpanded) {
-            removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
-            open.style.display = "unset";
-            close.style.display = "none";
-
-            // Move back rows and cleanup row
-            const childRow = tr.nextElementSibling;
-            if (childRow) {
-                const hiddenCols = findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`);
-
-                for (const col of hiddenCols) {
-                    // We don't really need to care where we insert them since we are going to redraw anyway
-                    tr.appendChild(col);
-                    setAttribute(col, "hidden");
-                }
-
-                childRow.parentElement?.removeChild(childRow);
-            }
-        } else {
-            addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
-            open.style.display = "none";
-            close.style.display = "unset";
-
-            // Create a child row and move rows into it
-            const childRow = ce("tr");
-            insertAfter(childRow, tr);
-            addClass(childRow, `${RESPONSIVE_CLASS}-child-row`);
-
-            const childRowTd = ce("td", childRow);
-            setAttribute(childRowTd, "colspan", this.grid.columnsLength(true));
-
-            const childTable = ce("table", childRowTd);
-            addClass(childTable, `${RESPONSIVE_CLASS}-table`);
-
-            const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
-            const idealWidth = this.computeLabelWidth();
-
-            for (const col of hiddenCols) {
-                const childTableRow = ce("tr", childTable);
-
-                // Add label
-                const label = col.dataset.name;
-                const labelCol = ce("th", childTableRow);
-                // It looks much better when aligned with an actual col
-                labelCol.style.width = `${idealWidth}px`;
-                labelCol.innerHTML = label ?? "";
-
-                // Add actual row
-                childTableRow.appendChild(col);
-                removeAttribute(col, "hidden");
-            }
-        }
-
+        this._setRowExpanded(tr, tr.dataset.responsiveExpanded !== "true");
         this.unblockObserver();
     }
 }

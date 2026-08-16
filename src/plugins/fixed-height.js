@@ -71,7 +71,9 @@ class FixedHeight extends BasePlugin {
         const rowHeight = grid.rowHeight ?? 0;
         // Find remaining missing height
         const max = grid.query.pageSize * rowHeight;
-        const visibleRows = grid.querySelectorAll("tbody tr:not([hidden])").length;
+        // Count real data rows only: responsive child rows are structure, not
+        // records, and would otherwise inflate the fill-the-last-page measure.
+        const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
         const fakeHeight = visibleRows > 1 ? max - visibleRows * rowHeight : max;
         if (fakeHeight > 0) {
             setAttribute(fakeRow, "height", fakeHeight);

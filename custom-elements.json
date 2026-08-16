@@ -40,6 +40,9 @@
               "name": "responsive-toggle"
             },
             {
+              "name": "responsive-start-open"
+            },
+            {
               "name": "selectable"
             },
             {

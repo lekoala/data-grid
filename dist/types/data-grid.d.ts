@@ -328,6 +328,10 @@ export type Options = {
      */
     responsiveToggle: boolean;
     /**
+     * Open responsive detail rows by default when columns are hidden (ResponsiveGrid module)
+     */
+    responsiveStartOpen: boolean;
+    /**
      * Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
      */
     filterDelay: number;

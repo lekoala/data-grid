@@ -217,3 +217,40 @@ test.skipIf(IS_WINDOWS)(
     },
     TIMEOUT,
 );
+
+test.skipIf(IS_WINDOWS)(
+    "responsive start-open keeps details and protects active columns across resize",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.stacked && window.stacked.rows.length > 0");
+
+        const childRows = () => "document.querySelectorAll('#stacked-grid tbody tr.dg-responsive-child-row').length";
+        const hiddenFields = () => "window.stacked.options.columns.filter(c => c.responsiveHidden).map(c => c.field)";
+
+        // Narrow grid: lower-priority columns hidden and details open by default
+        await waitFor(v, `${childRows()} > 0`);
+        expect(await read(v, childRows())).toBeGreaterThan(0);
+        expect(await read(v, `document.querySelectorAll('#stacked-grid tbody tr.dg-data-row').length`)).toBe(20);
+
+        // An actively sorted column is protected from hiding
+        await v.evaluate("window.stacked.sortAsc('company')");
+        await waitFor(v, `${hiddenFields()}.includes('company') === false`);
+        expect(await read(v, `${hiddenFields()}.includes('company')`)).toBe(false);
+
+        // Filtering re-renders the body but must keep the start-open details
+        await v.evaluate("window.stacked.setSearch('Name 1')");
+        await waitFor(v, `${childRows()} > 0`);
+
+        // Widen: details disappear, cells restored
+        await v.evaluate("window.stacked.style.width = '1200px'");
+        await waitFor(v, `${childRows()} === 0`);
+        expect(await read(v, hiddenFields())).toBe("[]");
+
+        // Narrow again: details rebuild for the open rows
+        await v.evaluate("window.stacked.style.width = '380px'");
+        await waitFor(v, `${childRows()} > 0`);
+        expect(await read(v, childRows())).toBeGreaterThan(0);
+    },
+    TIMEOUT,
+);

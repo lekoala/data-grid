@@ -169,3 +169,134 @@ test("the responsive toggle column always exists and toggles visibility", async 
     expect(th.hasAttribute("hidden")).toBe(true);
     document.body.removeChild(inst);
 });
+
+test("responsiveStartOpen defaults to false", () => {
+    expect(new DataGrid({}).options.responsiveStartOpen).toBe(false);
+});
+
+test("responsiveStartOpen: true auto-opens detail rows when columns are hidden", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, responsiveStartOpen: true });
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(0);
+
+    forceResize(inst, 200);
+    expect(hiddenFields(inst).length).toBeGreaterThan(0);
+    expect(inst.querySelectorAll("tbody tr.dg-data-row").length).toBe(ROWS.length);
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(ROWS.length);
+    document.body.removeChild(inst);
+});
+
+test("responsiveToggle: false + responsiveStartOpen shows details without a toggle column", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, responsiveStartOpen: true, responsiveToggle: false });
+    expect(inst.querySelector('thead th[data-column-id="$responsive"]')).toBeNull();
+
+    forceResize(inst, 200);
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(ROWS.length);
+    expect(inst.querySelector('thead th[data-column-id="$responsive"]')).toBeNull();
+    document.body.removeChild(inst);
+});
+
+test("an actively sorted column is never hidden", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, sortable: true });
+    const b = inst.options.columns.find((c) => c.field === "b");
+    await inst.sortAsc("b");
+    forceResize(inst, 150);
+    expect(b.responsiveHidden).toBe(false);
+    expect(hiddenFields(inst)).not.toContain("b");
+    document.body.removeChild(inst);
+});
+
+test("an actively filtered column is never hidden", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, filterable: true });
+    const b = inst.options.columns.find((c) => c.field === "b");
+    inst.setQuery({ filters: { b: { operator: "contains", value: "x" } } });
+    forceResize(inst, 150);
+    expect(b.responsiveHidden).toBe(false);
+    expect(hiddenFields(inst)).not.toContain("b");
+    document.body.removeChild(inst);
+});
+
+test("narrow -> wide -> narrow roundtrip keeps canonical order and no lost/duplicated cells", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, responsiveStartOpen: true, responsiveToggle: false });
+    const canonical = () =>
+        Array.from(inst.querySelectorAll("tbody tr.dg-data-row")).map((tr) => {
+            const next = tr.nextElementSibling;
+            const detail = next?.classList.contains("dg-responsive-child-row") ? next : null;
+            const main = Array.from(tr.children).map((td) => td.dataset.columnId);
+            const detailIds = detail
+                ? Array.from(detail.querySelectorAll(".dg-responsive-hidden")).map((td) => td.dataset.columnId)
+                : [];
+            return [...main, ...detailIds];
+        });
+
+    forceResize(inst, 200);
+    expect(hiddenFields(inst).length).toBeGreaterThan(0);
+    expect(canonical()).toEqual([["a", "b", "c", "d"]]);
+
+    forceResize(inst, 1000);
+    expect(hiddenFields(inst)).toEqual([]);
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(0);
+    expect(canonical()).toEqual([["a", "b", "c", "d"]]);
+
+    forceResize(inst, 200);
+    expect(hiddenFields(inst).length).toBeGreaterThan(0);
+    expect(canonical()).toEqual([["a", "b", "c", "d"]]);
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(ROWS.length);
+    document.body.removeChild(inst);
+});
+
+test("a user-collapsed row stays collapsed across responsive rebuilds", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, responsiveStartOpen: true });
+    const plugin = inst.plugins.ResponsiveGrid;
+
+    forceResize(inst, 200);
+    const first = inst.querySelector("tbody tr.dg-data-row");
+    expect(first.dataset.responsiveExpanded).toBe("true");
+
+    // Simulate the user collapsing the first row
+    plugin._setRowExpanded(first, false);
+    expect(first.dataset.responsiveExpanded).toBe("false");
+
+    forceResize(inst, 1000); // wide: details disappear
+    forceResize(inst, 200); // narrow again: rebuild
+    expect(first.dataset.responsiveExpanded).toBe("false");
+    expect(first.classList.contains("dg-responsive-expanded")).toBe(false);
+    // The other rows are still expanded
+    expect(inst.querySelectorAll("tbody tr.dg-data-row.dg-responsive-expanded").length).toBe(ROWS.length - 1);
+    document.body.removeChild(inst);
+});
+
+test("selection maps rows correctly when responsive child rows are present", async () => {
+    const rows = [
+        { id: 1, a: 1, b: 2, c: 3, d: 4 },
+        { id: 2, a: 5, b: 6, c: 7, d: 8 },
+    ];
+    const inst = await makeReadyGrid(
+        { columns: COLS, responsiveStartOpen: true, selectable: true },
+        { ResponsiveGrid, SelectableRows },
+    );
+    inst.dataSource = new ArrayDataSource(rows);
+    await inst.refresh();
+    forceResize(inst, 200);
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(rows.length);
+
+    const checkboxes = inst.querySelectorAll("tbody tr.dg-data-row .dg-selectable input");
+    expect(checkboxes.length).toBe(rows.length);
+    checkboxes[1].checked = true;
+    checkboxes[1].dispatchEvent(new Event("change"));
+    expect(Array.from(inst.getSelectionState().ids)).toEqual(["2"]);
+    document.body.removeChild(inst);
+});
+
+test("start-open details are restored after a body re-render (filter/search)", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, responsiveStartOpen: true });
+    forceResize(inst, 200);
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(ROWS.length);
+
+    // A query change re-renders the tbody and drops detail rows
+    await inst.refresh();
+    // Start-open must be re-applied on the fresh rows
+    expect(inst.querySelectorAll("tbody tr.dg-responsive-child-row").length).toBe(ROWS.length);
+    const tr = inst.querySelector("tbody tr.dg-data-row");
+    expect(tr.classList.contains("dg-responsive-expanded")).toBe(true);
+    document.body.removeChild(inst);
+});

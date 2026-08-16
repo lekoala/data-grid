@@ -143,53 +143,54 @@ attributes are an **intentionally curated declarative subset** of options
 options (`dataSource`, `actions`, `renderCell`, ...) remain JavaScript-only.
 Some options only work if the proper plugin is loaded.
 
-| Option              | Type                 | Default              | Description                                                  |
-|---------------------|----------------------|----------------------|--------------------------------------------------------------|
-| `src`               | `String`             | `""`                 | URL to a server-side endpoint                                |
-| `params`            | `Object`             | `{}`                 | Extra constant HTTP params per request                       |
-| `dataSource`        | `DataSource`         | -                    | Custom data source (defaults to fetch/array)                 |
-| `loading`           | `String`             | `"eager"`            | `eager` (load on connect) or `lazy` (defer the first fetch until the grid nears the viewport)
-| `columns`           | `Column[]`           | `[]`                 | Available columns                                            |
-| `rowKey`            | `String \| Function` | `"id"`               | Field or function for the stable row key                     |
-| `rowLabel`          | `String \| Function` | -                    | Field or function for the accessible row label               |
-| `sortable`          | `Boolean`            | `false`              | Sort by column                                               |
-| `filterable`        | `Boolean`            | `false`              | Show the filter row                                          |
-| `selectable`        | `Boolean`            | `false`              | Select rows with checkboxes                                  |
-| `singleSelect`      | `Boolean`            | `false`              | Select a single row with radios                              |
-| `selectVisibleOnly` | `Boolean`            | `true`               | `selectAll` only selects the visible rows                    |
-| `actions`           | `Action[]`           | `[]`                 | Row actions (also resolved from `$actions` / `meta.actions`) |
-| `rowActions`        | `Boolean`            | `false`              | Show the actions column even without static `actions`        |
-| `actionRenderer`    | `Function`           | -                    | Global action renderer                                       |
-| `collapseActions`   | `Boolean`            | `false`              | Group actions under a toggle                                 |
-| `bulkActions`       | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection                        |
-| `resizable`         | `Boolean`            | `false`              | Resizable columns                                            |
-| `reorder`           | `Boolean`            | `false`              | Draggable column headers                                     |
-| `menu`              | `Boolean`            | `false`              | Right-click column menu                                      |
-| `responsive`        | `Boolean`            | `false`              | Responsive columns                                           |
-| `responsiveToggle`  | `Boolean`            | `true`               | Show toggle column on small screens                          |
-| `autosize`          | `Boolean`            | `true`               | Compute column sizes from data                               |
-| `autoheight`        | `Boolean`            | `true`               | Fill table height on the last page                           |
-| `autohidePager`     | `Boolean`            | `false`              | Hide the pager when everything fits                          |
-| `expand`            | `Boolean`            | `false`              | Allow cell content to span multiple lines                    |
-| `pageSizes`         | `Number[]`           | `[10,25,50,100,250]` | Available page size options                                  |
-| `showPageSize`      | `Boolean`            | `true`               | Show the page size select                                    |
-| `filterDelay`       | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
-| `searchable`        | `Boolean`            | `false`              | Show the global search input                                 |
-| `searchPlaceholder` | `String`             | `""`                 | Optional visible hint for the search input                   |
-| `searchDelay`       | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
-| `minSearchLength`   | `Number`             | `0`                  | Minimum characters before a search is applied                |
-| `density`           | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |
-| `spinnerClass`      | `String`             | `""`                 | CSS classes for the loading spinner                          |
-| `saveState`         | `Boolean`            | `false`              | Persist query and columns                                    |
-| `errorMessage`      | `String`             | `""`                 | Message shown when a load fails                              |
-| `noData`            | `String`             | `""`                 | Message shown when there is no data                          |
-| `caption`           | `String`             | `""`                 | Table caption (accessible name)                              |
-| `initialQuery`      | `QueryState`         | -                    | Initial runtime query state                                  |
-| `initialResult`     | `PageResult`         | -                    | Initial result to display without loading                    |
-| `validate`          | `Function`           | -                    | Grid-level editor validator                                  |
-| `debug`             | `Boolean`            | `false`              | Log actions in DevTools console                              |
-| `dir`               | `String`             | `"ltr"`              | Direction                                                    |
-| `id`                | `String`             | auto                 | Custom id for the grid                                       |
+| Option                | Type                 | Default              | Description                                                  |
+|-----------------------|----------------------|----------------------|--------------------------------------------------------------|
+| `src`                 | `String`             | `""`                 | URL to a server-side endpoint                                |
+| `params`              | `Object`             | `{}`                 | Extra constant HTTP params per request                       |
+| `dataSource`          | `DataSource`         | -                    | Custom data source (defaults to fetch/array)                 |
+| `loading`             | `String`             | `"eager"`            | `eager` or `lazy`                                            |
+| `columns`             | `Column[]`           | `[]`                 | Available columns                                            |
+| `rowKey`              | `String \| Function` | `"id"`               | Field or function for the stable row key                     |
+| `rowLabel`            | `String \| Function` | -                    | Field or function for the accessible row label               |
+| `sortable`            | `Boolean`            | `false`              | Sort by column                                               |
+| `filterable`          | `Boolean`            | `false`              | Show the filter row                                          |
+| `selectable`          | `Boolean`            | `false`              | Select rows with checkboxes                                  |
+| `singleSelect`        | `Boolean`            | `false`              | Select a single row with radios                              |
+| `selectVisibleOnly`   | `Boolean`            | `true`               | `selectAll` only selects the visible rows                    |
+| `actions`             | `Action[]`           | `[]`                 | Row actions (also resolved from `$actions` / `meta.actions`) |
+| `rowActions`          | `Boolean`            | `false`              | Show the actions column even without static `actions`        |
+| `actionRenderer`      | `Function`           | -                    | Global action renderer                                       |
+| `collapseActions`     | `Boolean`            | `false`              | Group actions under a toggle                                 |
+| `bulkActions`         | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection                        |
+| `resizable`           | `Boolean`            | `false`              | Resizable columns                                            |
+| `reorder`             | `Boolean`            | `false`              | Draggable column headers                                     |
+| `menu`                | `Boolean`            | `false`              | Right-click column menu                                      |
+| `responsive`          | `Boolean`            | `false`              | Responsive columns                                           |
+| `responsiveToggle`    | `Boolean`            | `true`               | Show toggle column on small screens                          |
+| `responsiveStartOpen` | `Boolean`            | `false`              | Open responsive detail rows by default                       |
+| `autosize`            | `Boolean`            | `true`               | Compute column sizes from data                               |
+| `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
+| `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits                          |
+| `expand`              | `Boolean`            | `false`              | Allow cell content to span multiple lines                    |
+| `pageSizes`           | `Number[]`           | `[10,25,50,100,250]` | Available page size options                                  |
+| `showPageSize`        | `Boolean`            | `true`               | Show the page size select                                    |
+| `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
+| `searchable`          | `Boolean`            | `false`              | Show the global search input                                 |
+| `searchPlaceholder`   | `String`             | `""`                 | Optional visible hint for the search input                   |
+| `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
+| `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied                |
+| `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |
+| `spinnerClass`        | `String`             | `""`                 | CSS classes for the loading spinner                          |
+| `saveState`           | `Boolean`            | `false`              | Persist query and columns                                    |
+| `errorMessage`        | `String`             | `""`                 | Message shown when a load fails                              |
+| `noData`              | `String`             | `""`                 | Message shown when there is no data                          |
+| `caption`             | `String`             | `""`                 | Table caption (accessible name)                              |
+| `initialQuery`        | `QueryState`         | -                    | Initial runtime query state                                  |
+| `initialResult`       | `PageResult`         | -                    | Initial result to display without loading                    |
+| `validate`            | `Function`           | -                    | Grid-level editor validator                                  |
+| `debug`               | `Boolean`            | `false`              | Log actions in DevTools console                              |
+| `dir`                 | `String`             | `"ltr"`              | Direction                                                    |
+| `id`                  | `String`             | auto                 | Custom id for the grid                                       |
 
 `rowLabel` falls back to the row key, then the row index. A `dataSource`
 defaults to `FetchDataSource` or `ArrayDataSource`; plugin-backed options are
@@ -199,7 +200,7 @@ described in `docs/plugins.md`.
 
 The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`,
 `search-placeholder`, `min-search-length`, `responsive`, `responsive-toggle`,
-`selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
+`responsive-start-open`, `selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`,
 `reorder`, `menu`, `expand`, `autosize`, `resizable`, `autoheight`,
 `autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
@@ -260,6 +261,31 @@ page state set while hidden are applied in a single request when the grid
 becomes visible. An explicit `refresh()`/`load()` (or a `src` change) always
 loads immediately, regardless of visibility.
 
+## Responsive stacked
+
+`responsiveStartOpen` turns the responsive detail rows into a start-open
+"stacked" view: when columns are hidden on a narrow grid, their values are
+shown immediately inside the existing responsive detail row instead of behind a
+`+` toggle.
+
+```html
+<data-grid responsive responsive-start-open></data-grid>
+```
+
+It is a presentation-only option — search, sort, filters, selection, actions,
+pagination and the accessibility model are unchanged. Use `responsive: 0` for
+columns that must stay in the main row, and (optionally) `responsiveToggle`
+`false` for a clean record layout without a toggle column:
+
+```html
+<data-grid responsive responsive-start-open responsive-toggle="false"></data-grid>
+```
+
+Columns that are actively sorted or filtered are never hidden, so an active
+criterion stays visible. Users can still collapse individual rows; the grid
+never overrides an explicit collapse, and the choice resets on the next data
+load.
+
 ## API
 
 The runtime state is a `QueryState` (`page`, `pageSize`, `sort`, `filters`).
@@ -317,18 +343,18 @@ response protection).
 
 ## Action
 
-| Name       | Type                                                   | Description                            |
-|------------|--------------------------------------------------------|----------------------------------------|
-| `name`     | `String`                                               | action name (`button[data-action]`)    |
-| `label`    | `String`                                               | button label and accessible name       |
-| `intent`   | `"default" \| "primary" \| "danger"`                   | sets `data-intent`                     |
-| `href`     | `String \| Function`                                   | renders an `<a>` link                  |
-| `class`    | `String`                                               | class on the button                    |
-| `visible`  | `(row, ctx) => Boolean`                                | hide the action when falsy             |
-| `disabled` | `Boolean \| (row, ctx) => Boolean`                     | block the action (`aria-disabled`)     |
-| `render`   | `({ action, row, grid }) => content`                   | replace the button content             |
-| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation before dispatching|
-| `default`  | `Boolean`                                              | row click triggers the action          |
+| Name       | Type                                                   | Description                             |
+|------------|--------------------------------------------------------|-----------------------------------------|
+| `name`     | `String`                                               | action name (`button[data-action]`)     |
+| `label`    | `String`                                               | button label and accessible name        |
+| `intent`   | `"default" \| "primary" \| "danger"`                   | sets `data-intent`                      |
+| `href`     | `String \| Function`                                   | renders an `<a>` link                   |
+| `class`    | `String`                                               | class on the button                     |
+| `visible`  | `(row, ctx) => Boolean`                                | hide the action when falsy              |
+| `disabled` | `Boolean \| (row, ctx) => Boolean`                     | block the action (`aria-disabled`)      |
+| `render`   | `({ action, row, grid }) => content`                   | replace the button content              |
+| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation before dispatching |
+| `default`  | `Boolean`                                              | row click triggers the action           |
 
 `visible`/`disabled`/`href`/`confirm` receive `(row, ctx)` with `ctx = { grid, action, rowKey }`.
 

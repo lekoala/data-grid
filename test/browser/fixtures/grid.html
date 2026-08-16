@@ -68,6 +68,36 @@
     });
     document.body.appendChild(errorGrid);
     window.egrid = errorGrid;
+
+    const stackedGrid = new DataGrid({
+      id: "stacked-grid",
+      columns: [
+        { field: "name", title: "Name", responsive: 0 },
+        { field: "age", title: "Age", responsive: 0 },
+        { field: "company", title: "Company", responsive: 1 },
+        { field: "email", title: "Email", responsive: 2 },
+        { field: "city", title: "City", responsive: 3 },
+      ],
+      dataSource: new ArrayDataSource(
+        Array.from({ length: 20 }, (_, i) => ({
+          id: i + 1,
+          name: `Name ${i + 1}`,
+          age: 20 + (i % 30),
+          company: companies[i % 3],
+          email: `user${i + 1}@example.com`,
+          city: `City ${(i % 5) + 1}`,
+        })),
+      ),
+      responsive: true,
+      responsiveStartOpen: true,
+      responsiveToggle: false,
+      searchable: true,
+      sortable: true,
+      filterable: true,
+    });
+    stackedGrid.style.width = "380px";
+    document.body.appendChild(stackedGrid);
+    window.stacked = stackedGrid;
   </script>
 </head>
 <body></body>

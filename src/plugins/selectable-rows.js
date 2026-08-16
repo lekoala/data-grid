@@ -87,7 +87,7 @@ class SelectableRows extends BasePlugin {
         const inputs = /** @type {HTMLInputElement[]} */ (
             Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`))
         );
-        const trs = Array.from(tbody.querySelectorAll("tr"));
+        const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
         for (const input of inputs) {
             const tr = input.closest("tr");
             if (!tr) {
