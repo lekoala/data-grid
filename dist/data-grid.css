@@ -350,8 +350,8 @@ data-grid .dg-nav-icon, data-grid .dg-skip-icon {
   position: absolute;
   display: block;
   transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
-  width: 18px;
-  height: 18px;
+  width: 1.125em;
+  height: 1.125em;
   top: 50%;
   left: 50%;
 }
@@ -364,31 +364,31 @@ data-grid .dg-nav-icon:before, data-grid .dg-nav-icon:after, data-grid .dg-skip-
 }
 
 data-grid .dg-nav-icon:before {
-  border-top: 4px solid #0000;
-  border-bottom: 4px solid #0000;
-  border-left: 5px solid;
+  border-top: .25em solid #0000;
+  border-bottom: .25em solid #0000;
+  border-left: .3125em solid;
   width: 0;
-  height: 8px;
-  top: 5px;
-  left: 7px;
+  height: .5em;
+  top: .3125em;
+  left: .4375em;
 }
 
 data-grid .dg-skip-icon:before {
   background: currentColor;
-  width: 2px;
-  height: 8px;
-  top: 5px;
-  left: 12px;
+  width: .125em;
+  height: .5em;
+  top: .3125em;
+  left: .75em;
 }
 
 data-grid .dg-skip-icon:after {
-  border-top: 4px solid #0000;
-  border-bottom: 4px solid #0000;
-  border-left: 5px solid;
+  border-top: .25em solid #0000;
+  border-bottom: .25em solid #0000;
+  border-left: .3125em solid;
   width: 0;
-  height: 8px;
-  top: 5px;
-  left: 5px;
+  height: .5em;
+  top: .3125em;
+  left: .3125em;
 }
 
 data-grid .dg-rotate {

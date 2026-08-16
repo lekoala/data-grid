@@ -389,13 +389,12 @@ data-grid > .dg-scroll > table > tfoot {
   inset-block-end: 0;
 }
 
-/* Pagination icons: small, fixed-geometry CSS arrows (not type-scaled). prev/
-   next are single filled chevrons; first/last pair a vertical bar with a
-   chevron (‹| |›). */
+/* Pagination icons: small CSS arrows (chevron + bar for first/last), sized in
+   em so they scale with the type like the buttons/inputs they live in. */
 data-grid .dg-nav-icon,
 data-grid .dg-skip-icon {
-  width: 18px;
-  height: 18px;
+  width: 1.125em;
+  height: 1.125em;
   box-sizing: border-box;
   position: absolute;
   display: block;
@@ -416,30 +415,30 @@ data-grid .dg-skip-icon:after {
 
 data-grid .dg-nav-icon::before {
   width: 0;
-  height: 8px;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 5px solid currentColor;
-  top: 5px;
-  left: 7px;
+  height: 0.5em;
+  border-top: 0.25em solid transparent;
+  border-bottom: 0.25em solid transparent;
+  border-left: 0.3125em solid currentColor;
+  top: 0.3125em;
+  left: 0.4375em;
 }
 
 data-grid .dg-skip-icon::before {
-  width: 2px;
-  height: 8px;
+  width: 0.125em;
+  height: 0.5em;
   background: currentColor;
-  top: 5px;
-  left: 12px;
+  top: 0.3125em;
+  left: 0.75em;
 }
 
 data-grid .dg-skip-icon::after {
   width: 0;
-  height: 8px;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-  border-left: 5px solid currentColor;
-  top: 5px;
-  left: 5px;
+  height: 0.5em;
+  border-top: 0.25em solid transparent;
+  border-bottom: 0.25em solid transparent;
+  border-left: 0.3125em solid currentColor;
+  top: 0.3125em;
+  left: 0.3125em;
 }
 
 data-grid .dg-rotate {
