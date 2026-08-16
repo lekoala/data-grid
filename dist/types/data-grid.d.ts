@@ -216,6 +216,10 @@ export type Options = {
      */
     dataSource?: DataSource | null;
     /**
+     * Load immediately on connect ("eager") or defer the first data source load until the grid is near the viewport ("lazy"; only affects async sources)
+     */
+    loading?: "eager" | "lazy";
+    /**
      * Log actions in DevTools console
      */
     debug: boolean;
@@ -500,6 +504,10 @@ declare class DataGrid extends BaseElement {
     headerRow: HTMLTableRowElement | null;
     /** @type {Number|null} */
     rowHeight: number | null;
+    /** @type {IntersectionObserver|null} */
+    _loadObserver: IntersectionObserver | null;
+    /** @type {Boolean} */
+    _lazyPending: boolean;
     /**
      * Current render context, set by renderTable/renderBody.
      * @type {import("./core/base-plugin.js").RenderContext|null}
@@ -728,7 +736,20 @@ declare class DataGrid extends BaseElement {
     _adoptDeclarativeTable(): void;
     _connected(): Promise<void>;
     _disconnected(): void;
-    init(): Promise<void>;
+    init(): Promise<void> | undefined;
+    /**
+     * Whether the initial data source load should be deferred until the grid
+     * is near the viewport. Only async sources benefit: a purely declarative
+     * local table and a provided initialResult have no fetch worth deferring.
+     * @returns {Boolean}
+     */
+    _deferInitialLoad(): boolean;
+    /**
+     * Watch the grid and trigger the first load once it is near the viewport.
+     * The observer is intended to be one-shot and is disconnected on the first
+     * intersection.
+     */
+    _observeInitialLoad(): void;
     /**
      * @param {String} field
      * @returns {Column|null}

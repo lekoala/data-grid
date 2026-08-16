@@ -815,6 +815,8 @@ class DataGrid extends base_element_default {
   searchInput = null;
   headerRow = null;
   rowHeight = null;
+  _loadObserver = null;
+  _lazyPending = false;
   _renderContext = null;
   _ready() {
     this.fireEvents = false;
@@ -990,6 +992,7 @@ class DataGrid extends base_element_default {
       id: null,
       src: "",
       params: {},
+      loading: "eager",
       debug: false,
       sortable: false,
       filterable: false,
@@ -1106,6 +1109,7 @@ class DataGrid extends base_element_default {
   static get observedAttributes() {
     return [
       "src",
+      "loading",
       "sortable",
       "filterable",
       "searchable",
@@ -1202,6 +1206,9 @@ class DataGrid extends base_element_default {
     if (changesPopulation) {
       this._clearSelectionIfNeeded();
     }
+    if (this._lazyPending) {
+      return Promise.resolve();
+    }
     return this.refresh();
   }
   resetQuery() {
@@ -1213,6 +1220,11 @@ class DataGrid extends base_element_default {
     return this.load();
   }
   async load() {
+    if (this._lazyPending) {
+      this._lazyPending = false;
+      this._loadObserver?.disconnect();
+      this._loadObserver = null;
+    }
     const requestId = ++this._requestSeq;
     this._controller?.abort();
     const controller = new AbortController;
@@ -1498,6 +1510,8 @@ class DataGrid extends base_element_default {
   }
   _disconnected() {
     connectedInstances.delete(this);
+    this._loadObserver?.disconnect();
+    this._loadObserver = null;
     this._controller?.abort();
     this.btnFirst?.removeEventListener("click", this.getFirst);
     this.btnPrev?.removeEventListener("click", this.getPrev);
@@ -1510,12 +1524,36 @@ class DataGrid extends base_element_default {
     }
   }
   init() {
+    if (this._deferInitialLoad()) {
+      this.configureUi();
+      this.classList.add("dg-initialized");
+      this.fireEvents = true;
+      this._lazyPending = true;
+      this._observeInitialLoad();
+      this.log("initialized (lazy)");
+      return;
+    }
     return this.load().finally(() => {
       this.configureUi();
       this.classList.add("dg-initialized");
       this.fireEvents = true;
       this.log("initialized");
     });
+  }
+  _deferInitialLoad() {
+    return this.options.loading === "lazy" && !this._initialResult && (Boolean(this.options.src) || Boolean(this.options.dataSource));
+  }
+  _observeInitialLoad() {
+    this._loadObserver = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) {
+        return;
+      }
+      this._loadObserver?.disconnect();
+      this._loadObserver = null;
+      this._lazyPending = false;
+      this.load().finally(() => this.configureUi());
+    }, { rootMargin: "200px 0px" });
+    this._loadObserver.observe(this);
   }
   getCol(field) {
     let found = null;

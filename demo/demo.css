@@ -147,6 +147,23 @@ footer hr {
   opacity: 0.5;
 }
 
+.demo-tab {
+  border: 1px solid rgb(17 32 51 / 14%);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 72%);
+  color: #314256;
+  cursor: pointer;
+  font: inherit;
+  margin-inline-end: 0.4rem;
+  padding: 0.4rem 0.9rem;
+}
+
+.demo-tab.demo-tab-active {
+  background: #112033;
+  border-color: #112033;
+  color: #fff;
+}
+
 .demo-select {
   border: 1px solid rgb(17 32 51 / 14%);
   border-radius: 8px;

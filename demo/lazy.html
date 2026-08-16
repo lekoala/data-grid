@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Grid Demo — Lazy</title>
+
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js">
+  <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css">
+  <link rel="stylesheet" href="../dist/data-grid.css" />
+  <link rel="stylesheet" href="demo.css" />
+  <script type="module">
+    import DataGrid from '../data-grid.js';
+
+    const columns = [
+      { field: "id", title: "#", width: 72 },
+      { field: "first_name", title: "First Name" },
+      { field: "last_name", title: "Last Name" },
+      { field: "company", title: "Company" },
+    ];
+
+    // 1. Eager: fetches immediately on connect.
+    const eager = new DataGrid({ columns, src: "/api/users", sortable: true, filterable: true });
+    document.getElementById("eager-demo").appendChild(eager);
+
+    // 2. Lazy, far below the fold: only fetches when scrolled near it.
+    const lazyBelow = new DataGrid({ columns, src: "/api/users", sortable: true, filterable: true, loading: "lazy" });
+    document.getElementById("lazy-below-demo").appendChild(lazyBelow);
+
+    // 3. Lazy in a hidden tab: fetches only when the tab is opened.
+    const lazyTab = new DataGrid({ columns, src: "/api/users", sortable: true, filterable: true, loading: "lazy" });
+    document.getElementById("lazy-tab-demo").appendChild(lazyTab);
+
+    const counterEl = document.getElementById("request-count");
+    const refreshCounter = async () => {
+      const res = await fetch("/api/users/requests");
+      const data = await res.json();
+      counterEl.textContent = String(data.count);
+    };
+    setInterval(refreshCounter, 500);
+
+    const openTab = (name) => {
+      for (const n of ["hidden", "visible"]) {
+        document.getElementById(`tab-${n}`).classList.toggle("demo-tab-active", n === name);
+      }
+      document.getElementById("tab-hidden-panel").toggleAttribute("hidden", name !== "hidden");
+      document.getElementById("tab-visible-panel").toggleAttribute("hidden", name !== "visible");
+    };
+    document.getElementById("tab-visible").addEventListener("click", () => openTab("visible"));
+    document.getElementById("tab-hidden").addEventListener("click", () => openTab("hidden"));
+  </script>
+</head>
+
+<body>
+  <header>
+    <h1>Data Grid</h1>
+    <p><em>Standalone data grid web component</em></p>
+  </header>
+  <main>
+    <ul class="demo-nav">
+      <li><a class="demo-nav-link" href="index.html">Default</a></li>
+      <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+      <li><a class="demo-nav-link" href="server.html">Server</a></li>
+      <li><a class="demo-nav-link active" aria-current="page" href="#">Lazy</a></li>
+      <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+      <li><a class="demo-nav-link" href="api.html">API</a></li>
+    </ul>
+
+    <h2>Lazy initial load</h2>
+    <p>
+      <code>loading="lazy"</code> defers the first data source fetch until the grid nears the viewport.
+      An <code>eager</code> grid (top) fetches immediately; the grids below only fetch when they become
+      visible. Watch the request counter — it counts every <code>/api/users</code> list request.
+    </p>
+    <p><strong>Requests so far: <span id="request-count">0</span></strong></p>
+
+    <section class="demo-grid">
+      <h3>Eager — top of the page</h3>
+      <p class="demo-lead">Fetches immediately on connect.</p>
+      <div id="eager-demo"></div>
+    </section>
+
+    <div style="height: 140vh" aria-hidden="true"></div>
+
+    <section class="demo-grid">
+      <h3>Lazy — below the fold</h3>
+      <p class="demo-lead">Only fetches when you scroll it into view.</p>
+      <div id="lazy-below-demo"></div>
+    </section>
+
+    <section class="demo-grid">
+      <h3>Lazy — hidden tab</h3>
+      <p class="demo-lead">The grid ships inside the initially-hidden panel; opening it triggers the fetch.</p>
+      <button id="tab-visible" class="demo-tab demo-tab-active">Visible</button>
+      <button id="tab-hidden" class="demo-tab">Hidden</button>
+      <div id="tab-visible-panel"><p>This panel has no grid. Switch to “Hidden” to reveal the lazy grid below the fold.</p></div>
+      <div id="tab-hidden-panel" hidden><div id="lazy-tab-demo"></div></div>
+    </section>
+
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </main>
+</body>
+
+</html>

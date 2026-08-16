@@ -17,6 +17,9 @@ const rows = Array.from({ length: ROWS_COUNT }, (_, i) => ({
 // In-memory overrides for the edit action
 const overrides = new Map();
 
+// Number of /api/users list requests served (for the lazy-load demo)
+let userListRequests = 0;
+
 /**
  * Decode the bracket-notation query string produced by encodeSearchParams
  * back into a nested structure (arrays and objects).
@@ -79,6 +82,10 @@ export async function handleApi(req, url) {
         return new NativeResponse("Internal server error", { status: 500, headers });
     }
 
+    if (url.pathname === "/api/users/requests") {
+        return NativeResponse.json({ count: userListRequests }, { headers });
+    }
+
     if (url.pathname !== "/api/users") {
         return new NativeResponse("Not found", { status: 404, headers });
     }
@@ -95,6 +102,8 @@ export async function handleApi(req, url) {
         }
         return NativeResponse.json({ success: 1, record }, { headers });
     }
+
+    userListRequests++; // list request (eager/lazy demo counter)
 
     const query = decodeQuery(url.searchParams);
     const data = rows.map((r) => overrides.get(r.id) ?? r);

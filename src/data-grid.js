@@ -128,6 +128,7 @@ import {
  * @property {?String} src An URL to a server-side endpoint (FetchDataSource)
  * @property {Object} params Extra constant HTTP params passed to FetchDataSource
  * @property {?DataSource} [dataSource] Custom data source (defaults to FetchDataSource or ArrayDataSource)
+ * @property {"eager"|"lazy"} [loading] Load immediately on connect ("eager") or defer the first data source load until the grid is near the viewport ("lazy"; only affects async sources)
  * @property {Boolean} debug Log actions in DevTools console
  * @property {Boolean} sortable Allows a sort by column functionality
  * @property {Boolean} filterable Allows a filtering functionality
@@ -675,6 +676,12 @@ class DataGrid extends BaseElement {
     /** @type {Number|null} */
     rowHeight = null;
 
+    /** @type {IntersectionObserver|null} */
+    _loadObserver = null;
+
+    /** @type {Boolean} */
+    _lazyPending = false;
+
     /**
      * Current render context, set by renderTable/renderBody.
      * @type {import("./core/base-plugin.js").RenderContext|null}
@@ -921,6 +928,7 @@ class DataGrid extends BaseElement {
             id: null,
             src: "",
             params: {},
+            loading: "eager",
             debug: false,
             sortable: false,
             filterable: false,
@@ -1104,6 +1112,7 @@ class DataGrid extends BaseElement {
     static get observedAttributes() {
         return [
             "src",
+            "loading",
             "sortable",
             "filterable",
             "searchable",
@@ -1232,6 +1241,11 @@ class DataGrid extends BaseElement {
         if (changesPopulation) {
             this._clearSelectionIfNeeded();
         }
+        // While lazy and not yet first-loaded, only accumulate the query
+        // state. The first load (when the grid becomes visible) uses it.
+        if (this._lazyPending) {
+            return Promise.resolve();
+        }
         return this.refresh();
     }
 
@@ -1262,6 +1276,13 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     async load() {
+        // An explicit load is a request for data now: bypass any pending lazy
+        // deferral so the observer is disarmed and the fetch proceeds.
+        if (this._lazyPending) {
+            this._lazyPending = false;
+            this._loadObserver?.disconnect();
+            this._loadObserver = null;
+        }
         const requestId = ++this._requestSeq;
         this._controller?.abort();
         const controller = new AbortController();
@@ -1646,6 +1667,8 @@ class DataGrid extends BaseElement {
 
     _disconnected() {
         connectedInstances.delete(this);
+        this._loadObserver?.disconnect();
+        this._loadObserver = null;
         this._controller?.abort();
         this.btnFirst?.removeEventListener("click", this.getFirst);
         this.btnPrev?.removeEventListener("click", this.getPrev);
@@ -1660,6 +1683,18 @@ class DataGrid extends BaseElement {
     }
 
     init() {
+        if (this._deferInitialLoad()) {
+            // Build the chrome and mark the grid initialized now; only the
+            // first async data source load is deferred until it's near the
+            // viewport (or an explicit load/refresh is requested).
+            this.configureUi();
+            this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
+            this.fireEvents = true;
+            this._lazyPending = true;
+            this._observeInitialLoad();
+            this.log("initialized (lazy)");
+            return;
+        }
         return this.load().finally(() => {
             this.configureUi();
 
@@ -1669,6 +1704,41 @@ class DataGrid extends BaseElement {
 
             this.log("initialized");
         });
+    }
+
+    /**
+     * Whether the initial data source load should be deferred until the grid
+     * is near the viewport. Only async sources benefit: a purely declarative
+     * local table and a provided initialResult have no fetch worth deferring.
+     * @returns {Boolean}
+     */
+    _deferInitialLoad() {
+        return (
+            this.options.loading === "lazy" &&
+            !this._initialResult &&
+            (Boolean(this.options.src) || Boolean(this.options.dataSource))
+        );
+    }
+
+    /**
+     * Watch the grid and trigger the first load once it is near the viewport.
+     * The observer is intended to be one-shot and is disconnected on the first
+     * intersection.
+     */
+    _observeInitialLoad() {
+        this._loadObserver = new IntersectionObserver(
+            (entries) => {
+                if (!entries.some((entry) => entry.isIntersecting)) {
+                    return;
+                }
+                this._loadObserver?.disconnect();
+                this._loadObserver = null;
+                this._lazyPending = false;
+                this.load().finally(() => this.configureUi());
+            },
+            { rootMargin: "200px 0px" },
+        );
+        this._loadObserver.observe(this);
     }
 
     /**

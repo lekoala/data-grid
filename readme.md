@@ -148,6 +148,7 @@ Some options only work if the proper plugin is loaded.
 | `src`               | `String`             | `""`                 | URL to a server-side endpoint                                |
 | `params`            | `Object`             | `{}`                 | Extra constant HTTP params per request                       |
 | `dataSource`        | `DataSource`         | -                    | Custom data source (defaults to fetch/array)                 |
+| `loading`           | `String`             | `"eager"`            | `eager` (load on connect) or `lazy` (defer the first fetch until the grid nears the viewport)
 | `columns`           | `Column[]`           | `[]`                 | Available columns                                            |
 | `rowKey`            | `String \| Function` | `"id"`               | Field or function for the stable row key                     |
 | `rowLabel`          | `String \| Function` | -                    | Field or function for the accessible row label               |
@@ -196,7 +197,7 @@ described in `docs/plugins.md`.
 
 ### Attributes
 
-The main attributes are `src`, `sortable`, `filterable`, `searchable`,
+The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`,
 `search-placeholder`, `min-search-length`, `responsive`, `responsive-toggle`,
 `selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`,
@@ -238,6 +239,26 @@ container and its chrome stays visible while rows scroll:
 On an unconstrained grid nothing changes visually: the grid grows with its
 content, so there is nothing to stick against. Pin the height only when you
 want an internal vertical viewport.
+
+## Lazy initial load
+
+`loading="lazy"` defers the **first** data source fetch until the grid nears the
+viewport (using a one-shot `IntersectionObserver` with a ~200px margin). It is
+ideal for grids in hidden tabs or far below the fold:
+
+```html
+<data-grid src="/api/users" loading="lazy"></data-grid>
+```
+
+The grid still builds its chrome (header, filters, footer) and fires
+`connected` immediately; only the fetch is postponed. It applies to async
+sources (`src`/`dataSource`) — a local declarative table or a provided
+`initialResult` renders right away. Default is `"eager"` (load on connect).
+
+Query changes before activation accumulate normally: any filters, search or
+page state set while hidden are applied in a single request when the grid
+becomes visible. An explicit `refresh()`/`load()` (or a `src` change) always
+loads immediately, regardless of visibility.
 
 ## API
 

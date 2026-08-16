@@ -16,6 +16,9 @@
               "name": "src"
             },
             {
+              "name": "loading"
+            },
+            {
               "name": "sortable"
             },
             {
