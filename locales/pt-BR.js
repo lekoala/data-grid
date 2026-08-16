@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "Página anterior",
     gotoNextPage: "Próxima página",
     gotoLastPage: "Última página",
-    pageRange: "{from} – {to} de {total}",
+    pageStatus: "Página {page} de {pages}",
     resultCount: "Itens: {count}",
     selectedCount: "Selecionados: {count}",
     selectAll: "Selecionar todas as linhas",

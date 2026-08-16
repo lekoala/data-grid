@@ -2,7 +2,35 @@
 
 All UI labels are plain strings and can be overridden at any time. Labels are
 expressed as full phrases: `pageRange` uses `{from}`, `{to}` and `{total}`
-placeholders, `resultCount` and `selectedCount` use `{count}`.
+placeholders, `pageStatus` uses `{page}` and `{pages}`, `resultCount` and
+`selectedCount` use `{count}`.
+
+## Language-neutral visible UI
+
+The visible chrome is intentionally language-neutral by default: numbers and
+structure carry the information, so nothing on screen needs translating.
+
+```text
+1–10 / 198     [10⌄]   ‹ ‹ [1] › ›
+```
+
+```text
+[ 3 ] [Archive] [Delete]
+```
+
+The words live in the accessibility layer, as `aria-label`, `title` or a live
+region:
+
+- `pageRange` — visible range, defaults to the symbolic `{from}–{to} / {total}`
+- `pageStatus` — accessible page context (`Page 1 of 20`), never visible
+- `selectedCount` — the selected count announced by the live badge
+- `search`, `gotoPage`, `gotoFirstPage`, ... — accessible names
+
+`setLabels()` updates every connected grid immediately. It should normally be
+called before creating grids (the internal template is built from the current
+labels on first render).
+
+An explicit override can still bring the wording back on screen:
 
 ```js
 DataGrid.setLabels({
@@ -11,9 +39,12 @@ DataGrid.setLabels({
 });
 ```
 
-`setLabels()` updates every connected grid immediately. It should normally be
-called before creating grids (the internal template is built from the current
-labels on first render).
+## Placeholders are not labels
+
+`search-placeholder` and `filter-placeholder` are optional business hints
+supplied by the application. They are never derived from labels: a placeholder
+explains a format or a domain ("Name, email or user ID", "≥ 100"), while the
+accessible name always comes from the labels / the column header.
 
 ## Application labels (JSON)
 
@@ -26,7 +57,7 @@ await DataGrid.loadLabels("/i18n/data-grid.fr.json");
 ```json
 {
   "itemsPerPage": "Éléments par page",
-  "pageRange": "{from} – {to} sur {total}",
+  "pageStatus": "Page {page} sur {pages}",
   "noData": "Aucune donnée"
 }
 ```
@@ -55,6 +86,6 @@ Available locales: `en`, `fr`, `nl`, `de`, `es`, `it`, `pt-BR`, `pt-PT`,
 `zh-CN`, `ja`, `ko`, `ar`, `hi`, `ru`, `tr`, `id`, `pl`.
 
 Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
-`gotoNextPage`, `gotoLastPage`, `pageRange`, `resultCount`, `selectedCount`,
-`selectAll`, `selectRow`, `toggleActions`, `resizeColumn`, `search`, `noData`,
-`loading`, `areYouSure`, `networkError`.
+`gotoNextPage`, `gotoLastPage`, `pageRange`, `pageStatus`, `resultCount`,
+`selectedCount`, `selectAll`, `selectRow`, `toggleActions`, `resizeColumn`,
+`search`, `noData`, `loading`, `areYouSure`, `networkError`.

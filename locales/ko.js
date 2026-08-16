@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "이전 페이지",
     gotoNextPage: "다음 페이지",
     gotoLastPage: "마지막 페이지",
-    pageRange: "{from} – {to} / 전체 {total}",
+    pageStatus: "{page} / {pages} 페이지",
     resultCount: "항목: {count}",
     selectedCount: "선택됨: {count}",
     selectAll: "모든 행 선택",

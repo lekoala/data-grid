@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "पिछला पृष्ठ",
     gotoNextPage: "अगला पृष्ठ",
     gotoLastPage: "अंतिम पृष्ठ",
-    pageRange: "{from} – {to} / कुल {total}",
+    pageStatus: "पृष्ठ {page} / {pages}",
     resultCount: "आइटम: {count}",
     selectedCount: "चयनित: {count}",
     selectAll: "सभी पंक्तियाँ चुनें",

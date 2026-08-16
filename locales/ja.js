@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "前のページ",
     gotoNextPage: "次のページ",
     gotoLastPage: "最後のページ",
-    pageRange: "{from} – {to} 件（全 {total} 件）",
+    pageStatus: "{page} / {pages} ページ",
     resultCount: "{count} 件",
     selectedCount: "選択中: {count} 件",
     selectAll: "すべての行を選択",

@@ -11,6 +11,10 @@ class BulkActions extends BasePlugin {
     bar = null;
     /** @type {HTMLSpanElement|null} */
     countEl = null;
+    /** @type {HTMLSpanElement|null} */
+    countVisible = null;
+    /** @type {HTMLSpanElement|null} */
+    countStatus = null;
     /** @type {HTMLButtonElement[]|null} */
     buttons = null;
 
@@ -28,7 +32,16 @@ class BulkActions extends BasePlugin {
         this.bar = bar;
 
         this.countEl = document.createElement("span");
-        this.countEl.className = "dg-bulk-count";
+        this.countEl.className = "dg-selection-count";
+        this.countEl.setAttribute("role", "status");
+        this.countEl.setAttribute("aria-live", "polite");
+        this.countEl.setAttribute("aria-atomic", "true");
+        this.countEl.hidden = true;
+        this.countVisible = document.createElement("span");
+        this.countVisible.setAttribute("aria-hidden", "true");
+        this.countStatus = document.createElement("span");
+        this.countStatus.className = "dg-visually-hidden";
+        this.countEl.append(this.countVisible, this.countStatus);
         bar.appendChild(this.countEl);
 
         this.buttons = bulkActions.map((action) => {
@@ -120,7 +133,11 @@ class BulkActions extends BasePlugin {
         const selection = grid.getSelectionState();
         const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
 
-        this.countEl.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+        this.countEl.hidden = count === 0;
+        if (this.countVisible && this.countStatus) {
+            this.countVisible.textContent = `${count}`;
+            this.countStatus.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+        }
         for (const button of this.buttons) {
             button.disabled = count === 0;
         }

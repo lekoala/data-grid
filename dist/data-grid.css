@@ -63,7 +63,7 @@ data-grid {
   }
 }
 
-data-grid .dg-status {
+data-grid .dg-status, data-grid .dg-visually-hidden {
   position: absolute;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
@@ -151,6 +151,15 @@ data-grid table {
   border-radius: var(--dg-radius);
   width: 100%;
   max-width: 100%;
+}
+
+data-grid caption {
+  caption-side: top;
+  color: var(--dg-muted-color);
+  padding: 0 var(--dg-padding-x) var(--dg-space-2);
+  text-align: start;
+  font-size: .875em;
+  font-weight: 600;
 }
 
 data-grid thead, data-grid tfoot {
@@ -263,10 +272,20 @@ data-grid .dg-bulk-actions {
   gap: .5rem;
 }
 
-data-grid .dg-bulk-count {
-  color: var(--dg-muted-color);
-  margin-inline-end: .5rem;
+data-grid .dg-selection-count {
+  border: 1px solid var(--dg-control-border-color);
+  background-color: var(--dg-control-bg);
+  color: var(--dg-color);
+  font-variant-numeric: tabular-nums;
+  font-size: .875em;
   font-weight: 600;
+  line-height: calc(var(--dg-control-height)  - 2px);
+  text-align: center;
+  border-radius: 999px;
+  min-inline-size: 2.25rem;
+  margin-inline-end: .5rem;
+  padding-inline-start: .5rem;
+  padding-inline-end: .5rem;
 }
 
 data-grid .dg-selectable label {
@@ -710,6 +729,10 @@ data-grid tfoot .dg-input-page {
   width: 3.5rem;
 }
 
+data-grid tfoot .dg-select-per-page {
+  padding-inline-end: var(--dg-control-padding-inline);
+}
+
 data-grid tfoot .dg-footer {
   display: flex;
   align-items:  center;
@@ -742,6 +765,7 @@ data-grid tfoot .dg-pagination button:hover {
 
 data-grid tfoot .dg-meta {
   color: var(--dg-muted-color);
+  font-variant-numeric: tabular-nums;
   text-align: left;
   white-space: nowrap;
   order: -1;
@@ -785,11 +809,50 @@ data-grid th.dg-sortable:focus-within {
 
 data-grid .dg-sort-indicator {
   color: var(--dg-muted-color);
-  text-align: center;
+  position: relative;
   flex: none;
+  block-size: 12px;
   inline-size: 12px;
-  font-size: 12px;
-  line-height: 1;
+}
+
+data-grid .dg-sort-indicator:before, data-grid .dg-sort-indicator:after {
+  box-sizing: border-box;
+  content: "";
+  position: absolute;
+  border-top: 1.5px solid;
+  border-left: 1.5px solid;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  left: 50%;
+}
+
+data-grid th:not([data-sort]) .dg-sort-indicator:before {
+  top: 1px;
+  transform: rotate(45deg);
+}
+
+data-grid th:not([data-sort]) .dg-sort-indicator:after {
+  bottom: 1px;
+  transform: rotate(225deg);
+}
+
+data-grid th[data-sort="asc"] .dg-sort-indicator:before {
+  top: 3px;
+  transform: rotate(45deg);
+}
+
+data-grid th[data-sort="asc"] .dg-sort-indicator:after {
+  display: none;
+}
+
+data-grid th[data-sort="desc"] .dg-sort-indicator:before {
+  top: 3px;
+  transform: rotate(225deg);
+}
+
+data-grid th[data-sort="desc"] .dg-sort-indicator:after {
+  display: none;
 }
 
 data-grid th[aria-sort] .dg-sort-indicator {

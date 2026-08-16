@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "Poprzednia strona",
     gotoNextPage: "Następna strona",
     gotoLastPage: "Ostatnia strona",
-    pageRange: "{from} – {to} z {total}",
+    pageStatus: "Strona {page} z {pages}",
     resultCount: "Elementy: {count}",
     selectedCount: "Wybrano: {count}",
     selectAll: "Zaznacz wszystkie wiersze",

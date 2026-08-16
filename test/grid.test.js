@@ -86,29 +86,29 @@ test("clicking the sort button toggles aria-sort/data-sort and sorts rows", asyn
     expect(indicator).toBeTruthy();
     // Decorative glyph: always present, kept out of the accessibility tree
     expect(indicator.getAttribute("aria-hidden")).toBe("true");
-    // Unsorted sortable column shows the neutral affordance
-    expect(indicator.textContent).toBe("↕");
+    // The glyph is drawn in CSS: the element stays empty, state lives on the th
+    expect(indicator.textContent).toBe("");
     expect(th.hasAttribute("aria-sort")).toBe(false);
     expect(th.hasAttribute("data-sort")).toBe(false);
 
     button.click();
     expect(th.getAttribute("aria-sort")).toBe("ascending");
     expect(th.getAttribute("data-sort")).toBe("asc");
-    expect(indicator.textContent).toBe("↑");
+    expect(indicator.textContent).toBe("");
     await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("a");
 
     button.click();
     expect(th.getAttribute("aria-sort")).toBe("descending");
     expect(th.getAttribute("data-sort")).toBe("desc");
-    expect(indicator.textContent).toBe("↓");
+    expect(indicator.textContent).toBe("");
     await tick();
     expect(inst.querySelector("tbody tr td").textContent).toBe("b");
 
     button.click();
     expect(th.hasAttribute("aria-sort")).toBe(false);
     expect(th.hasAttribute("data-sort")).toBe(false);
-    expect(indicator.textContent).toBe("↕");
+    expect(indicator.textContent).toBe("");
     removeGrid(inst);
 });
 

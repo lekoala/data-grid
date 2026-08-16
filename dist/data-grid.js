@@ -552,7 +552,8 @@ var labels = {
   gotoPrevPage: "Go to previous page",
   gotoNextPage: "Go to next page",
   gotoLastPage: "Go to last page",
-  pageRange: "{from} - {to} of {total} items",
+  pageRange: "{from}–{to} / {total}",
+  pageStatus: "Page {page} of {pages}",
   resultCount: "{count} items",
   selectedCount: "{count} selected",
   selectAll: "Select all rows",
@@ -632,6 +633,9 @@ function parseDeclarativeTable(table) {
     }
     if (th.dataset.filter) {
       column.filterType = th.dataset.filter;
+    }
+    if (th.dataset.filterPlaceholder !== undefined) {
+      column.filterPlaceholder = th.dataset.filterPlaceholder;
     }
     if (th.dataset.responsive !== undefined) {
       const responsive = Number(th.dataset.responsive);
@@ -840,7 +844,7 @@ class DataGrid extends base_element_default {
                 <div class="dg-page-nav">
                   <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
                 </div>
-                <div class="dg-pagination">
+                <div class="dg-pagination" role="group" aria-label="${formatLabel(labels.pageStatus, { page: 0, pages: 0 })}">
                   <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
@@ -912,7 +916,7 @@ class DataGrid extends base_element_default {
     }
     if (this.searchInput) {
       this.searchInput.setAttribute("aria-label", this.labels.search);
-      this.searchInput.setAttribute("placeholder", this.labels.search);
+      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
     }
     const buttonLabels = [
       [this.btnFirst, this.labels.gotoFirstPage],
@@ -929,6 +933,7 @@ class DataGrid extends base_element_default {
     }
     this.#setNoData(this.tbody);
     this.updateMetaLabel();
+    this.updatePageStatus();
     if (this.loading) {
       this.#updateStatus(this.labels.loading);
     } else if (this.hasDataError) {
@@ -955,6 +960,14 @@ class DataGrid extends base_element_default {
     }
     meta.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
   }
+  updatePageStatus() {
+    const pagination = this.querySelector(".dg-pagination");
+    if (!pagination) {
+      return;
+    }
+    const pages = this.totalPages();
+    pagination.setAttribute("aria-label", this.formatLabel(this.labels.pageStatus, { page: this._query.page || 1, pages }));
+  }
   get defaultColumn() {
     return {
       field: "",
@@ -968,6 +981,7 @@ class DataGrid extends base_element_default {
       responsiveHidden: false,
       transform: "",
       filterType: "text",
+      filterPlaceholder: "",
       firstFilterOption: { value: "", text: "" }
     };
   }
@@ -1004,6 +1018,7 @@ class DataGrid extends base_element_default {
       responsiveToggle: true,
       filterDelay: 300,
       searchable: false,
+      searchPlaceholder: "",
       searchDelay: 300,
       minSearchLength: 0,
       spinnerClass: "",
@@ -1094,6 +1109,7 @@ class DataGrid extends base_element_default {
       "sortable",
       "filterable",
       "searchable",
+      "search-placeholder",
       "min-search-length",
       "responsive",
       "responsive-toggle",
@@ -1300,6 +1316,11 @@ class DataGrid extends base_element_default {
   searchableChanged() {
     this.renderSearch();
   }
+  searchPlaceholderChanged() {
+    if (this.searchInput) {
+      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+    }
+  }
   populatePageSizes() {
     if (!this.selectPerPage) {
       return;
@@ -1344,7 +1365,7 @@ class DataGrid extends base_element_default {
     const input = ce("input");
     input.type = "search";
     input.className = "dg-search";
-    input.setAttribute("placeholder", this.labels.search);
+    input.setAttribute("placeholder", this.options.searchPlaceholder);
     input.setAttribute("aria-label", this.labels.search);
     input.value = this._query.search;
     let composing = false;
@@ -1848,17 +1869,12 @@ class DataGrid extends base_element_default {
     const headers = findAll(this, "thead tr.dg-head-columns th");
     for (const th of headers) {
       const match = sort.find((s) => s.field === th.getAttribute("field"));
-      const indicator = th.querySelector(".dg-sort-indicator");
       if (match) {
         th.setAttribute("aria-sort", match.direction === "asc" ? "ascending" : "descending");
         setAttribute(th, "data-sort", match.direction);
-        if (indicator)
-          indicator.textContent = match.direction === "asc" ? "↑" : "↓";
       } else {
         th.removeAttribute("aria-sort");
         th.removeAttribute("data-sort");
-        if (indicator)
-          indicator.textContent = "↕";
       }
     }
     return this.setQuery({ sort });
@@ -2104,13 +2120,6 @@ class DataGrid extends base_element_default {
       const indicator = ce("span");
       indicator.classList.add("dg-sort-indicator");
       indicator.setAttribute("aria-hidden", "true");
-      if (direction === "asc") {
-        indicator.textContent = "↑";
-      } else if (direction === "desc") {
-        indicator.textContent = "↓";
-      } else {
-        indicator.textContent = "↕";
-      }
       button.append(label, indicator);
       th.appendChild(button);
     } else {
@@ -2224,7 +2233,7 @@ class DataGrid extends base_element_default {
       input.type = "text";
       input.inputMode = "search";
       input.autocomplete = "off";
-      input.placeholder = "Filter…";
+      input.placeholder = column.filterPlaceholder ?? "";
       input.spellcheck = false;
     }
     filter.dataset.name = column.field ?? "";
@@ -2373,6 +2382,7 @@ class DataGrid extends base_element_default {
     if (this.btnLast)
       this.btnLast.disabled = this._query.page >= this.pages;
     this.updateMetaLabel();
+    this.updatePageStatus();
     tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
   }
   totalPages() {
@@ -2391,6 +2401,7 @@ class DataGrid extends base_element_default {
     this.inputPage.max = `${this.pages}`;
     this.inputPage.value = `${this._query.page}`;
     this.inputPage.disabled = this.pages < 2;
+    this.updatePageStatus();
     return this;
   }
 }
@@ -2892,6 +2903,8 @@ var selectable_rows_default = SelectableRows;
 class BulkActions extends base_plugin_default {
   bar = null;
   countEl = null;
+  countVisible = null;
+  countStatus = null;
   buttons = null;
   connected() {
     const grid = this.grid;
@@ -2903,7 +2916,16 @@ class BulkActions extends base_plugin_default {
     bar.className = "dg-bulk-actions";
     this.bar = bar;
     this.countEl = document.createElement("span");
-    this.countEl.className = "dg-bulk-count";
+    this.countEl.className = "dg-selection-count";
+    this.countEl.setAttribute("role", "status");
+    this.countEl.setAttribute("aria-live", "polite");
+    this.countEl.setAttribute("aria-atomic", "true");
+    this.countEl.hidden = true;
+    this.countVisible = document.createElement("span");
+    this.countVisible.setAttribute("aria-hidden", "true");
+    this.countStatus = document.createElement("span");
+    this.countStatus.className = "dg-visually-hidden";
+    this.countEl.append(this.countVisible, this.countStatus);
     bar.appendChild(this.countEl);
     this.buttons = bulkActions.map((action) => {
       const button = document.createElement("button");
@@ -2978,7 +3000,11 @@ class BulkActions extends base_plugin_default {
     const grid = this.grid;
     const selection = grid.getSelectionState();
     const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
-    this.countEl.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+    this.countEl.hidden = count === 0;
+    if (this.countVisible && this.countStatus) {
+      this.countVisible.textContent = `${count}`;
+      this.countStatus.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+    }
     for (const button of this.buttons) {
       button.disabled = count === 0;
     }

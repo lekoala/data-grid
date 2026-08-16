@@ -268,10 +268,12 @@ test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
     });
 
     const bar = inst.querySelector(".dg-bulk-actions");
+    const countEl = bar.querySelector(".dg-selection-count");
     const button = bar.querySelector('button[data-action="archive"]');
     // The toolbar exists as soon as bulkActions are configured
     expect(bar.hidden).toBe(false);
-    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("0 selected");
+    // The badge is hidden and silent until something is selected
+    expect(countEl.hidden).toBe(true);
     expect(button.disabled).toBe(true);
 
     // A disabled bulk action never dispatches
@@ -283,7 +285,10 @@ test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
     expect(detail).toBeNull();
 
     toggle(firstCheckbox(inst));
-    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("1 selected");
+    expect(countEl.hidden).toBe(false);
+    // Visible: a plain number. Accessible: the translated phrase in the status region.
+    expect(countEl.querySelector('[aria-hidden="true"]').textContent).toBe("1");
+    expect(countEl.querySelector(".dg-visually-hidden").textContent).toBe("1 selected");
     expect(button.disabled).toBe(false);
 
     button.click();
@@ -293,7 +298,7 @@ test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
     expect(detail.query.page).toBe(1);
 
     toggle(firstCheckbox(inst));
-    expect(bar.querySelector(".dg-bulk-count").textContent).toBe("0 selected");
+    expect(countEl.hidden).toBe(true);
     expect(button.disabled).toBe(true);
     document.body.removeChild(inst);
 });

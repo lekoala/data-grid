@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "Önceki sayfa",
     gotoNextPage: "Sonraki sayfa",
     gotoLastPage: "Son sayfa",
-    pageRange: "{from} – {to} / toplam {total}",
+    pageStatus: "Sayfa {page} / {pages}",
     resultCount: "Öğeler: {count}",
     selectedCount: "Seçilen: {count}",
     selectAll: "Tüm satırları seç",

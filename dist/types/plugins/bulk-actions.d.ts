@@ -9,6 +9,10 @@ declare class BulkActions extends BasePlugin {
     bar: HTMLDivElement | null;
     /** @type {HTMLSpanElement|null} */
     countEl: HTMLSpanElement | null;
+    /** @type {HTMLSpanElement|null} */
+    countVisible: HTMLSpanElement | null;
+    /** @type {HTMLSpanElement|null} */
+    countStatus: HTMLSpanElement | null;
     /** @type {HTMLButtonElement[]|null} */
     buttons: HTMLButtonElement[] | null;
     connected(): void;

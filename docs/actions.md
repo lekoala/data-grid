@@ -127,7 +127,7 @@ row.$actions           per-row availability + overrides
     "total": 142,
     "meta": {
         "actions": {
-            "view": { "label": "View", "href": "/patients/{id}" },
+            "view": { "label": "View", "href": "/users/{id}" },
             "delete": { "label": "Delete", "intent": "danger", "confirm": true }
         }
     }

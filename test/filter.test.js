@@ -357,6 +357,26 @@ test("a column with filterable: false keeps its th but renders no control", asyn
     document.body.removeChild(inst);
 });
 
+test("text filter placeholders are empty by default and only come from the column", async () => {
+    const inst = await makeReadyGrid({
+        columns: [
+            { field: "name", title: "Name" },
+            { field: "ref", title: "Reference", filterPlaceholder: "ABC-123" },
+        ],
+        filterable: true,
+        dataSource: new ArrayDataSource([{ name: "Alice", ref: "ABC" }]),
+    });
+
+    const plain = inst.querySelector('.dg-head-filters input[data-name="name"]');
+    expect(plain.getAttribute("placeholder")).toBe("");
+
+    const hinted = inst.querySelector('.dg-head-filters input[data-name="ref"]');
+    expect(hinted.getAttribute("placeholder")).toBe("ABC-123");
+    // The accessible name comes from the column header, not a generated label
+    expect(hinted.getAttribute("aria-labelledby")).toBeTruthy();
+    document.body.removeChild(inst);
+});
+
 test("a stale server result cannot overwrite the latest filter", async () => {
     /** @type {Array<{ query: QueryState, resolve: Function }>} */
     const pending = [];

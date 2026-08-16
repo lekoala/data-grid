@@ -69,9 +69,47 @@ styled:
 - `data-selected` - set on `tr` of selected rows
 - `data-editing` / `data-invalid` - set on editable cells
 
+## Sort glyphs
+
+The sort indicator is drawn entirely in CSS, driven by the `th` state
+(`data-sort="asc"`, `data-sort="desc"` or absent for neutral). The
+`.dg-sort-indicator` element stays empty; the JS only manages the state. To
+swap the glyph, restyle `.dg-sort-indicator` (`::before` / `::after`).
+
+## Selection badge
+
+`bulkActions` renders a `.dg-selection-count` badge that shows the plain count,
+hidden while nothing is selected. It carries `role="status"` and announces
+`selectedCount` through a `.dg-visually-hidden` text, so the visible UI needs
+no translation.
+
+`.dg-visually-hidden` is the component's screen-reader-only utility, paired
+with an `aria-hidden` visible counterpart.
+
+## Caption
+
+`options.caption` renders a real `<caption>` styled as a quiet dataset label
+(left-aligned, muted). When the surrounding page already provides a heading,
+hide it visually while keeping the semantics:
+
+```css
+data-grid caption {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+```
+
 ## Selectors
 
-Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-filter`, `.dg-actions`,
-`.dg-footer`, `.dg-topbar`, `.dg-topbar-start`, `.dg-topbar-end`, `.dg-search`,
-`.dg-bulk-actions`, `.dg-menu`, `.dg-responsive-hidden`.
+Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-filter`,
+`.dg-actions`, `.dg-footer`, `.dg-topbar`, `.dg-topbar-start`,
+`.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
+`.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.

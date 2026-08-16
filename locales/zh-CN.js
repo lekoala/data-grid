@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "上一页",
     gotoNextPage: "下一页",
     gotoLastPage: "最后一页",
-    pageRange: "第 {from} – {to} 条，共 {total} 条",
+    pageStatus: "第 {page} 页，共 {pages} 页",
     resultCount: "共 {count} 条",
     selectedCount: "已选 {count} 项",
     selectAll: "全选所有行",

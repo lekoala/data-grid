@@ -25,6 +25,9 @@
               "name": "searchable"
             },
             {
+              "name": "search-placeholder"
+            },
+            {
               "name": "min-search-length"
             },
             {

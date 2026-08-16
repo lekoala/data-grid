@@ -37,7 +37,7 @@ test("options are registered", () => {
 
 function resetLabels() {
     DataGrid.setLabels({
-        pageRange: "{from} - {to} of {total} items",
+        pageRange: "{from}–{to} / {total}",
         resultCount: "{count} items",
         selectedCount: "{count} selected",
         noData: "No data",

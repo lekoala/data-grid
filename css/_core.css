@@ -96,6 +96,19 @@ data-grid .dg-status {
   border: 0;
 }
 
+/* Screen-reader-only text paired with a visible, aria-hidden counterpart. */
+data-grid .dg-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 data-grid[density="compact"] {
   --dg-cell-padding-block: var(--dg-space-1);
   --dg-cell-padding-inline: var(--dg-space-2);
@@ -165,6 +178,18 @@ data-grid table {
   border-collapse: separate;
   border-spacing: 0;
   border-radius: var(--dg-radius);
+}
+
+/* The caption is a quiet dataset label, not a native "floating title".
+   Visually hide it when the surrounding page already provides a heading
+   (see docs/styling.md). */
+data-grid caption {
+  caption-side: top;
+  color: var(--dg-muted-color);
+  font-size: 0.875em;
+  font-weight: 600;
+  padding: 0 var(--dg-padding-x) var(--dg-space-2);
+  text-align: start;
 }
 
 data-grid thead,
@@ -283,10 +308,19 @@ data-grid .dg-bulk-actions {
   align-items: center;
 }
 
-data-grid .dg-bulk-count {
+data-grid .dg-selection-count {
   margin-inline-end: 0.5rem;
+  min-inline-size: 2.25rem;
+  padding-inline: 0.5rem;
+  border: 1px solid var(--dg-control-border-color);
+  border-radius: 999px;
+  background-color: var(--dg-control-bg);
+  color: var(--dg-color);
+  font-size: 0.875em;
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--dg-muted-color);
+  line-height: calc(var(--dg-control-height) - 2px);
+  text-align: center;
 }
 
 data-grid .dg-selectable label {
@@ -686,6 +720,11 @@ data-grid tfoot .dg-input-page {
   width: 3.5rem;
 }
 
+/* Native caret kept; padding makes the value sit clear of the arrow. */
+data-grid tfoot .dg-select-per-page {
+  padding-inline-end: var(--dg-control-padding-inline);
+}
+
 data-grid tfoot .dg-footer {
   display: flex;
   align-items: center;
@@ -720,6 +759,7 @@ data-grid tfoot .dg-pagination button:hover {
 data-grid tfoot .dg-meta {
   color: var(--dg-muted-color);
   font-size: 0.875em;
+  font-variant-numeric: tabular-nums;
   margin-right: auto;
   order: -1;
   text-align: left;
@@ -768,13 +808,58 @@ data-grid th.dg-sortable:focus-within {
   box-shadow: inset 0 -2px 0 var(--dg-accent);
 }
 
+/* The sort glyph is drawn entirely in CSS, driven by the th state (data-sort):
+   the indicator element stays empty and the JS only manages the state. */
 data-grid .dg-sort-indicator {
   color: var(--dg-muted-color);
   flex: none;
-  font-size: 12px;
   inline-size: 12px;
-  line-height: 1;
-  text-align: center;
+  block-size: 12px;
+  position: relative;
+}
+
+data-grid .dg-sort-indicator::before,
+data-grid .dg-sort-indicator::after {
+  box-sizing: border-box;
+  content: "";
+  position: absolute;
+  left: 50%;
+  margin-left: -3px;
+  width: 6px;
+  height: 6px;
+  border-left: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+}
+
+/* neutral: two stacked chevrons */
+data-grid th:not([data-sort]) .dg-sort-indicator::before {
+  top: 1px;
+  transform: rotate(45deg);
+}
+
+data-grid th:not([data-sort]) .dg-sort-indicator::after {
+  bottom: 1px;
+  transform: rotate(225deg);
+}
+
+/* ascending: a single up chevron */
+data-grid th[data-sort="asc"] .dg-sort-indicator::before {
+  top: 3px;
+  transform: rotate(45deg);
+}
+
+data-grid th[data-sort="asc"] .dg-sort-indicator::after {
+  display: none;
+}
+
+/* descending: a single down chevron */
+data-grid th[data-sort="desc"] .dg-sort-indicator::before {
+  top: 3px;
+  transform: rotate(225deg);
+}
+
+data-grid th[data-sort="desc"] .dg-sort-indicator::after {
+  display: none;
 }
 
 data-grid th[aria-sort] .dg-sort-indicator {

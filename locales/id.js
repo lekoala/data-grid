@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "Halaman sebelumnya",
     gotoNextPage: "Halaman berikutnya",
     gotoLastPage: "Halaman terakhir",
-    pageRange: "{from} – {to} dari {total}",
+    pageStatus: "Halaman {page} dari {pages}",
     resultCount: "Item: {count}",
     selectedCount: "Dipilih: {count}",
     selectAll: "Pilih semua baris",

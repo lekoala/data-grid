@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "الصفحة السابقة",
     gotoNextPage: "الصفحة التالية",
     gotoLastPage: "الصفحة الأخيرة",
-    pageRange: "{from} – {to} من {total}",
+    pageStatus: "صفحة {page} من {pages}",
     resultCount: "العناصر: {count}",
     selectedCount: "المحدد: {count}",
     selectAll: "تحديد كل الصفوف",

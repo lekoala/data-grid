@@ -51,6 +51,28 @@ test("a non-searchable grid has no search input and no topbar", async () => {
     removeGrid(inst);
 });
 
+test("search placeholder is empty by default and follows search-placeholder", async () => {
+    const plain = await makeReadyGrid({ searchable: true });
+    expect(plain.querySelector(".dg-search").getAttribute("placeholder")).toBe("");
+    removeGrid(plain);
+
+    const hinted = await makeReadyGrid({ searchable: true, searchPlaceholder: "Name, email or patient ID" });
+    const input = hinted.querySelector(".dg-search");
+    expect(input.getAttribute("placeholder")).toBe("Name, email or patient ID");
+    expect(input.getAttribute("aria-label")).toBe("Search");
+    removeGrid(hinted);
+});
+
+test("toggling search-placeholder at runtime updates the existing input", async () => {
+    const inst = await makeReadyGrid({ searchable: true });
+    const input = inst.querySelector(".dg-search");
+    expect(input.getAttribute("placeholder")).toBe("");
+
+    inst.setAttribute("search-placeholder", "Ref ABC-123");
+    expect(input.getAttribute("placeholder")).toBe("Ref ABC-123");
+    removeGrid(inst);
+});
+
 test("typing applies the search after the debounce and resets the page", async () => {
     const inst = await makeReadyGrid({ searchable: true, searchDelay: 0, pageSize: 10 });
 

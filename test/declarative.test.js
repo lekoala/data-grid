@@ -104,6 +104,24 @@ test("data-value keeps a machine value while the markup stays rich", async () =>
     removeGrid(inst);
 });
 
+test("data-filter-placeholder becomes the text filter placeholder", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name">Name</th><th data-field="ref" data-filter-placeholder="ABC-123">Reference</th></tr></thead>
+    <tbody><tr data-row-key="1"><td>a</td><td>ABC</td></tr></tbody>
+</table>
+`,
+        { filterable: true },
+    );
+
+    expect(inst.options.columns[1].filterPlaceholder).toBe("ABC-123");
+    expect(inst.querySelector('thead tr.dg-head-filters input[data-name="ref"]').getAttribute("placeholder")).toBe(
+        "ABC-123",
+    );
+    removeGrid(inst);
+});
+
 test("data-row-key is the authoritative row identity", async () => {
     const inst = await makeDeclarativeGrid(
         `

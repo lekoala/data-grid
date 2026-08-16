@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
+import BulkActions from "../src/plugins/bulk-actions.js";
 import EditableColumn from "../src/plugins/editable-column.js";
 import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
@@ -220,6 +221,36 @@ test("inline edit inputs carry the column title as accessible name", async () =>
 
     const input = inst.querySelector("tbody td input.dg-editable");
     expect(input.getAttribute("aria-label")).toBe("Name");
+    document.body.removeChild(inst);
+});
+
+test("the pagination group exposes the page context and the selection badge is a live status", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name", title: "Name" }],
+            selectable: true,
+            bulkActions: [{ name: "archive", label: "Archive" }],
+        },
+        [{ id: 7, name: "Alice" }],
+        { SelectableRows, BulkActions },
+    );
+
+    const pagination = inst.querySelector(".dg-pagination");
+    expect(pagination.getAttribute("role")).toBe("group");
+    expect(pagination.getAttribute("aria-label")).toBe("Page 1 of 1");
+
+    const count = inst.querySelector(".dg-selection-count");
+    expect(count.getAttribute("role")).toBe("status");
+    expect(count.getAttribute("aria-live")).toBe("polite");
+    expect(count.getAttribute("aria-atomic")).toBe("true");
+    expect(count.hidden).toBe(true);
+
+    const input = inst.tbody.querySelector('td[data-column-id="$selection"] input');
+    input.checked = true;
+    input.dispatchEvent(new Event("change"));
+    expect(count.hidden).toBe(false);
+    expect(count.querySelector('[aria-hidden="true"]').textContent).toBe("1");
+    expect(count.querySelector(".dg-visually-hidden").textContent).toBe("1 selected");
     document.body.removeChild(inst);
 });
 

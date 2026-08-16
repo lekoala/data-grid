@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "Предыдущая страница",
     gotoNextPage: "Следующая страница",
     gotoLastPage: "Последняя страница",
-    pageRange: "{from} – {to} из {total}",
+    pageStatus: "Страница {page} из {pages}",
     resultCount: "Элементы: {count}",
     selectedCount: "Выбрано: {count}",
     selectAll: "Выбрать все строки",

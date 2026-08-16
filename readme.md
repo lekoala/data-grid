@@ -143,51 +143,52 @@ attributes are an **intentionally curated declarative subset** of options
 options (`dataSource`, `actions`, `renderCell`, ...) remain JavaScript-only.
 Some options only work if the proper plugin is loaded.
 
-| Option                | Type                 | Default              | Description                                      |
-|-----------------------|----------------------|----------------------|--------------------------------------------------|
-| `src`                 | `String`             | `""`                 | URL to a server-side endpoint                    |
-| `params`              | `Object`             | `{}`                 | Extra constant HTTP params per request           |
-| `dataSource`          | `DataSource`         | -                    | Custom data source (defaults to fetch/array)     |
-| `columns`             | `Column[]`           | `[]`                 | Available columns                                |
-| `rowKey`              | `String \| Function` | `"id"`               | Field or function for the stable row key         |
-| `rowLabel`            | `String \| Function` | -                    | Field or function for the accessible row label   |
-| `sortable`            | `Boolean`            | `false`              | Sort by column                                   |
-| `filterable`          | `Boolean`            | `false`              | Show the filter row                              |
-| `selectable`          | `Boolean`            | `false`              | Select rows with checkboxes                      |
-| `singleSelect`        | `Boolean`            | `false`              | Select a single row with radios                  |
-| `selectVisibleOnly`   | `Boolean`            | `true`               | `selectAll` only selects the visible rows        |
-| `actions`             | `Action[]`           | `[]`                 | Row actions (also resolved from `$actions` / `meta.actions`) |
-| `rowActions`          | `Boolean`            | `false`              | Show the actions column even without static `actions`        |
-| `actionRenderer`      | `Function`           | -                    | Global action renderer                           |
-| `collapseActions`     | `Boolean`            | `false`              | Group actions under a toggle                     |
-| `bulkActions`         | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection            |
-| `resizable`           | `Boolean`            | `false`              | Resizable columns                                |
-| `reorder`             | `Boolean`            | `false`              | Draggable column headers                         |
-| `menu`                | `Boolean`            | `false`              | Right-click column menu                          |
-| `responsive`          | `Boolean`            | `false`              | Responsive columns                               |
-| `responsiveToggle`    | `Boolean`            | `true`               | Show toggle column on small screens              |
-| `autosize`            | `Boolean`            | `true`               | Compute column sizes from data                   |
-| `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page               |
-| `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits              |
-| `expand`              | `Boolean`            | `false`              | Allow cell content to span multiple lines        |
-| `pageSizes`           | `Number[]`           | `[10,25,50,100,250]` | Available page size options                      |
-| `showPageSize`        | `Boolean`            | `true`               | Show the page size select                        |
-| `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters      |
-| `searchable`          | `Boolean`            | `false`              | Show the global search input                     |
-| `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search        |
-| `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied    |
-| `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable` |
-| `spinnerClass`        | `String`             | `""`                 | CSS classes for the loading spinner              |
-| `saveState`           | `Boolean`            | `false`              | Persist query and columns                        |
-| `errorMessage`        | `String`             | `""`                 | Message shown when a load fails                  |
-| `noData`              | `String`             | `""`                 | Message shown when there is no data              |
-| `caption`             | `String`             | `""`                 | Table caption (accessible name)                  |
-| `initialQuery`        | `QueryState`         | -                    | Initial runtime query state                      |
-| `initialResult`       | `PageResult`         | -                    | Initial result to display without loading        |
-| `validate`            | `Function`           | -                    | Grid-level editor validator                      |
-| `debug`               | `Boolean`            | `false`              | Log actions in DevTools console                  |
-| `dir`                 | `String`             | `"ltr"`              | Direction                                        |
-| `id`                  | `String`             | auto                 | Custom id for the grid                           |
+| Option              | Type                 | Default              | Description                                                  |
+|---------------------|----------------------|----------------------|--------------------------------------------------------------|
+| `src`               | `String`             | `""`                 | URL to a server-side endpoint                                |
+| `params`            | `Object`             | `{}`                 | Extra constant HTTP params per request                       |
+| `dataSource`        | `DataSource`         | -                    | Custom data source (defaults to fetch/array)                 |
+| `columns`           | `Column[]`           | `[]`                 | Available columns                                            |
+| `rowKey`            | `String \| Function` | `"id"`               | Field or function for the stable row key                     |
+| `rowLabel`          | `String \| Function` | -                    | Field or function for the accessible row label               |
+| `sortable`          | `Boolean`            | `false`              | Sort by column                                               |
+| `filterable`        | `Boolean`            | `false`              | Show the filter row                                          |
+| `selectable`        | `Boolean`            | `false`              | Select rows with checkboxes                                  |
+| `singleSelect`      | `Boolean`            | `false`              | Select a single row with radios                              |
+| `selectVisibleOnly` | `Boolean`            | `true`               | `selectAll` only selects the visible rows                    |
+| `actions`           | `Action[]`           | `[]`                 | Row actions (also resolved from `$actions` / `meta.actions`) |
+| `rowActions`        | `Boolean`            | `false`              | Show the actions column even without static `actions`        |
+| `actionRenderer`    | `Function`           | -                    | Global action renderer                                       |
+| `collapseActions`   | `Boolean`            | `false`              | Group actions under a toggle                                 |
+| `bulkActions`       | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection                        |
+| `resizable`         | `Boolean`            | `false`              | Resizable columns                                            |
+| `reorder`           | `Boolean`            | `false`              | Draggable column headers                                     |
+| `menu`              | `Boolean`            | `false`              | Right-click column menu                                      |
+| `responsive`        | `Boolean`            | `false`              | Responsive columns                                           |
+| `responsiveToggle`  | `Boolean`            | `true`               | Show toggle column on small screens                          |
+| `autosize`          | `Boolean`            | `true`               | Compute column sizes from data                               |
+| `autoheight`        | `Boolean`            | `true`               | Fill table height on the last page                           |
+| `autohidePager`     | `Boolean`            | `false`              | Hide the pager when everything fits                          |
+| `expand`            | `Boolean`            | `false`              | Allow cell content to span multiple lines                    |
+| `pageSizes`         | `Number[]`           | `[10,25,50,100,250]` | Available page size options                                  |
+| `showPageSize`      | `Boolean`            | `true`               | Show the page size select                                    |
+| `filterDelay`       | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
+| `searchable`        | `Boolean`            | `false`              | Show the global search input                                 |
+| `searchPlaceholder` | `String`             | `""`                 | Optional visible hint for the search input                   |
+| `searchDelay`       | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
+| `minSearchLength`   | `Number`             | `0`                  | Minimum characters before a search is applied                |
+| `density`           | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |
+| `spinnerClass`      | `String`             | `""`                 | CSS classes for the loading spinner                          |
+| `saveState`         | `Boolean`            | `false`              | Persist query and columns                                    |
+| `errorMessage`      | `String`             | `""`                 | Message shown when a load fails                              |
+| `noData`            | `String`             | `""`                 | Message shown when there is no data                          |
+| `caption`           | `String`             | `""`                 | Table caption (accessible name)                              |
+| `initialQuery`      | `QueryState`         | -                    | Initial runtime query state                                  |
+| `initialResult`     | `PageResult`         | -                    | Initial result to display without loading                    |
+| `validate`          | `Function`           | -                    | Grid-level editor validator                                  |
+| `debug`             | `Boolean`            | `false`              | Log actions in DevTools console                              |
+| `dir`               | `String`             | `"ltr"`              | Direction                                                    |
+| `id`                | `String`             | auto                 | Custom id for the grid                                       |
 
 `rowLabel` falls back to the row key, then the row index. A `dataSource`
 defaults to `FetchDataSource` or `ArrayDataSource`; plugin-backed options are
@@ -196,8 +197,8 @@ described in `docs/plugins.md`.
 ### Attributes
 
 The main attributes are `src`, `sortable`, `filterable`, `searchable`,
-`min-search-length`, `responsive`, `responsive-toggle`, `selectable`,
-`single-select`, `select-visible-only`, `row-key`, `row-label`,
+`search-placeholder`, `min-search-length`, `responsive`, `responsive-toggle`,
+`selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`,
 `reorder`, `menu`, `expand`, `autosize`, `resizable`, `autoheight`,
 `autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
@@ -241,13 +242,13 @@ response protection).
 | `selectAll()` / `clearSelection()`                       | select/reset the selection                      |
 | `getSelection(...keys)`                                  | page-local selected rows                        |
 | `setSearch(value)` / `clearSearch()`                     | set / clear the global search                   |
-| `updateRow(rowKey, patch)` / `removeRow(rowKey)`          | mutate / remove a row (see `docs/actions.md`)   |
+| `updateRow(rowKey, patch)` / `removeRow(rowKey)`         | mutate / remove a row (see `docs/actions.md`)   |
 | `getFirst()` / `getPrev()` / `getNext()` / `getLast()`   | paging                                          |
 | `clearFilters()`                                         | clear the current filters                       |
 | `sortAsc(field)` / `sortDesc(field)` / `sortNone(field)` | sort helpers                                    |
 | `DataGrid.registerPlugins(map)`                          | register plugin constructors                    |
-| `DataGrid.getLabels()` / `setLabels(labels)`            | read / translate the UI labels                     |
-| `DataGrid.loadLabels(url)`                              | fetch a JSON label file and apply it               |
+| `DataGrid.getLabels()` / `setLabels(labels)`             | read / translate the UI labels                  |
+| `DataGrid.loadLabels(url)`                               | fetch a JSON label file and apply it            |
 
 ## Column
 
@@ -274,18 +275,18 @@ response protection).
 
 ## Action
 
-| Name       | Type                                                | Description                                      |
-|------------|-----------------------------------------------------|--------------------------------------------------|
-| `name`     | `String`                                            | the action name (`button[data-action]`)          |
-| `label`    | `String`                                            | the button label and accessible name             |
-| `intent`   | `"default" \| "primary" \| "danger"`                | sets `data-intent`                               |
-| `href`     | `String \| Function`                                | renders an `<a>` link (`{field}` interpolation or `(row, ctx) => string`) |
-| `class`    | `String`                                            | class on the button                              |
-| `visible`  | `(row, ctx) => Boolean`                             | hide the action when falsy                       |
-| `disabled` | `Boolean \| (row, ctx) => Boolean`                  | blocks the action (`aria-disabled` + guarded click) |
-| `render`   | `({ action, row, grid }) => content`                | replace the button content                      |
-| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation (generic label, message, or resolver) |
-| `default`  | `Boolean`                                           | clicking the row triggers the action (first resolved default wins, interactive elements are ignored) |
+| Name       | Type                                                   | Description                            |
+|------------|--------------------------------------------------------|----------------------------------------|
+| `name`     | `String`                                               | action name (`button[data-action]`)    |
+| `label`    | `String`                                               | button label and accessible name       |
+| `intent`   | `"default" \| "primary" \| "danger"`                   | sets `data-intent`                     |
+| `href`     | `String \| Function`                                   | renders an `<a>` link                  |
+| `class`    | `String`                                               | class on the button                    |
+| `visible`  | `(row, ctx) => Boolean`                                | hide the action when falsy             |
+| `disabled` | `Boolean \| (row, ctx) => Boolean`                     | block the action (`aria-disabled`)     |
+| `render`   | `({ action, row, grid }) => content`                   | replace the button content             |
+| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation before dispatching|
+| `default`  | `Boolean`                                              | row click triggers the action          |
 
 `visible`/`disabled`/`href`/`confirm` receive `(row, ctx)` with `ctx = { grid, action, rowKey }`.
 
@@ -299,21 +300,21 @@ See `docs/actions.md` for the full contract.
 
 ## Events
 
-| Name               | Detail                                        | Trigger                    |
-|--------------------|-----------------------------------------------|----------------------------|
-| `connected`        | -                                             | the grid is connected      |
-| `disconnected`     | -                                             | the grid is disconnected   |
-| `loadError`        | error                                         | a load fails               |
-| `selectionChange`  | `{ selectionState }`                          | the selection changes      |
-| `columnVisibility` | `{ col, visibility }`                         | a column is hidden/shown   |
-| `columnResized`    | `{ col, width }`                              | a column is resized        |
-| `columnReordered`  | `{ col, from, to }`                           | a column is dragged        |
-| `headerRendered`   | -                                             | the header is rendered     |
-| `bodyRendered`     | -                                             | the body is rendered       |
-| `rowRendered`      | `{ rowData, tr }`                             | a row is rendered          |
-| `action`           | `{ action, name, row, rowKey, rowIndex, trigger }` | an action is performed |
+| Name               | Detail                                             | Trigger                    |
+|--------------------|----------------------------------------------------|----------------------------|
+| `connected`        | -                                                  | the grid is connected      |
+| `disconnected`     | -                                                  | the grid is disconnected   |
+| `loadError`        | error                                              | a load fails               |
+| `selectionChange`  | `{ selectionState }`                               | the selection changes      |
+| `columnVisibility` | `{ col, visibility }`                              | a column is hidden/shown   |
+| `columnResized`    | `{ col, width }`                                   | a column is resized        |
+| `columnReordered`  | `{ col, from, to }`                                | a column is dragged        |
+| `headerRendered`   | -                                                  | the header is rendered     |
+| `bodyRendered`     | -                                                  | the body is rendered       |
+| `rowRendered`      | `{ rowData, tr }`                                  | a row is rendered          |
+| `action`           | `{ action, name, row, rowKey, rowIndex, trigger }` | an action is performed     |
 | `bulkAction`       | `{ action, name, selection, query, trigger }`      | a bulk action is performed |
-| `edit`             | `{ data, value, field, column }` (cancelable) | an edit is committed       |
+| `edit`             | `{ data, value, field, column }` (cancelable)      | an edit is committed       |
 
 ## Server
 

@@ -7,7 +7,7 @@ const labels = {
     gotoPrevPage: "Vorige pagina",
     gotoNextPage: "Volgende pagina",
     gotoLastPage: "Laatste pagina",
-    pageRange: "{from} – {to} van {total}",
+    pageStatus: "Pagina {page} van {pages}",
     resultCount: "Items: {count}",
     selectedCount: "Geselecteerd: {count}",
     selectAll: "Alle rijen selecteren",

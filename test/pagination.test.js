@@ -29,6 +29,7 @@ test("the page input only navigates on change and clamps out-of-range values", a
 
     const input = inst.querySelector(".dg-input-page");
     expect(input.max).toBe("3");
+    expect(inst.querySelector(".dg-pagination").getAttribute("aria-label")).toBe("Page 1 of 3");
 
     // Typing alone must not trigger a request
     input.value = "12";
@@ -41,6 +42,7 @@ test("the page input only navigates on change and clamps out-of-range values", a
     await flush();
     expect(inst.query.page).toBe(3);
     expect(inst.rows[0].id).toBe(21);
+    expect(inst.querySelector(".dg-pagination").getAttribute("aria-label")).toBe("Page 3 of 3");
 
     // Change back to page 1
     input.value = "1";

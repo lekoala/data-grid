@@ -76,8 +76,11 @@ bulk action never targets the population of a previous search.
 
 ## Bulk actions
 
-`bulkActions` adds a bar with one button per action, shown when something is
-selected:
+`bulkActions` adds a permanent bar with one button per action. A
+`.dg-selection-count` badge shows the plain selected count and is hidden while
+nothing is selected; the buttons are disabled until the count reaches one.
+The badge announces `selectedCount` ("3 selected") through a live region while
+staying visually language-neutral:
 
 ```js
 const grid = new DataGrid({
