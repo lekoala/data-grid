@@ -7,7 +7,7 @@ import { ArrayDataSource, DataGrid } from "../data-grid.js";
  * @param {HTMLElement} container
  * @param {String} url
  * @param {Object} [options] Additional grid options
- * @param {Array} [attrs] Boolean attributes to set on the element (ex: "sticky")
+ * @param {Array} [attrs] Boolean attributes to set on the element (ex: "sortable")
  * @returns {Promise<DataGrid>}
  */
 export async function createStaticGrid(container, url, options = {}, attrs = []) {

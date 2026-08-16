@@ -357,19 +357,19 @@ data-grid select {
   font: inherit;
 }
 
-data-grid[sticky] table thead,
-data-grid[sticky] table tfoot {
+data-grid table thead,
+data-grid table tfoot {
   z-index: 2;
   position: sticky;
   margin: 0;
   border: 0;
 }
 
-data-grid[sticky] table thead {
+data-grid table thead {
   inset-block-start: -1px;
 }
 
-data-grid[sticky] table tfoot {
+data-grid table tfoot {
   inset-block-end: -1px;
 }
 

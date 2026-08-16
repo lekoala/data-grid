@@ -58,7 +58,7 @@
         ["typ-24", "24px host typography: no fixed header height, the sort icon stays a stable glyph next to the label."],
         ["typ-32", "32px extreme: headers grow, controls must stay vertically centered, host button color must not leak."],
       ]) {
-        const grid = await createStaticGrid(document.getElementById(id), "../demo-simple.json", opts, ["sticky"]);
+        const grid = await createStaticGrid(document.getElementById(id), "../demo-simple.json", opts);
         grid.setAttribute("aria-label", id);
       }
     </script>

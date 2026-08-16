@@ -48,6 +48,34 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 `density` is `compact`, `default` or `comfortable` and adjusts the spacing
 tokens (`--dg-cell-padding-*`, `--dg-header-padding-y`, `--dg-control-height`).
 
+## Scrollable grid
+
+The header (columns + filter row) stays pinned to the top and the footer to the
+bottom of the grid's own scroll viewport. This is the **default** — no option
+is needed. Give the grid a constrained height and it becomes its own scroll
+container, keeping its chrome visible while the rows scroll:
+
+```css
+.results-grid {
+  max-height: 70vh;
+}
+```
+
+```html
+<data-grid class="results-grid"></data-grid>
+```
+
+On an unconstrained grid nothing changes visually (the grid grows with its
+content, so there is nothing to stick against). Keep the height-constraining
+decision with the application — the grid never applies an arbitrary cap. This
+is a progressive enhancement: browsers without `position: sticky` on
+`<thead>` simply show a normal table.
+
+> A separate feature — keeping the header visible while the surrounding
+> **page** scrolls (`[sticky]`, header only) — is reserved and not yet
+> implemented in v3.
+
+
 ## Bootstrap theme
 
 `themes/bootstrap.css` maps the tokens onto Bootstrap 5 variables, including dark

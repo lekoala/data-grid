@@ -34,7 +34,6 @@
         sortable: true,
         initialQuery: { pageSize: 10, sort: [{ field: "company", direction: "asc" }] },
       },
-      ["sticky"],
     );
 
     const denseDemo = await createStaticGrid(
@@ -45,8 +44,10 @@
         sortable: true,
         initialQuery: { pageSize: 12 },
       },
-      ["sticky"],
     );
+    // Constrain the grid height so it scrolls internally and pins its own
+    // header/footer (the default scrollable-grid behavior).
+    denseDemo.style.maxHeight = "520px";
 
     const filtersDemo = await createStaticGrid(
       document.getElementById("filters-demo"),
@@ -72,7 +73,6 @@
         ],
         initialQuery: { pageSize: 8 },
       },
-      ["sticky"],
     );
 
     const selectionActionsDemo = await createStaticGrid(
@@ -104,7 +104,6 @@
         bulkActions: [{ name: "export", label: "Export selection" }],
         initialQuery: { pageSize: 8 },
       },
-      ["sticky"],
     );
 
     const fullDemo = await createStaticGrid(
@@ -143,7 +142,6 @@
         ],
         initialQuery: { pageSize: 10 },
       },
-      ["sticky"],
     );
 
     document.getElementById("get-selection").addEventListener("click", (e) => {
@@ -199,7 +197,7 @@
       <h2>Dense</h2>
       <p class="demo-lead">Long strings, many visible rows and no zebra dependency. This is the main scanability check for the default theme.</p>
       <div class="demo-frame is-fixed" id="dense-demo" style="height: 520px"></div>
-      <p class="demo-note">The dense scene keeps sticky header/footer and enough rows on screen to validate the default density.</p>
+      <p class="demo-note">With a constrained height, the grid keeps its header and footer visible while the rows scroll.</p>
     </section>
 
     <section class="demo-grid">

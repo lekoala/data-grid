@@ -318,18 +318,18 @@ data-grid button, data-grid input, data-grid select {
   font: inherit;
 }
 
-data-grid[sticky] table thead, data-grid[sticky] table tfoot {
+data-grid table thead, data-grid table tfoot {
   z-index: 2;
   position: sticky;
   border: 0;
   margin: 0;
 }
 
-data-grid[sticky] table thead {
+data-grid table thead {
   top: -1px;
 }
 
-data-grid[sticky] table tfoot {
+data-grid table tfoot {
   bottom: -1px;
 }
 

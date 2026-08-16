@@ -51,7 +51,6 @@
       sortable: true,
       debug: true
     });
-    serverDemo.setAttribute("sticky", "");
     serverDemo.setAttribute("density", "compact");
     serverDemo.addEventListener("edit", (ev) => {
       postJson("/api/users?action=edit", ev.detail);
@@ -66,7 +65,6 @@
       sortable: true,
       debug: true
     });
-    invalidDemo.setAttribute("sticky", "");
     document.getElementById("invalid-demo").appendChild(invalidDemo);
   </script>
 </head>

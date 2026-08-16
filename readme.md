@@ -218,6 +218,27 @@ The main attributes are `src`, `sortable`, `filterable`, `searchable`,
 ></data-grid>
 ```
 
+## Scrollable grid
+
+The header (including the filter row) stays pinned to the top and the footer to
+the bottom of the **grid's own scroll area**. This is the default behavior —
+as soon as the grid is given a constrained height, it becomes its own scroll
+container and its chrome stays visible while rows scroll:
+
+```css
+.results-grid {
+  max-height: 70vh;
+}
+```
+
+```html
+<data-grid class="results-grid"></data-grid>
+```
+
+On an unconstrained grid nothing changes visually: the grid grows with its
+content, so there is nothing to stick against. Pin the height only when you
+want an internal vertical viewport.
+
 ## API
 
 The runtime state is a `QueryState` (`page`, `pageSize`, `sort`, `filters`).
