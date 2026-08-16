@@ -389,6 +389,9 @@ data-grid > .dg-scroll > table > tfoot {
   inset-block-end: 0;
 }
 
+/* Pagination icons: small, fixed-geometry CSS arrows (not type-scaled). prev/
+   next are single filled chevrons; first/last pair a vertical bar with a
+   chevron (‹| |›). */
 data-grid .dg-nav-icon,
 data-grid .dg-skip-icon {
   width: 18px;
@@ -416,7 +419,7 @@ data-grid .dg-nav-icon::before {
   height: 8px;
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
-  border-left: 5px solid;
+  border-left: 5px solid currentColor;
   top: 5px;
   left: 7px;
 }
@@ -434,7 +437,7 @@ data-grid .dg-skip-icon::after {
   height: 8px;
   border-top: 4px solid transparent;
   border-bottom: 4px solid transparent;
-  border-left: 5px solid;
+  border-left: 5px solid currentColor;
   top: 5px;
   left: 5px;
 }
@@ -741,6 +744,14 @@ data-grid tfoot .dg-select-per-page {
   padding-inline-end: var(--dg-control-padding-inline);
 }
 
+/* The page-size select and page input share the pager button rhythm: a 2em
+   square-ish control that scales with the type, so a large host font grows
+   them instead of cranking a fixed 32px height. */
+data-grid tfoot .dg-select-per-page,
+data-grid tfoot .dg-input-page {
+  block-size: 2em;
+}
+
 data-grid tfoot .dg-footer {
   display: flex;
   align-items: center;
@@ -750,9 +761,18 @@ data-grid tfoot .dg-footer {
   justify-content: flex-end;
 }
 
+/* Right-hand block: page-size selector + navigation group, geometrically
+   centered as peers. */
+data-grid tfoot .dg-footer-controls {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+}
+
 data-grid tfoot .dg-pagination {
   display: flex;
-  gap: var(--dg-space-1);
+  align-items: center;
+  gap: 0.25em;
   text-align: center;
 }
 
@@ -760,16 +780,25 @@ data-grid tfoot .dg-pagination button {
   background-color: transparent;
   border-color: transparent;
   color: var(--dg-muted-color);
-  position: relative;
-  min-width: var(--dg-control-height);
+  display: inline-grid;
+  place-items: center;
+  line-height: 1;
   padding: 0;
-  width: var(--dg-control-height);
+  position: relative;
+  min-width: 0;
+  width: 2em;
+  height: 2em;
 }
 
 data-grid tfoot .dg-pagination button:hover {
   background-color: var(--dg-bg);
   border-color: var(--dg-control-border-color);
   color: var(--dg-color);
+}
+
+/* Disabled pager buttons stay recognizably present: clearly off, not artifacts. */
+data-grid tfoot .dg-pagination button:disabled {
+  opacity: 0.4;
 }
 
 data-grid tfoot .dg-meta {

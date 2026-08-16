@@ -845,6 +845,7 @@ class DataGrid extends base_element_default {
         <tr>
             <td>
             <div class="dg-footer">
+                <div class="dg-footer-controls">
                 <div class="dg-page-nav">
                   <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
                 </div>
@@ -862,6 +863,7 @@ class DataGrid extends base_element_default {
                   <button type="button" class="dg-btn-last" title="${labels.gotoLastPage}" aria-label="${labels.gotoLastPage}" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
+                </div>
                 </div>
                 <div class="dg-meta">${formatLabel(labels.pageRange, { from: 0, to: 0, total: 0 })}</div>
             </div>

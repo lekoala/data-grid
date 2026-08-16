@@ -745,6 +745,10 @@ data-grid tfoot .dg-select-per-page {
   padding-inline-end: var(--dg-control-padding-inline);
 }
 
+data-grid tfoot .dg-select-per-page, data-grid tfoot .dg-input-page {
+  block-size: 2em;
+}
+
 data-grid tfoot .dg-footer {
   display: flex;
   align-items:  center;
@@ -753,26 +757,41 @@ data-grid tfoot .dg-footer {
   justify-content: flex-end;
 }
 
+data-grid tfoot .dg-footer-controls {
+  display: flex;
+  align-items:  center;
+  gap: 1em;
+}
+
 data-grid tfoot .dg-pagination {
   display: flex;
-  gap: var(--dg-space-1);
   text-align: center;
+  align-items:  center;
+  gap: .25em;
 }
 
 data-grid tfoot .dg-pagination button {
   color: var(--dg-muted-color);
+  display: inline-grid;
   position: relative;
-  min-width: var(--dg-control-height);
-  width: var(--dg-control-height);
   background-color: #0000;
   border-color: #0000;
+  place-items:  center;
+  width: 2em;
+  min-width: 0;
+  height: 2em;
   padding: 0;
+  line-height: 1;
 }
 
 data-grid tfoot .dg-pagination button:hover {
   background-color: var(--dg-bg);
   border-color: var(--dg-control-border-color);
   color: var(--dg-color);
+}
+
+data-grid tfoot .dg-pagination button:disabled {
+  opacity: .4;
 }
 
 data-grid tfoot .dg-meta {
