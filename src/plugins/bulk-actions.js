@@ -56,7 +56,7 @@ class BulkActions extends BasePlugin {
 
         const table = grid.querySelector("table");
         if (table) {
-            grid.insertBefore(bar, table);
+            grid.ensureTopbar().querySelector(".dg-topbar-start")?.appendChild(bar);
         } else {
             grid.appendChild(bar);
         }

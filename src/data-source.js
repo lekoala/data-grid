@@ -35,10 +35,12 @@
  */
 
 /**
- * Runtime query state. Single source of truth for pagination, sort and filters.
+ * Runtime query state. Single source of truth for pagination, search, sort and
+ * filters.
  * @typedef {Object} QueryState
  * @property {Number} page
  * @property {Number} pageSize
+ * @property {String} search Global search (server decides which fields it covers)
  * @property {SortState[]} sort
  * @property {Record<string, FilterInput>} filters
  */
@@ -263,6 +265,13 @@ export function paginate(rows, page, pageSize) {
 
 /**
  * Parse a raw response into a PageResult.
+ *
+ * The canonical server contract is:
+ * ```json
+ * { "rows": [...], "total": 142, "meta": { "unfilteredTotal": 998 } }
+ * ```
+ * `total` counts the rows matching the current query; `meta.unfilteredTotal`
+ * (optional) counts the population before any search/filter.
  * @param {any} json
  * @returns {PageResult}
  */
@@ -270,9 +279,36 @@ export function parseResult(json) {
     if (Array.isArray(json)) {
         return { rows: json, total: json.length, meta: {} };
     }
-    const rows = Array.isArray(json?.data) ? json.data : [];
-    const meta = json?.meta ?? {};
-    return { rows, total: meta.filtered ?? rows.length, meta };
+    const rows = Array.isArray(json?.rows) ? json.rows : [];
+    return {
+        rows,
+        total: Number.isFinite(json?.total) ? json.total : rows.length,
+        meta: json?.meta ?? {},
+    };
+}
+
+/**
+ * Apply a global search locally: case-insensitive `contains` over the scalar
+ * values of each row. This is a convenient default for client-side data, not a
+ * contract for server backends: `QueryState.search` only means "the user asked
+ * for a global search", the server decides which fields it covers.
+ * @param {Array<Record<string, any>>} rows
+ * @param {String} search
+ * @returns {Array<Record<string, any>>}
+ */
+export function applySearch(rows, search) {
+    if (!search) {
+        return rows;
+    }
+    const needle = search.toLowerCase();
+    return rows.filter((row) => {
+        for (const value of Object.values(row)) {
+            if (value !== null && value !== undefined && `${value}`.toLowerCase().includes(needle)) {
+                return true;
+            }
+        }
+        return false;
+    });
 }
 
 /**
@@ -375,12 +411,13 @@ export class ArrayDataSource {
      */
     async load(query) {
         let rows = applyFilters(this.rows, query.filters);
+        rows = applySearch(rows, query.search);
         rows = applySort(rows, query.sort);
         const total = rows.length;
         return {
             rows: paginate(rows, query.page || 1, query.pageSize || 10),
             total,
-            meta: { total: this.rows.length },
+            meta: { unfilteredTotal: this.rows.length },
         };
     }
 

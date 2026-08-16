@@ -250,16 +250,41 @@ data-grid .dg-selectable {
   text-align: center;
 }
 
+data-grid .dg-topbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+}
+
+data-grid .dg-topbar-start,
+data-grid .dg-topbar-end {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+data-grid .dg-topbar-end {
+  margin-inline-start: auto;
+}
+
+data-grid .dg-search {
+  min-inline-size: 14rem;
+  max-inline-size: 100%;
+}
+
 data-grid .dg-bulk-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
-  padding: 0.5rem 0;
 }
 
 data-grid .dg-bulk-count {
-  margin-right: auto;
+  margin-inline-end: 0.5rem;
   font-weight: 600;
   color: var(--dg-muted-color);
 }

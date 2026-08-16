@@ -91,8 +91,10 @@ means `true`). Some options only work if the proper plugin is loaded.
 | `expand`              | `Boolean`            | `false`              | Allow cell content to span multiple lines        |
 | `pageSizes`           | `Number[]`           | `[10,25,50,100,250]` | Available page size options                      |
 | `showPageSize`        | `Boolean`            | `true`               | Show the page size select                        |
-| `filterOnEnter`       | `Boolean`            | `true`               | Filter only on Enter/Return                      |
-| `filterKeypressDelay` | `Number`             | `500`                | Debounce delay for keypress filtering            |
+| `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters      |
+| `searchable`          | `Boolean`            | `false`              | Show the global search input                     |
+| `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search        |
+| `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied    |
 | `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable` |
 | `spinnerClass`        | `String`             | `""`                 | CSS classes for the loading spinner              |
 | `saveState`           | `Boolean`            | `false`              | Persist query and columns                        |
@@ -112,13 +114,13 @@ described in `docs/plugins.md`.
 
 ### Attributes
 
-The main attributes are `src`, `sortable`, `filterable`, `responsive`,
-`selectable`, `single-select`, `reorder`, `menu`, `expand`, `autosize`,
-`resizable`, `autoheight`, `autohide-pager`, `show-page-size`, `debug`, `dir`,
-`density`. Example:
+The main attributes are `src`, `sortable`, `filterable`, `searchable`,
+`min-search-length`, `responsive`, `selectable`, `single-select`, `reorder`,
+`menu`, `expand`, `autosize`, `resizable`, `autoheight`, `autohide-pager`,
+`show-page-size`, `debug`, `dir`, `density`. Example:
 
 ```html
-<data-grid src="/api/users" sortable filterable selectable density="compact"></data-grid>
+<data-grid src="/api/users" sortable filterable searchable min-search-length="3"></data-grid>
 ```
 
 ## API
@@ -144,6 +146,7 @@ response protection).
 | `selectRow(row)` / `deselectRow(row)` / `toggleRow(row)` | row selection                                   |
 | `selectAll()` / `clearSelection()`                       | select/reset the selection                      |
 | `getSelection(...keys)`                                  | page-local selected rows                        |
+| `setSearch(value)` / `clearSearch()`                     | set / clear the global search                   |
 | `getFirst()` / `getPrev()` / `getNext()` / `getLast()`   | paging                                          |
 | `clearFilters()`                                         | clear the current filters                       |
 | `sortAsc(field)` / `sortDesc(field)` / `sortNone(field)` | sort helpers                                    |
@@ -283,8 +286,8 @@ Available locales: `en`, `fr`, `nl`, `de`, `es`, `it`, `pt-BR`, `pt-PT`,
 
 Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `pageRange`, `resultCount`, `selectedCount`,
-`selectAll`, `toggleActions`, `resizeColumn`, `noData`, `loading`, `areYouSure`,
-`networkError`.
+`selectAll`, `selectRow`, `toggleActions`, `resizeColumn`, `search`, `noData`,
+`loading`, `areYouSure`, `networkError`.
 
 ## Browser Support
 

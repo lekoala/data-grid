@@ -99,7 +99,24 @@ Shortcuts and special cases:
 - IME composition (CJK…) is ignored until `compositionend`, so no filter runs on
   intermediate fragments.
 
+## Global search vs column filters
+
+The global `search` is a separate concept from column `filters`: they combine
+with `AND`. The server decides which fields the search covers (see
+`docs/server-data.md`), while column filters constrain explicit fields. The
+search input is shown with `searchable: true` and gated by `minSearchLength`
+(an empty value clears the search, a non-empty value below the minimum keeps the
+current results).
+
+Clearing works precisely:
+
+- `clearSearch()` - global search only.
+- `clearFilters()` - column filters only.
+- `resetQuery()` - search + filters + sort + page.
+
 ## API
 
 - `clearFilters()` - clears the filter inputs and resets the filters.
 - `filterData()` - collects the current filter inputs into the query and reloads.
+- `setSearch(value)` / `clearSearch()` - set / clear the global search.
+- `resetQuery()` - restores the initial query state.

@@ -1,4 +1,4 @@
-import { applyFilters, applySort, paginate } from "../src/data-source.js";
+import { applyFilters, applySearch, applySort, paginate } from "../src/data-source.js";
 
 // happy-dom patches the global Response in tests; Bun.serve requires a native
 // Response to be returned, so resolve the native constructor explicitly.
@@ -57,6 +57,7 @@ function decodeQuery(params) {
     return {
         page: Number(decoded.page) || 1,
         pageSize: Number(decoded.pageSize) || 10,
+        search: decoded.search ?? "",
         sort: Array.isArray(decoded.sort) ? decoded.sort : [],
         filters: decoded.filters ?? {},
     };
@@ -98,13 +99,15 @@ export async function handleApi(req, url) {
     const query = decodeQuery(url.searchParams);
     const data = rows.map((r) => overrides.get(r.id) ?? r);
     const filtered = applyFilters(data, query.filters);
-    const sorted = applySort(filtered, query.sort);
+    const searched = applySearch(filtered, query.search);
+    const sorted = applySort(searched, query.sort);
     const pageRows = paginate(sorted, query.page, query.pageSize);
 
     return NativeResponse.json(
         {
-            meta: { total: data.length, filtered: filtered.length },
-            data: pageRows,
+            rows: pageRows,
+            total: sorted.length,
+            meta: { unfilteredTotal: data.length },
         },
         { headers },
     );

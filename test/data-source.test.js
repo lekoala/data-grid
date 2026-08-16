@@ -2,10 +2,12 @@ import { expect, test } from "bun:test";
 import {
     ArrayDataSource,
     applyFilters,
+    applySearch,
     applySort,
     encodeSearchParams,
     FetchDataSource,
     paginate,
+    parseResult,
 } from "../src/data-source.js";
 
 test("encodeSearchParams encodes nested objects and arrays", () => {
@@ -36,6 +38,14 @@ test("applyFilters filters by contains and eq", () => {
     expect(contains.map((r) => r.name)).toEqual(["John"]);
     const eq = applyFilters(rows, { name: { operator: "eq", value: "Jane" } });
     expect(eq.map((r) => r.name)).toEqual(["Jane"]);
+});
+
+test("applySearch matches any scalar value case-insensitively", () => {
+    const rows = [{ name: "John", email: "john@acme.com" }, { name: "Jane", email: "jane@acme.com" }, { name: "Bob" }];
+    expect(applySearch(rows, "JOHN").map((r) => r.name)).toEqual(["John"]);
+    expect(applySearch(rows, "acme").map((r) => r.name)).toEqual(["John", "Jane"]);
+    expect(applySearch(rows, "")).toEqual(rows);
+    expect(applySearch(rows, "zzz")).toEqual([]);
 });
 
 test("applySort sorts asc and desc", () => {
@@ -101,10 +111,25 @@ test("ArrayDataSource loads a page with filter and sort", async () => {
         pageSize: 2,
         sort: [{ field: "name", direction: "asc" }],
         filters: {},
+        search: "",
     });
     expect(result.total).toBe(3);
     expect(result.rows.map((r) => r.name)).toEqual(["a", "b"]);
-    expect(result.meta.total).toBe(3);
+    expect(result.meta.unfilteredTotal).toBe(3);
+});
+
+test("ArrayDataSource applies the global search", async () => {
+    const ds = new ArrayDataSource([{ name: "John" }, { name: "Jane" }, { name: "Bobby" }]);
+    const result = await ds.load({
+        page: 1,
+        pageSize: 10,
+        sort: [],
+        filters: {},
+        search: "o",
+    });
+    expect(result.total).toBe(2);
+    expect(result.rows.map((r) => r.name)).toEqual(["John", "Bobby"]);
+    expect(result.meta.unfilteredTotal).toBe(3);
 });
 
 test("FetchDataSource builds a structured url", () => {
@@ -112,11 +137,13 @@ test("FetchDataSource builds a structured url", () => {
     const url = ds.buildUrl({
         page: 2,
         pageSize: 25,
+        search: "dupont",
         sort: [{ field: "name", direction: "asc" }],
         filters: { status: { operator: "eq", value: "active" } },
     });
     expect(url.searchParams.get("page")).toBe("2");
     expect(url.searchParams.get("pageSize")).toBe("25");
+    expect(url.searchParams.get("search")).toBe("dupont");
     expect(url.searchParams.get("sort[0][field]")).toBe("name");
     expect(url.searchParams.get("sort[0][direction]")).toBe("asc");
     expect(url.searchParams.get("filters[status][operator]")).toBe("eq");
@@ -127,22 +154,33 @@ test("FetchDataSource builds a structured url", () => {
 test("FetchDataSource parses an array response", async () => {
     globalThis.fetch = async () => ({ ok: true, json: async () => [{ id: 1 }, { id: 2 }] });
     const ds = new FetchDataSource("/api/users");
-    const result = await ds.load({ page: 1, pageSize: 10, sort: [], filters: {} });
+    const result = await ds.load({ page: 1, pageSize: 10, sort: [], filters: {}, search: "" });
     expect(result.rows.length).toBe(2);
     expect(result.total).toBe(2);
     delete globalThis.fetch;
 });
 
-test("FetchDataSource parses an object response with meta", async () => {
+test("FetchDataSource parses the canonical response contract", async () => {
     globalThis.fetch = async () => ({
         ok: true,
-        json: async () => ({ data: [{ id: 1 }], meta: { filtered: 42 } }),
+        json: async () => ({ rows: [{ id: 1 }], total: 42, meta: { unfilteredTotal: 100 } }),
     });
     const ds = new FetchDataSource("/api/users");
-    const result = await ds.load({ page: 1, pageSize: 10, sort: [], filters: {} });
+    const result = await ds.load({ page: 1, pageSize: 10, sort: [], filters: {}, search: "" });
     expect(result.total).toBe(42);
-    expect(result.meta.filtered).toBe(42);
+    expect(result.meta.unfilteredTotal).toBe(100);
     delete globalThis.fetch;
+});
+
+test("parseResult keeps the canonical shape and falls back to rows.length", () => {
+    expect(parseResult({ rows: [{ id: 1 }], total: 7, meta: {} })).toEqual({
+        rows: [{ id: 1 }],
+        total: 7,
+        meta: {},
+    });
+    expect(parseResult({ rows: [{ id: 1 }, { id: 2 }] })).toEqual({ rows: [{ id: 1 }, { id: 2 }], total: 2, meta: {} });
+    expect(parseResult([{ id: 1 }])).toEqual({ rows: [{ id: 1 }], total: 1, meta: {} });
+    expect(parseResult({})).toEqual({ rows: [], total: 0, meta: {} });
 });
 
 test("FetchDataSource throws on http error", async () => {
@@ -153,7 +191,7 @@ test("FetchDataSource throws on http error", async () => {
 });
 
 test("ArrayDataSource.fromUrl fetches a collection once", async () => {
-    globalThis.fetch = async () => ({ ok: true, json: async () => ({ data: [{ id: 1 }, { id: 2 }] }) });
+    globalThis.fetch = async () => ({ ok: true, json: async () => ({ rows: [{ id: 1 }, { id: 2 }] }) });
     const ds = await ArrayDataSource.fromUrl("/static.json");
     expect(ds.rows.length).toBe(2);
     delete globalThis.fetch;

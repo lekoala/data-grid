@@ -72,5 +72,6 @@ styled:
 ## Selectors
 
 Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-filter`, `.dg-actions`,
-`.dg-footer`, `.dg-bulk-actions`, `.dg-menu`, `.dg-responsive-hidden`.
+`.dg-footer`, `.dg-topbar`, `.dg-topbar-start`, `.dg-topbar-end`, `.dg-search`,
+`.dg-bulk-actions`, `.dg-menu`, `.dg-responsive-hidden`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.

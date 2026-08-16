@@ -144,6 +144,9 @@ import {
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
+ * @property {Boolean} searchable Show the global search input (core, not a plugin)
+ * @property {Number} searchDelay Debounce delay in milliseconds before the global search is applied (0 = immediate)
+ * @property {Number} minSearchLength Minimum number of characters before a search is applied (0 = always)
  * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
  * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
@@ -170,6 +173,7 @@ import {
  * @property {String} selectRow
  * @property {String} toggleActions
  * @property {String} resizeColumn
+ * @property {String} search
  * @property {String} noData
  * @property {String} loading
  * @property {String} areYouSure
@@ -205,6 +209,7 @@ let labels = {
     selectRow: "Select {row}",
     toggleActions: "Toggle row actions",
     resizeColumn: "Resize column",
+    search: "Search",
     noData: "No data",
     loading: "Loading…",
     areYouSure: "Are you sure?",
@@ -231,6 +236,7 @@ function normalizeQuery(query) {
     const q = /** @type {QueryState} */ (query || {});
     const page = Math.floor(Number(q.page)) || 1;
     const pageSize = Math.floor(Number(q.pageSize)) || 10;
+    const search = typeof q.search === "string" ? q.search : "";
     const sort = Array.isArray(q.sort)
         ? q.sort
               .filter((s) => s?.field)
@@ -268,7 +274,7 @@ function normalizeQuery(query) {
             }
         }
     }
-    return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), sort, filters };
+    return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), search, sort, filters };
 }
 
 /**
@@ -469,6 +475,9 @@ class DataGrid extends BaseElement {
     /** @type {HTMLInputElement|null} */
     inputPage = null;
 
+    /** @type {HTMLInputElement|null} */
+    searchInput = null;
+
     /** @type {HTMLTableRowElement|null} */
     headerRow = null;
 
@@ -624,6 +633,10 @@ class DataGrid extends BaseElement {
         if (this.inputPage) {
             this.inputPage.setAttribute("aria-label", this.labels.gotoPage);
         }
+        if (this.searchInput) {
+            this.searchInput.setAttribute("aria-label", this.labels.search);
+            this.searchInput.setAttribute("placeholder", this.labels.search);
+        }
         /** @type {Array<[HTMLInputElement | null, String]>} */
         const buttonLabels = [
             [this.btnFirst, this.labels.gotoFirstPage],
@@ -724,6 +737,9 @@ class DataGrid extends BaseElement {
             responsive: false,
             responsiveToggle: true,
             filterDelay: 300,
+            searchable: false,
+            searchDelay: 300,
+            minSearchLength: 0,
             spinnerClass: "",
             saveState: false,
             errorMessage: "",
@@ -878,6 +894,8 @@ class DataGrid extends BaseElement {
             "src",
             "sortable",
             "filterable",
+            "searchable",
+            "min-search-length",
             "responsive",
             "selectable",
             "single-select",
@@ -951,22 +969,32 @@ class DataGrid extends BaseElement {
 
     /**
      * Merge a patch into the query state and reload.
-     * Changing filters, sort or pageSize resets the page to 1 unless an explicit
-     * page is provided in the patch.
+     * Changing search, filters, sort or pageSize resets the page to 1 unless an
+     * explicit page is provided in the patch. Changing search or filters
+     * (population changes) also clears the selection, since a `mode: "all"`
+     * selection only means something for the population it was created on.
      * @public
      * @param {Partial<QueryState>} patch
      * @returns {Promise<void>}
      */
     setQuery(patch) {
         const next = normalizeQuery(this._query);
-        const touchesPopulation =
-            patch.filters !== undefined || patch.sort !== undefined || patch.pageSize !== undefined;
+        const resetsPage =
+            patch.search !== undefined ||
+            patch.filters !== undefined ||
+            patch.sort !== undefined ||
+            patch.pageSize !== undefined;
+        const changesPopulation = patch.search !== undefined || patch.filters !== undefined;
         if (patch.pageSize !== undefined) next.pageSize = patch.pageSize;
+        if (patch.search !== undefined) next.search = patch.search;
         if (patch.sort !== undefined) next.sort = patch.sort;
         if (patch.filters !== undefined) next.filters = patch.filters;
-        if (touchesPopulation && patch.page === undefined) next.page = 1;
+        if (resetsPage && patch.page === undefined) next.page = 1;
         if (patch.page !== undefined) next.page = patch.page;
         this._query = normalizeQuery(next);
+        if (changesPopulation) {
+            this._clearSelectionIfNeeded();
+        }
         return this.refresh();
     }
 
@@ -977,6 +1005,7 @@ class DataGrid extends BaseElement {
      */
     resetQuery() {
         this._query = normalizeQuery(this._initialQuery);
+        this._clearSelectionIfNeeded();
         return this.refresh();
     }
 
@@ -1020,7 +1049,11 @@ class DataGrid extends BaseElement {
                 result = await ds.load(this.query, { signal: controller.signal });
             }
             if (requestId !== this._requestSeq) return;
-            this.applyResult(result);
+            if (this.applyResult(result)) {
+                // The requested page does not exist anymore (e.g. the dataset
+                // shrank after a deletion): refetch on the last valid page.
+                return this.refresh();
+            }
             this.#updateStatus(
                 this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
             );
@@ -1063,11 +1096,18 @@ class DataGrid extends BaseElement {
             this.options.columns = this.convertColumns(this.options.columns);
         }
 
+        const requestedPage = this._query.page;
         this.fixPage();
+        if (this.total > 0 && requestedPage > this.pages) {
+            // The requested page does not exist anymore: the caller refetches
+            // on the last valid page instead of showing an empty page.
+            return true;
+        }
         if (inferredColumns) {
             this.renderTable();
         }
         this.renderBody();
+        return false;
     }
 
     /**
@@ -1075,6 +1115,7 @@ class DataGrid extends BaseElement {
      */
     srcChanged() {
         this.setupDataSource();
+        this._clearSelectionIfNeeded();
         return this.refresh();
     }
 
@@ -1112,6 +1153,10 @@ class DataGrid extends BaseElement {
         this.renderTable();
     }
 
+    searchableChanged() {
+        this.renderSearch();
+    }
+
     /**
      * Populate the page size select according to options
      */
@@ -1125,6 +1170,112 @@ class DataGrid extends BaseElement {
         for (const v of this.options.pageSizes) {
             addSelectOption(this.selectPerPage, v, v, v === this._query.pageSize);
         }
+    }
+
+    /**
+     * Lazily create the shared top bar: `.dg-topbar > .dg-topbar-start +
+     * .dg-topbar-end`, inserted before the table. Both the bulk actions plugin
+     * and the core search control use it.
+     * @returns {HTMLDivElement}
+     */
+    ensureTopbar() {
+        let topbar = /** @type {HTMLDivElement|null} */ (this.querySelector(".dg-topbar"));
+        if (!topbar) {
+            topbar = ce("div");
+            topbar.className = "dg-topbar";
+            const start = ce("div");
+            start.className = "dg-topbar-start";
+            const end = ce("div");
+            end.className = "dg-topbar-end";
+            topbar.append(start, end);
+            const table = this.table;
+            if (table) {
+                this.insertBefore(topbar, table);
+            } else {
+                this.appendChild(topbar);
+            }
+        }
+        return topbar;
+    }
+
+    /**
+     * Create (once) or remove the global search input based on the `searchable`
+     * option. The control is kept stable across renders to avoid focus loss.
+     */
+    renderSearch() {
+        if (!this.options.searchable) {
+            this.searchInput?.remove();
+            this.searchInput = null;
+            return;
+        }
+        if (this.searchInput) {
+            this.searchInput.setAttribute("aria-label", this.labels.search);
+            this.searchInput.setAttribute("placeholder", this.labels.search);
+            return;
+        }
+        const input = ce("input");
+        input.type = "search";
+        input.className = "dg-search";
+        input.setAttribute("placeholder", this.labels.search);
+        input.setAttribute("aria-label", this.labels.search);
+        input.value = this._query.search;
+
+        // The visible value can temporarily diverge from query.search: it is
+        // only committed when it becomes valid (see commitSearch). The
+        // selection is invalidated as soon as the value changes, so a bulk
+        // action never targets the population of a previous search.
+        let composing = false;
+        const apply = debounce(() => this.commitSearch(), this.options.searchDelay);
+        input.addEventListener("input", () => {
+            this._clearSelectionIfNeeded();
+            if (!composing) {
+                apply();
+            }
+        });
+        input.addEventListener("compositionstart", () => {
+            composing = true;
+        });
+        input.addEventListener("compositionend", () => {
+            composing = false;
+            apply();
+        });
+        input.addEventListener("keydown", (/** @type {KeyboardEvent} */ e) => {
+            if (composing) {
+                return;
+            }
+            if (e.key === "Enter") {
+                e.preventDefault();
+                apply.flush();
+            } else if (e.key === "Escape" && input.value) {
+                input.value = "";
+                apply.cancel();
+                this.commitSearch();
+            }
+        });
+
+        this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(input);
+        this.searchInput = input;
+    }
+
+    /**
+     * Commit the current search input value to the query. An empty value clears
+     * the search; a non-empty value below `minSearchLength` is ignored so the
+     * current results stay in place.
+     * @returns {Promise<void>|undefined}
+     */
+    commitSearch() {
+        const input = this.searchInput;
+        if (!input) {
+            return;
+        }
+        const value = input.value;
+        if (value !== "" && value.length < this.options.minSearchLength) {
+            return;
+        }
+        if (value === this._query.search) {
+            return;
+        }
+        return this.setQuery({ search: value });
     }
 
     async _connected() {
@@ -1150,7 +1301,7 @@ class DataGrid extends BaseElement {
         this.btnLast?.addEventListener("click", this.getLast);
         this.selectPerPage?.addEventListener("change", this.changePerPage);
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
-        this.inputPage?.addEventListener("input", this.gotoPage);
+        this.inputPage?.addEventListener("change", this.gotoPage);
 
         this.setupDataSource();
         this.setupInitialState();
@@ -1163,6 +1314,7 @@ class DataGrid extends BaseElement {
         this.dirChanged();
         this.populatePageSizes();
         this.updateLabels();
+        this.renderSearch();
 
         await this.init();
     }
@@ -1175,7 +1327,7 @@ class DataGrid extends BaseElement {
         this.btnNext?.removeEventListener("click", this.getNext);
         this.btnLast?.removeEventListener("click", this.getLast);
         this.selectPerPage?.removeEventListener("change", this.changePerPage);
-        this.inputPage?.removeEventListener("input", this.gotoPage);
+        this.inputPage?.removeEventListener("change", this.gotoPage);
 
         for (const plugin of Object.values(this.plugins)) {
             plugin.disconnected?.();
@@ -1499,6 +1651,18 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Clear the selection only when it is not already empty, to avoid firing a
+     * `selectionChange` on every population change once nothing is selected.
+     */
+    _clearSelectionIfNeeded() {
+        const selection = this._selection;
+        if (selection.mode === "explicit" && selection.ids.size === 0) {
+            return;
+        }
+        this.clearSelection();
+    }
+
+    /**
      * Get selected rows or specific fields from selected rows.
      * Only reflects the currently loaded page.
      * For cross-page/server-side selection, use getSelectionState().
@@ -1596,26 +1760,20 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * @param {Event|KeyboardEvent} event
      * @returns {Promise<void>|undefined}
      */
-    gotoPage(event) {
-        if (event.type === "keypress") {
-            const keyEvent = /** @type {KeyboardEvent} */ (event);
-            const key = keyEvent.keyCode || keyEvent.key;
-            if (key === 13 || key === "Enter") {
-                event.preventDefault();
-            } else {
-                return;
-            }
-        }
+    gotoPage() {
         if (!this.inputPage) {
             return;
         }
+        const pages = this.totalPages();
         const page = Number.parseInt(this.inputPage.value);
-        if (page) {
-            return this.setQuery({ page });
+        const clamped = Number.isFinite(page) ? Math.min(Math.max(1, page), pages) : this._query.page;
+        if (clamped === this._query.page) {
+            this.fixPage();
+            return;
         }
+        return this.setQuery({ page: clamped });
     }
 
     /**
@@ -1744,6 +1902,33 @@ class DataGrid extends BaseElement {
             input.value = "";
         }
         return this.filterData();
+    }
+
+    /**
+     * Set the global search and reload. The server decides which fields the
+     * search covers; `ArrayDataSource` applies a generic scalar match.
+     * @public
+     * @param {String} search
+     * @returns {Promise<void>}
+     */
+    setSearch(search) {
+        const value = typeof search === "string" ? search : `${search ?? ""}`;
+        if (this.searchInput) {
+            this.searchInput.value = value;
+        }
+        return this.setQuery({ search: value });
+    }
+
+    /**
+     * Clear the global search and reload.
+     * @public
+     * @returns {Promise<void>}
+     */
+    clearSearch() {
+        if (this.searchInput) {
+            this.searchInput.value = "";
+        }
+        return this.setQuery({ search: "" });
     }
 
     /**
@@ -2379,7 +2564,8 @@ class DataGrid extends BaseElement {
      * @returns {number}
      */
     totalPages() {
-        return Math.ceil(this.total / (this._query.pageSize || 1));
+        // At least one page: zero results is the logical page 1/1, never 1/0.
+        return Math.max(1, Math.ceil(this.total / (this._query.pageSize || 1)));
     }
 
     /**

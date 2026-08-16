@@ -16,6 +16,10 @@
       "types": "./dist/types/data-source.d.ts",
       "import": "./src/data-source.js"
     },
+    "./plugin": {
+      "types": "./dist/types/core/base-plugin.d.ts",
+      "import": "./src/core/base-plugin.js"
+    },
     "./locales/*": "./locales/*.js"
   },
   "files": [

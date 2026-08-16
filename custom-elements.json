@@ -22,6 +22,12 @@
               "name": "filterable"
             },
             {
+              "name": "searchable"
+            },
+            {
+              "name": "min-search-length"
+            },
+            {
               "name": "responsive"
             },
             {
@@ -118,7 +124,7 @@
             {
               "kind": "method",
               "name": "setQuery",
-              "description": "Merge a patch into the query state and reload. Changing filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch."
+              "description": "Merge a patch into the query state and reload. Changing search, filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch. Changing search or filters (population changes) also clears the selection, since a `mode: \"all\"` selection only means something for the population it was created on."
             },
             {
               "kind": "method",
@@ -214,6 +220,16 @@
             {
               "kind": "method",
               "name": "clearFilters"
+            },
+            {
+              "kind": "method",
+              "name": "setSearch",
+              "description": "Set the global search and reload. The server decides which fields the search covers; `ArrayDataSource` applies a generic scalar match."
+            },
+            {
+              "kind": "method",
+              "name": "clearSearch",
+              "description": "Clear the global search and reload."
             },
             {
               "kind": "method",

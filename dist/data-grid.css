@@ -231,17 +231,41 @@ data-grid .dg-selectable {
   font-size: 1em;
 }
 
-data-grid .dg-bulk-actions {
+data-grid .dg-topbar {
   display: flex;
   flex-wrap: wrap;
+  justify-content: space-between;
   align-items:  center;
   gap: .5rem;
   padding: .5rem 0;
 }
 
+data-grid .dg-topbar-start, data-grid .dg-topbar-end {
+  display: flex;
+  flex-wrap: wrap;
+  align-items:  center;
+  gap: .5rem;
+}
+
+data-grid .dg-topbar-end {
+  margin-inline-start: auto;
+}
+
+data-grid .dg-search {
+  min-inline-size: 14rem;
+  max-inline-size: 100%;
+}
+
+data-grid .dg-bulk-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items:  center;
+  gap: .5rem;
+}
+
 data-grid .dg-bulk-count {
   color: var(--dg-muted-color);
-  margin-right: auto;
+  margin-inline-end: .5rem;
   font-weight: 600;
 }
 

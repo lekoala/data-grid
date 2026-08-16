@@ -37,6 +37,7 @@ The current `QueryState` is the single source of truth:
 {
     page: 1,
     pageSize: 10,
+    search: "dupont",
     sort: [{ field: "name", direction: "asc" }],
     filters: { status: { operator: "eq", value: "active" } },
 }
@@ -46,10 +47,25 @@ By default the whole state is serialized with bracket notation through
 `encodeSearchParams`:
 
 ```
-page=1&pageSize=10&sort[0][field]=name&sort[0][direction]=asc&filters[status][operator]=eq&filters[status][value]=active
+page=1&pageSize=10&search=dupont&sort[0][field]=name&sort[0][direction]=asc&filters[status][operator]=eq&filters[status][value]=active
 ```
 
 Provide `serializeQuery` to map the state to your own server protocol.
+
+## Global search
+
+`search` is a single global search term, distinct from the column `filters`
+(`search AND filters`). The server decides which fields it covers — it is a
+capability of the dataset, not a naive concatenation of the returned columns.
+The client only ever sends the term, never a list of search fields.
+
+> **A server must whitelist sortable/filterable/searchable fields and filter
+> operators. Client-provided field names must never be interpolated directly
+> into SQL.**
+
+For `ArrayDataSource` a generic case-insensitive `contains` over the scalar
+values of each row is applied; this is a convenient local default, **not** the
+contract imposed on backends.
 
 ## Response contract
 
@@ -59,12 +75,16 @@ The server must return a `PageResult`:
 {
     "rows": [{ "id": 1, "name": "Ada" }],
     "total": 142,
-    "meta": { "filters": { "status": [{ "value": "active", "text": "Active" }] } }
+    "meta": {
+        "unfilteredTotal": 998,
+        "filters": { "status": [{ "value": "active", "text": "Active" }] }
+    }
 }
 ```
 
 - `rows` - the rows of the requested page.
-- `total` - number of rows matching the current query (used for pagination).
+- `total` - number of rows matching the current query (after search + filters, used for pagination).
+- `meta.unfilteredTotal` - optional, number of rows before any search/filter.
 - `meta` - optional extra information, e.g. `filters` to populate select filter options.
 
 `parseResponse` lets you adapt a different response shape. `ArrayDataSource.fromUrl(url)` fetches a static JSON file once and applies the query locally.

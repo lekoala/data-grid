@@ -310,6 +310,18 @@ export type Options = {
      */
     filterDelay: number;
     /**
+     * Show the global search input (core, not a plugin)
+     */
+    searchable: boolean;
+    /**
+     * Debounce delay in milliseconds before the global search is applied (0 = immediate)
+     */
+    searchDelay: number;
+    /**
+     * Minimum number of characters before a search is applied (0 = always)
+     */
+    minSearchLength: number;
+    /**
      * Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
      */
     spinnerClass: string;
@@ -356,6 +368,7 @@ export type Labels = {
     selectRow: string;
     toggleActions: string;
     resizeColumn: string;
+    search: string;
     noData: string;
     loading: string;
     areYouSure: string;
@@ -458,6 +471,8 @@ declare class DataGrid extends BaseElement {
     selectPerPage: HTMLSelectElement | null;
     /** @type {HTMLInputElement|null} */
     inputPage: HTMLInputElement | null;
+    /** @type {HTMLInputElement|null} */
+    searchInput: HTMLInputElement | null;
     /** @type {HTMLTableRowElement|null} */
     headerRow: HTMLTableRowElement | null;
     /** @type {Number|null} */
@@ -596,8 +611,10 @@ declare class DataGrid extends BaseElement {
     setupInitialState(): void;
     /**
      * Merge a patch into the query state and reload.
-     * Changing filters, sort or pageSize resets the page to 1 unless an explicit
-     * page is provided in the patch.
+     * Changing search, filters, sort or pageSize resets the page to 1 unless an
+     * explicit page is provided in the patch. Changing search or filters
+     * (population changes) also clears the selection, since a `mode: "all"`
+     * selection only means something for the population it was created on.
      * @public
      * @param {Partial<QueryState>} patch
      * @returns {Promise<void>}
@@ -626,7 +643,7 @@ declare class DataGrid extends BaseElement {
      * Apply a PageResult and render.
      * @param {PageResult} result
      */
-    applyResult(result: PageResult): void;
+    applyResult(result: PageResult): boolean;
     /**
      * Pick the data source based on configuration.
      */
@@ -639,10 +656,30 @@ declare class DataGrid extends BaseElement {
     reorderChanged(): void;
     sortableChanged(): void;
     filterableChanged(): void;
+    searchableChanged(): void;
     /**
      * Populate the page size select according to options
      */
     populatePageSizes(): void;
+    /**
+     * Lazily create the shared top bar: `.dg-topbar > .dg-topbar-start +
+     * .dg-topbar-end`, inserted before the table. Both the bulk actions plugin
+     * and the core search control use it.
+     * @returns {HTMLDivElement}
+     */
+    ensureTopbar(): HTMLDivElement;
+    /**
+     * Create (once) or remove the global search input based on the `searchable`
+     * option. The control is kept stable across renders to avoid focus loss.
+     */
+    renderSearch(): void;
+    /**
+     * Commit the current search input value to the query. An empty value clears
+     * the search; a non-empty value below `minSearchLength` is ignored so the
+     * current results stay in place.
+     * @returns {Promise<void>|undefined}
+     */
+    commitSearch(): Promise<void> | undefined;
     _connected(): Promise<void>;
     _disconnected(): void;
     init(): Promise<void>;
@@ -773,6 +810,11 @@ declare class DataGrid extends BaseElement {
      */
     clearSelection(): void;
     /**
+     * Clear the selection only when it is not already empty, to avoid firing a
+     * `selectionChange` on every population change once nothing is selected.
+     */
+    _clearSelectionIfNeeded(): void;
+    /**
      * Get selected rows or specific fields from selected rows.
      * Only reflects the currently loaded page.
      * For cross-page/server-side selection, use getSelectionState().
@@ -811,10 +853,9 @@ declare class DataGrid extends BaseElement {
      */
     getNext(): Promise<void> | undefined;
     /**
-     * @param {Event|KeyboardEvent} event
      * @returns {Promise<void>|undefined}
      */
-    gotoPage(event: Event | KeyboardEvent): Promise<void> | undefined;
+    gotoPage(): Promise<void> | undefined;
     /**
      * This is the callback for the select control
      * @returns {Promise<void>|undefined}
@@ -849,6 +890,20 @@ declare class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     clearFilters(): Promise<void>;
+    /**
+     * Set the global search and reload. The server decides which fields the
+     * search covers; `ArrayDataSource` applies a generic scalar match.
+     * @public
+     * @param {String} search
+     * @returns {Promise<void>}
+     */
+    setSearch(search: string): Promise<void>;
+    /**
+     * Clear the global search and reload.
+     * @public
+     * @returns {Promise<void>}
+     */
+    clearSearch(): Promise<void>;
     /**
      * Collect current filter inputs into the query and reload.
      */

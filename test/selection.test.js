@@ -43,6 +43,53 @@ test("selection survives a page change", async () => {
     document.body.removeChild(inst);
 });
 
+test("selection survives a sort change", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true, sortable: true });
+
+    toggle(firstCheckbox(inst));
+    expect(inst.getSelectionState().ids.has("1")).toBe(true);
+
+    await inst.setQuery({ sort: [{ field: "name", direction: "asc" }] });
+    expect(inst.getSelectionState().ids.has("1")).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("selection clears on a filter change", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true, filterable: true });
+
+    toggle(firstCheckbox(inst));
+    expect(inst.getSelectionState().ids.size).toBe(1);
+
+    await inst.setQuery({ filters: { name: { operator: "contains", value: "row1" } } });
+    const state = inst.getSelectionState();
+    expect(state.mode).toBe("explicit");
+    expect(state.ids.size).toBe(0);
+    document.body.removeChild(inst);
+});
+
+test("selection clears on resetQuery", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true, pageSize: 10 });
+
+    toggle(firstCheckbox(inst));
+    expect(inst.getSelectionState().ids.size).toBe(1);
+
+    await inst.setQuery({ page: 2 });
+    await inst.resetQuery();
+    expect(inst.getSelectionState().ids.size).toBe(0);
+    document.body.removeChild(inst);
+});
+
+test("an empty selection does not fire a redundant selectionChange", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
+
+    let fires = 0;
+    inst.addEventListener("selectionChange", () => fires++);
+
+    await inst.setQuery({ filters: { name: { operator: "contains", value: "row0" } } });
+    expect(fires).toBe(0);
+    document.body.removeChild(inst);
+});
+
 test("tr[data-selected] reflects the selection", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
 

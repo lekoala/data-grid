@@ -377,9 +377,26 @@ function parseResult(json) {
   if (Array.isArray(json)) {
     return { rows: json, total: json.length, meta: {} };
   }
-  const rows = Array.isArray(json?.data) ? json.data : [];
-  const meta = json?.meta ?? {};
-  return { rows, total: meta.filtered ?? rows.length, meta };
+  const rows = Array.isArray(json?.rows) ? json.rows : [];
+  return {
+    rows,
+    total: Number.isFinite(json?.total) ? json.total : rows.length,
+    meta: json?.meta ?? {}
+  };
+}
+function applySearch(rows, search) {
+  if (!search) {
+    return rows;
+  }
+  const needle = search.toLowerCase();
+  return rows.filter((row) => {
+    for (const value of Object.values(row)) {
+      if (value !== null && value !== undefined && `${value}`.toLowerCase().includes(needle)) {
+        return true;
+      }
+    }
+    return false;
+  });
 }
 
 class FetchDataSource {
@@ -440,12 +457,13 @@ class ArrayDataSource {
   }
   async load(query) {
     let rows = applyFilters(this.rows, query.filters);
+    rows = applySearch(rows, query.search);
     rows = applySort(rows, query.sort);
     const total = rows.length;
     return {
       rows: paginate(rows, query.page || 1, query.pageSize || 10),
       total,
-      meta: { total: this.rows.length }
+      meta: { unfilteredTotal: this.rows.length }
     };
   }
   add(row) {
@@ -541,6 +559,7 @@ var labels = {
   selectRow: "Select {row}",
   toggleActions: "Toggle row actions",
   resizeColumn: "Resize column",
+  search: "Search",
   noData: "No data",
   loading: "Loading…",
   areYouSure: "Are you sure?",
@@ -554,6 +573,7 @@ function normalizeQuery(query) {
   const q = query || {};
   const page = Math.floor(Number(q.page)) || 1;
   const pageSize = Math.floor(Number(q.pageSize)) || 10;
+  const search = typeof q.search === "string" ? q.search : "";
   const sort = Array.isArray(q.sort) ? q.sort.filter((s) => s?.field).map((s) => ({
     field: String(s.field),
     direction: s.direction === "desc" ? "desc" : "asc"
@@ -582,7 +602,7 @@ function normalizeQuery(query) {
       }
     }
   }
-  return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), sort, filters };
+  return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), search, sort, filters };
 }
 function orderColumns(columns) {
   const start = [];
@@ -660,6 +680,7 @@ class DataGrid extends base_element_default {
   btnLast = null;
   selectPerPage = null;
   inputPage = null;
+  searchInput = null;
   headerRow = null;
   rowHeight = null;
   _renderContext = null;
@@ -761,6 +782,10 @@ class DataGrid extends base_element_default {
     if (this.inputPage) {
       this.inputPage.setAttribute("aria-label", this.labels.gotoPage);
     }
+    if (this.searchInput) {
+      this.searchInput.setAttribute("aria-label", this.labels.search);
+      this.searchInput.setAttribute("placeholder", this.labels.search);
+    }
     const buttonLabels = [
       [this.btnFirst, this.labels.gotoFirstPage],
       [this.btnPrev, this.labels.gotoPrevPage],
@@ -849,6 +874,9 @@ class DataGrid extends base_element_default {
       responsive: false,
       responsiveToggle: true,
       filterDelay: 300,
+      searchable: false,
+      searchDelay: 300,
+      minSearchLength: 0,
       spinnerClass: "",
       saveState: false,
       errorMessage: "",
@@ -936,6 +964,8 @@ class DataGrid extends base_element_default {
       "src",
       "sortable",
       "filterable",
+      "searchable",
+      "min-search-length",
       "responsive",
       "selectable",
       "single-select",
@@ -994,22 +1024,29 @@ class DataGrid extends base_element_default {
   }
   setQuery(patch) {
     const next = normalizeQuery(this._query);
-    const touchesPopulation = patch.filters !== undefined || patch.sort !== undefined || patch.pageSize !== undefined;
+    const resetsPage = patch.search !== undefined || patch.filters !== undefined || patch.sort !== undefined || patch.pageSize !== undefined;
+    const changesPopulation = patch.search !== undefined || patch.filters !== undefined;
     if (patch.pageSize !== undefined)
       next.pageSize = patch.pageSize;
+    if (patch.search !== undefined)
+      next.search = patch.search;
     if (patch.sort !== undefined)
       next.sort = patch.sort;
     if (patch.filters !== undefined)
       next.filters = patch.filters;
-    if (touchesPopulation && patch.page === undefined)
+    if (resetsPage && patch.page === undefined)
       next.page = 1;
     if (patch.page !== undefined)
       next.page = patch.page;
     this._query = normalizeQuery(next);
+    if (changesPopulation) {
+      this._clearSelectionIfNeeded();
+    }
     return this.refresh();
   }
   resetQuery() {
     this._query = normalizeQuery(this._initialQuery);
+    this._clearSelectionIfNeeded();
     return this.refresh();
   }
   refresh() {
@@ -1039,7 +1076,9 @@ class DataGrid extends base_element_default {
       }
       if (requestId !== this._requestSeq)
         return;
-      this.applyResult(result);
+      if (this.applyResult(result)) {
+        return this.refresh();
+      }
       this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
     } catch (err) {
       if (requestId !== this._requestSeq)
@@ -1071,14 +1110,20 @@ class DataGrid extends base_element_default {
     } else {
       this.options.columns = this.convertColumns(this.options.columns);
     }
+    const requestedPage = this._query.page;
     this.fixPage();
+    if (this.total > 0 && requestedPage > this.pages) {
+      return true;
+    }
     if (inferredColumns) {
       this.renderTable();
     }
     this.renderBody();
+    return false;
   }
   srcChanged() {
     this.setupDataSource();
+    this._clearSelectionIfNeeded();
     return this.refresh();
   }
   dirChanged() {
@@ -1107,6 +1152,9 @@ class DataGrid extends base_element_default {
   filterableChanged() {
     this.renderTable();
   }
+  searchableChanged() {
+    this.renderSearch();
+  }
   populatePageSizes() {
     if (!this.selectPerPage) {
       return;
@@ -1117,6 +1165,87 @@ class DataGrid extends base_element_default {
     for (const v of this.options.pageSizes) {
       addSelectOption(this.selectPerPage, v, v, v === this._query.pageSize);
     }
+  }
+  ensureTopbar() {
+    let topbar = this.querySelector(".dg-topbar");
+    if (!topbar) {
+      topbar = ce("div");
+      topbar.className = "dg-topbar";
+      const start = ce("div");
+      start.className = "dg-topbar-start";
+      const end = ce("div");
+      end.className = "dg-topbar-end";
+      topbar.append(start, end);
+      const table = this.table;
+      if (table) {
+        this.insertBefore(topbar, table);
+      } else {
+        this.appendChild(topbar);
+      }
+    }
+    return topbar;
+  }
+  renderSearch() {
+    if (!this.options.searchable) {
+      this.searchInput?.remove();
+      this.searchInput = null;
+      return;
+    }
+    if (this.searchInput) {
+      this.searchInput.setAttribute("aria-label", this.labels.search);
+      this.searchInput.setAttribute("placeholder", this.labels.search);
+      return;
+    }
+    const input = ce("input");
+    input.type = "search";
+    input.className = "dg-search";
+    input.setAttribute("placeholder", this.labels.search);
+    input.setAttribute("aria-label", this.labels.search);
+    input.value = this._query.search;
+    let composing = false;
+    const apply = debounce(() => this.commitSearch(), this.options.searchDelay);
+    input.addEventListener("input", () => {
+      this._clearSelectionIfNeeded();
+      if (!composing) {
+        apply();
+      }
+    });
+    input.addEventListener("compositionstart", () => {
+      composing = true;
+    });
+    input.addEventListener("compositionend", () => {
+      composing = false;
+      apply();
+    });
+    input.addEventListener("keydown", (e) => {
+      if (composing) {
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        apply.flush();
+      } else if (e.key === "Escape" && input.value) {
+        input.value = "";
+        apply.cancel();
+        this.commitSearch();
+      }
+    });
+    this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(input);
+    this.searchInput = input;
+  }
+  commitSearch() {
+    const input = this.searchInput;
+    if (!input) {
+      return;
+    }
+    const value = input.value;
+    if (value !== "" && value.length < this.options.minSearchLength) {
+      return;
+    }
+    if (value === this._query.search) {
+      return;
+    }
+    return this.setQuery({ search: value });
   }
   async _connected() {
     connectedInstances.add(this);
@@ -1139,7 +1268,7 @@ class DataGrid extends base_element_default {
     this.btnLast?.addEventListener("click", this.getLast);
     this.selectPerPage?.addEventListener("change", this.changePerPage);
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
-    this.inputPage?.addEventListener("input", this.gotoPage);
+    this.inputPage?.addEventListener("change", this.gotoPage);
     this.setupDataSource();
     this.setupInitialState();
     for (const plugin of Object.values(this.plugins)) {
@@ -1148,6 +1277,7 @@ class DataGrid extends base_element_default {
     this.dirChanged();
     this.populatePageSizes();
     this.updateLabels();
+    this.renderSearch();
     await this.init();
   }
   _disconnected() {
@@ -1158,7 +1288,7 @@ class DataGrid extends base_element_default {
     this.btnNext?.removeEventListener("click", this.getNext);
     this.btnLast?.removeEventListener("click", this.getLast);
     this.selectPerPage?.removeEventListener("change", this.changePerPage);
-    this.inputPage?.removeEventListener("input", this.gotoPage);
+    this.inputPage?.removeEventListener("change", this.gotoPage);
     for (const plugin of Object.values(this.plugins)) {
       plugin.disconnected?.();
     }
@@ -1345,6 +1475,13 @@ class DataGrid extends base_element_default {
     this._selection = { mode: "explicit", ids: new Set, except: new Set };
     this._selectionChanged();
   }
+  _clearSelectionIfNeeded() {
+    const selection = this._selection;
+    if (selection.mode === "explicit" && selection.ids.size === 0) {
+      return;
+    }
+    this.clearSelection();
+  }
   getSelection(...keys) {
     const selected = [];
     for (let i = 0;i < this.rows.length; i++) {
@@ -1404,23 +1541,18 @@ class DataGrid extends base_element_default {
     }
     return this.setQuery({ page: this._query.page + 1 });
   }
-  gotoPage(event) {
-    if (event.type === "keypress") {
-      const keyEvent = event;
-      const key = keyEvent.keyCode || keyEvent.key;
-      if (key === 13 || key === "Enter") {
-        event.preventDefault();
-      } else {
-        return;
-      }
-    }
+  gotoPage() {
     if (!this.inputPage) {
       return;
     }
+    const pages = this.totalPages();
     const page = Number.parseInt(this.inputPage.value);
-    if (page) {
-      return this.setQuery({ page });
+    const clamped = Number.isFinite(page) ? Math.min(Math.max(1, page), pages) : this._query.page;
+    if (clamped === this._query.page) {
+      this.fixPage();
+      return;
     }
+    return this.setQuery({ page: clamped });
   }
   changePerPage() {
     const select = this.selectPerPage;
@@ -1503,6 +1635,19 @@ class DataGrid extends base_element_default {
       input.value = "";
     }
     return this.filterData();
+  }
+  setSearch(search) {
+    const value = typeof search === "string" ? search : `${search ?? ""}`;
+    if (this.searchInput) {
+      this.searchInput.value = value;
+    }
+    return this.setQuery({ search: value });
+  }
+  clearSearch() {
+    if (this.searchInput) {
+      this.searchInput.value = "";
+    }
+    return this.setQuery({ search: "" });
   }
   filterData() {
     this.log("filter data");
@@ -1970,7 +2115,7 @@ class DataGrid extends base_element_default {
     tfoot.toggleAttribute("hidden", this.options.autohidePager && this._query.pageSize > this.total);
   }
   totalPages() {
-    return Math.ceil(this.total / (this._query.pageSize || 1));
+    return Math.max(1, Math.ceil(this.total / (this._query.pageSize || 1)));
   }
   fixPage() {
     if (!this.inputPage)
@@ -2523,7 +2668,7 @@ class BulkActions extends base_plugin_default {
     });
     const table = grid.querySelector("table");
     if (table) {
-      grid.insertBefore(bar, table);
+      grid.ensureTopbar().querySelector(".dg-topbar-start")?.appendChild(bar);
     } else {
       grid.appendChild(bar);
     }

@@ -19,6 +19,10 @@ export type FilterInput = FilterState | String | Number | Boolean;
 export type QueryState = {
     page: number;
     pageSize: number;
+    /**
+     * Global search (server decides which fields it covers)
+     */
+    search: string;
     sort: SortState[];
     filters: Record<string, FilterInput>;
 };
@@ -66,10 +70,12 @@ export type DataSource = {
  * @typedef {FilterState | String | Number | Boolean} FilterInput
  */
 /**
- * Runtime query state. Single source of truth for pagination, sort and filters.
+ * Runtime query state. Single source of truth for pagination, search, sort and
+ * filters.
  * @typedef {Object} QueryState
  * @property {Number} page
  * @property {Number} pageSize
+ * @property {String} search Global search (server decides which fields it covers)
  * @property {SortState[]} sort
  * @property {Record<string, FilterInput>} filters
  */
@@ -138,10 +144,27 @@ export declare function applySort(rows: Array<Record<string, any>>, sort?: SortS
 export declare function paginate(rows: Array<Record<string, any>>, page: number, pageSize: number): Array<Record<string, any>>;
 /**
  * Parse a raw response into a PageResult.
+ *
+ * The canonical server contract is:
+ * ```json
+ * { "rows": [...], "total": 142, "meta": { "unfilteredTotal": 998 } }
+ * ```
+ * `total` counts the rows matching the current query; `meta.unfilteredTotal`
+ * (optional) counts the population before any search/filter.
  * @param {any} json
  * @returns {PageResult}
  */
 export declare function parseResult(json: any): PageResult;
+/**
+ * Apply a global search locally: case-insensitive `contains` over the scalar
+ * values of each row. This is a convenient default for client-side data, not a
+ * contract for server backends: `QueryState.search` only means "the user asked
+ * for a global search", the server decides which fields it covers.
+ * @param {Array<Record<string, any>>} rows
+ * @param {String} search
+ * @returns {Array<Record<string, any>>}
+ */
+export declare function applySearch(rows: Array<Record<string, any>>, search: string): Array<Record<string, any>>;
 /**
  * Server-side data source (the assumed default path).
  * Each query is serialized and sent to the server.

@@ -59,7 +59,7 @@ test.skipIf(IS_WINDOWS)(
         await v.click('#server-grid .dg-head-filters input[data-name="company"]');
         await v.type("Acme");
         // Live filtering: the debounced request narrows the grid without Enter
-        await waitFor(v, "window.sgrid.meta && window.sgrid.meta.filtered === 333");
+        await waitFor(v, "window.sgrid.total === 333");
         expect(await read(v, "window.sgrid.rows.every((r) => r.company === 'Acme')")).toBe(true);
     },
     TIMEOUT,

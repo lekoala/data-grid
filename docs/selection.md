@@ -15,8 +15,10 @@ Selection is server-first and lives in the core as a `SelectionState`:
 { mode: "all", ids: Set(), except: Set(["3"]) }
 ```
 
-`selectAll()` on the last page uses `mode: "all"`, so a select-all across server
-pages only needs the keys of the rows you want to exclude.
+`selectAll()` uses `mode: "all"` when `selectVisibleOnly` is `false`, so a
+select-all across server pages only needs the keys of the rows you want to
+exclude. With `selectVisibleOnly: true` (default) it only selects the visible
+page as an explicit `ids` set.
 
 Row keys come from the `rowKey` option (`"id"` by default), either a field name
 or a function `(row) => key`.
@@ -64,6 +66,13 @@ grid.addEventListener("selectionChange", (ev) => {
 
 The core owns the `tr[data-selected]` state attribute; the plugin only renders
 the checkboxes.
+
+Selection survives pagination and sorting, but **any population change clears
+it**: a `mode: "all"` selection only means something for the population it was
+created on. Changing the global search or the column filters (and switching the
+data source) invalidates the selection. The selection is also cleared as soon as
+the search input value changes, even before the new search is committed, so a
+bulk action never targets the population of a previous search.
 
 ## Bulk actions
 

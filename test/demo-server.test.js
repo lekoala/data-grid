@@ -17,24 +17,33 @@ test("paginates with page and pageSize", async () => {
     const res = await Bun.fetch(`${base}/api/users?page=2&pageSize=5`);
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.data).toHaveLength(5);
-    expect(json.meta.total).toBe(998);
-    expect(json.meta.filtered).toBe(998);
-    expect(json.data[0].id).toBe(6);
+    expect(json.rows).toHaveLength(5);
+    expect(json.total).toBe(998);
+    expect(json.meta.unfilteredTotal).toBe(998);
+    expect(json.rows[0].id).toBe(6);
 });
 
 test("sorts by field and direction", async () => {
     const res = await Bun.fetch(`${base}/api/users?sort[0][field]=company&sort[0][direction]=desc`);
     const json = await res.json();
-    expect(json.data[0].company).toBe("Google");
+    expect(json.rows[0].company).toBe("Google");
 });
 
 test("filters with bracket notation", async () => {
     const res = await Bun.fetch(`${base}/api/users?filters[company][operator]=eq&filters[company][value]=Acme`);
     const json = await res.json();
-    expect(json.meta.filtered).toBe(333);
-    for (const row of json.data) {
+    expect(json.total).toBe(333);
+    for (const row of json.rows) {
         expect(row.company).toBe("Acme");
+    }
+});
+
+test("searches with the global search parameter", async () => {
+    const res = await Bun.fetch(`${base}/api/users?search=First+name+500`);
+    const json = await res.json();
+    expect(json.total).toBe(1);
+    for (const row of json.rows) {
+        expect(row.first_name).toContain("First name 500");
     }
 });
 
@@ -59,6 +68,6 @@ test("edit persists an in-memory override", async () => {
 
     const check = await Bun.fetch(`${base}/api/users?filters[company][operator]=eq&filters[company][value]=Changed`);
     const json = await check.json();
-    expect(json.meta.filtered).toBe(1);
-    expect(json.data[0].id).toBe(1);
+    expect(json.total).toBe(1);
+    expect(json.rows[0].id).toBe(1);
 });

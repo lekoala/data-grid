@@ -18,7 +18,7 @@ Any object exposing one of these methods is a plugin (duck typing):
 
 ```js
 import { DataGrid } from "data-grid-component";
-import { BasePlugin } from "data-grid-component/src/core/base-plugin.js";
+import BasePlugin from "data-grid-component/plugin";
 
 class MyPlugin extends BasePlugin {
     afterRender(context) {
