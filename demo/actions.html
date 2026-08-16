@@ -76,8 +76,8 @@
     actionDemo.addEventListener("action", (ev) => {
       let z = document.getElementById("debug-zone");
       z.innerText = JSON.stringify(ev.detail);
-      if (ev.detail.action === "delete") {
-        actionDemo.dataSource.remove(ev.detail.data.id, "id");
+      if (ev.detail.name === "delete") {
+        actionDemo.dataSource.remove(ev.detail.row.id, "id");
         actionDemo.refresh();
       }
     });

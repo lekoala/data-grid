@@ -29,8 +29,10 @@ test.skipIf(IS_WINDOWS)(
         await waitFor(v, "window.grid && window.grid.rows.length > 0");
 
         await v.click('#local-grid tbody button[data-action="edit"]');
-        await waitFor(v, "window.lastAction && window.lastAction.action === 'edit'");
-        expect(await read(v, "window.lastAction.data.id")).toBe(1);
+        await waitFor(v, "window.lastAction && window.lastAction.name === 'edit'");
+        expect(await read(v, "window.lastAction.row.id")).toBe(1);
+        expect(await read(v, "window.lastAction.rowKey")).toBe("1");
+        expect(await read(v, "window.lastAction.action.name")).toBe("edit");
     },
     TIMEOUT,
 );
