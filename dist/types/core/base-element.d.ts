@@ -62,10 +62,10 @@ declare class BaseElement extends HTMLElement {
      * Observed attributes map to options (kebab-case -> camelCase).
      * An attribute without a value means "true".
      * @param {String} attributeName
-     * @param {String} oldValue
-     * @param {String} newValue
+     * @param {String|null} oldValue
+     * @param {String|null} newValue
      */
-    attributeChangedCallback(attributeName: string, oldValue: string, newValue: string): void;
+    attributeChangedCallback(attributeName: string, oldValue: string | null, newValue: string | null): void;
 }
 export default BaseElement;
 //# sourceMappingURL=base-element.d.ts.map

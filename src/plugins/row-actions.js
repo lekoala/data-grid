@@ -1,4 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
+import applyContent from "../utils/applyContent.js";
 import interpolate from "../utils/interpolate.js";
 import { dispatch, findAll, off, on } from "../utils/shortcuts.js";
 
@@ -6,6 +7,25 @@ import { dispatch, findAll, off, on } from "../utils/shortcuts.js";
  * Add actions on rows
  */
 class RowActions extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid) {
+        super(grid);
+        /** @type {HTMLUListElement|null} */
+        this.menu = null;
+        /** @type {HTMLElement|null} */
+        this.openCell = null;
+        /** @type {((e: MouseEvent) => void) | null} */
+        this._boundDocumentClick = null;
+        /** @type {((e: KeyboardEvent) => void) | null} */
+        this._boundKeydown = null;
+    }
+
+    disconnected() {
+        this.closeActionMenu();
+    }
+
     /**
      * Whether the actions column is active: static `options.actions`, the
      * `rowActions` capability or a declarative `<th data-actions>`.
@@ -121,8 +141,8 @@ class RowActions extends BasePlugin {
         while (menu.lastChild) {
             menu.removeChild(menu.lastChild);
         }
+        const rowKey = grid.resolveRowKey(row, rowIndex);
         for (const action of grid.getActionsForRow(row)) {
-            const rowKey = grid.resolveRowKey(row, rowIndex);
             if (action.visible && !action.visible(row, { grid, action, rowKey })) {
                 continue;
             }
@@ -233,8 +253,8 @@ class RowActions extends BasePlugin {
         fragment.appendChild(actionsToggle);
 
         let defaultApplied = false;
+        const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
         for (const action of actions) {
-            const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
             if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
                 continue;
             }
@@ -300,7 +320,7 @@ class RowActions extends BasePlugin {
             if (content === null || content === undefined) {
                 el.textContent = action.label ?? action.name;
             } else {
-                this.applyContent(el, content);
+                applyContent(el, content);
                 if (menu) {
                     // In the collapsed menu the custom content (often an icon)
                     // is kept, with the label shown next to it.
@@ -325,7 +345,7 @@ class RowActions extends BasePlugin {
             el.classList.add(`dg-intent-${action.intent}`);
         }
         if (action.class) {
-            el.classList.add(...action.class.split(" "));
+            el.classList.add(...action.class.trim().split(/\s+/));
         }
 
         // Disabled actions must really block: a native `disabled` on buttons,
@@ -375,21 +395,6 @@ class RowActions extends BasePlugin {
         el.addEventListener("click", dispatchAction);
 
         return { el, dispatchAction };
-    }
-
-    /**
-     * Apply renderer content to an element (same contract as renderCell).
-     * @param {HTMLElement} el
-     * @param {*} content
-     */
-    applyContent(el, content) {
-        if (content instanceof Node) {
-            el.appendChild(content);
-        } else if (typeof content === "object" && content.html !== undefined) {
-            el.innerHTML = content.html;
-        } else {
-            el.textContent = content;
-        }
     }
 
     get actionClass() {

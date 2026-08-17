@@ -15,13 +15,17 @@
 export default function debounce(handler, timeout = 300) {
     /** @type {ReturnType<typeof setTimeout> | null} */
     let timer = null;
+    /** @type {any[]|null} */
+    let lastArgs = null;
     /** @type {DebouncedFunction} */
     const fn = (...args) => {
+        lastArgs = args;
         if (timer !== null) {
             clearTimeout(timer);
         }
         timer = setTimeout(() => {
             timer = null;
+            lastArgs = null;
             handler(...args);
         }, timeout);
     };
@@ -31,11 +35,18 @@ export default function debounce(handler, timeout = 300) {
             clearTimeout(timer);
             timer = null;
         }
+        lastArgs = null;
     };
     /** Cancel a pending invocation and run the handler immediately. */
     fn.flush = () => {
-        fn.cancel();
-        handler();
+        if (timer === null) {
+            return;
+        }
+        clearTimeout(timer);
+        timer = null;
+        const args = lastArgs ?? [];
+        lastArgs = null;
+        handler(...args);
     };
     return fn;
 }

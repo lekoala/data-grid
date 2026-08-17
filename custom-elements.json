@@ -255,15 +255,15 @@
               "name": "getNext"
             },
             {
-              "kind": "field",
+              "kind": "method",
               "name": "sortAsc"
             },
             {
-              "kind": "field",
+              "kind": "method",
               "name": "sortDesc"
             },
             {
-              "kind": "field",
+              "kind": "method",
               "name": "sortNone"
             },
             {

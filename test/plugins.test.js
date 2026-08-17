@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
+import ColumnResizer from "../src/plugins/column-resizer.js";
 import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 
@@ -226,5 +227,41 @@ test("reorder pins both $selection and $actions at the extremes", async () => {
     reorder("first_name", "last_name");
     expect(headerIds()[0]).toBe("$selection");
     expect(headerIds()[headerIds().length - 1]).toBe("$actions");
+    document.body.removeChild(inst);
+});
+
+test("column resizer only clears widths on visible columns after a hidden column", async () => {
+    const inst = await makeReadyGrid(
+        { ColumnResizer },
+        {
+            resizable: true,
+            sortable: false,
+            columns: [
+                { field: "c0", title: "A" },
+                { field: "c1", title: "B", hidden: true },
+                { field: "c2", title: "C" },
+            ],
+        },
+        [{ c0: "x", c1: "y", c2: "z" }],
+    );
+
+    const c0 = inst.querySelector('thead th[data-column-id="c0"]');
+    const c1 = inst.querySelector('thead th[data-column-id="c1"]');
+    const c2 = inst.querySelector('thead th[data-column-id="c2"]');
+    // The hidden column is still in the DOM and carries the hidden attribute
+    expect(c1.hasAttribute("hidden")).toBe(true);
+
+    c0.setAttribute("width", "100");
+    c1.setAttribute("width", "50");
+    c2.setAttribute("width", "70");
+
+    const resizer = c0.querySelector(".dg-resizer");
+    expect(resizer).toBeTruthy();
+    resizer.dispatchEvent(new window.MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 10 }));
+
+    // Width is removed from the following *visible* column (c2) but the hidden
+    // column (c1) is left untouched.
+    expect(c2.hasAttribute("width")).toBe(false);
+    expect(c1.getAttribute("width")).toBe("50");
     document.body.removeChild(inst);
 });

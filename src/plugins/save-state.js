@@ -1,10 +1,10 @@
 import BasePlugin from "../core/base-plugin.js";
+import debounce from "../utils/debounce.js";
 
 /**
  * @typedef CachedGridState
  * @property {import("../data-source.js").QueryState} query
  * @property {Array<{ field: string, hidden?: boolean }>} columns
- * @property {Number} scrollTo
  */
 
 class SaveState extends BasePlugin {
@@ -14,10 +14,14 @@ class SaveState extends BasePlugin {
     constructor(grid) {
         super(grid);
         this.cachedState = null;
+        /** @type {(() => void) | null} */
+        this.onBodyRendered = null;
+        /** @type {(() => void) | null} */
+        this.onScroll = null;
         this.log("Init");
     }
 
-    async connected() {
+    connected() {
         this.log("connected");
         const grid = this.grid;
 
@@ -50,8 +54,22 @@ class SaveState extends BasePlugin {
             }
         }
 
-        grid.addEventListener("bodyRendered", () => this._update());
-        document.addEventListener("scrollend", () => this._update());
+        this.onBodyRendered = () => this._update();
+        this.onScroll = debounce(() => this._update(), 200);
+        grid.addEventListener("bodyRendered", this.onBodyRendered);
+        document.addEventListener("scroll", this.onScroll);
+    }
+
+    disconnected() {
+        const grid = this.grid;
+        if (this.onBodyRendered) {
+            grid.removeEventListener("bodyRendered", this.onBodyRendered);
+            this.onBodyRendered = null;
+        }
+        if (this.onScroll) {
+            document.removeEventListener("scroll", this.onScroll);
+            this.onScroll = null;
+        }
     }
 
     /**
@@ -65,7 +83,6 @@ class SaveState extends BasePlugin {
         this._setState({
             query: grid.query,
             columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) })),
-            scrollTo: window.scrollY,
         });
     }
 
@@ -95,7 +112,9 @@ class SaveState extends BasePlugin {
      * @param {CachedGridState} state
      */
     _setState(state) {
-        sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
+        try {
+            sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
+        } catch (_) {}
     }
 }
 

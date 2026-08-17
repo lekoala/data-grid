@@ -202,6 +202,20 @@ test("single select keeps at most one selected row and allows toggling off", asy
     document.body.removeChild(inst);
 });
 
+test("single select radios are scoped per grid so two grids stay independent", async () => {
+    const a = await makeReadyGrid({ columns: [{ field: "name" }], singleSelect: true });
+    const b = await makeReadyGrid({ columns: [{ field: "name" }], singleSelect: true });
+
+    const radioNameA = a.querySelector("tbody input").name;
+    const radioNameB = b.querySelector("tbody input").name;
+    expect(radioNameA).not.toBe(radioNameB);
+    expect(radioNameA).toBe(`dg-row-select-${a.id}`);
+    expect(radioNameB).toBe(`dg-row-select-${b.id}`);
+
+    document.body.removeChild(a);
+    document.body.removeChild(b);
+});
+
 test("toggling selectable at runtime updates header and body", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }] });
 

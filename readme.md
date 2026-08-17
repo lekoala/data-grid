@@ -24,6 +24,7 @@ Docs:
 - [Styling](docs/styling.md)
 - [Inline editing](docs/editing.md)
 - [Translations](docs/translations.md)
+- [Migration from v2](docs/migration-from-v2.md)
 
 ## How to use
 

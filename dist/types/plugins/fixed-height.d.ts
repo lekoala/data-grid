@@ -5,11 +5,6 @@ import BasePlugin from "../core/base-plugin.js";
  * We should add a fake row to push the footer down in case we don't have enough rows
  */
 declare class FixedHeight extends BasePlugin {
-    hasFixedHeight: boolean;
-    /**
-     * @param {import("../data-grid.js").default} grid
-     */
-    constructor(grid: import("../data-grid.js").default);
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */

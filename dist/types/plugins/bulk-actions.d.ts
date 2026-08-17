@@ -15,6 +15,10 @@ declare class BulkActions extends BasePlugin {
     countStatus: HTMLSpanElement | null;
     /** @type {HTMLButtonElement[]|null} */
     buttons: HTMLButtonElement[] | null;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid: import("../data-grid.js").default);
     connected(): void;
     disconnected(): void;
     /**

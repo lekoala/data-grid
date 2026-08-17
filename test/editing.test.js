@@ -137,3 +137,12 @@ test("preventDefault on the edit event rejects the commit", async () => {
     expect(inst.rows[0].name).toBe("a");
     document.body.removeChild(inst);
 });
+
+test("null and undefined editable values render as empty, not 'null'/'undefined'", async () => {
+    const inst = await makeReadyGrid({ columns: [editableColumn, { field: "age", editable: true }] }, [
+        { id: 1, name: "a", age: null },
+    ]);
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+    expect(inputs[1].value).toBe("");
+    document.body.removeChild(inst);
+});

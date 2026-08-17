@@ -418,7 +418,6 @@ export type TextInputState = {
 /**
  */
 declare class DataGrid extends BaseElement {
-    #private;
     _filterSelector: string;
     _excludedRowElementSelector: string;
     /**
@@ -441,22 +440,16 @@ declare class DataGrid extends BaseElement {
      * @type {SelectionState}
      */
     _selection: SelectionState;
-    /**
-     * @type {Number}
-     */
+    /** @type {Number} */
     _requestSeq: number;
-    /**
-     * @type {?AbortController}
-     */
+    /** @type {?AbortController} */
     _controller: AbortController | null;
     /**
      * Optional initial result, can be set as a property before connection
      * @type {PageResult|null}
      */
     initialResult: PageResult | null;
-    /**
-     * @type {PageResult|null}
-     */
+    /** @type {PageResult|null} */
     _initialResult: PageResult | null;
     /**
      * Rows of the current page
@@ -473,17 +466,11 @@ declare class DataGrid extends BaseElement {
      * @type {Record<string, any>}
      */
     meta: Record<string, any>;
-    /**
-     * @type {Number}
-     */
+    /** @type {Number} */
     pages: number;
-    /**
-     * @type {Boolean}
-     */
+    /** @type {Boolean} */
     loading: boolean;
-    /**
-     * @type {?Error}
-     */
+    /** @type {?Error} */
     error: Error | null;
     /**
      * Normalized columns of the current render cycle
@@ -534,6 +521,10 @@ declare class DataGrid extends BaseElement {
      * @type {import("./core/base-plugin.js").RenderContext|null}
      */
     _renderContext: import("./core/base-plugin.js").RenderContext | null;
+    /**
+     * @param {Object} [options]
+     */
+    constructor(options?: Object);
     _ready(): void;
     /**
      * Instantiate the registered plugin constructors.
@@ -571,6 +562,15 @@ declare class DataGrid extends BaseElement {
     /** Gets the text to be displayed when no data is loaded.
      * @public */
     get noData(): string;
+    /**
+     * @param {HTMLTableSectionElement} tbody
+     */
+    _setNoData(tbody: HTMLTableSectionElement): void;
+    /**
+     * Update the persistent status live region.
+     * @param {String} text
+     */
+    _updateStatus(text: string): void;
     updateLabels(): void;
     updateMetaLabel(): void;
     /**
@@ -1065,12 +1065,24 @@ declare class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     _sort(columnName: string, direction: "asc" | "desc" | "none"): Promise<void>;
-    /** @public @param {String} columnName */
-    sortAsc: (columnName: string) => Promise<void>;
-    /** @public @param {String} columnName */
-    sortDesc: (columnName: string) => Promise<void>;
-    /** @public @param {String} columnName */
-    sortNone: (columnName: string) => Promise<void>;
+    /**
+     * @public
+     * @param {String} columnName
+     * @returns {Promise<void>}
+     */
+    sortAsc(columnName: string): Promise<void>;
+    /**
+     * @public
+     * @param {String} columnName
+     * @returns {Promise<void>}
+     */
+    sortDesc(columnName: string): Promise<void>;
+    /**
+     * @public
+     * @param {String} columnName
+     * @returns {Promise<void>}
+     */
+    sortNone(columnName: string): Promise<void>;
     /**
      * @public
      * @returns {Promise<void>}

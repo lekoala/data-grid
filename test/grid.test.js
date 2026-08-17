@@ -262,3 +262,31 @@ test("inferring columns from the first load rebuilds the table structure", async
     expect(inst.querySelectorAll('thead tr.dg-head-columns th[data-column-id="id"]')).toHaveLength(1);
     removeGrid(inst);
 });
+
+test("row attr columns are set for falsy values like 0, false and empty string", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                { field: "n", attr: "data-n" },
+                { field: "ok", attr: "data-ok" },
+                { field: "s", attr: "data-s" },
+            ],
+        },
+        [{ id: 1, n: 0, ok: false, s: "" }],
+    );
+    const tr = inst.querySelector("tbody tr");
+    expect(tr.getAttribute("data-n")).toBe("0");
+    expect(tr.getAttribute("data-ok")).toBe("false");
+    expect(tr.getAttribute("data-s")).toBe("");
+    // null/undefined are skipped
+    const inst2 = await makeReadyGrid({ columns: [{ field: "n", attr: "data-n" }] }, [{ id: 2, n: null }]);
+    expect(inst2.querySelector("tbody tr").hasAttribute("data-n")).toBe(false);
+    removeGrid(inst);
+    removeGrid(inst2);
+});
+
+test("uppercase/lowercase transforms coerce non-strings instead of throwing", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "n", transform: "uppercase" }] }, [{ id: 1, n: 42 }]);
+    expect(inst.querySelector("tbody td").textContent).toBe("42");
+    removeGrid(inst);
+});

@@ -3,10 +3,14 @@ import BasePlugin from "../core/base-plugin.js";
  * Create a right click menu on the headers
  */
 declare class ContextMenu extends BasePlugin {
-    /**
-     * @type {HTMLUListElement|null}
-     */
+    /** @type {HTMLUListElement|null} */
     menu: HTMLUListElement | null;
+    /** @type {((e: MouseEvent) => void) | null} */
+    _docClickHandler: ((e: MouseEvent) => void) | null;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid: import("../data-grid.js").default);
     connected(): void;
     disconnected(): void;
     /**

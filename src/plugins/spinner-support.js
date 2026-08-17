@@ -22,7 +22,8 @@ class SpinnerSupport extends BasePlugin {
             return;
         }
         const cls = classes
-            .split(" ")
+            .trim()
+            .split(/\s+/)
             .map((e) => `.${e}`)
             .join("");
 
@@ -40,7 +41,9 @@ class SpinnerSupport extends BasePlugin {
                 styleParent.insertAdjacentHTML(position, template);
             }
         }
-        !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
+        if (!$(`i${cls}`, grid)) {
+            grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
+        }
     }
 }
 

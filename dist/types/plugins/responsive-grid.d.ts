@@ -32,6 +32,11 @@ declare class ResponsiveGrid extends BasePlugin {
     blockObserver(): void;
     unblockObserver(): void;
     /**
+     * @param {ResizeObserverEntry} entry
+     * @returns {Number}
+     */
+    _entryWidth(entry: ResizeObserverEntry): number;
+    /**
      * @returns {Boolean}
      */
     hasHiddenColumns(): boolean;

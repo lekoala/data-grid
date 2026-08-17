@@ -1,11 +1,20 @@
 import BasePlugin from "../core/base-plugin.js";
-import getParentElement from "../utils/getParentElement.js";
 import { off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Create a right click menu on the headers
  */
 class ContextMenu extends BasePlugin {
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid) {
+        super(grid);
+        /** @type {HTMLUListElement|null} */
+        this.menu = null;
+        /** @type {((e: MouseEvent) => void) | null} */
+        this._docClickHandler = null;
+    }
     connected() {
         /**
          * @type {HTMLUListElement|null}
@@ -13,8 +22,13 @@ class ContextMenu extends BasePlugin {
         this.menu = this.grid.querySelector(".dg-menu");
     }
     disconnected() {
-        if (this.grid.headerRow) {
-            off(this.grid.headerRow, "contextmenu", this);
+        const grid = this.grid;
+        if (grid.headerRow) {
+            off(grid.headerRow, "contextmenu", this);
+        }
+        if (this._docClickHandler) {
+            off(document, "click", this._docClickHandler);
+            this._docClickHandler = null;
         }
     }
 
@@ -59,9 +73,9 @@ class ContextMenu extends BasePlugin {
 
     oncontextmenu(/** @type {MouseEvent} */ e) {
         e.preventDefault();
-        const target = getParentElement(/** @type {HTMLElement} */ (e.target), "THEAD");
+        const target = /** @type {HTMLElement} */ (e.target).closest("thead");
         const menu = this.menu;
-        if (!menu) {
+        if (!menu || !target) {
             return;
         }
         const rect = target.getBoundingClientRect();
@@ -77,12 +91,14 @@ class ContextMenu extends BasePlugin {
             menu.style.left = `${x}px`;
         }
 
-        const documentClickHandler = (/** @type {MouseEvent} */ e) => {
-            if (!menu.contains(/** @type {Node} */ (e.target))) {
+        const documentClickHandler = (/** @type {MouseEvent} */ ev) => {
+            if (!menu.contains(/** @type {Node} */ (ev.target))) {
                 setAttribute(menu, "hidden", "");
                 off(document, "click", documentClickHandler);
+                this._docClickHandler = null;
             }
         };
+        this._docClickHandler = documentClickHandler;
         on(document, "click", documentClickHandler);
     }
     createMenu() {

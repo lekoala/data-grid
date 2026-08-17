@@ -7,16 +7,22 @@ import { dispatch } from "../utils/shortcuts.js";
  * which operates on a single row.
  */
 class BulkActions extends BasePlugin {
-    /** @type {HTMLDivElement|null} */
-    bar = null;
-    /** @type {HTMLSpanElement|null} */
-    countEl = null;
-    /** @type {HTMLSpanElement|null} */
-    countVisible = null;
-    /** @type {HTMLSpanElement|null} */
-    countStatus = null;
-    /** @type {HTMLButtonElement[]|null} */
-    buttons = null;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid) {
+        super(grid);
+        /** @type {HTMLDivElement|null} */
+        this.bar = null;
+        /** @type {HTMLSpanElement|null} */
+        this.countEl = null;
+        /** @type {HTMLSpanElement|null} */
+        this.countVisible = null;
+        /** @type {HTMLSpanElement|null} */
+        this.countStatus = null;
+        /** @type {HTMLButtonElement[]|null} */
+        this.buttons = null;
+    }
 
     connected() {
         const grid = this.grid;
@@ -44,7 +50,8 @@ class BulkActions extends BasePlugin {
         this.countEl.append(this.countVisible, this.countStatus);
         bar.appendChild(this.countEl);
 
-        this.buttons = bulkActions.map((action) => {
+        this.buttons = [];
+        for (const action of bulkActions) {
             const button = document.createElement("button");
             button.type = "button";
             button.dataset.action = action.name;
@@ -82,8 +89,8 @@ class BulkActions extends BasePlugin {
                 });
             });
             bar.appendChild(button);
-            return button;
-        });
+            this.buttons.push(button);
+        }
 
         const table = grid.querySelector("table");
         if (table) {

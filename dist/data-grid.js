@@ -34,29 +34,6 @@ function normalizeData(v) {
 }
 
 // src/utils/shortcuts.js
-var supportedPassiveTypes = [
-  "scroll",
-  "wheel",
-  "touchstart",
-  "touchmove",
-  "touchenter",
-  "touchend",
-  "touchleave",
-  "mouseout",
-  "mouseleave",
-  "mouseup",
-  "mousedown",
-  "mousemove",
-  "mouseenter",
-  "mousewheel",
-  "mouseover"
-];
-function passiveOpts(type) {
-  if (supportedPassiveTypes.includes(type)) {
-    return { passive: true };
-  }
-  return {};
-}
 function getAttribute(el, name) {
   return el.getAttribute(name);
 }
@@ -73,11 +50,11 @@ function removeAttribute(el, name) {
     el.removeAttribute(name);
   }
 }
-function on(el, type, listener) {
-  el.addEventListener(type, listener, passiveOpts(type));
+function on(el, type, listener, options = {}) {
+  el.addEventListener(type, listener, options);
 }
-function off(el, type, listener) {
-  el.removeEventListener(type, listener, passiveOpts(type));
+function off(el, type, listener, options = {}) {
+  el.removeEventListener(type, listener, options);
 }
 function dispatch(el, name, data = {}, bubbles = false) {
   const opts = {};
@@ -157,7 +134,7 @@ class BaseElement extends HTMLElement {
     }
   }
   handleEvent(event) {
-    const handler = Reflect.get(this, `on${event.type}`);
+    const handler = this[`on${event.type}`];
     if (typeof handler === "function") {
       handler.call(this, event);
     }
@@ -198,12 +175,13 @@ class BaseElement extends HTMLElement {
       return;
     }
     this.log(`attributeChangedCallback: ${attributeName}`);
-    const transformer = Reflect.get(this.transformAttributes, attributeName) ?? normalizeData;
+    const options = this.options;
+    const transformer = this.transformAttributes[attributeName] ?? normalizeData;
     const attr = camelize(attributeName);
     const raw = newValue === "" ? "true" : newValue;
-    Reflect.set(this.options, attr, transformer(raw));
+    options[attr] = transformer(raw);
     if (this.fireEvents) {
-      const handler = Reflect.get(this, `${attr}Changed`);
+      const handler = this[`${attr}Changed`];
       if (typeof handler === "function") {
         handler.call(this);
       }
@@ -490,15 +468,34 @@ function addSelectOption(el, value, label, checked = false) {
   el.appendChild(opt);
 }
 
+// src/utils/applyContent.js
+function applyContent(el, content) {
+  if (content === undefined || content === null) {
+    return;
+  }
+  if (content instanceof Node) {
+    el.appendChild(content);
+    return;
+  }
+  if (typeof content === "object" && content.html !== undefined) {
+    el.innerHTML = content.html;
+    return;
+  }
+  el.textContent = content;
+}
+
 // src/utils/debounce.js
 function debounce(handler, timeout = 300) {
   let timer = null;
+  let lastArgs = null;
   const fn = (...args) => {
+    lastArgs = args;
     if (timer !== null) {
       clearTimeout(timer);
     }
     timer = setTimeout(() => {
       timer = null;
+      lastArgs = null;
       handler(...args);
     }, timeout);
   };
@@ -507,10 +504,17 @@ function debounce(handler, timeout = 300) {
       clearTimeout(timer);
       timer = null;
     }
+    lastArgs = null;
   };
   fn.flush = () => {
-    fn.cancel();
-    handler();
+    if (timer === null) {
+      return;
+    }
+    clearTimeout(timer);
+    timer = null;
+    const args = lastArgs ?? [];
+    lastArgs = null;
+    handler(...args);
   };
   return fn;
 }
@@ -713,16 +717,17 @@ function rowsFromTable(table, columns, rowKey = "id") {
   for (const tr of trs) {
     const row = {};
     const tds = Array.from(tr.querySelectorAll(":scope > td")).filter((td) => !td.hasAttribute("data-actions"));
-    columns.forEach((column, index) => {
+    for (let index = 0;index < columns.length; index++) {
+      const column = columns[index];
       if (!column.field) {
-        return;
+        continue;
       }
       const td = tds[index];
       if (!td) {
-        return;
+        continue;
       }
       row[column.field] = td.dataset.value ?? td.textContent.trim();
-    });
+    }
     const actionsCell = tr.querySelector(":scope > td[data-actions]");
     if (actionsCell) {
       const actions = parseActionsCell(actionsCell);
@@ -752,20 +757,6 @@ function orderColumns(columns) {
   }
   return [...start.reverse(), ...middle, ...end];
 }
-function applyCellContent(el, content) {
-  if (content === undefined || content === null) {
-    return;
-  }
-  if (content instanceof Node) {
-    el.appendChild(content);
-    return;
-  }
-  if (typeof content === "object" && content.html !== undefined) {
-    el.innerHTML = content.html;
-    return;
-  }
-  el.textContent = content;
-}
 function isColumnHidden(column) {
   return Boolean(column.hidden || column.responsiveHidden);
 }
@@ -788,38 +779,41 @@ function applyColumnDefinition(el, column) {
 }
 
 class DataGrid extends base_element_default {
-  _filterSelector = "[id^=dg-filter]";
-  _excludedRowElementSelector = "a,button,input,select,textarea";
-  plugins = this._initPlugins();
-  _initialQuery = normalizeQuery(this.options.initialQuery);
-  _query = normalizeQuery(this._initialQuery);
-  _selection = { mode: "explicit", ids: new Set, except: new Set };
-  _requestSeq = 0;
-  _controller = null;
-  initialResult = null;
-  _initialResult = this.options.initialResult || this.initialResult || null;
-  rows = [];
-  total = 0;
-  meta = {};
-  pages = 0;
-  loading = false;
-  error = null;
-  _columns = [];
-  dataSource = null;
-  table = null;
-  scrollEl = document.createElement("div");
-  btnFirst = null;
-  btnPrev = null;
-  btnNext = null;
-  btnLast = null;
-  selectPerPage = null;
-  inputPage = null;
-  searchInput = null;
-  headerRow = null;
-  rowHeight = null;
-  _loadObserver = null;
-  _lazyPending = false;
-  _renderContext = null;
+  constructor(options = {}) {
+    super(options);
+    this._filterSelector = "[id^=dg-filter]";
+    this._excludedRowElementSelector = "a,button,input,select,textarea";
+    this.plugins = this._initPlugins();
+    this._initialQuery = normalizeQuery(this.options.initialQuery);
+    this._query = normalizeQuery(this._initialQuery);
+    this._selection = { mode: "explicit", ids: new Set, except: new Set };
+    this._requestSeq = 0;
+    this._controller = null;
+    this.initialResult = null;
+    this._initialResult = this.options.initialResult || this.initialResult || null;
+    this.rows = [];
+    this.total = 0;
+    this.meta = {};
+    this.pages = 0;
+    this.loading = false;
+    this.error = null;
+    this._columns = [];
+    this.dataSource = null;
+    this.table = null;
+    this.scrollEl = document.createElement("div");
+    this.btnFirst = null;
+    this.btnPrev = null;
+    this.btnNext = null;
+    this.btnLast = null;
+    this.selectPerPage = null;
+    this.inputPage = null;
+    this.searchInput = null;
+    this.headerRow = null;
+    this.rowHeight = null;
+    this._loadObserver = null;
+    this._lazyPending = false;
+    this._renderContext = null;
+  }
   _ready() {
     this.fireEvents = false;
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
@@ -902,12 +896,12 @@ class DataGrid extends base_element_default {
   get noData() {
     return this.options.noData || this.labels.noData;
   }
-  #setNoData(tbody) {
+  _setNoData(tbody) {
     if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
       tbody.setAttribute("data-empty-message", this.noData);
     }
   }
-  #updateStatus(text) {
+  _updateStatus(text) {
     const status = this.querySelector(".dg-status");
     if (status) {
       status.textContent = text;
@@ -937,15 +931,15 @@ class DataGrid extends base_element_default {
       button.setAttribute("aria-label", label);
       button.setAttribute("title", label);
     }
-    this.#setNoData(this.tbody);
+    this._setNoData(this.tbody);
     this.updateMetaLabel();
     this.updatePageStatus();
     if (this.loading) {
-      this.#updateStatus(this.labels.loading);
+      this._updateStatus(this.labels.loading);
     } else if (this.hasDataError) {
-      this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+      this._updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
     } else {
-      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+      this._updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
     }
     this.runPlugins("updateLabels");
   }
@@ -1066,7 +1060,7 @@ class DataGrid extends base_element_default {
   }
   runPlugins(hook, ...args) {
     for (const plugin of Object.values(this.plugins)) {
-      const fn = Reflect.get(plugin, hook);
+      const fn = plugin[hook];
       if (typeof fn === "function") {
         fn.call(plugin, ...args);
       }
@@ -1239,7 +1233,7 @@ class DataGrid extends base_element_default {
     this.error = null;
     setAttribute(this, "data-loading", "");
     removeAttribute(this, "data-error");
-    this.#updateStatus(this.labels.loading);
+    this._updateStatus(this.labels.loading);
     try {
       let result;
       if (this._initialResult) {
@@ -1257,7 +1251,7 @@ class DataGrid extends base_element_default {
       if (this.applyResult(result)) {
         return this.refresh();
       }
-      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+      this._updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
     } catch (err) {
       if (requestId !== this._requestSeq)
         return;
@@ -1268,7 +1262,7 @@ class DataGrid extends base_element_default {
       this.error = e;
       setAttribute(this, "data-error", "");
       this.tbody?.setAttribute("data-empty-message", message);
-      this.#updateStatus(message);
+      this._updateStatus(message);
       this.renderBody();
       dispatch(this, "loadError", e);
     } finally {
@@ -1372,7 +1366,7 @@ class DataGrid extends base_element_default {
     }
     if (this.searchInput) {
       this.searchInput.setAttribute("aria-label", this.labels.search);
-      this.searchInput.setAttribute("placeholder", this.labels.search);
+      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
       return;
     }
     const input = ce("input");
@@ -1641,7 +1635,7 @@ class DataGrid extends base_element_default {
     }
   }
   _handleComposition(target, composing) {
-    const input = target.closest(".dg-search, " + this._filterSelector);
+    const input = target.closest(`.dg-search, ${this._filterSelector}`);
     if (!input || !this._ownsControl(input)) {
       return;
     }
@@ -1687,22 +1681,21 @@ class DataGrid extends base_element_default {
     this._loadObserver.observe(this);
   }
   getCol(field) {
-    let found = null;
     for (const col of this.options.columns) {
       if (col.field === field) {
-        found = col;
+        return col;
       }
     }
-    return found;
+    return null;
   }
   getColProp(field, prop) {
     const c = this.getCol(field);
-    return c ? Reflect.get(c, prop) : null;
+    return c ? c[prop] : null;
   }
   setColProp(field, prop, val) {
     const c = this.getCol(field);
     if (c) {
-      Reflect.set(c, prop, val);
+      c[prop] = val;
     }
   }
   visibleColumns() {
@@ -1777,7 +1770,7 @@ class DataGrid extends base_element_default {
         this.rowHeight = tr.offsetHeight;
       }
     }
-    this.#setNoData(this.tbody);
+    this._setNoData(this.tbody);
     return this.fixPage();
   }
   resolveRowKey(row, index = 0) {
@@ -2058,9 +2051,15 @@ class DataGrid extends base_element_default {
     }
     return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
   }
-  sortAsc = (columnName) => this._sort(columnName, "asc");
-  sortDesc = (columnName) => this._sort(columnName, "desc");
-  sortNone = (columnName) => this._sort(columnName, "none");
+  sortAsc(columnName) {
+    return this._sort(columnName, "asc");
+  }
+  sortDesc(columnName) {
+    return this._sort(columnName, "desc");
+  }
+  sortNone(columnName) {
+    return this._sort(columnName, "none");
+  }
   clearFilters() {
     const inputs = findAll(this, this._filterSelector);
     for (const input of inputs) {
@@ -2421,7 +2420,7 @@ class DataGrid extends base_element_default {
         }
         const field = column.field;
         if (column.attr) {
-          if (field && item[field]) {
+          if (field && item[field] != null) {
             if (column.attr === "class") {
               addClass(tr, item[field]);
             } else {
@@ -2436,7 +2435,7 @@ class DataGrid extends base_element_default {
         td.setAttribute("data-name", column.title ?? "");
         const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
         if (column.renderCell) {
-          applyCellContent(td, column.renderCell(ctx));
+          applyContent(td, column.renderCell(ctx));
         } else {
           this.renderDefaultCell(td, ctx);
         }
@@ -2494,10 +2493,10 @@ class DataGrid extends base_element_default {
     let tv;
     switch (column.transform) {
       case "uppercase":
-        tv = v.toUpperCase();
+        tv = String(v).toUpperCase();
         break;
       case "lowercase":
-        tv = v.toLowerCase();
+        tv = String(v).toLowerCase();
         break;
       default:
         tv = v;
@@ -2558,7 +2557,7 @@ class BasePlugin {
   updateLabels() {}
   responsiveChanged(enabled) {}
   handleEvent(event) {
-    const handler = Reflect.get(this, `on${event.type}`);
+    const handler = this[`on${event.type}`];
     if (typeof handler === "function") {
       handler.call(this, event);
     }
@@ -2635,6 +2634,7 @@ class ColumnResizer extends base_plugin_default {
         e.stopPropagation();
       });
       on(resizer, "mousedown", (e) => {
+        e.preventDefault();
         e.stopPropagation();
         const target = e.target;
         const currentCols = findAll(grid, "thead tr.dg-head-columns th");
@@ -2654,7 +2654,7 @@ class ColumnResizer extends base_plugin_default {
         setAttribute(col, "width", startW);
         for (let j = 0;j < visibleCols.length; j++) {
           if (j > columnIndex) {
-            removeAttribute(cols[j], "width");
+            removeAttribute(visibleCols[j], "width");
           }
         }
         on(document, "mousemove", mouseMoveHandler);
@@ -2665,23 +2665,24 @@ class ColumnResizer extends base_plugin_default {
 }
 var column_resizer_default = ColumnResizer;
 
-// src/utils/getParentElement.js
-function getParentElement(el, type, prop = "nodeName") {
-  let parent = el;
-  while (parent && Reflect.get(parent, prop) !== type) {
-    parent = parent.parentElement;
-  }
-  return parent;
-}
-
 // src/plugins/context-menu.js
 class ContextMenu extends base_plugin_default {
+  constructor(grid) {
+    super(grid);
+    this.menu = null;
+    this._docClickHandler = null;
+  }
   connected() {
     this.menu = this.grid.querySelector(".dg-menu");
   }
   disconnected() {
-    if (this.grid.headerRow) {
-      off(this.grid.headerRow, "contextmenu", this);
+    const grid = this.grid;
+    if (grid.headerRow) {
+      off(grid.headerRow, "contextmenu", this);
+    }
+    if (this._docClickHandler) {
+      off(document, "click", this._docClickHandler);
+      this._docClickHandler = null;
     }
   }
   afterRender(context) {
@@ -2717,9 +2718,9 @@ class ContextMenu extends base_plugin_default {
   }
   oncontextmenu(e) {
     e.preventDefault();
-    const target = getParentElement(e.target, "THEAD");
+    const target = e.target.closest("thead");
     const menu = this.menu;
-    if (!menu) {
+    if (!menu || !target) {
       return;
     }
     const rect = target.getBoundingClientRect();
@@ -2732,12 +2733,14 @@ class ContextMenu extends base_plugin_default {
       x -= menu.offsetWidth;
       menu.style.left = `${x}px`;
     }
-    const documentClickHandler = (e2) => {
-      if (!menu.contains(e2.target)) {
+    const documentClickHandler = (ev) => {
+      if (!menu.contains(ev.target)) {
         setAttribute(menu, "hidden", "");
         off(document, "click", documentClickHandler);
+        this._docClickHandler = null;
       }
     };
+    this._docClickHandler = documentClickHandler;
     on(document, "click", documentClickHandler);
   }
   createMenu() {
@@ -2796,38 +2799,33 @@ class DraggableHeaders extends base_plugin_default {
       dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
     });
     on(th, "dragover", (e) => {
-      if (e.preventDefault) {
-        e.preventDefault();
-      }
+      e.preventDefault();
       if (e.dataTransfer) {
         e.dataTransfer.dropEffect = "move";
       }
-      return false;
     });
     on(th, "drop", (e) => {
-      if (e.stopPropagation) {
-        e.stopPropagation();
-      }
-      const target = getParentElement(e.target, "TH");
+      e.stopPropagation();
+      const target = e.target.closest("th");
       const dt = e.dataTransfer;
       if (!dt) {
-        return false;
+        return;
       }
       const draggedId = dt.getData("text/plain");
       const targetId = target?.getAttribute("data-column-id");
       if (!targetId || draggedId === targetId) {
         grid.log("reordered col stayed the same");
-        return false;
+        return;
       }
       if (draggedId.startsWith("$") || targetId.startsWith("$")) {
-        return false;
+        return;
       }
       grid.log(`reordered col from ${draggedId} to ${targetId}`);
       const cols = grid.options.columns;
       const from = cols.findIndex((c) => (c.id ?? c.field) === draggedId);
       const to = cols.findIndex((c) => (c.id ?? c.field) === targetId);
       if (from === -1 || to === -1) {
-        return false;
+        return;
       }
       [cols[from], cols[to]] = [cols[to], cols[from]];
       grid.renderTable();
@@ -2836,7 +2834,6 @@ class DraggableHeaders extends base_plugin_default {
         from,
         to
       });
-      return false;
     });
   }
 }
@@ -2945,13 +2942,12 @@ class SelectableRows extends base_plugin_default {
       return;
     }
     const inputs = Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`));
-    const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
     for (const input of inputs) {
       const tr = input.closest("tr");
       if (!tr) {
         continue;
       }
-      const index = trs.indexOf(tr);
+      const index = Number.parseInt(tr.dataset.rowIndex ?? "", 10);
       const row = grid.rows[index];
       if (row === undefined) {
         continue;
@@ -2965,7 +2961,8 @@ class SelectableRows extends base_plugin_default {
     if (!this.selectAll || !grid.options.selectable) {
       return;
     }
-    const visible = [];
+    let visible = 0;
+    let checked = 0;
     const tbody = grid.tbody;
     if (tbody) {
       const inputs = Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`));
@@ -2973,12 +2970,14 @@ class SelectableRows extends base_plugin_default {
         if (this.visibleOnly && input.closest("tr[hidden]")) {
           continue;
         }
-        visible.push(input);
+        visible += 1;
+        if (input.checked) {
+          checked += 1;
+        }
       }
     }
-    const checked = visible.filter((input) => input.checked).length;
-    this.selectAll.indeterminate = checked > 0 && checked < visible.length;
-    this.selectAll.checked = visible.length > 0 && checked === visible.length;
+    this.selectAll.indeterminate = checked > 0 && checked < visible;
+    this.selectAll.checked = visible > 0 && checked === visible;
   }
   createHeaderCell(th) {
     th.classList.add("dg-not-resizable", "dg-not-sortable");
@@ -3008,7 +3007,7 @@ class SelectableRows extends base_plugin_default {
     input.checked = row ? grid.isRowSelected(row, rowIndex ?? 0) : false;
     input.setAttribute("aria-label", grid.formatLabel(grid.labels.selectRow, { row: grid.getRowLabel(row ?? {}, rowIndex ?? 0) }));
     if (this.isSingleSelect) {
-      input.name = "dg-row-select";
+      input.name = `dg-row-select-${grid.id}`;
     }
     const label = document.createElement("label");
     label.classList.add("dg-clickable-cell");
@@ -3039,11 +3038,14 @@ var selectable_rows_default = SelectableRows;
 
 // src/plugins/bulk-actions.js
 class BulkActions extends base_plugin_default {
-  bar = null;
-  countEl = null;
-  countVisible = null;
-  countStatus = null;
-  buttons = null;
+  constructor(grid) {
+    super(grid);
+    this.bar = null;
+    this.countEl = null;
+    this.countVisible = null;
+    this.countStatus = null;
+    this.buttons = null;
+  }
   connected() {
     const grid = this.grid;
     const bulkActions = grid.options.bulkActions ?? [];
@@ -3065,7 +3067,8 @@ class BulkActions extends base_plugin_default {
     this.countStatus.className = "dg-visually-hidden";
     this.countEl.append(this.countVisible, this.countStatus);
     bar.appendChild(this.countEl);
-    this.buttons = bulkActions.map((action) => {
+    this.buttons = [];
+    for (const action of bulkActions) {
       const button = document.createElement("button");
       button.type = "button";
       button.dataset.action = action.name;
@@ -3103,8 +3106,8 @@ class BulkActions extends base_plugin_default {
         });
       });
       bar.appendChild(button);
-      return button;
-    });
+      this.buttons.push(button);
+    }
     const table = grid.querySelector("table");
     if (table) {
       grid.ensureTopbar().querySelector(".dg-topbar-start")?.appendChild(bar);
@@ -3152,13 +3155,6 @@ var bulk_actions_default = BulkActions;
 
 // src/plugins/fixed-height.js
 class FixedHeight extends base_plugin_default {
-  constructor(grid) {
-    super(grid);
-    this.hasFixedHeight = false;
-    if (grid.style.height) {
-      this.hasFixedHeight = true;
-    }
-  }
   afterRender(context) {
     if (context !== "body") {
       return;
@@ -3218,10 +3214,14 @@ class AutosizeColumn extends base_plugin_default {
     }
     const availableWidth = grid.clientWidth;
     const colMaxWidth = Math.round(availableWidth / grid.columnsLength(true) * 2);
+    const columns = new Map;
+    for (const column of grid.getColumns()) {
+      columns.set(column.id ?? column.field ?? "", column);
+    }
     const ths = findAll(grid, "thead tr.dg-head-columns th[data-column-id]:not([hidden])");
     let totalWidth = 0;
     for (const th of ths) {
-      const column = grid.getColumns().find((c) => (c.id ?? c.field) === th.getAttribute("data-column-id"));
+      const column = columns.get(th.getAttribute("data-column-id") ?? "");
       if (!column) {
         continue;
       }
@@ -3241,8 +3241,8 @@ class AutosizeColumn extends base_plugin_default {
     }
     const firstVal = grid.rows[0];
     const lastVal = grid.rows[grid.rows.length - 1];
-    let v = firstVal[field] ? firstVal[field].toString() : "";
-    const v2 = lastVal[field] ? lastVal[field].toString() : "";
+    let v = firstVal[field] != null ? firstVal[field].toString() : "";
+    const v2 = lastVal[field] != null ? lastVal[field].toString() : "";
     if (v2.length > v.length) {
       v = v2;
     }
@@ -3351,22 +3351,24 @@ class ResponsiveGrid extends base_plugin_default {
       this.observerBlocked = false;
       const entry = this._lastEntry;
       if (entry) {
-        const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
-        const size = Math.round(contentBoxSize.inlineSize);
+        const size = Math.round(this._entryWidth(entry));
         if (size !== this._lastProcessedWidth) {
           this.resize();
         }
       }
     }, 200);
   }
+  _entryWidth(entry) {
+    const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
+    return Math.round(contentBoxSize?.inlineSize ?? entry.contentRect?.width ?? 0);
+  }
   hasHiddenColumns() {
-    let flag = false;
     for (const col of this.grid.options.columns) {
       if (col.responsiveHidden) {
-        flag = true;
+        return true;
       }
     }
-    return flag;
+    return false;
   }
   createHeaderCell(th) {
     th.classList.add("dg-not-resizable", "dg-not-sortable");
@@ -3400,15 +3402,17 @@ class ResponsiveGrid extends base_plugin_default {
     if (!entry) {
       return;
     }
-    const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
-    const size = Math.round(contentBoxSize.inlineSize);
+    const size = this._entryWidth(entry);
     if (size === this._lastProcessedWidth) {
       return;
     }
     this._lastProcessedWidth = size;
-    const preferredWidth = (th) => {
-      return Number.parseInt(th.dataset.preferredWidth ?? "") || Number.parseInt(th.getAttribute("width") ?? "") || Number.parseInt(th.dataset.minWidth ?? "") || Number.parseInt(getComputedStyle(th).minWidth || "") || 0;
-    };
+    const widths = new Map;
+    for (const th of findAll(headerRow, "th")) {
+      const el = th;
+      widths.set(el, Number.parseInt(el.dataset.preferredWidth ?? "") || Number.parseInt(el.getAttribute("width") ?? "") || Number.parseInt(el.dataset.minWidth ?? "") || Number.parseInt(getComputedStyle(el).minWidth || "") || 0);
+    }
+    const preferredWidth = (th) => widths.get(th) ?? 0;
     const items = sortByPriority(findAll(headerRow, "th[field]").reverse().filter((th) => {
       const column = grid.getCol(th.getAttribute("field") ?? "");
       return column && this._isEssential(column) === false;
@@ -3572,7 +3576,7 @@ class ResponsiveGrid extends base_plugin_default {
         const childTableRow = ce("tr", childTable);
         const labelCol = ce("th", childTableRow);
         labelCol.style.width = `${idealWidth}px`;
-        labelCol.innerHTML = col.dataset.name ?? "";
+        labelCol.textContent = col.dataset.name ?? "";
         childTableRow.appendChild(col);
         removeAttribute(col, "hidden");
       }
@@ -3654,11 +3658,21 @@ var responsive_grid_default = ResponsiveGrid;
 
 // src/utils/interpolate.js
 function interpolate(str, data) {
-  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2]);
+  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2] ?? "");
 }
 
 // src/plugins/row-actions.js
 class RowActions extends base_plugin_default {
+  constructor(grid) {
+    super(grid);
+    this.menu = null;
+    this.openCell = null;
+    this._boundDocumentClick = null;
+    this._boundKeydown = null;
+  }
+  disconnected() {
+    this.closeActionMenu();
+  }
   hasActions() {
     const grid = this.grid;
     return grid.options.actions.length > 0 || grid.options.rowActions;
@@ -3734,8 +3748,8 @@ class RowActions extends base_plugin_default {
     while (menu.lastChild) {
       menu.removeChild(menu.lastChild);
     }
+    const rowKey = grid.resolveRowKey(row, rowIndex);
     for (const action of grid.getActionsForRow(row)) {
-      const rowKey = grid.resolveRowKey(row, rowIndex);
       if (action.visible && !action.visible(row, { grid, action, rowKey })) {
         continue;
       }
@@ -3825,8 +3839,8 @@ class RowActions extends base_plugin_default {
     });
     fragment.appendChild(actionsToggle);
     let defaultApplied = false;
+    const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
     for (const action of actions) {
-      const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
       if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
         continue;
       }
@@ -3868,7 +3882,7 @@ class RowActions extends base_plugin_default {
       if (content === null || content === undefined) {
         el.textContent = action.label ?? action.name;
       } else {
-        this.applyContent(el, content);
+        applyContent(el, content);
         if (menu) {
           const label = document.createElement("span");
           label.className = "dg-action-label";
@@ -3888,7 +3902,7 @@ class RowActions extends base_plugin_default {
       el.classList.add(`dg-intent-${action.intent}`);
     }
     if (action.class) {
-      el.classList.add(...action.class.split(" "));
+      el.classList.add(...action.class.trim().split(/\s+/));
     }
     const isDisabled = typeof action.disabled === "function" ? action.disabled(row, ctx) : Boolean(action.disabled);
     if (isDisabled) {
@@ -3932,15 +3946,6 @@ class RowActions extends base_plugin_default {
     el.addEventListener("click", dispatchAction);
     return { el, dispatchAction };
   }
-  applyContent(el, content) {
-    if (content instanceof Node) {
-      el.appendChild(content);
-    } else if (typeof content === "object" && content.html !== undefined) {
-      el.innerHTML = content.html;
-    } else {
-      el.textContent = content;
-    }
-  }
   get actionClass() {
     const { actions, collapseActions, rowActions } = this.grid.options;
     if (rowActions && actions.length === 0) {
@@ -3961,10 +3966,14 @@ class EditableColumn extends base_plugin_default {
       return;
     }
     const grid = this.grid;
+    const columns = new Map;
+    for (const column of grid.getColumns()) {
+      columns.set(column.id ?? column.field ?? "", column);
+    }
     const cells = findAll(grid, "tbody td.dg-editable-col");
     for (const td of cells) {
       const rowIndex = Number.parseInt(td.dataset.rowIndex ?? "");
-      const column = grid.getColumns().find((c) => (c.id ?? c.field) === td.getAttribute("data-column-id"));
+      const column = columns.get(td.getAttribute("data-column-id") ?? "");
       const item = grid.rows[rowIndex];
       if (!column || !item) {
         continue;
@@ -3993,7 +4002,7 @@ class EditableColumn extends base_plugin_default {
     input.classList.add("dg-editable");
     input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
-    input.value = item[field];
+    input.value = item[field] ?? "";
     input.dataset.field = field;
     const previous = () => item[field];
     const startEditing = () => {
@@ -4073,7 +4082,7 @@ class SpinnerSupport extends base_plugin_default {
     if (!classes) {
       return;
     }
-    const cls = classes.split(" ").map((e) => `.${e}`).join("");
+    const cls = classes.trim().split(/\s+/).map((e) => `.${e}`).join("");
     const template = `
 <style id="dg-styles">
   data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
@@ -4088,7 +4097,9 @@ class SpinnerSupport extends base_plugin_default {
         styleParent.insertAdjacentHTML(position, template);
       }
     }
-    !$(`i${cls}`, grid) && grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
+    if (!$(`i${cls}`, grid)) {
+      grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
+    }
   }
 }
 var spinner_support_default = SpinnerSupport;
@@ -4098,9 +4109,11 @@ class SaveState extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.cachedState = null;
+    this.onBodyRendered = null;
+    this.onScroll = null;
     this.log("Init");
   }
-  async connected() {
+  connected() {
     this.log("connected");
     const grid = this.grid;
     if (!grid.options.saveState) {
@@ -4124,8 +4137,21 @@ class SaveState extends base_plugin_default {
         grid._query = cachedState.query;
       }
     }
-    grid.addEventListener("bodyRendered", () => this._update());
-    document.addEventListener("scrollend", () => this._update());
+    this.onBodyRendered = () => this._update();
+    this.onScroll = debounce(() => this._update(), 200);
+    grid.addEventListener("bodyRendered", this.onBodyRendered);
+    document.addEventListener("scroll", this.onScroll);
+  }
+  disconnected() {
+    const grid = this.grid;
+    if (this.onBodyRendered) {
+      grid.removeEventListener("bodyRendered", this.onBodyRendered);
+      this.onBodyRendered = null;
+    }
+    if (this.onScroll) {
+      document.removeEventListener("scroll", this.onScroll);
+      this.onScroll = null;
+    }
   }
   _update() {
     const grid = this.grid;
@@ -4134,8 +4160,7 @@ class SaveState extends base_plugin_default {
     }
     this._setState({
       query: grid.query,
-      columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) })),
-      scrollTo: window.scrollY
+      columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) }))
     });
   }
   log(...data) {
@@ -4152,7 +4177,9 @@ class SaveState extends base_plugin_default {
     return state;
   }
   _setState(state) {
-    sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
+    try {
+      sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
+    } catch (_) {}
   }
 }
 var save_state_default = SaveState;

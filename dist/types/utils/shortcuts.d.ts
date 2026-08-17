@@ -76,14 +76,16 @@ export declare function removeAttribute(el: Element, name: string): void;
  * @param {EventTarget} el
  * @param {String} type
  * @param {Function|EventListenerObject|FlexibleListener} listener
+ * @param {AddEventListenerOptions} [options]
  */
-export declare function on(el: EventTarget, type: string, listener: Function | EventListenerObject | FlexibleListener): void;
+export declare function on(el: EventTarget, type: string, listener: Function | EventListenerObject | FlexibleListener, options?: AddEventListenerOptions): void;
 /**
  * @param {EventTarget} el
  * @param {String} type
  * @param {Function|EventListenerObject|FlexibleListener} listener
+ * @param {AddEventListenerOptions} [options]
  */
-export declare function off(el: EventTarget, type: string, listener: Function | EventListenerObject | FlexibleListener): void;
+export declare function off(el: EventTarget, type: string, listener: Function | EventListenerObject | FlexibleListener, options?: AddEventListenerOptions): void;
 /**
  * @param {EventTarget} el
  * @param {String} type

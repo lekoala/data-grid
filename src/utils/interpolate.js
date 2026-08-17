@@ -5,5 +5,5 @@
  * @returns {String}
  */
 export default function interpolate(str, data) {
-    return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2]);
+    return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2] ?? "");
 }

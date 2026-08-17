@@ -19,10 +19,14 @@ class AutosizeColumn extends BasePlugin {
         }
         const availableWidth = grid.clientWidth;
         const colMaxWidth = Math.round((availableWidth / grid.columnsLength(true)) * 2);
+        const columns = new Map();
+        for (const column of grid.getColumns()) {
+            columns.set(column.id ?? column.field ?? "", column);
+        }
         const ths = findAll(grid, "thead tr.dg-head-columns th[data-column-id]:not([hidden])");
         let totalWidth = 0;
         for (const th of ths) {
-            const column = grid.getColumns().find((c) => (c.id ?? c.field) === th.getAttribute("data-column-id"));
+            const column = columns.get(th.getAttribute("data-column-id") ?? "");
             if (!column) {
                 continue;
             }
@@ -56,8 +60,8 @@ class AutosizeColumn extends BasePlugin {
         }
         const firstVal = grid.rows[0];
         const lastVal = grid.rows[grid.rows.length - 1];
-        let v = firstVal[field] ? firstVal[field].toString() : "";
-        const v2 = lastVal[field] ? lastVal[field].toString() : "";
+        let v = firstVal[field] != null ? firstVal[field].toString() : "";
+        const v2 = lastVal[field] != null ? lastVal[field].toString() : "";
         if (v2.length > v.length) {
             v = v2;
         }

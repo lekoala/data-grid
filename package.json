@@ -42,12 +42,13 @@
     "test:browser": "bun test test/browser",
     "test:browser:wsl": "wsl -e bash scripts/test-browser-wsl.sh",
     "check": "biome check .",
+    "check:baseline": "bun scripts/check-baseline.js",
     "check:locales": "bun scripts/check-locales.js",
     "typecheck": "tsc -p jsconfig.json",
     "types": "tsc -p tsconfig.types.json",
     "manifest": "bun scripts/custom-elements.js",
     "check:package": "bun scripts/check-package.js",
-    "ci": "bun run check && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run manifest && bun run build && git diff --exit-code -- dist custom-elements.json"
+    "ci": "bun run check && bun run check:baseline && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run manifest && bun run build && git diff --exit-code -- dist custom-elements.json"
   },
   "repository": {
     "type": "git",

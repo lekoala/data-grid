@@ -1,5 +1,4 @@
 import BasePlugin from "../core/base-plugin.js";
-import getParentElement from "../utils/getParentElement.js";
 import { dispatch, findAll, on } from "../utils/shortcuts.js";
 
 /**
@@ -35,32 +34,27 @@ class DraggableHeaders extends BasePlugin {
             dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
         });
         on(th, "dragover", (/** @type {DragEvent} */ e) => {
-            if (e.preventDefault) {
-                e.preventDefault();
-            }
+            e.preventDefault();
             if (e.dataTransfer) {
                 e.dataTransfer.dropEffect = "move";
             }
-            return false;
         });
         on(th, "drop", (/** @type {DragEvent} */ e) => {
-            if (e.stopPropagation) {
-                e.stopPropagation();
-            }
-            const target = getParentElement(/** @type {HTMLElement} */ (e.target), "TH");
+            e.stopPropagation();
+            const target = /** @type {HTMLElement} */ (e.target).closest("th");
             const dt = e.dataTransfer;
             if (!dt) {
-                return false;
+                return;
             }
             const draggedId = dt.getData("text/plain");
             const targetId = target?.getAttribute("data-column-id");
             if (!targetId || draggedId === targetId) {
                 grid.log("reordered col stayed the same");
-                return false;
+                return;
             }
             // Virtual columns are pinned and cannot be reordered
             if (draggedId.startsWith("$") || targetId.startsWith("$")) {
-                return false;
+                return;
             }
             grid.log(`reordered col from ${draggedId} to ${targetId}`);
 
@@ -68,7 +62,7 @@ class DraggableHeaders extends BasePlugin {
             const from = cols.findIndex((c) => (c.id ?? c.field) === draggedId);
             const to = cols.findIndex((c) => (c.id ?? c.field) === targetId);
             if (from === -1 || to === -1) {
-                return false;
+                return;
             }
             [cols[from], cols[to]] = [cols[to], cols[from]];
 
@@ -79,7 +73,6 @@ class DraggableHeaders extends BasePlugin {
                 from,
                 to,
             });
-            return false;
         });
     }
 }

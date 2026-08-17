@@ -44,36 +44,6 @@ class FlexibleEventListenerObject {
     handleEvent(e) {}
 }
 
-const supportedPassiveTypes = [
-    "scroll",
-    "wheel",
-    "touchstart",
-    "touchmove",
-    "touchenter",
-    "touchend",
-    "touchleave",
-    "mouseout",
-    "mouseleave",
-    "mouseup",
-    "mousedown",
-    "mousemove",
-    "mouseenter",
-    "mousewheel",
-    "mouseover",
-];
-
-/**
- * Automatically set passive options based on type
- * @param {string} type
- * @returns {AddEventListenerOptions}
- */
-function passiveOpts(type) {
-    if (supportedPassiveTypes.includes(type)) {
-        return { passive: true };
-    }
-    return {};
-}
-
 /**
  * @param {Element} el
  * @param {String} name
@@ -117,18 +87,20 @@ export function removeAttribute(el, name) {
  * @param {EventTarget} el
  * @param {String} type
  * @param {Function|EventListenerObject|FlexibleListener} listener
+ * @param {AddEventListenerOptions} [options]
  */
-export function on(el, type, listener) {
-    el.addEventListener(type, /** @type {any} */ (listener), passiveOpts(type));
+export function on(el, type, listener, options = {}) {
+    el.addEventListener(type, /** @type {any} */ (listener), options);
 }
 
 /**
  * @param {EventTarget} el
  * @param {String} type
  * @param {Function|EventListenerObject|FlexibleListener} listener
+ * @param {AddEventListenerOptions} [options]
  */
-export function off(el, type, listener) {
-    el.removeEventListener(type, /** @type {any} */ (listener), passiveOpts(type));
+export function off(el, type, listener, options = {}) {
+    el.removeEventListener(type, /** @type {any} */ (listener), options);
 }
 
 /**

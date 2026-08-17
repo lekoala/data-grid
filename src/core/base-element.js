@@ -79,7 +79,7 @@ class BaseElement extends HTMLElement {
      * @param {Event} event
      */
     handleEvent(event) {
-        const handler = Reflect.get(this, `on${event.type}`);
+        const handler = /** @type {Record<string, any>} */ (this)[`on${event.type}`];
         if (typeof handler === "function") {
             handler.call(this, event);
         }
@@ -140,8 +140,8 @@ class BaseElement extends HTMLElement {
      * Observed attributes map to options (kebab-case -> camelCase).
      * An attribute without a value means "true".
      * @param {String} attributeName
-     * @param {String} oldValue
-     * @param {String} newValue
+     * @param {String|null} oldValue
+     * @param {String|null} newValue
      */
     attributeChangedCallback(attributeName, oldValue, newValue) {
         // It didn't change
@@ -151,14 +151,16 @@ class BaseElement extends HTMLElement {
 
         this.log(`attributeChangedCallback: ${attributeName}`);
 
-        const transformer = Reflect.get(this.transformAttributes, attributeName) ?? normalizeData;
+        const options = /** @type {Record<string, any>} */ (this.options);
+        const transformer =
+            /** @type {Record<string, any>} */ (this.transformAttributes)[attributeName] ?? normalizeData;
         const attr = camelize(attributeName);
         const raw = newValue === "" ? "true" : newValue;
-        Reflect.set(this.options, attr, transformer(raw));
+        options[attr] = transformer(raw);
 
         // Fire internal event
         if (this.fireEvents) {
-            const handler = Reflect.get(this, `${attr}Changed`);
+            const handler = /** @type {Record<string, any>} */ (this)[`${attr}Changed`];
             if (typeof handler === "function") {
                 handler.call(this);
             }

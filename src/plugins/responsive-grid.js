@@ -132,10 +132,7 @@ class ResponsiveGrid extends BasePlugin {
             // (the state is idempotent for a given width).
             const entry = this._lastEntry;
             if (entry) {
-                const contentBoxSize = Array.isArray(entry.contentBoxSize)
-                    ? entry.contentBoxSize[0]
-                    : entry.contentBoxSize;
-                const size = Math.round(contentBoxSize.inlineSize);
+                const size = Math.round(this._entryWidth(entry));
                 if (size !== this._lastProcessedWidth) {
                     this.resize();
                 }
@@ -144,17 +141,24 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /**
+     * @param {ResizeObserverEntry} entry
+     * @returns {Number}
+     */
+    _entryWidth(entry) {
+        const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
+        return Math.round(contentBoxSize?.inlineSize ?? entry.contentRect?.width ?? 0);
+    }
+
+    /**
      * @returns {Boolean}
      */
     hasHiddenColumns() {
-        let flag = false;
-
         for (const col of this.grid.options.columns) {
             if (col.responsiveHidden) {
-                flag = true;
+                return true;
             }
         }
-        return flag;
+        return false;
     }
 
     /**
@@ -205,8 +209,7 @@ class ResponsiveGrid extends BasePlugin {
             return;
         }
         // check inlineSize (width) and not blockSize (height)
-        const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
-        const size = Math.round(contentBoxSize.inlineSize);
+        const size = this._entryWidth(entry);
         // The state is idempotent for a given width: skip duplicate evaluations
         // (ex: a resize that merely re-renders after a visibility change).
         if (size === this._lastProcessedWidth) {
@@ -214,20 +217,26 @@ class ResponsiveGrid extends BasePlugin {
         }
         this._lastProcessedWidth = size;
 
-        // Preferred (ideal) width of a header column, before any compression.
-        // Falls back to the CSS min-width (plugin columns such as actions or
-        // selection only declare a min/width in CSS) and finally 0: a column
+        // Preferred (ideal) width of each rendered header column, computed once
+        // per cycle and cached in a map to avoid repeated getComputedStyle/layout
+        // reads. Falls back to the CSS min-width (plugin columns such as actions
+        // or selection only declare a min/width in CSS) and finally 0: a column
         // without a declared basis is a stretch column and must not feed its
         // layout-dependent offsetWidth back into the math (that oscillates).
-        const preferredWidth = (/** @type {HTMLElement} */ th) => {
-            return (
-                Number.parseInt(th.dataset.preferredWidth ?? "") ||
-                Number.parseInt(th.getAttribute("width") ?? "") ||
-                Number.parseInt(th.dataset.minWidth ?? "") ||
-                Number.parseInt(getComputedStyle(th).minWidth || "") ||
-                0
+        /** @type {Map<HTMLElement, Number>} */
+        const widths = new Map();
+        for (const th of findAll(headerRow, "th")) {
+            const el = /** @type {HTMLElement} */ (th);
+            widths.set(
+                el,
+                Number.parseInt(el.dataset.preferredWidth ?? "") ||
+                    Number.parseInt(el.getAttribute("width") ?? "") ||
+                    Number.parseInt(el.dataset.minWidth ?? "") ||
+                    Number.parseInt(getComputedStyle(el).minWidth || "") ||
+                    0,
             );
-        };
+        }
+        const preferredWidth = (/** @type {HTMLElement} */ th) => widths.get(th) ?? 0;
 
         // Hideable candidates: data columns only, responsive !== "0", not
         // manually hidden. Ordered most important last (priority order).
@@ -473,7 +482,7 @@ class ResponsiveGrid extends BasePlugin {
                 const childTableRow = ce("tr", childTable);
                 const labelCol = ce("th", childTableRow);
                 labelCol.style.width = `${idealWidth}px`;
-                labelCol.innerHTML = col.dataset.name ?? "";
+                labelCol.textContent = col.dataset.name ?? "";
                 childTableRow.appendChild(col);
                 removeAttribute(col, "hidden");
             }

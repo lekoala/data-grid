@@ -14,8 +14,12 @@ runtime requirement (no Bun/Node APIs in `src/`).
 - tsc: typecheck from JSDoc (`checkJs`, `strict` on) via `bun run typecheck`; emits
   `.d.ts` into `dist/types` via `bun run types` (`tsconfig.types.json`)
 - `scripts/custom-elements.js` generates `custom-elements.json` (`bun run manifest`), schema `2.1.0`
-- `bun run ci` = check + typecheck + test + types + manifest + build + drift check
-  (`git diff --exit-code -- dist custom-elements.json`) so committed artifacts stay in sync
+- `bun run check:baseline` (`scripts/check-baseline.js`) greps `src/` for the
+  post-baseline APIs below (private members, class fields, `structuredClone`,
+  `Object.hasOwn`, `replaceAll`, `.at(`, `scrollend`, `getRootNode`)
+- `bun run ci` = check + check:baseline + typecheck + test + types + manifest +
+  build + drift check (`git diff --exit-code -- dist custom-elements.json`) so
+  committed artifacts stay in sync
 - Mark the public API surface of `src/data-grid.js` with `@public` in JSDoc: the
   CEM generator and the docs rely on it. No `@deprecated` markers: v3 is a clean
   contract, legacy behavior is removed, not annotated.
@@ -30,6 +34,29 @@ runtime requirement (no Bun/Node APIs in `src/`).
 - Normalize at API boundaries; every new abstraction must remove
   branching/coupling (rule: "what does it let me delete?")
 - Prefer simplification over abstraction
+
+## Browser baseline (JS)
+
+`src/` is itself exported by the package (see `exports`), so the source must be
+compatible by construction — never transpiled, and matching a ~2020 browser
+target. This is enforced by review, not by a build step.
+
+Allowed:
+- ES modules, async/await, `for...of`
+- `Object.entries` / `Object.fromEntries`
+- optional chaining (`?.`) and nullish coalescing (`??`)
+- `AbortController`, `ResizeObserver`, template literals
+
+Avoid (post-baseline APIs and syntax):
+- private class members (`#method`) and class-field initializers — use an
+  explicit `constructor` for instance state and ordinary prototype methods
+  (prototype methods are also shared between instances, unlike arrow-function
+  fields)
+- `Array.prototype.at`, `Object.hasOwn`, `structuredClone`, `replaceAll`
+  (use `replace`), `Node.getRootNode`, dynamic `import()`, top-level await
+- Web APIs newer than the baseline such as `scrollend`
+- forcing `passive` implicitly in the `on()`/`off()` event helper — pass
+  explicit options instead
 
 ## Code style
 

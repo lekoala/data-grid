@@ -15,10 +15,14 @@ class EditableColumn extends BasePlugin {
             return;
         }
         const grid = this.grid;
+        const columns = new Map();
+        for (const column of grid.getColumns()) {
+            columns.set(column.id ?? column.field ?? "", column);
+        }
         const cells = findAll(grid, "tbody td.dg-editable-col");
         for (const td of cells) {
             const rowIndex = Number.parseInt(td.dataset.rowIndex ?? "");
-            const column = grid.getColumns().find((c) => (c.id ?? c.field) === td.getAttribute("data-column-id"));
+            const column = columns.get(td.getAttribute("data-column-id") ?? "");
             const item = grid.rows[rowIndex];
             if (!column || !item) {
                 continue;
@@ -54,7 +58,7 @@ class EditableColumn extends BasePlugin {
         input.classList.add("dg-editable");
         input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
         input.setAttribute("aria-label", column.title ?? field);
-        input.value = item[field];
+        input.value = item[field] ?? "";
         input.dataset.field = field;
 
         const previous = () => item[field];

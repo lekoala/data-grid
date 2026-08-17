@@ -100,6 +100,7 @@ class ColumnResizer extends BasePlugin {
             });
 
             on(resizer, "mousedown", (/** @type {MouseEvent} */ e) => {
+                e.preventDefault();
                 e.stopPropagation();
 
                 const target = /** @type {HTMLElement} */ (e.target);
@@ -133,7 +134,7 @@ class ColumnResizer extends BasePlugin {
                 setAttribute(col, "width", startW);
                 for (let j = 0; j < visibleCols.length; j++) {
                     if (j > columnIndex) {
-                        removeAttribute(cols[j], "width");
+                        removeAttribute(visibleCols[j], "width");
                     }
                 }
 

@@ -3,10 +3,19 @@ import BasePlugin from "../core/base-plugin.js";
  * Add actions on rows
  */
 declare class RowActions extends BasePlugin {
-    menu: HTMLUListElement | undefined;
-    openCell: HTMLElement | null | undefined;
-    _boundDocumentClick: ((ev: MouseEvent) => void) | null | undefined;
-    _boundKeydown: ((ev: KeyboardEvent) => void) | null | undefined;
+    /** @type {HTMLUListElement|null} */
+    menu: HTMLUListElement | null;
+    /** @type {HTMLElement|null} */
+    openCell: HTMLElement | null;
+    /** @type {((e: MouseEvent) => void) | null} */
+    _boundDocumentClick: ((e: MouseEvent) => void) | null;
+    /** @type {((e: KeyboardEvent) => void) | null} */
+    _boundKeydown: ((e: KeyboardEvent) => void) | null;
+    /**
+     * @param {import("../data-grid.js").default} grid
+     */
+    constructor(grid: import("../data-grid.js").default);
+    disconnected(): void;
     /**
      * Whether the actions column is active: static `options.actions`, the
      * `rowActions` capability or a declarative `<th data-actions>`.
@@ -80,12 +89,6 @@ declare class RowActions extends BasePlugin {
         el: HTMLElement;
         dispatchAction: (ev: Event) => void;
     };
-    /**
-     * Apply renderer content to an element (same contract as renderCell).
-     * @param {HTMLElement} el
-     * @param {*} content
-     */
-    applyContent(el: HTMLElement, content: any): void;
     get actionClass(): string;
 }
 export default RowActions;

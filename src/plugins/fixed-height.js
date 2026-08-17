@@ -8,20 +8,6 @@ import { setAttribute } from "../utils/shortcuts.js";
  */
 class FixedHeight extends BasePlugin {
     /**
-     * @param {import("../data-grid.js").default} grid
-     */
-    constructor(grid) {
-        super(grid);
-
-        this.hasFixedHeight = false;
-        // The .dg-scroll wrapper owns overflow now; a host height only turns on
-        // the fixed-height behaviour.
-        if (grid.style.height) {
-            this.hasFixedHeight = true;
-        }
-    }
-
-    /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {

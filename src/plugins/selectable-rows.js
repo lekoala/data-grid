@@ -87,13 +87,12 @@ class SelectableRows extends BasePlugin {
         const inputs = /** @type {HTMLInputElement[]} */ (
             Array.from(tbody.querySelectorAll(`.${SELECTABLE_CLASS} input`))
         );
-        const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
         for (const input of inputs) {
             const tr = input.closest("tr");
             if (!tr) {
                 continue;
             }
-            const index = trs.indexOf(tr);
+            const index = Number.parseInt(tr.dataset.rowIndex ?? "", 10);
             const row = grid.rows[index];
             if (row === undefined) {
                 continue;
@@ -111,7 +110,8 @@ class SelectableRows extends BasePlugin {
         if (!this.selectAll || !grid.options.selectable) {
             return;
         }
-        const visible = [];
+        let visible = 0;
+        let checked = 0;
         const tbody = grid.tbody;
         if (tbody) {
             const inputs = /** @type {HTMLInputElement[]} */ (
@@ -121,12 +121,14 @@ class SelectableRows extends BasePlugin {
                 if (this.visibleOnly && input.closest("tr[hidden]")) {
                     continue;
                 }
-                visible.push(input);
+                visible += 1;
+                if (input.checked) {
+                    checked += 1;
+                }
             }
         }
-        const checked = visible.filter((input) => input.checked).length;
-        this.selectAll.indeterminate = checked > 0 && checked < visible.length;
-        this.selectAll.checked = visible.length > 0 && checked === visible.length;
+        this.selectAll.indeterminate = checked > 0 && checked < visible;
+        this.selectAll.checked = visible > 0 && checked === visible;
     }
 
     /**
@@ -174,7 +176,7 @@ class SelectableRows extends BasePlugin {
             grid.formatLabel(grid.labels.selectRow, { row: grid.getRowLabel(row ?? {}, rowIndex ?? 0) }),
         );
         if (this.isSingleSelect) {
-            input.name = "dg-row-select";
+            input.name = `dg-row-select-${grid.id}`;
         }
 
         // Label need to take full space thanks to css to make the whole cell clickable

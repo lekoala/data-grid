@@ -5,21 +5,24 @@ export type CachedGridState = {
         field: string;
         hidden?: boolean;
     }>;
-    scrollTo: number;
 };
 /**
  * @typedef CachedGridState
  * @property {import("../data-source.js").QueryState} query
  * @property {Array<{ field: string, hidden?: boolean }>} columns
- * @property {Number} scrollTo
  */
 declare class SaveState extends BasePlugin {
     cachedState: CachedGridState | null;
+    /** @type {(() => void) | null} */
+    onBodyRendered: (() => void) | null;
+    /** @type {(() => void) | null} */
+    onScroll: (() => void) | null;
     /**
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid: import("../data-grid.js").default);
-    connected(): Promise<void>;
+    connected(): void;
+    disconnected(): void;
     /**
      * Persist the current query, columns and scroll position.
      */

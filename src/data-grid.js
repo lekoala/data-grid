@@ -6,6 +6,7 @@
 import BaseElement from "./core/base-element.js";
 import { ArrayDataSource, FetchDataSource } from "./data-source.js";
 import addSelectOption from "./utils/addSelectOption.js";
+import applyContent from "./utils/applyContent.js";
 import debounce from "./utils/debounce.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import randstr from "./utils/randstr.js";
@@ -459,16 +460,17 @@ function rowsFromTable(table, columns, rowKey = "id") {
         const tds = Array.from(
             /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll(":scope > td")),
         ).filter((td) => !td.hasAttribute("data-actions"));
-        columns.forEach((column, index) => {
+        for (let index = 0; index < columns.length; index++) {
+            const column = columns[index];
             if (!column.field) {
-                return;
+                continue;
             }
             const td = tds[index];
             if (!td) {
-                return;
+                continue;
             }
             row[column.field] = td.dataset.value ?? td.textContent.trim();
-        });
+        }
         const actionsCell = /** @type {HTMLTableCellElement|null} */ (tr.querySelector(":scope > td[data-actions]"));
         if (actionsCell) {
             const actions = parseActionsCell(actionsCell);
@@ -508,27 +510,6 @@ function orderColumns(columns) {
 }
 
 /**
- * Apply a renderer result to a cell.
- * primitive -> textContent, Node -> append, { html } -> innerHTML (opt-in).
- * @param {HTMLElement} el
- * @param {*} content
- */
-function applyCellContent(el, content) {
-    if (content === undefined || content === null) {
-        return;
-    }
-    if (content instanceof Node) {
-        el.appendChild(content);
-        return;
-    }
-    if (typeof content === "object" && content.html !== undefined) {
-        el.innerHTML = content.html;
-        return;
-    }
-    el.textContent = content;
-}
-
-/**
  * A column is hidden when the host/config hides it (`hidden`) or when
  * ResponsiveGrid temporarily hides it (`responsiveHidden`). These are two
  * distinct states: only `hidden` is the explicit, persisted choice.
@@ -565,151 +546,146 @@ function applyColumnDefinition(el, column) {
 /**
  */
 class DataGrid extends BaseElement {
-    _filterSelector = "[id^=dg-filter]";
-    _excludedRowElementSelector = "a,button,input,select,textarea";
-
     /**
-     * Instantiated plugins, keyed by their registration name.
-     * @type {PluginInstances}
+     * @param {Object} [options]
      */
-    plugins = this._initPlugins();
+    constructor(options = {}) {
+        super(options);
 
-    /**
-     * Initial query used by resetQuery()
-     * @type {QueryState}
-     */
-    _initialQuery = normalizeQuery(this.options.initialQuery);
+        this._filterSelector = "[id^=dg-filter]";
+        this._excludedRowElementSelector = "a,button,input,select,textarea";
 
-    /**
-     * Runtime query state, single source of truth
-     * @type {QueryState}
-     */
-    _query = normalizeQuery(this._initialQuery);
+        /**
+         * Instantiated plugins, keyed by their registration name.
+         * @type {PluginInstances}
+         */
+        this.plugins = this._initPlugins();
 
-    /**
-     * Selection state, single source of truth for row selection
-     * @type {SelectionState}
-     */
-    _selection = { mode: "explicit", ids: new Set(), except: new Set() };
+        /**
+         * Initial query used by resetQuery()
+         * @type {QueryState}
+         */
+        this._initialQuery = normalizeQuery(this.options.initialQuery);
 
-    /**
-     * @type {Number}
-     */
-    _requestSeq = 0;
+        /**
+         * Runtime query state, single source of truth
+         * @type {QueryState}
+         */
+        this._query = normalizeQuery(this._initialQuery);
 
-    /**
-     * @type {?AbortController}
-     */
-    _controller = null;
+        /**
+         * Selection state, single source of truth for row selection
+         * @type {SelectionState}
+         */
+        this._selection = { mode: "explicit", ids: new Set(), except: new Set() };
 
-    /**
-     * Optional initial result, can be set as a property before connection
-     * @type {PageResult|null}
-     */
-    initialResult = null;
+        /** @type {Number} */
+        this._requestSeq = 0;
 
-    /**
-     * @type {PageResult|null}
-     */
-    _initialResult = this.options.initialResult || this.initialResult || null;
+        /** @type {?AbortController} */
+        this._controller = null;
 
-    /**
-     * Rows of the current page
-     * @type {Array<Record<string, any>>}
-     */
-    rows = [];
+        /**
+         * Optional initial result, can be set as a property before connection
+         * @type {PageResult|null}
+         */
+        this.initialResult = null;
 
-    /**
-     * Total number of rows matching the current query
-     * @type {Number}
-     */
-    total = 0;
+        /** @type {PageResult|null} */
+        this._initialResult = this.options.initialResult || this.initialResult || null;
 
-    /**
-     * Meta information returned by the data source
-     * @type {Record<string, any>}
-     */
-    meta = {};
+        /**
+         * Rows of the current page
+         * @type {Array<Record<string, any>>}
+         */
+        this.rows = [];
 
-    /**
-     * @type {Number}
-     */
-    pages = 0;
+        /**
+         * Total number of rows matching the current query
+         * @type {Number}
+         */
+        this.total = 0;
 
-    /**
-     * @type {Boolean}
-     */
-    loading = false;
+        /**
+         * Meta information returned by the data source
+         * @type {Record<string, any>}
+         */
+        this.meta = {};
 
-    /**
-     * @type {?Error}
-     */
-    error = null;
+        /** @type {Number} */
+        this.pages = 0;
 
-    /**
-     * Normalized columns of the current render cycle
-     * @type {Column[]}
-     */
-    _columns = [];
+        /** @type {Boolean} */
+        this.loading = false;
 
-    /**
-     * The active data source, set by setupDataSource().
-     * @type {DataSource|null}
-     */
-    dataSource = null;
+        /** @type {?Error} */
+        this.error = null;
 
-    /**
-     * DOM refs set on connect from the rendered template.
-     * @type {HTMLTableElement|null}
-     */
-    table = null;
+        /**
+         * Normalized columns of the current render cycle
+         * @type {Column[]}
+         */
+        this._columns = [];
 
-    /**
-     * The table viewport: a wrapper that owns the scroll, the outer border and
-     * radius, and is the sticky containing block for thead/tfoot. Guaranteed to
-     * exist as a direct child of the host after `_connected()`.
-     * @type {HTMLDivElement}
-     */
-    scrollEl = /** @type {HTMLDivElement} */ (document.createElement("div"));
+        /**
+         * The active data source, set by setupDataSource().
+         * @type {DataSource|null}
+         */
+        this.dataSource = null;
 
-    /** @type {HTMLInputElement|null} */
-    btnFirst = null;
+        /**
+         * DOM refs set on connect from the rendered template.
+         * @type {HTMLTableElement|null}
+         */
+        this.table = null;
 
-    /** @type {HTMLInputElement|null} */
-    btnPrev = null;
+        /**
+         * The table viewport: a wrapper that owns the scroll, the outer border and
+         * radius, and is the sticky containing block for thead/tfoot. Guaranteed to
+         * exist as a direct child of the host after `_connected()`.
+         * @type {HTMLDivElement}
+         */
+        this.scrollEl = /** @type {HTMLDivElement} */ (document.createElement("div"));
 
-    /** @type {HTMLInputElement|null} */
-    btnNext = null;
+        /** @type {HTMLInputElement|null} */
+        this.btnFirst = null;
 
-    /** @type {HTMLInputElement|null} */
-    btnLast = null;
+        /** @type {HTMLInputElement|null} */
+        this.btnPrev = null;
 
-    /** @type {HTMLSelectElement|null} */
-    selectPerPage = null;
+        /** @type {HTMLInputElement|null} */
+        this.btnNext = null;
 
-    /** @type {HTMLInputElement|null} */
-    inputPage = null;
+        /** @type {HTMLInputElement|null} */
+        this.btnLast = null;
 
-    /** @type {HTMLInputElement|null} */
-    searchInput = null;
+        /** @type {HTMLSelectElement|null} */
+        this.selectPerPage = null;
 
-    /** @type {HTMLTableRowElement|null} */
-    headerRow = null;
+        /** @type {HTMLInputElement|null} */
+        this.inputPage = null;
 
-    /** @type {Number|null} */
-    rowHeight = null;
+        /** @type {HTMLInputElement|null} */
+        this.searchInput = null;
 
-    /** @type {IntersectionObserver|null} */
-    _loadObserver = null;
+        /** @type {HTMLTableRowElement|null} */
+        this.headerRow = null;
 
-    /** @type {Boolean} */
-    _lazyPending = false;
+        /** @type {Number|null} */
+        this.rowHeight = null;
 
-    /**
-     * Current render context, set by renderTable/renderBody.
-     * @type {import("./core/base-plugin.js").RenderContext|null}
-     */
-    _renderContext = null;
+        /** @type {IntersectionObserver|null} */
+        this._loadObserver = null;
+
+        /** @type {Boolean} */
+        this._lazyPending = false;
+
+        /**
+         * Current render context, set by renderTable/renderBody.
+         * @type {import("./core/base-plugin.js").RenderContext|null}
+         */
+        this._renderContext = null;
+    }
 
     _ready() {
         this.fireEvents = false;
@@ -832,7 +808,7 @@ class DataGrid extends BaseElement {
     /**
      * @param {HTMLTableSectionElement} tbody
      */
-    #setNoData(tbody) {
+    _setNoData(tbody) {
         if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
             tbody.setAttribute("data-empty-message", this.noData);
         }
@@ -842,7 +818,7 @@ class DataGrid extends BaseElement {
      * Update the persistent status live region.
      * @param {String} text
      */
-    #updateStatus(text) {
+    _updateStatus(text) {
         const status = this.querySelector(".dg-status");
         if (status) {
             status.textContent = text;
@@ -874,15 +850,15 @@ class DataGrid extends BaseElement {
             button.setAttribute("aria-label", label);
             button.setAttribute("title", label);
         }
-        this.#setNoData(this.tbody);
+        this._setNoData(this.tbody);
         this.updateMetaLabel();
         this.updatePageStatus();
         if (this.loading) {
-            this.#updateStatus(this.labels.loading);
+            this._updateStatus(this.labels.loading);
         } else if (this.hasDataError) {
-            this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+            this._updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
         } else {
-            this.#updateStatus(
+            this._updateStatus(
                 this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
             );
         }
@@ -1068,7 +1044,7 @@ class DataGrid extends BaseElement {
      */
     runPlugins(hook, ...args) {
         for (const plugin of Object.values(this.plugins)) {
-            const fn = Reflect.get(plugin, hook);
+            const fn = /** @type {Record<string, any>} */ (plugin)[hook];
             if (typeof fn === "function") {
                 fn.call(plugin, ...args);
             }
@@ -1319,7 +1295,7 @@ class DataGrid extends BaseElement {
         this.error = null;
         setAttribute(this, "data-loading", "");
         removeAttribute(this, "data-error");
-        this.#updateStatus(this.labels.loading);
+        this._updateStatus(this.labels.loading);
 
         try {
             let result;
@@ -1339,7 +1315,7 @@ class DataGrid extends BaseElement {
                 // shrank after a deletion): refetch on the last valid page.
                 return this.refresh();
             }
-            this.#updateStatus(
+            this._updateStatus(
                 this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
             );
         } catch (err) {
@@ -1351,7 +1327,7 @@ class DataGrid extends BaseElement {
             this.error = e;
             setAttribute(this, "data-error", "");
             this.tbody?.setAttribute("data-empty-message", message);
-            this.#updateStatus(message);
+            this._updateStatus(message);
             this.renderBody();
             dispatch(this, "loadError", e);
         } finally {
@@ -1499,7 +1475,7 @@ class DataGrid extends BaseElement {
         }
         if (this.searchInput) {
             this.searchInput.setAttribute("aria-label", this.labels.search);
-            this.searchInput.setAttribute("placeholder", this.labels.search);
+            this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
             return;
         }
         const input = ce("input");
@@ -1892,7 +1868,7 @@ class DataGrid extends BaseElement {
      * @returns {void}
      */
     _handleComposition(target, composing) {
-        const input = /** @type {HTMLInputElement} */ (target.closest(".dg-search, " + this._filterSelector));
+        const input = /** @type {HTMLInputElement} */ (target.closest(`.dg-search, ${this._filterSelector}`));
         if (!input || !this._ownsControl(input)) {
             return;
         }
@@ -1970,14 +1946,12 @@ class DataGrid extends BaseElement {
      * @returns {Column|null}
      */
     getCol(field) {
-        let found = null;
-
         for (const col of this.options.columns) {
             if (col.field === field) {
-                found = col;
+                return col;
             }
         }
-        return found;
+        return null;
     }
 
     /**
@@ -1987,7 +1961,7 @@ class DataGrid extends BaseElement {
      */
     getColProp(field, prop) {
         const c = this.getCol(field);
-        return c ? Reflect.get(c, prop) : null;
+        return c ? /** @type {Record<string, any>} */ (c)[prop] : null;
     }
 
     /**
@@ -1998,7 +1972,7 @@ class DataGrid extends BaseElement {
     setColProp(field, prop, val) {
         const c = this.getCol(field);
         if (c) {
-            Reflect.set(c, prop, val);
+            /** @type {Record<string, any>} */ (c)[prop] = val;
         }
     }
 
@@ -2123,7 +2097,7 @@ class DataGrid extends BaseElement {
                 this.rowHeight = tr.offsetHeight;
             }
         }
-        this.#setNoData(this.tbody);
+        this._setNoData(this.tbody);
         return this.fixPage();
     }
 
@@ -2593,12 +2567,32 @@ class DataGrid extends BaseElement {
         return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
     }
 
-    /** @public @param {String} columnName */
-    sortAsc = (columnName) => this._sort(columnName, "asc");
-    /** @public @param {String} columnName */
-    sortDesc = (columnName) => this._sort(columnName, "desc");
-    /** @public @param {String} columnName */
-    sortNone = (columnName) => this._sort(columnName, "none");
+    /**
+     * @public
+     * @param {String} columnName
+     * @returns {Promise<void>}
+     */
+    sortAsc(columnName) {
+        return this._sort(columnName, "asc");
+    }
+
+    /**
+     * @public
+     * @param {String} columnName
+     * @returns {Promise<void>}
+     */
+    sortDesc(columnName) {
+        return this._sort(columnName, "desc");
+    }
+
+    /**
+     * @public
+     * @param {String} columnName
+     * @returns {Promise<void>}
+     */
+    sortNone(columnName) {
+        return this._sort(columnName, "none");
+    }
 
     /**
      * @public
@@ -3124,7 +3118,7 @@ class DataGrid extends BaseElement {
                 const field = column.field;
                 // It should be applied as an attr of the row
                 if (column.attr) {
-                    if (field && item[field]) {
+                    if (field && item[field] != null) {
                         // Special case if we try to write over the class attr
                         if (column.attr === "class") {
                             addClass(tr, item[field]);
@@ -3143,7 +3137,7 @@ class DataGrid extends BaseElement {
 
                 const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
                 if (column.renderCell) {
-                    applyCellContent(td, column.renderCell(ctx));
+                    applyContent(td, column.renderCell(ctx));
                 } else {
                     this.renderDefaultCell(td, ctx);
                 }
@@ -3221,10 +3215,10 @@ class DataGrid extends BaseElement {
         // TODO: make this modular
         switch (column.transform) {
             case "uppercase":
-                tv = v.toUpperCase();
+                tv = String(v).toUpperCase();
                 break;
             case "lowercase":
-                tv = v.toLowerCase();
+                tv = String(v).toLowerCase();
                 break;
             default:
                 tv = v;

@@ -80,7 +80,7 @@ class BasePlugin {
      * @param {Event} event
      */
     handleEvent(event) {
-        const handler = Reflect.get(this, `on${event.type}`);
+        const handler = /** @type {Record<string, any>} */ (this)[`on${event.type}`];
         if (typeof handler === "function") {
             handler.call(this, event);
         }
