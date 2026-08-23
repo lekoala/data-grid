@@ -252,6 +252,11 @@ footer hr {
 
 .demo-grid .demo-frame.is-fixed {
   min-height: 420px;
+  overflow: visible;
+}
+
+.demo-grid .demo-frame.is-fixed > data-grid {
+  height: 100%;
 }
 
 .demo-grid .demo-note {

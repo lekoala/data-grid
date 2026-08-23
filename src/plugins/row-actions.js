@@ -173,9 +173,11 @@ class RowActions extends BasePlugin {
     }
 
     /**
-     * Position the menu inside the grid, flipping up or to the left when the
-     * cell sits close to an edge. The menu stays inside the grid bounds so the
-     * grid scroll container never clips it.
+     * Position the menu inside the grid, anchored to the toggle rather than
+     * the whole cell. This matters when another cell makes the row unusually
+     * tall. Flip up or to the left when the toggle sits close to an edge.
+     * The menu stays inside the grid bounds so the grid scroll container never
+     * clips it.
      * @param {HTMLElement} cell
      */
     positionActionMenu(cell) {
@@ -185,15 +187,16 @@ class RowActions extends BasePlugin {
             return;
         }
         const gridRect = grid.getBoundingClientRect();
-        const cellRect = cell.getBoundingClientRect();
+        const toggle = /** @type {HTMLElement|null} */ (cell.querySelector(".dg-actions-toggle"));
+        const anchorRect = (toggle ?? cell).getBoundingClientRect();
         const menuHeight = menu.offsetHeight;
         const menuWidth = menu.offsetWidth;
-        let top = cellRect.bottom - gridRect.top;
+        let top = anchorRect.bottom - gridRect.top;
         if (top + menuHeight > gridRect.height) {
-            top = cellRect.top - gridRect.top - menuHeight;
+            top = anchorRect.top - gridRect.top - menuHeight;
         }
         menu.style.top = `${Math.max(0, top)}px`;
-        let right = gridRect.right - cellRect.right;
+        let right = gridRect.right - anchorRect.right;
         if (right + menuWidth > gridRect.width) {
             right = gridRect.width - menuWidth;
         }

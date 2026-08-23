@@ -1529,6 +1529,7 @@ class DataGrid extends base_element_default {
     this.addEventListener("change", this);
     this.addEventListener("input", this);
     this.addEventListener("keydown", this);
+    this.addEventListener("mouseover", this);
     this.addEventListener("compositionstart", this);
     this.addEventListener("compositionend", this);
     this.addEventListener("columnResized", this);
@@ -1561,6 +1562,7 @@ class DataGrid extends base_element_default {
     this.removeEventListener("change", this);
     this.removeEventListener("input", this);
     this.removeEventListener("keydown", this);
+    this.removeEventListener("mouseover", this);
     this.removeEventListener("compositionstart", this);
     this.removeEventListener("compositionend", this);
     this.removeEventListener("columnResized", this);
@@ -1592,6 +1594,9 @@ class DataGrid extends base_element_default {
       case "keydown":
         this._handleKeydown(event, target);
         break;
+      case "mouseover":
+        this._handleMouseover(target);
+        break;
       case "compositionstart":
         this._handleComposition(target, true);
         break;
@@ -1604,6 +1609,25 @@ class DataGrid extends base_element_default {
   }
   _ownsControl(element) {
     return Boolean(element && element.closest("data-grid") === this);
+  }
+  _handleMouseover(target) {
+    const cell = target.closest("tbody td");
+    if (!cell || !this._ownsControl(cell)) {
+      return;
+    }
+    const generated = cell.hasAttribute("data-dg-overflow-title");
+    if (cell.hasAttribute("title") && !generated) {
+      return;
+    }
+    const truncated = !cell.classList.contains("dg-wrap") && cell.scrollWidth > cell.clientWidth;
+    const text = cell.textContent.trim();
+    if (truncated && text) {
+      cell.title = text;
+      cell.setAttribute("data-dg-overflow-title", "");
+    } else if (generated) {
+      cell.removeAttribute("title");
+      cell.removeAttribute("data-dg-overflow-title");
+    }
   }
   _cancelTextInputs(root) {
     for (const input of root.querySelectorAll("input")) {
@@ -3934,15 +3958,16 @@ class RowActions extends base_plugin_default {
       return;
     }
     const gridRect = grid.getBoundingClientRect();
-    const cellRect = cell.getBoundingClientRect();
+    const toggle = cell.querySelector(".dg-actions-toggle");
+    const anchorRect = (toggle ?? cell).getBoundingClientRect();
     const menuHeight = menu.offsetHeight;
     const menuWidth = menu.offsetWidth;
-    let top = cellRect.bottom - gridRect.top;
+    let top = anchorRect.bottom - gridRect.top;
     if (top + menuHeight > gridRect.height) {
-      top = cellRect.top - gridRect.top - menuHeight;
+      top = anchorRect.top - gridRect.top - menuHeight;
     }
     menu.style.top = `${Math.max(0, top)}px`;
-    let right = gridRect.right - cellRect.right;
+    let right = gridRect.right - anchorRect.right;
     if (right + menuWidth > gridRect.width) {
       right = gridRect.width - menuWidth;
     }

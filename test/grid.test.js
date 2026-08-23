@@ -51,6 +51,23 @@ test("cells carry a stable data-column-id", async () => {
     removeGrid(inst);
 });
 
+test("a truncated cell exposes its full text as a native tooltip", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }] }, [{ name: "A long cell value" }]);
+    const cell = inst.querySelector("tbody td");
+    Object.defineProperty(cell, "clientWidth", { configurable: true, value: 80 });
+    Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 180 });
+
+    cell.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+
+    expect(cell.title).toBe("A long cell value");
+    expect(cell.hasAttribute("data-dg-overflow-title")).toBe(true);
+
+    Object.defineProperty(cell, "scrollWidth", { configurable: true, value: 80 });
+    cell.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
+    expect(cell.hasAttribute("title")).toBe(false);
+    removeGrid(inst);
+});
+
 test("reconnecting the element does not duplicate the template", async () => {
     const inst = await makeReadyGrid({}, []);
     expect(inst.querySelectorAll("table").length).toBe(1);

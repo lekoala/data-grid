@@ -264,6 +264,34 @@ test("more than two actions collapse into a popover menu", async () => {
     document.body.removeChild(inst);
 });
 
+test("the actions popover is anchored to the toggle in a tall row", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name", wrap: true }],
+            actions: [{ name: "one" }, { name: "two" }, { name: "three" }],
+        },
+        [{ name: "A very long row" }],
+        { RowActions },
+    );
+    const cell = inst.tbody.querySelector('td[data-column-id="$actions"]');
+    const toggle = cell.querySelector(".dg-actions-toggle");
+    toggle.click();
+    const menu = inst.querySelector(".dg-actions-menu");
+    const plugin = inst.getPlugin("RowActions");
+
+    inst.getBoundingClientRect = () => ({ top: 100, right: 600, height: 500 });
+    cell.getBoundingClientRect = () => ({ top: 150, right: 580, bottom: 350 });
+    toggle.getBoundingClientRect = () => ({ top: 160, right: 570, bottom: 188 });
+    Object.defineProperty(menu, "offsetHeight", { configurable: true, value: 120 });
+    Object.defineProperty(menu, "offsetWidth", { configurable: true, value: 180 });
+
+    plugin.positionActionMenu(cell);
+
+    expect(menu.style.top).toBe("88px");
+    expect(menu.style.right).toBe("30px");
+    document.body.removeChild(inst);
+});
+
 test("icon-only render keeps its label visible in the menu", async () => {
     const inst = await makeReadyGrid(
         {
