@@ -16,6 +16,16 @@ async function makeReadyGrid(options, rows = [{ id: 1, name: "Alice", email: "al
     return inst;
 }
 
+function forceResponsiveResize(inst, size) {
+    const plugin = inst.getPlugin("ResponsiveGrid");
+    if (plugin.unblockTimeout) {
+        clearTimeout(plugin.unblockTimeout);
+    }
+    plugin.observerBlocked = false;
+    plugin._lastEntry = { contentBoxSize: [{ inlineSize: size }] };
+    plugin.resize();
+}
+
 test("column wrap overrides the grid-wide wrapping policy without adding row interaction", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name", wrap: true }, { field: "email", wrap: false }, { field: "id" }],
@@ -93,9 +103,10 @@ test("responsive disclosure uses a named native button and controls its detail r
     const button = inst.querySelector("tbody .dg-responsive-toggle-control");
     expect(button.tagName).toBe("BUTTON");
     expect(button.getAttribute("aria-expanded")).toBe("false");
-    expect(button.getAttribute("aria-label")).toContain("Alice");
+    expect(button.getAttribute("aria-label")).toBe("Show additional columns for Alice");
     button.click();
     expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.getAttribute("aria-label")).toBe("Hide additional columns for Alice");
     expect(document.getElementById(button.getAttribute("aria-controls"))).toBeTruthy();
     document.body.removeChild(inst);
 });
@@ -112,6 +123,7 @@ test("RowDetails renders application content, exposes state methods and emits on
     });
     const plugin = inst.getPlugin("RowDetails");
     const button = inst.querySelector("tbody .dg-row-details-toggle-control");
+    expect(button.getAttribute("aria-label")).toBe("Show details for Alice");
     let detail;
     inst.addEventListener("rowDetailsToggle", (event) => {
         detail = event.detail;
@@ -148,6 +160,53 @@ test("RowDetails coexists with responsive child rows without becoming a data row
     expect(
         Array.from(inst.querySelectorAll('thead th[data-column-id^="$"]')).every((th) => th.dataset.frozen === "start"),
     ).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("stacked responsive columns compose with RowDetails across resize and body renders", async () => {
+    const inst = await makeReadyGrid({
+        columns: [
+            { field: "id", width: 100, responsive: 0 },
+            { field: "name", width: 100, responsive: 1 },
+            { field: "email", width: 100, responsive: 2 },
+        ],
+        responsive: true,
+        responsiveStartOpen: true,
+        responsiveToggle: false,
+        rowLabel: "name",
+        rowDetails: ({ row }) => `Profile for ${row.name}`,
+    });
+    const details = inst.getPlugin("RowDetails");
+    details.expand("1");
+
+    const expectStructure = (responsive) => {
+        const rows = Array.from(inst.querySelectorAll("tbody > tr"));
+        expect(rows.map((row) => row.className)).toEqual(
+            responsive
+                ? ["dg-data-row dg-responsive-expanded", "dg-responsive-child-row", "dg-row-details-row"]
+                : ["dg-data-row", "dg-row-details-row"],
+        );
+        expect(inst.querySelector(".dg-responsive-toggle-control")).toBeNull();
+        expect(inst.querySelector(".dg-row-details-toggle-control")).not.toBeNull();
+        for (const cell of inst.querySelectorAll("[data-dg-span-columns]")) {
+            expect(cell.colSpan).toBe(inst.columnsLength(true));
+        }
+    };
+
+    forceResponsiveResize(inst, 160);
+    expectStructure(true);
+
+    forceResponsiveResize(inst, 1000);
+    expectStructure(false);
+
+    forceResponsiveResize(inst, 160);
+    expectStructure(true);
+
+    await inst.refresh();
+    expectStructure(true);
+
+    await inst.setQuery({ search: "Alice" });
+    expectStructure(true);
     document.body.removeChild(inst);
 });
 

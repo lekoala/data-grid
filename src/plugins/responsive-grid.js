@@ -184,7 +184,7 @@ class ResponsiveGrid extends BasePlugin {
         cell.setAttribute("aria-controls", this._detailId(rowIndex));
         cell.setAttribute(
             "aria-label",
-            this.grid.formatLabel(this.grid.labels.showDetails, {
+            this.grid.formatLabel(this.grid.labels.showHiddenColumns, {
                 row: this.grid.getRowLabel(row ?? {}, rowIndex),
             }),
         );
@@ -448,9 +448,12 @@ class ResponsiveGrid extends BasePlugin {
             control.setAttribute("aria-expanded", String(expanded));
             control.setAttribute(
                 "aria-label",
-                this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
-                    row: this.grid.getRowLabel(row, rowIndex),
-                }),
+                this.grid.formatLabel(
+                    expanded ? this.grid.labels.hideHiddenColumns : this.grid.labels.showHiddenColumns,
+                    {
+                        row: this.grid.getRowLabel(row, rowIndex),
+                    },
+                ),
             );
         }
         const open = find(tr, `.${RESPONSIVE_CLASS}-open`);
@@ -493,6 +496,7 @@ class ResponsiveGrid extends BasePlugin {
             detailRow.id = this._detailId(rowIndex);
 
             const detailTd = ce("td", detailRow);
+            setAttribute(detailTd, "data-dg-span-columns", "");
             setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
 
             const childTable = ce("table", detailTd);

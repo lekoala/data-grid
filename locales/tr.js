@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "Satır eylemlerini göster",
     showDetails: "{row} ayrıntılarını göster",
     hideDetails: "{row} ayrıntılarını gizle",
+    showHiddenColumns: "{row} için ek sütunları göster",
+    hideHiddenColumns: "{row} için ek sütunları gizle",
     resizeColumn: "Sütunu yeniden boyutlandır",
     noData: "Veri yok",
     loading: "Yükleniyor…",

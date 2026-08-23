@@ -424,6 +424,8 @@ export type Labels = {
     toggleActions: string;
     showDetails: string;
     hideDetails: string;
+    showHiddenColumns: string;
+    hideHiddenColumns: string;
     resizeColumn: string;
     search: string;
     noData: string;
@@ -819,6 +821,13 @@ declare class DataGrid extends BaseElement {
      */
     _ownsControl(element: Element | null | undefined): boolean;
     /**
+     * Expose the full text through the native tooltip when a data cell is
+     * visually truncated. Resolve this on hover so the measurement always
+     * reflects the current column width, including user resizing.
+     * @param {Element} target
+     */
+    _handleMouseover(target: Element): void;
+    /**
      * Cancel the pending text-input debounces of inputs within `root` and drop
      * their state. Used before replacing a filter row so a stale update never
      * fires on a detached element.
@@ -909,6 +918,8 @@ declare class DataGrid extends BaseElement {
      * reflect their fresh hidden state.
      */
     _syncColumnVisibility(): void;
+    /** Keep auxiliary full-width rows aligned with the visible column list. */
+    _syncSpanningCells(): void;
     /** Queue one frozen-column geometry pass for the next frame. */
     queueFrozenSync(): void;
     /**

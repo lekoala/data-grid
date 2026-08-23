@@ -294,6 +294,22 @@ criterion stays visible. Users can still collapse individual rows; the grid
 never overrides an explicit collapse, and the choice resets on the next data
 load.
 
+When responsive columns are combined with application-rendered `rowDetails`,
+prefer the start-open presentation without a responsive toggle:
+
+```js
+new DataGrid({
+    responsive: true,
+    responsiveStartOpen: true,
+    responsiveToggle: false,
+    rowDetails: ({ row }) => renderCustomerActivity(row),
+});
+```
+
+Responsive content is then the narrow-screen representation of normal table
+columns, while the remaining row-details chevron reveals genuinely additional
+content. The two plugins and their expansion states remain independent.
+
 ## API
 
 The runtime state is a `QueryState` (`page`, `pageSize`, `sort`, `filters`).

@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "Показать действия строки",
     showDetails: "Показать сведения о {row}",
     hideDetails: "Скрыть сведения о {row}",
+    showHiddenColumns: "Показать дополнительные столбцы для {row}",
+    hideHiddenColumns: "Скрыть дополнительные столбцы для {row}",
     resizeColumn: "Изменить ширину столбца",
     noData: "Нет данных",
     loading: "Загрузка…",

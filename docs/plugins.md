@@ -102,3 +102,24 @@ details.collapseAll();
 
 Use `rowDetailsStartOpen: true` to seed rows open. A toggle dispatches
 `rowDetailsToggle` with `{ row, rowKey, expanded }`.
+
+### Combining responsive columns and row details
+
+Responsive columns and row details have different roles: responsive columns
+adapt the table representation to the available width, while row details reveal
+additional application content. Keep the plugins independent and use the
+start-open responsive presentation when both are enabled:
+
+```js
+const grid = new DataGrid({
+    responsive: true,
+    responsiveStartOpen: true,
+    responsiveToggle: false,
+    rowDetails: ({ row }) => renderCustomerActivity(row),
+});
+```
+
+On narrow grids, hidden column values remain visible in a stacked child row and
+the row-details chevron is the only disclosure control. Setting
+`responsiveToggle: true` remains supported when two independent controls are
+intentionally required.

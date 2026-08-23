@@ -57,9 +57,11 @@ declare class RowActions extends BasePlugin {
      */
     openActionMenu(cell: HTMLElement, row: Record<string, any>): void;
     /**
-     * Position the menu inside the grid, flipping up or to the left when the
-     * cell sits close to an edge. The menu stays inside the grid bounds so the
-     * grid scroll container never clips it.
+     * Position the menu inside the grid, anchored to the toggle rather than
+     * the whole cell. This matters when another cell makes the row unusually
+     * tall. Flip up or to the left when the toggle sits close to an edge.
+     * The menu stays inside the grid bounds so the grid scroll container never
+     * clips it.
      * @param {HTMLElement} cell
      */
     positionActionMenu(cell: HTMLElement): void;

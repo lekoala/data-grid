@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "Zeilenaktionen anzeigen",
     showDetails: "Details für {row} anzeigen",
     hideDetails: "Details für {row} ausblenden",
+    showHiddenColumns: "Zusätzliche Spalten für {row} anzeigen",
+    hideHiddenColumns: "Zusätzliche Spalten für {row} ausblenden",
     resizeColumn: "Spalte vergrößern",
     noData: "Keine Daten",
     loading: "Wird geladen…",

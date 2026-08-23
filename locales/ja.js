@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "行のアクションを表示",
     showDetails: "{row} の詳細を表示",
     hideDetails: "{row} の詳細を非表示",
+    showHiddenColumns: "{row} の追加列を表示",
+    hideHiddenColumns: "{row} の追加列を非表示",
     resizeColumn: "列の幅を変更",
     noData: "データがありません",
     loading: "読み込み中…",

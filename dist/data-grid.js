@@ -563,6 +563,8 @@ var labels = {
   toggleActions: "Toggle row actions",
   showDetails: "Show details for {row}",
   hideDetails: "Hide details for {row}",
+  showHiddenColumns: "Show additional columns for {row}",
+  hideHiddenColumns: "Hide additional columns for {row}",
   resizeColumn: "Resize column",
   search: "Search",
   noData: "No data",
@@ -1808,8 +1810,15 @@ class DataGrid extends base_element_default {
         cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
       }
     }
+    this._syncSpanningCells();
     this.renderFooter();
     this.queueFrozenSync();
+  }
+  _syncSpanningCells() {
+    const colspan = Math.max(1, this.columnsLength(true));
+    for (const cell of this.querySelectorAll("[data-dg-span-columns]")) {
+      cell.setAttribute("colspan", String(colspan));
+    }
   }
   queueFrozenSync() {
     if (this._frozenFrame !== null) {
@@ -3532,7 +3541,7 @@ class ResponsiveGrid extends base_plugin_default {
     cell.classList.add("dg-clickable-cell", `${RESPONSIVE_CLASS}-toggle-control`);
     cell.setAttribute("aria-expanded", "false");
     cell.setAttribute("aria-controls", this._detailId(rowIndex));
-    cell.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showDetails, {
+    cell.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showHiddenColumns, {
       row: this.grid.getRowLabel(row ?? {}, rowIndex)
     }));
     cell.innerHTML = `<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
@@ -3704,7 +3713,7 @@ class ResponsiveGrid extends base_plugin_default {
     const row = this.grid.rows[rowIndex] ?? {};
     if (control) {
       control.setAttribute("aria-expanded", String(expanded));
-      control.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
+      control.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideHiddenColumns : this.grid.labels.showHiddenColumns, {
         row: this.grid.getRowLabel(row, rowIndex)
       }));
     }
@@ -3736,6 +3745,7 @@ class ResponsiveGrid extends base_plugin_default {
       const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
       detailRow.id = this._detailId(rowIndex);
       const detailTd = ce("td", detailRow);
+      setAttribute(detailTd, "data-dg-span-columns", "");
       setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
       const childTable = ce("table", detailTd);
       addClass(childTable, `${RESPONSIVE_CLASS}-table`);
@@ -4466,6 +4476,7 @@ class RowDetails extends base_plugin_default {
       detailRow.id = id;
       detailRow.className = `${DETAILS_CLASS}-row`;
       const td = document.createElement("td");
+      td.setAttribute("data-dg-span-columns", "");
       td.colSpan = Math.max(1, this.grid.columnsLength(true));
       applyContent(td, renderer({ row, rowKey: key, grid: this.grid }));
       detailRow.appendChild(td);

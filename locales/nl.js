@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "Rijacties weergeven",
     showDetails: "Details voor {row} tonen",
     hideDetails: "Details voor {row} verbergen",
+    showHiddenColumns: "Extra kolommen voor {row} tonen",
+    hideHiddenColumns: "Extra kolommen voor {row} verbergen",
     resizeColumn: "Kolom aanpassen",
     noData: "Geen gegevens",
     loading: "Laden…",

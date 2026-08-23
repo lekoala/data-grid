@@ -144,6 +144,7 @@ class RowDetails extends BasePlugin {
             detailRow.id = id;
             detailRow.className = `${DETAILS_CLASS}-row`;
             const td = document.createElement("td");
+            td.setAttribute("data-dg-span-columns", "");
             td.colSpan = Math.max(1, this.grid.columnsLength(true));
             applyContent(td, renderer({ row, rowKey: key, grid: this.grid }));
             detailRow.appendChild(td);

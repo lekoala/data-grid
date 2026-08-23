@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "पंक्ति क्रियाएँ दिखाएँ",
     showDetails: "{row} का विवरण दिखाएँ",
     hideDetails: "{row} का विवरण छिपाएँ",
+    showHiddenColumns: "{row} के लिए अतिरिक्त कॉलम दिखाएँ",
+    hideHiddenColumns: "{row} के लिए अतिरिक्त कॉलम छिपाएँ",
     resizeColumn: "कॉलम का आकार बदलें",
     noData: "कोई डेटा नहीं",
     loading: "लोड हो रहा है…",

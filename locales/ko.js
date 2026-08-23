@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "행 작업 표시",
     showDetails: "{row} 세부 정보 표시",
     hideDetails: "{row} 세부 정보 숨기기",
+    showHiddenColumns: "{row}의 추가 열 표시",
+    hideHiddenColumns: "{row}의 추가 열 숨기기",
     resizeColumn: "열 너비 조정",
     noData: "데이터 없음",
     loading: "로딩 중…",

@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "Mostrar acciones de fila",
     showDetails: "Mostrar detalles de {row}",
     hideDetails: "Ocultar detalles de {row}",
+    showHiddenColumns: "Mostrar columnas adicionales de {row}",
+    hideHiddenColumns: "Ocultar columnas adicionales de {row}",
     resizeColumn: "Redimensionar columna",
     noData: "Sin datos",
     loading: "Cargando…",

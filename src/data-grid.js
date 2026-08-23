@@ -194,6 +194,8 @@ import {
  * @property {String} toggleActions
  * @property {String} showDetails
  * @property {String} hideDetails
+ * @property {String} showHiddenColumns
+ * @property {String} hideHiddenColumns
  * @property {String} resizeColumn
  * @property {String} search
  * @property {String} noData
@@ -247,6 +249,8 @@ let labels = {
     toggleActions: "Toggle row actions",
     showDetails: "Show details for {row}",
     hideDetails: "Hide details for {row}",
+    showHiddenColumns: "Show additional columns for {row}",
+    hideHiddenColumns: "Hide additional columns for {row}",
     resizeColumn: "Resize column",
     search: "Search",
     noData: "No data",
@@ -2137,8 +2141,17 @@ class DataGrid extends BaseElement {
                 cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
             }
         }
+        this._syncSpanningCells();
         this.renderFooter();
         this.queueFrozenSync();
+    }
+
+    /** Keep auxiliary full-width rows aligned with the visible column list. */
+    _syncSpanningCells() {
+        const colspan = Math.max(1, this.columnsLength(true));
+        for (const cell of this.querySelectorAll("[data-dg-span-columns]")) {
+            cell.setAttribute("colspan", String(colspan));
+        }
     }
 
     /** Queue one frozen-column geometry pass for the next frame. */

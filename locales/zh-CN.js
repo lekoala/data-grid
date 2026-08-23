@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "显示行操作",
     showDetails: "显示 {row} 的详细信息",
     hideDetails: "隐藏 {row} 的详细信息",
+    showHiddenColumns: "显示 {row} 的其他列",
+    hideHiddenColumns: "隐藏 {row} 的其他列",
     resizeColumn: "调整列宽",
     noData: "暂无数据",
     loading: "加载中…",

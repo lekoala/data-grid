@@ -88,4 +88,5 @@ Available locales: `en`, `fr`, `nl`, `de`, `es`, `it`, `pt-BR`, `pt-PT`,
 Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `pageRange`, `pageStatus`, `resultCount`,
 `selectedCount`, `selectAll`, `selectRow`, `toggleActions`, `resizeColumn`,
-`search`, `noData`, `loading`, `areYouSure`, `networkError`.
+`showDetails`, `hideDetails`, `showHiddenColumns`, `hideHiddenColumns`, `search`,
+`noData`, `loading`, `areYouSure`, `networkError`.

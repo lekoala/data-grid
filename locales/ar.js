@@ -15,6 +15,8 @@ const labels = {
     toggleActions: "إظهار إجراءات الصف",
     showDetails: "إظهار تفاصيل {row}",
     hideDetails: "إخفاء تفاصيل {row}",
+    showHiddenColumns: "إظهار الأعمدة الإضافية لـ {row}",
+    hideHiddenColumns: "إخفاء الأعمدة الإضافية لـ {row}",
     resizeColumn: "تغيير حجم العمود",
     noData: "لا توجد بيانات",
     loading: "جارٍ التحميل…",

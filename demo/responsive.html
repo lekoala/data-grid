@@ -53,11 +53,6 @@
           responsive: true,
           snapColumns: true,
           rowLabel: (row) => `${row.first_name} ${row.last_name}`,
-          rowDetails: ({ row }) => {
-            const details = document.createElement("div");
-            details.textContent = `${row.job_title} at ${row.company} — ${row.city}`;
-            return details;
-          },
           initialQuery: { pageSize: 15 },
           columns: [
             { field: "id", title: "ID", width: 72, frozen: "start", responsive: 0 },
@@ -84,6 +79,12 @@
           responsive: true,
           responsiveStartOpen: true,
           responsiveToggle: false,
+          rowLabel: (row) => `${row.first_name} ${row.last_name}`,
+          rowDetails: ({ row }) => {
+            const details = document.createElement("div");
+            details.textContent = `Application details for customer ${row.id}: activity, actions or custom UI belong here.`;
+            return details;
+          },
           initialQuery: { pageSize: 15 },
           columns: [
             { field: "id", title: "ID", width: 72, responsive: 0 },
@@ -160,7 +161,7 @@
         <div class="demo-toolbar">
           <div>
             <p class="demo-kicker">Stacked</p>
-            <h2>Start-open details</h2>
+            <h2>Responsive columns + row details</h2>
           </div>
           <span class="demo-meta">width: <code id="stacked-width">—</code></span>
         </div>
@@ -168,10 +169,10 @@
           <div id="stacked-demo"></div>
         </div>
         <p class="demo-note">
-          The same <code>responsive</code> behavior, but <code>responsive-start-open</code> shows the hidden
-          values immediately (with <code>responsive-toggle="false"</code> there is no <code>+</code> control),
-          giving a clean record layout. Search, sort and filters still work, and an actively sorted or filtered
-          column is never hidden.
+          Hidden columns are part of the responsive representation, so <code>responsive-start-open</code> shows
+          them immediately and <code>responsive-toggle="false"</code> removes the second disclosure control.
+          The remaining chevron opens application-rendered row details. Search, sort and filters still work, and
+          an actively sorted or filtered column is never hidden.
         </p>
       </div>
     </main>
