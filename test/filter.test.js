@@ -357,7 +357,7 @@ test("a column with filterable: false keeps its th but renders no control", asyn
     document.body.removeChild(inst);
 });
 
-test("text filter placeholders are empty by default and only come from the column", async () => {
+test("text filter placeholders use an ellipsis by default and can be overridden by the column", async () => {
     const inst = await makeReadyGrid({
         columns: [
             { field: "name", title: "Name" },
@@ -368,7 +368,7 @@ test("text filter placeholders are empty by default and only come from the colum
     });
 
     const plain = inst.querySelector('.dg-head-filters input[data-name="name"]');
-    expect(plain.getAttribute("placeholder")).toBe("");
+    expect(plain.getAttribute("placeholder")).toBe("…");
 
     const hinted = inst.querySelector('.dg-head-filters input[data-name="ref"]');
     expect(hinted.getAttribute("placeholder")).toBe("ABC-123");

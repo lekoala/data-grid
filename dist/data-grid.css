@@ -183,7 +183,7 @@ data-grid > .dg-scroll > table {
 data-grid caption {
   caption-side: top;
   color: var(--dg-muted-color);
-  padding: 0 var(--dg-padding-x) var(--dg-space-2);
+  padding: var(--dg-space-1) var(--dg-padding-x);
   text-align: start;
   font-size: .875em;
   font-weight: 600;
@@ -278,9 +278,54 @@ data-grid .dg-topbar-end {
   margin-inline-start: auto;
 }
 
+data-grid .dg-search-field {
+  display: inline-flex;
+  position: relative;
+  max-inline-size: 100%;
+}
+
 data-grid .dg-search {
   min-inline-size: 14rem;
   max-inline-size: 100%;
+}
+
+data-grid .dg-search-icon {
+  color: var(--dg-muted-color);
+  display: block;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+  inline-size: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+data-grid .dg-search-icon:not(:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))) {
+  left: var(--dg-control-padding-inline);
+}
+
+data-grid .dg-search-icon:not(:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))) {
+  left: var(--dg-control-padding-inline);
+}
+
+data-grid .dg-search-icon:not(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))) {
+  left: var(--dg-control-padding-inline);
+}
+
+data-grid .dg-search-icon:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)) {
+  right: var(--dg-control-padding-inline);
+}
+
+data-grid .dg-search-icon:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)) {
+  right: var(--dg-control-padding-inline);
+}
+
+data-grid .dg-search-icon:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)) {
+  right: var(--dg-control-padding-inline);
+}
+
+data-grid .dg-search-icon svg {
+  display: block;
 }
 
 data-grid .dg-bulk-actions {
@@ -470,6 +515,10 @@ data-grid input:not(:is([type="checkbox"], [type="radio"])), data-grid select {
   max-width: none;
   margin: 0;
   transition: background-color .12s, border-color .12s, box-shadow .12s;
+}
+
+data-grid input.dg-search {
+  padding-inline-start: calc(var(--dg-control-padding-inline)  + 20px);
 }
 
 data-grid input:not([type="checkbox"]):focus-visible {

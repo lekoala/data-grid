@@ -170,7 +170,7 @@ Some options only work if the proper plugin is loaded.
 | `responsiveToggle`    | `Boolean`            | `true`               | Show toggle column on small screens                          |
 | `responsiveStartOpen` | `Boolean`            | `false`              | Open responsive detail rows by default                       |
 | `rowDetails`          | `Function`           | -                    | Render expandable application content for a row              |
-| `rowDetailsStartOpen` | `Boolean`            | `false`              | Open row details by default                                   |
+| `rowDetailsStartOpen` | `Boolean`            | `false`              | Open row details by default                                  |
 | `autosize`            | `Boolean`            | `true`               | Compute column sizes from data                               |
 | `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
 | `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits                          |
@@ -180,7 +180,7 @@ Some options only work if the proper plugin is loaded.
 | `showPageSize`        | `Boolean`            | `true`               | Show the page size select                                    |
 | `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
 | `searchable`          | `Boolean`            | `false`              | Show the global search input                                 |
-| `searchPlaceholder`   | `String`             | `""`                 | Optional visible hint for the search input                   |
+| `searchPlaceholder`   | `String`             | `"…"`                | Visible hint for the search input                            |
 | `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
 | `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied                |
 | `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |

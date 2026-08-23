@@ -990,7 +990,7 @@ class DataGrid extends base_element_default {
       frozen: null,
       transform: "",
       filterType: "text",
-      filterPlaceholder: "",
+      filterPlaceholder: "…",
       firstFilterOption: { value: "", text: "" }
     };
   }
@@ -1032,7 +1032,7 @@ class DataGrid extends base_element_default {
       rowDetailsStartOpen: false,
       filterDelay: 300,
       searchable: false,
-      searchPlaceholder: "",
+      searchPlaceholder: "…",
       searchDelay: 300,
       minSearchLength: 0,
       spinnerClass: "",
@@ -1390,7 +1390,7 @@ class DataGrid extends base_element_default {
   }
   renderSearch() {
     if (!this.options.searchable) {
-      this.searchInput?.remove();
+      this.searchInput?.closest(".dg-search-field")?.remove();
       this.searchInput = null;
       return;
     }
@@ -1401,15 +1401,25 @@ class DataGrid extends base_element_default {
     }
     const input = ce("input");
     input.type = "search";
+    input.name = "search";
     input.className = "dg-search";
     input.setAttribute("placeholder", this.options.searchPlaceholder);
     input.setAttribute("aria-label", this.labels.search);
     input.value = this._query.search;
+    const field = ce("span");
+    field.className = "dg-search-field";
+    const icon = ce("span");
+    icon.className = "dg-search-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" focusable="false">
+            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
+        </svg>`;
+    field.append(icon, input);
     textInputState.set(input, {
       composing: false,
       apply: debounce(() => this.commitSearch(), this.options.searchDelay)
     });
-    this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(input);
+    this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(field);
     this.searchInput = input;
   }
   commitSearch() {

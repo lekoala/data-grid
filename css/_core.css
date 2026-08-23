@@ -219,7 +219,7 @@ data-grid caption {
   color: var(--dg-muted-color);
   font-size: 0.875em;
   font-weight: 600;
-  padding: 0 var(--dg-padding-x) var(--dg-space-2);
+  padding: var(--dg-space-1) var(--dg-padding-x);
   text-align: start;
 }
 
@@ -318,9 +318,31 @@ data-grid .dg-topbar-end {
   margin-inline-start: auto;
 }
 
+data-grid .dg-search-field {
+  display: inline-flex;
+  max-inline-size: 100%;
+  position: relative;
+}
+
 data-grid .dg-search {
   min-inline-size: 14rem;
   max-inline-size: 100%;
+}
+
+data-grid .dg-search-icon {
+  color: var(--dg-muted-color);
+  display: block;
+  inline-size: 16px;
+  inset-inline-start: var(--dg-control-padding-inline);
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+data-grid .dg-search-icon svg {
+  display: block;
 }
 
 data-grid .dg-bulk-actions {
@@ -495,6 +517,10 @@ data-grid select {
   padding: 0 var(--dg-control-padding-inline);
   max-width: none;
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+data-grid input.dg-search {
+  padding-inline-start: calc(var(--dg-control-padding-inline) + 20px);
 }
 
 /* Form controls keep a full ring on keyboard focus */

@@ -33,13 +33,17 @@ function typeInto(input, value) {
     input.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-test("searchable renders a labelled search input in the topbar end", async () => {
+test("searchable renders a named, labelled search input with a decorative icon", async () => {
     const inst = await makeReadyGrid({ searchable: true });
     const input = inst.querySelector(".dg-search");
     expect(input).toBeTruthy();
     expect(input.type).toBe("search");
+    expect(input.name).toBe("search");
     expect(input.getAttribute("aria-label")).toBe("Search");
-    expect(input.closest(".dg-topbar-end")).toBeTruthy();
+    const field = input.closest(".dg-search-field");
+    expect(field).toBeTruthy();
+    expect(field.querySelector('.dg-search-icon[aria-hidden="true"] svg')).toBeTruthy();
+    expect(field.closest(".dg-topbar-end")).toBeTruthy();
     expect(input.closest(".dg-topbar")).toBeTruthy();
     removeGrid(inst);
 });
@@ -51,9 +55,9 @@ test("a non-searchable grid has no search input and no topbar", async () => {
     removeGrid(inst);
 });
 
-test("search placeholder is empty by default and follows search-placeholder", async () => {
+test("search placeholder uses an ellipsis by default and follows search-placeholder", async () => {
     const plain = await makeReadyGrid({ searchable: true });
-    expect(plain.querySelector(".dg-search").getAttribute("placeholder")).toBe("");
+    expect(plain.querySelector(".dg-search").getAttribute("placeholder")).toBe("…");
     removeGrid(plain);
 
     const hinted = await makeReadyGrid({ searchable: true, searchPlaceholder: "Name, email or patient ID" });
@@ -66,7 +70,7 @@ test("search placeholder is empty by default and follows search-placeholder", as
 test("toggling search-placeholder at runtime updates the existing input", async () => {
     const inst = await makeReadyGrid({ searchable: true });
     const input = inst.querySelector(".dg-search");
-    expect(input.getAttribute("placeholder")).toBe("");
+    expect(input.getAttribute("placeholder")).toBe("…");
 
     inst.setAttribute("search-placeholder", "Ref ABC-123");
     expect(input.getAttribute("placeholder")).toBe("Ref ABC-123");
@@ -221,5 +225,6 @@ test("toggling searchable at runtime adds and removes the search input", async (
 
     inst.removeAttribute("searchable");
     expect(inst.querySelector(".dg-search")).toBeNull();
+    expect(inst.querySelector(".dg-search-field")).toBeNull();
     removeGrid(inst);
 });
