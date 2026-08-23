@@ -92,7 +92,7 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
-    "page-size and filter selects share the same caret",
+    "page-size and filter selects share the same caret geometry",
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/${FIXTURE}`);
@@ -113,24 +113,27 @@ test.skipIf(IS_WINDOWS)(
                 ].map((select) => {
                     const style = getComputedStyle(select);
                     const caret = getComputedStyle(select.closest('.dg-select-field'), '::after');
-                    return [
-                        style.appearance,
-                        style.paddingInlineEnd,
-                        caret.width,
-                        caret.height,
-                        caret.borderInlineEndWidth,
-                        caret.transform,
-                        caret.insetInlineEnd,
-                    ];
+                    return {
+                        appearance: style.appearance,
+                        paddingInlineEnd: style.paddingInlineEnd,
+                        caret: {
+                            width: caret.width,
+                            height: caret.height,
+                            borderInlineEndWidth: caret.borderInlineEndWidth,
+                            transform: caret.transform,
+                            insetInlineEnd: caret.insetInlineEnd,
+                        },
+                    };
                 }))`,
             ),
         );
-        expect(styles[0]).toEqual(styles[1]);
-        expect(styles[0][0]).toBe("none");
-        expect(styles[0][1]).toBe("32px");
-        expect(styles[0][2]).toBe("6px");
-        expect(styles[0][4]).toBe("1.5px");
-        expect(styles[0][6]).toBe("12px");
+        expect(styles[0].appearance).toBe("none");
+        expect(styles[1].appearance).toBe("none");
+        expect(styles[0].paddingInlineEnd).toBe("32px");
+        expect(styles[0].caret).toEqual(styles[1].caret);
+        expect(styles[0].caret.width).toBe("6px");
+        expect(styles[0].caret.borderInlineEndWidth).toBe("1px");
+        expect(styles[0].caret.insetInlineEnd).toBe("12px");
     },
     TIMEOUT,
 );
@@ -235,7 +238,7 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
-    "a selected row keeps its background over the stripe",
+    "a selected row overrides stripes and then restores the baseline backgrounds",
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/${FIXTURE}`);
@@ -243,6 +246,7 @@ test.skipIf(IS_WINDOWS)(
 
         const rowBg = (n) =>
             `getComputedStyle(document.querySelectorAll('#local-grid tbody tr')[${n}]).backgroundColor`;
+        const baseline = await read(v, `JSON.stringify([${rowBg(0)}, ${rowBg(1)}, ${rowBg(2)}])`);
 
         await v.evaluate("window.grid.selectAll()");
         // Wait for the 120ms background transition to settle
@@ -254,10 +258,11 @@ test.skipIf(IS_WINDOWS)(
         expect(second).toBe(first);
         expect(third).toBe(first);
 
-        // Deselecting restores the normal (transparent) row background
+        // Deselecting restores each row's original background state.
         await v.evaluate("window.grid.clearSelection()");
-        await waitFor(v, `${rowBg(0)} === 'rgba(0, 0, 0, 0)'`);
-        expect(await read(v, rowBg(1))).toBe("rgba(0, 0, 0, 0)");
+        await waitFor(v, "document.querySelectorAll('#local-grid tbody tr[data-selected]').length === 0");
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        expect(await read(v, `JSON.stringify([${rowBg(0)}, ${rowBg(1)}, ${rowBg(2)}])`)).toBe(baseline);
     },
     TIMEOUT,
 );

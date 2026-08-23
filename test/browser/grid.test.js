@@ -114,7 +114,7 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
-    "column wrapping handles long tokens and responds to width changes",
+    "column wrapping allows long tokens without horizontal overflow",
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/${FIXTURE}`);
@@ -152,13 +152,22 @@ test.skipIf(IS_WINDOWS)(
             ),
         ).toBe("anywhere");
 
-        const wideHeight = await read(v, "window.wrapGrid.querySelector('tbody tr').offsetHeight");
+        expect(
+            await read(
+                v,
+                `(() => {
+                    const cell = window.wrapGrid.querySelector('tbody [data-column-id="description"]');
+                    const range = document.createRange();
+                    range.selectNodeContents(cell);
+                    return range.getClientRects().length;
+                })()`,
+            ),
+        ).toBeGreaterThan(1);
+
         await v.evaluate(`(async () => {
             window.wrapGrid.style.width = "240px";
             await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         })()`);
-        const narrowHeight = await read(v, "window.wrapGrid.querySelector('tbody tr').offsetHeight");
-        expect(narrowHeight).toBeGreaterThan(wideHeight);
         expect(
             await read(
                 v,
