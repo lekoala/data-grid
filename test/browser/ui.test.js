@@ -92,6 +92,50 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "page-size and filter selects share the same caret",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        await v.evaluate(`(() => {
+            window.grid.options.columns.find((column) => column.field === "company").filterType = "select";
+            window.grid.renderTable();
+        })()`);
+        await waitFor(v, "document.querySelector('#local-grid .dg-head-filters select')");
+
+        const styles = JSON.parse(
+            await read(
+                v,
+                `JSON.stringify([
+                    document.querySelector('#local-grid .dg-select-per-page'),
+                    document.querySelector('#local-grid .dg-head-filters select'),
+                ].map((select) => {
+                    const style = getComputedStyle(select);
+                    const caret = getComputedStyle(select.closest('.dg-select-field'), '::after');
+                    return [
+                        style.appearance,
+                        style.paddingInlineEnd,
+                        caret.width,
+                        caret.height,
+                        caret.borderInlineEndWidth,
+                        caret.transform,
+                        caret.insetInlineEnd,
+                    ];
+                }))`,
+            ),
+        );
+        expect(styles[0]).toEqual(styles[1]);
+        expect(styles[0][0]).toBe("none");
+        expect(styles[0][1]).toBe("32px");
+        expect(styles[0][2]).toBe("6px");
+        expect(styles[0][4]).toBe("1.5px");
+        expect(styles[0][6]).toBe("12px");
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "responsive mode hides columns on a narrow viewport",
     async () => {
         await using v = view();

@@ -519,6 +519,33 @@ data-grid select {
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
+/* Every select uses the same language-neutral caret. Keeping this on the base
+   element also covers plugin-provided controls and future editable selects. */
+data-grid select {
+  appearance: none;
+  padding-inline-end: 32px;
+}
+
+data-grid .dg-select-field {
+  display: inline-flex;
+  max-inline-size: 100%;
+  position: relative;
+}
+
+data-grid .dg-select-field::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-inline-end: 1.5px solid currentColor;
+  border-block-end: 1.5px solid currentColor;
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+  opacity: 0.65;
+}
+
 data-grid input.dg-search {
   padding-inline-start: calc(var(--dg-control-padding-inline) + 20px);
 }
@@ -589,7 +616,7 @@ data-grid thead tr.dg-head-filters th.dg-filter-cell {
 }
 
 data-grid thead tr.dg-head-filters .dg-filter-control {
-  background: transparent;
+  background-color: transparent;
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -619,38 +646,14 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
   outline: 0;
 }
 
-/* Select filters: keep the control 100% native but replace only its caret so
-   the text stays clear of the right edge, aligned with the control padding. */
-data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select) {
-  position: relative;
-}
-
-data-grid thead tr.dg-head-filters th.dg-filter-cell select.dg-filter-control {
-  appearance: none;
-  padding-inline-end: 32px;
-}
-
-data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select)::after {
-  content: "";
-  position: absolute;
-  inset-inline-end: 12px;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  border-inline-end: 1.5px solid currentColor;
-  border-block-end: 1.5px solid currentColor;
-  transform: translateY(-70%) rotate(45deg);
-  pointer-events: none;
-  opacity: 0.65;
-}
-
 /* In forced-colors mode, hand the appearance back to the native control. */
 @media (forced-colors: active) {
-  data-grid thead tr.dg-head-filters th.dg-filter-cell select.dg-filter-control {
+  data-grid select {
     appearance: auto;
+    padding-inline-end: var(--dg-control-padding-inline);
   }
 
-  data-grid thead tr.dg-head-filters th.dg-filter-cell:has(select)::after {
+  data-grid .dg-select-field::after {
     display: none;
   }
 }
@@ -791,11 +794,6 @@ data-grid tfoot .dg-page-nav {
 data-grid tfoot .dg-input-page {
   text-align: center;
   width: 3.5rem;
-}
-
-/* Native caret kept; padding makes the value sit clear of the arrow. */
-data-grid tfoot .dg-select-per-page {
-  padding-inline-end: var(--dg-control-padding-inline);
 }
 
 /* The page-size select and page input share the pager button rhythm: a 2em

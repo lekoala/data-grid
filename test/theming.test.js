@@ -25,6 +25,13 @@ test("core css ships the density presets", () => {
     expect(coreCss).toMatch(/data-grid\[density=?["']?comfortable["']?\]/);
 });
 
+test("all selects share the component caret", () => {
+    expect(coreCss).toMatch(/data-grid select \{[\s\S]*?appearance: none;/);
+    expect(coreCss).toMatch(/data-grid \.dg-select-field:after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/);
+    expect(coreCss).toContain("padding-inline-end: 32px");
+    expect(coreCss).not.toContain("dg-filter-cell:has(select)");
+});
+
 test("bootstrap theme maps --dg-* onto --bs-* and covers dark mode", () => {
     expect(themeCss).toContain("--dg-bg: var(--bs-body-bg");
     expect(themeCss).toContain("--dg-accent: var(--bs-primary");

@@ -114,6 +114,10 @@ no translation.
 `.dg-visually-hidden` is the component's screen-reader-only utility, paired
 with an `aria-hidden` visible counterpart.
 
+All `<select>` controls inside the component share the same CSS caret and
+reserve the same inline-end space for it. This includes page-size and column
+filter controls as well as selects rendered by plugins.
+
 ## Caption
 
 `options.caption` renders a real `<caption>` styled as a quiet dataset label

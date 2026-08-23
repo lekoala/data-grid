@@ -740,7 +740,9 @@ class DataGrid extends BaseElement {
             <div class="dg-footer">
                 <div class="dg-footer-controls">
                 <div class="dg-page-nav">
-                  <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
+                  <span class="dg-select-field">
+                    <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
+                  </span>
                 </div>
                 <div class="dg-pagination" role="group" aria-label="${formatLabel(labels.pageStatus, { page: 0, pages: 0 })}">
                   <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
@@ -1425,6 +1427,7 @@ class DataGrid extends BaseElement {
 
     showPageSizeChanged() {
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
+        this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
     }
 
     responsiveChanged() {
@@ -1720,6 +1723,7 @@ class DataGrid extends BaseElement {
         this.addEventListener("columnReordered", this);
         this.addEventListener("columnVisibility", this);
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
+        this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
 
         this.setupDataSource();
         this.setupInitialState();
@@ -3162,7 +3166,14 @@ class DataGrid extends BaseElement {
             }
         }
 
-        th.appendChild(filter);
+        if (filter instanceof HTMLSelectElement) {
+            const field = ce("span");
+            field.className = "dg-select-field";
+            field.appendChild(filter);
+            th.appendChild(field);
+        } else {
+            th.appendChild(filter);
+        }
     }
 
     /**

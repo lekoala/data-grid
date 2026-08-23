@@ -852,7 +852,9 @@ class DataGrid extends base_element_default {
             <div class="dg-footer">
                 <div class="dg-footer-controls">
                 <div class="dg-page-nav">
-                  <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
+                  <span class="dg-select-field">
+                    <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
+                  </span>
                 </div>
                 <div class="dg-pagination" role="group" aria-label="${formatLabel(labels.pageStatus, { page: 0, pages: 0 })}">
                   <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
@@ -1324,6 +1326,7 @@ class DataGrid extends base_element_default {
   }
   showPageSizeChanged() {
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
+    this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
   }
   responsiveChanged() {
     this.runPlugins("responsiveChanged", this.options.responsive);
@@ -1532,6 +1535,7 @@ class DataGrid extends base_element_default {
     this.addEventListener("columnReordered", this);
     this.addEventListener("columnVisibility", this);
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
+    this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
     this.setupDataSource();
     this.setupInitialState();
     for (const plugin of Object.values(this.plugins)) {
@@ -2466,7 +2470,14 @@ class DataGrid extends base_element_default {
         filter.value = filterState.value ?? "";
       }
     }
-    th.appendChild(filter);
+    if (filter instanceof HTMLSelectElement) {
+      const field2 = ce("span");
+      field2.className = "dg-select-field";
+      field2.appendChild(filter);
+      th.appendChild(field2);
+    } else {
+      th.appendChild(filter);
+    }
   }
   createFilterElement(column, relatedTh) {
     const isSelect = column.filterType === "select";

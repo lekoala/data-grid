@@ -24,6 +24,19 @@ function removeGrid(inst) {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 20));
 
+test("the page-size select and its caret wrapper toggle together", async () => {
+    const inst = await makeReadyGrid({ showPageSize: false });
+    const select = inst.querySelector(".dg-select-per-page");
+    const field = select.closest(".dg-select-field");
+    expect(select.hidden).toBe(true);
+    expect(field.hidden).toBe(true);
+
+    inst.setAttribute("show-page-size", "");
+    expect(select.hidden).toBe(false);
+    expect(field.hidden).toBe(false);
+    removeGrid(inst);
+});
+
 test("the page input only navigates on change and clamps out-of-range values", async () => {
     const inst = await makeReadyGrid({ pageSize: 10 });
 
