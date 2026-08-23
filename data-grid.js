@@ -20,6 +20,7 @@ import RowActions from "./src/plugins/row-actions.js";
 import EditableColumn from "./src/plugins/editable-column.js";
 import SpinnerSupport from "./src/plugins/spinner-support.js";
 import SaveState from "./src/plugins/save-state.js";
+import RowDetails from "./src/plugins/row-details.js";
 
 // Using shorthand property names
 // This make them reserved and keys will be preserved
@@ -37,7 +38,8 @@ DataGrid.registerPlugins({
   RowActions,
   EditableColumn,
   SpinnerSupport,
-  SaveState
+  SaveState,
+  RowDetails
 });
 
 // Prevent errors if included multiple times

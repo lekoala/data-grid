@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Tüm satırları seç",
     selectRow: "{row} seç",
     toggleActions: "Satır eylemlerini göster",
+    showDetails: "{row} ayrıntılarını göster",
+    hideDetails: "{row} ayrıntılarını gizle",
     resizeColumn: "Sütunu yeniden boyutlandır",
     noData: "Veri yok",
     loading: "Yükleniyor…",

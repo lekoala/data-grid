@@ -168,6 +168,11 @@ If you customized v2 Sass variables or Bootstrap-specific selectors, migrate tho
 
 Do not rely on the internal DOM structure more than necessary.
 
+The v2 `expand=true` option made a row click toggle cell wrapping. In v3,
+wrapping is presentation rather than disclosure, so use `wrap=true`. For real
+expandable content, use the `RowDetails` plugin through the `rowDetails`
+renderer option.
+
 ## Accessibility
 
 v3 relies much more on native HTML semantics.

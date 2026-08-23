@@ -1,0 +1,27 @@
+data-grid .dg-row-details-toggle {
+  padding: 0;
+  text-align: center;
+}
+
+data-grid .dg-row-details-toggle-control {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+}
+
+data-grid .dg-row-details-toggle-control svg {
+  transition: transform 160ms ease;
+}
+
+data-grid .dg-row-details-toggle-control-open svg {
+  transform: rotate(90deg);
+}
+
+data-grid .dg-row-details-row > td {
+  background: var(--dg-bg);
+  padding: var(--dg-space-3) var(--dg-padding-x);
+  white-space: normal;
+}

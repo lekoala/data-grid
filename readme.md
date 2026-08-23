@@ -169,10 +169,13 @@ Some options only work if the proper plugin is loaded.
 | `responsive`          | `Boolean`            | `false`              | Responsive columns                                           |
 | `responsiveToggle`    | `Boolean`            | `true`               | Show toggle column on small screens                          |
 | `responsiveStartOpen` | `Boolean`            | `false`              | Open responsive detail rows by default                       |
+| `rowDetails`          | `Function`           | -                    | Render expandable application content for a row              |
+| `rowDetailsStartOpen` | `Boolean`            | `false`              | Open row details by default                                   |
 | `autosize`            | `Boolean`            | `true`               | Compute column sizes from data                               |
 | `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
 | `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits                          |
-| `expand`              | `Boolean`            | `false`              | Allow cell content to span multiple lines                    |
+| `wrap`                | `Boolean`            | `false`              | Allow data cells to wrap over multiple lines                 |
+| `snapColumns`         | `Boolean`            | `false`              | Snap horizontal scrolling near column starts                 |
 | `pageSizes`           | `Number[]`           | `[10,25,50,100,250]` | Available page size options                                  |
 | `showPageSize`        | `Boolean`            | `true`               | Show the page size select                                    |
 | `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
@@ -201,9 +204,9 @@ described in `docs/plugins.md`.
 
 The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`,
 `search-placeholder`, `min-search-length`, `responsive`, `responsive-toggle`,
-`responsive-start-open`, `selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
+`responsive-start-open`, `row-details-start-open`, `selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`,
-`reorder`, `menu`, `expand`, `autosize`, `resizable`, `autoheight`,
+`reorder`, `menu`, `wrap`, `snap-columns`, `autosize`, `resizable`, `autoheight`,
 `autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
 
 ```html
@@ -387,6 +390,7 @@ See `docs/actions.md` for the full contract.
 | `action`           | `{ action, name, row, rowKey, rowIndex, trigger }` | an action is performed     |
 | `bulkAction`       | `{ action, name, selection, query, trigger }`      | a bulk action is performed |
 | `edit`             | `{ data, value, field, column }` (cancelable)      | an edit is committed       |
+| `rowDetailsToggle` | `{ row, rowKey, expanded }`                        | row details are toggled    |
 
 ## Server
 

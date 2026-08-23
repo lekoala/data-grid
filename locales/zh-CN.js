@@ -13,6 +13,8 @@ const labels = {
     selectAll: "全选所有行",
     selectRow: "选择 {row}",
     toggleActions: "显示行操作",
+    showDetails: "显示 {row} 的详细信息",
+    hideDetails: "隐藏 {row} 的详细信息",
     resizeColumn: "调整列宽",
     noData: "暂无数据",
     loading: "加载中…",

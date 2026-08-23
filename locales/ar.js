@@ -13,6 +13,8 @@ const labels = {
     selectAll: "تحديد كل الصفوف",
     selectRow: "تحديد {row}",
     toggleActions: "إظهار إجراءات الصف",
+    showDetails: "إظهار تفاصيل {row}",
+    hideDetails: "إخفاء تفاصيل {row}",
     resizeColumn: "تغيير حجم العمود",
     noData: "لا توجد بيانات",
     loading: "جارٍ التحميل…",

@@ -46,18 +46,17 @@ declare class ResponsiveGrid extends BasePlugin {
     createHeaderCell(th: HTMLTableCellElement): void;
     createFilterCell(): void;
     /**
-     * @returns {HTMLElement}
+     * @param {import("../data-grid.js").CellContext} ctx
+     * @returns {HTMLButtonElement}
      */
-    createDataCell(): HTMLElement;
+    createDataCell({ row, rowIndex }: import("../data-grid.js").CellContext): HTMLButtonElement;
+    /** @param {Number} rowIndex */
+    _detailId(rowIndex: number): string;
     /**
      * Apply responsive hide/show based on the last observed size.
      */
     resize(): void;
     computeLabelWidth(): number;
-    /**
-     * @param {Event} ev
-     */
-    onmousedown(ev: Event): void;
     /**
      * The real rendered record rows (excludes responsive child rows and fake
      * empty/error rows).
@@ -114,6 +113,7 @@ declare class ResponsiveGrid extends BasePlugin {
      * with no state yet are seeded from `responsiveStartOpen`.
      */
     _seedRows(): void;
+    updateLabels(): void;
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */

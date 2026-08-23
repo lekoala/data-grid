@@ -75,9 +75,6 @@ function addClass(el, name) {
 function removeClass(el, name) {
   el.classList.remove(...name.split(" "));
 }
-function toggleClass(el, name) {
-  el.classList.toggle(name);
-}
 function $(selector, base = document) {
   if (selector instanceof HTMLElement) {
     return selector;
@@ -564,6 +561,8 @@ var labels = {
   selectAll: "Select all rows",
   selectRow: "Select {row}",
   toggleActions: "Toggle row actions",
+  showDetails: "Show details for {row}",
+  hideDetails: "Hide details for {row}",
   resizeColumn: "Resize column",
   search: "Search",
   noData: "No data",
@@ -647,6 +646,9 @@ function parseDeclarativeTable(table) {
       if (Number.isFinite(responsive)) {
         column.responsive = responsive;
       }
+    }
+    if (th.dataset.frozen === "start") {
+      column.frozen = "start";
     }
     if (th.dataset.hidden !== undefined) {
       column.hidden = parseDeclarativeBoolean(th.dataset.hidden);
@@ -767,6 +769,11 @@ function applyColumnDefinition(el, column) {
   if (column.class) {
     addClass(el, column.class);
   }
+  if (column.frozen === "start") {
+    el.dataset.frozen = "start";
+  } else {
+    delete el.dataset.frozen;
+  }
   if (isColumnHidden(column)) {
     setAttribute(el, "hidden", "");
     if (column.responsiveHidden) {
@@ -813,6 +820,7 @@ class DataGrid extends base_element_default {
     this._loadObserver = null;
     this._lazyPending = false;
     this._renderContext = null;
+    this._frozenFrame = null;
   }
   _ready() {
     this.fireEvents = false;
@@ -979,6 +987,7 @@ class DataGrid extends base_element_default {
       editable: false,
       responsive: 1,
       responsiveHidden: false,
+      frozen: null,
       transform: "",
       filterType: "text",
       filterPlaceholder: "",
@@ -1012,12 +1021,15 @@ class DataGrid extends base_element_default {
       bulkActions: [],
       resizable: false,
       autosize: true,
-      expand: false,
+      wrap: false,
+      snapColumns: false,
       autoheight: true,
       autohidePager: false,
       responsive: false,
       responsiveToggle: true,
       responsiveStartOpen: false,
+      rowDetails: null,
+      rowDetailsStartOpen: false,
       filterDelay: 300,
       searchable: false,
       searchPlaceholder: "",
@@ -1074,6 +1086,9 @@ class DataGrid extends base_element_default {
   getColumns() {
     return this._columns;
   }
+  getPlugin(name) {
+    return this.plugins[name];
+  }
   convertColumns(columns) {
     const cols = [];
     if (typeof columns === "object" && !Array.isArray(columns)) {
@@ -1117,6 +1132,7 @@ class DataGrid extends base_element_default {
       "responsive",
       "responsive-toggle",
       "responsive-start-open",
+      "row-details-start-open",
       "selectable",
       "single-select",
       "select-visible-only",
@@ -1130,7 +1146,8 @@ class DataGrid extends base_element_default {
       "row-actions",
       "reorder",
       "menu",
-      "expand",
+      "wrap",
+      "snap-columns",
       "autosize",
       "resizable",
       "autoheight",
@@ -1309,6 +1326,19 @@ class DataGrid extends base_element_default {
     this.runPlugins("responsiveChanged", this.options.responsive);
     this.renderTable();
   }
+  snapColumnsChanged() {
+    this.classList.toggle("dg-snap-columns", Boolean(this.options.snapColumns));
+  }
+  wrapChanged() {
+    if (this.table) {
+      this.renderBody();
+    }
+  }
+  rowDetailsStartOpenChanged() {
+    if (this.table) {
+      this.renderBody();
+    }
+  }
   menuChanged() {
     this.renderHeader();
   }
@@ -1449,6 +1479,7 @@ class DataGrid extends base_element_default {
     const existing = this.querySelector(":scope > .dg-scroll");
     if (existing) {
       existing.className = "dg-scroll";
+      existing.tabIndex = 0;
       this.scrollEl = existing;
       const table = existing.querySelector(":scope > table");
       if (table) {
@@ -1458,6 +1489,7 @@ class DataGrid extends base_element_default {
     }
     const scroll = ce("div");
     scroll.className = "dg-scroll";
+    scroll.tabIndex = 0;
     if (this.table) {
       this.insertBefore(scroll, this.table);
       scroll.appendChild(this.table);
@@ -1483,6 +1515,9 @@ class DataGrid extends base_element_default {
     this.addEventListener("keydown", this);
     this.addEventListener("compositionstart", this);
     this.addEventListener("compositionend", this);
+    this.addEventListener("columnResized", this);
+    this.addEventListener("columnReordered", this);
+    this.addEventListener("columnVisibility", this);
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
     this.setupDataSource();
     this.setupInitialState();
@@ -1490,6 +1525,7 @@ class DataGrid extends base_element_default {
       await plugin.connected?.();
     }
     this.dirChanged();
+    this.snapColumnsChanged();
     this.populatePageSizes();
     this.updateLabels();
     this.renderSearch();
@@ -1510,6 +1546,13 @@ class DataGrid extends base_element_default {
     this.removeEventListener("keydown", this);
     this.removeEventListener("compositionstart", this);
     this.removeEventListener("compositionend", this);
+    this.removeEventListener("columnResized", this);
+    this.removeEventListener("columnReordered", this);
+    this.removeEventListener("columnVisibility", this);
+    if (this._frozenFrame !== null) {
+      cancelAnimationFrame(this._frozenFrame);
+      this._frozenFrame = null;
+    }
     for (const plugin of Object.values(this.plugins)) {
       plugin.disconnected?.();
     }
@@ -1725,6 +1768,55 @@ class DataGrid extends base_element_default {
       }
     }
     this.renderFooter();
+    this.queueFrozenSync();
+  }
+  queueFrozenSync() {
+    if (this._frozenFrame !== null) {
+      return;
+    }
+    this._frozenFrame = requestAnimationFrame(() => {
+      this._frozenFrame = null;
+      this.syncFrozenColumns();
+    });
+  }
+  syncFrozenColumns() {
+    if (!this.headerRow || !this.scrollEl) {
+      return;
+    }
+    for (const cell of findAll(this, "[data-frozen-edge]")) {
+      cell.removeAttribute("data-frozen-edge");
+    }
+    let offset = 0;
+    let edgeCells = [];
+    for (const column of this.getColumns()) {
+      if (column.frozen !== "start" || isColumnHidden(column) || column.attr) {
+        continue;
+      }
+      const id = column.id ?? column.field;
+      const cells = findAll(this, `[data-column-id="${id}"]`).filter((cell) => cell.closest("data-grid") === this);
+      const header = cells.find((cell) => cell.parentElement?.classList.contains("dg-head-columns"));
+      if (!header) {
+        continue;
+      }
+      for (const cell of cells) {
+        cell.style.setProperty("--dg-frozen-offset", `${offset}px`);
+      }
+      edgeCells = cells;
+      offset += header.offsetWidth;
+    }
+    for (const cell of edgeCells) {
+      cell.setAttribute("data-frozen-edge", "");
+    }
+    this.scrollEl.style.setProperty("--dg-frozen-start-width", `${offset}px`);
+  }
+  oncolumnResized() {
+    this.queueFrozenSync();
+  }
+  oncolumnReordered() {
+    this.queueFrozenSync();
+  }
+  oncolumnVisibility() {
+    this.queueFrozenSync();
   }
   showColumn(field, render = true) {
     this.setColProp(field, "hidden", false);
@@ -2106,6 +2198,7 @@ class DataGrid extends base_element_default {
     this.renderHeader();
     this.renderFooter();
     this.runPlugins("afterRender", this._renderContext);
+    this.queueFrozenSync();
   }
   updateTableLabel() {
     const table = this.table;
@@ -2122,6 +2215,9 @@ class DataGrid extends base_element_default {
       cap.textContent = caption;
       table.removeAttribute("aria-labelledby");
       table.removeAttribute("aria-label");
+      this.scrollEl.setAttribute("role", "region");
+      this.scrollEl.setAttribute("aria-label", caption);
+      this.scrollEl.removeAttribute("aria-labelledby");
     } else {
       cap?.remove();
       const labelledby = this.getAttribute("aria-labelledby");
@@ -2129,12 +2225,21 @@ class DataGrid extends base_element_default {
       if (labelledby) {
         table.setAttribute("aria-labelledby", labelledby);
         table.removeAttribute("aria-label");
+        this.scrollEl.setAttribute("role", "region");
+        this.scrollEl.setAttribute("aria-labelledby", labelledby);
+        this.scrollEl.removeAttribute("aria-label");
       } else if (ariaLabel) {
         table.setAttribute("aria-label", ariaLabel);
         table.removeAttribute("aria-labelledby");
+        this.scrollEl.setAttribute("role", "region");
+        this.scrollEl.setAttribute("aria-label", ariaLabel);
+        this.scrollEl.removeAttribute("aria-labelledby");
       } else {
         table.removeAttribute("aria-labelledby");
         table.removeAttribute("aria-label");
+        this.scrollEl.removeAttribute("role");
+        this.scrollEl.removeAttribute("aria-labelledby");
+        this.scrollEl.removeAttribute("aria-label");
       }
     }
   }
@@ -2302,6 +2407,7 @@ class DataGrid extends base_element_default {
       }
       const th = ce("th");
       setAttribute(th, "data-column-id", column.id ?? column.field);
+      applyColumnDefinition(th, column);
       if (this.isColumnFilterable(column)) {
         th.classList.add("dg-filter-cell");
         const ctx = { grid: this, column };
@@ -2405,14 +2511,6 @@ class DataGrid extends base_element_default {
       const tr = ce("tr");
       tr.classList.add("dg-data-row");
       tr.dataset.rowIndex = String(i);
-      if (this.options.expand) {
-        tr.classList.add("dg-expandable");
-        on(tr, "click", (ev) => {
-          if (ev.target.matches(this._excludedRowElementSelector))
-            return;
-          toggleClass(ev.currentTarget, "dg-expanded");
-        });
-      }
       for (const column of this.getColumns()) {
         if (!column) {
           console.error("Empty column found!", this.getColumns());
@@ -2432,6 +2530,9 @@ class DataGrid extends base_element_default {
         const td = ce("td");
         setAttribute(td, "data-column-id", column.id ?? field);
         applyColumnDefinition(td, column);
+        if (this.options.wrap) {
+          td.classList.add("dg-wrap");
+        }
         td.setAttribute("data-name", column.title ?? "");
         const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
         if (column.renderCell) {
@@ -2471,6 +2572,7 @@ class DataGrid extends base_element_default {
     }
     this.paginate();
     this.runPlugins("afterRender", this._renderContext);
+    this.queueFrozenSync();
     if (this.hasDataError || this.rows.length) {
       removeAttribute(this, "data-empty");
     } else {
@@ -2911,6 +3013,7 @@ class SelectableRows extends base_plugin_default {
       id: "$selection",
       virtual: true,
       position: "start",
+      frozen: "start",
       width: 40,
       sortable: false,
       title: "",
@@ -3330,6 +3433,7 @@ class ResponsiveGrid extends base_plugin_default {
       id: "$responsive",
       virtual: true,
       position: "start",
+      frozen: "start",
       width: 40,
       sortable: false,
       title: "",
@@ -3337,7 +3441,7 @@ class ResponsiveGrid extends base_plugin_default {
       hidden: !this.hasHiddenColumns(),
       renderHeaderCell: (th) => this.createHeaderCell(th),
       renderFilterCell: () => this.createFilterCell(),
-      renderCell: () => this.createDataCell()
+      renderCell: (ctx) => this.createDataCell(ctx)
     });
   }
   blockObserver() {
@@ -3374,19 +3478,27 @@ class ResponsiveGrid extends base_plugin_default {
     th.classList.add("dg-not-resizable", "dg-not-sortable");
   }
   createFilterCell() {}
-  createDataCell() {
-    const cell = document.createElement("div");
-    cell.classList.add("dg-clickable-cell");
-    cell.innerHTML = `<svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+  createDataCell({ row, rowIndex = 0 }) {
+    const cell = document.createElement("button");
+    cell.type = "button";
+    cell.classList.add("dg-clickable-cell", `${RESPONSIVE_CLASS}-toggle-control`);
+    cell.setAttribute("aria-expanded", "false");
+    cell.setAttribute("aria-controls", this._detailId(rowIndex));
+    cell.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showDetails, {
+      row: this.grid.getRowLabel(row ?? {}, rowIndex)
+    }));
+    cell.innerHTML = `<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
   <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>
-<svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
+<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>`;
     cell.addEventListener("click", this);
-    cell.addEventListener("mousedown", this);
     return cell;
+  }
+  _detailId(rowIndex) {
+    return `dg-responsive-detail-${this.grid.id}-${rowIndex}`;
   }
   resize() {
     const grid = this.grid;
@@ -3508,9 +3620,6 @@ class ResponsiveGrid extends base_plugin_default {
     }
     return idealWidth;
   }
-  onmousedown(ev) {
-    ev.preventDefault();
-  }
   _dataRows() {
     return Array.from(this.grid.querySelectorAll("tbody > tr.dg-data-row"));
   }
@@ -3518,7 +3627,7 @@ class ResponsiveGrid extends base_plugin_default {
     if (!column?.field) {
       return false;
     }
-    if (column.responsive === 0 || column.hidden) {
+    if (column.responsive === 0 || column.hidden || column.frozen === "start") {
       return true;
     }
     if (this.grid.getColumnSortDirection(column.field)) {
@@ -3542,6 +3651,15 @@ class ResponsiveGrid extends base_plugin_default {
     }
   }
   _setToggleIcon(tr, expanded) {
+    const control = tr.querySelector(`.${RESPONSIVE_CLASS}-toggle-control`);
+    const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
+    const row = this.grid.rows[rowIndex] ?? {};
+    if (control) {
+      control.setAttribute("aria-expanded", String(expanded));
+      control.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
+        row: this.grid.getRowLabel(row, rowIndex)
+      }));
+    }
     const open = find(tr, `.${RESPONSIVE_CLASS}-open`);
     const close = find(tr, `.${RESPONSIVE_CLASS}-close`);
     if (!open || !close) {
@@ -3567,6 +3685,8 @@ class ResponsiveGrid extends base_plugin_default {
       const detailRow = ce("tr");
       insertAfter(detailRow, tr);
       addClass(detailRow, `${RESPONSIVE_CLASS}-child-row`);
+      const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
+      detailRow.id = this._detailId(rowIndex);
       const detailTd = ce("td", detailRow);
       setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
       const childTable = ce("table", detailTd);
@@ -3626,6 +3746,11 @@ class ResponsiveGrid extends base_plugin_default {
       if (expanded === "true") {
         this._setRowExpanded(tr, true);
       }
+    }
+  }
+  updateLabels() {
+    for (const tr of this._dataRows()) {
+      this._setToggleIcon(tr, tr.dataset.responsiveExpanded === "true");
     }
   }
   afterRender(context) {
@@ -4184,6 +4309,157 @@ class SaveState extends base_plugin_default {
 }
 var save_state_default = SaveState;
 
+// src/plugins/row-details.js
+var DETAILS_CLASS = "dg-row-details";
+
+class RowDetails extends base_plugin_default {
+  constructor(grid) {
+    super(grid);
+    this.expanded = new Set;
+    this.collapsed = new Set;
+  }
+  extendColumns(columns) {
+    if (typeof this.grid.options.rowDetails !== "function") {
+      return;
+    }
+    columns.unshift({
+      id: "$details",
+      virtual: true,
+      position: "start",
+      frozen: "start",
+      width: 40,
+      sortable: false,
+      title: "",
+      class: `${DETAILS_CLASS}-toggle`,
+      renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
+      renderFilterCell: () => {},
+      renderCell: (ctx) => this.createToggle(ctx)
+    });
+  }
+  isExpanded(rowKey) {
+    return this.expanded.has(String(rowKey));
+  }
+  expand(rowKey) {
+    this._change(rowKey, true);
+  }
+  collapse(rowKey) {
+    this._change(rowKey, false);
+  }
+  toggle(rowKey) {
+    this._change(rowKey, !this.isExpanded(rowKey));
+  }
+  collapseAll() {
+    for (const key of this.expanded) {
+      this.collapsed.add(key);
+    }
+    this.expanded.clear();
+    this.grid.renderBody();
+  }
+  _change(rowKey, expanded) {
+    const key = String(rowKey);
+    const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === key);
+    if (index < 0) {
+      return;
+    }
+    if (expanded) {
+      this.expanded.add(key);
+      this.collapsed.delete(key);
+    } else {
+      this.expanded.delete(key);
+      this.collapsed.add(key);
+    }
+    const tr = this.grid.tbody?.querySelector(`tr.dg-data-row[data-row-index="${index}"]`);
+    if (tr) {
+      this._setRowExpanded(tr, this.grid.rows[index], index, expanded, true);
+    }
+  }
+  _detailId(rowIndex) {
+    return `dg-row-detail-${this.grid.id}-${rowIndex}`;
+  }
+  createToggle({ row = {}, rowIndex = 0 }) {
+    const key = this.grid.resolveRowKey(row, rowIndex);
+    const expanded = this.isExpanded(key);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `dg-clickable-cell ${DETAILS_CLASS}-toggle-control`;
+    button.setAttribute("aria-controls", this._detailId(rowIndex));
+    this._syncToggle(button, row, rowIndex, expanded);
+    button.innerHTML += `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      this.toggle(key);
+    });
+    return button;
+  }
+  _syncToggle(button, row, rowIndex, expanded) {
+    button.setAttribute("aria-expanded", String(expanded));
+    button.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
+      row: this.grid.getRowLabel(row, rowIndex)
+    }));
+    button.classList.toggle(`${DETAILS_CLASS}-toggle-control-open`, expanded);
+  }
+  _setRowExpanded(tr, row, rowIndex, expanded, emit) {
+    const key = this.grid.resolveRowKey(row, rowIndex);
+    const button = tr.querySelector(`.${DETAILS_CLASS}-toggle-control`);
+    if (button) {
+      this._syncToggle(button, row, rowIndex, expanded);
+    }
+    const id = this._detailId(rowIndex);
+    const current = document.getElementById(id);
+    if (!expanded) {
+      current?.remove();
+    } else if (!current) {
+      const renderer = this.grid.options.rowDetails;
+      if (typeof renderer !== "function") {
+        return;
+      }
+      const detailRow = document.createElement("tr");
+      detailRow.id = id;
+      detailRow.className = `${DETAILS_CLASS}-row`;
+      const td = document.createElement("td");
+      td.colSpan = Math.max(1, this.grid.columnsLength(true));
+      applyContent(td, renderer({ row, rowKey: key, grid: this.grid }));
+      detailRow.appendChild(td);
+      const responsiveRow = tr.nextElementSibling?.classList.contains("dg-responsive-child-row") ? tr.nextElementSibling : null;
+      const anchor = responsiveRow || tr;
+      anchor.parentNode?.insertBefore(detailRow, anchor.nextSibling);
+    }
+    if (emit) {
+      dispatch(this.grid, "rowDetailsToggle", { row, rowKey: key, expanded });
+    }
+  }
+  afterRender(context) {
+    if (context !== "body" || typeof this.grid.options.rowDetails !== "function") {
+      return;
+    }
+    for (const tr of this.grid.querySelectorAll("tbody > tr.dg-data-row")) {
+      const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
+      const row = this.grid.rows[rowIndex];
+      if (!row) {
+        continue;
+      }
+      const key = this.grid.resolveRowKey(row, rowIndex);
+      if (this.grid.options.rowDetailsStartOpen && !this.collapsed.has(key)) {
+        this.expanded.add(key);
+      }
+      if (this.expanded.has(key)) {
+        this._setRowExpanded(tr, row, rowIndex, true, false);
+      }
+    }
+  }
+  updateLabels() {
+    for (const tr of this.grid.querySelectorAll("tbody > tr.dg-data-row")) {
+      const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
+      const row = this.grid.rows[rowIndex];
+      const button = tr.querySelector(`.${DETAILS_CLASS}-toggle-control`);
+      if (row && button) {
+        this._syncToggle(button, row, rowIndex, this.isExpanded(this.grid.resolveRowKey(row, rowIndex)));
+      }
+    }
+  }
+}
+var row_details_default = RowDetails;
+
 // data-grid.js
 data_grid_default.registerPlugins({
   ColumnResizer: column_resizer_default,
@@ -4198,7 +4474,8 @@ data_grid_default.registerPlugins({
   RowActions: row_actions_default,
   EditableColumn: editable_column_default,
   SpinnerSupport: spinner_support_default,
-  SaveState: save_state_default
+  SaveState: save_state_default,
+  RowDetails: row_details_default
 });
 if (!customElements.get("data-grid")) {
   customElements.define("data-grid", data_grid_default);
@@ -4209,8 +4486,8 @@ global.DataGrid = data_grid_default;
 global.ArrayDataSource = ArrayDataSource;
 global.FetchDataSource = FetchDataSource;
 export {
-  data_grid_default2 as default,
-  FetchDataSource,
+  ArrayDataSource,
   data_grid_default as DataGrid,
-  ArrayDataSource
+  FetchDataSource,
+  data_grid_default2 as default
 };

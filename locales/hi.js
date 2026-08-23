@@ -13,6 +13,8 @@ const labels = {
     selectAll: "सभी पंक्तियाँ चुनें",
     selectRow: "{row} चुनें",
     toggleActions: "पंक्ति क्रियाएँ दिखाएँ",
+    showDetails: "{row} का विवरण दिखाएँ",
+    hideDetails: "{row} का विवरण छिपाएँ",
     resizeColumn: "कॉलम का आकार बदलें",
     noData: "कोई डेटा नहीं",
     loading: "लोड हो रहा है…",

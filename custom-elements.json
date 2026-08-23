@@ -43,6 +43,9 @@
               "name": "responsive-start-open"
             },
             {
+              "name": "row-details-start-open"
+            },
+            {
               "name": "selectable"
             },
             {
@@ -82,7 +85,10 @@
               "name": "menu"
             },
             {
-              "name": "expand"
+              "name": "wrap"
+            },
+            {
+              "name": "snap-columns"
             },
             {
               "name": "autosize"
@@ -162,6 +168,11 @@
             },
             {
               "kind": "method",
+              "name": "getPlugin",
+              "description": "Return an instantiated plugin by its registration name."
+            },
+            {
+              "kind": "method",
               "name": "setQuery",
               "description": "Merge a patch into the query state and reload. Changing search, filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch. Changing search or filters (population changes) also clears the selection, since a `mode: \"all\"` selection only means something for the population it was created on."
             },
@@ -174,6 +185,11 @@
               "kind": "method",
               "name": "refresh",
               "description": "Reload the result matching the current query."
+            },
+            {
+              "kind": "method",
+              "name": "syncFrozenColumns",
+              "description": "Measure visible frozen columns and assign their logical sticky offsets."
             },
             {
               "kind": "method",
@@ -317,6 +333,9 @@
             },
             {
               "name": "loadError"
+            },
+            {
+              "name": "rowDetailsToggle"
             },
             {
               "name": "rowRendered"

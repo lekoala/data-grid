@@ -64,6 +64,7 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | `BulkActions`      | `bulkActions`                 | bulk action bar for the selection       |
 | `RowActions`       | `actions`                     | row actions column                      |
 | `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room |
+| `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row |
 | `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers          |
 | `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering         |
 | `ContextMenu`      | `menu`                        | right-click menu to toggle columns      |
@@ -76,3 +77,28 @@ The core creates the `<th>`/`<td>` and their structural attributes
 
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.
+
+## Row details
+
+`rowDetails` receives `{ row, rowKey, grid }` and may return the same content
+types as a cell renderer. Its detail row is separate from `.dg-data-row`, so it
+does not participate in pagination, sorting or selection.
+
+```js
+const grid = new DataGrid({
+    rowDetails: ({ row }) => {
+        const details = document.createElement("dl");
+        details.textContent = `Notes: ${row.notes}`;
+        return details;
+    },
+});
+
+const details = grid.getPlugin("RowDetails");
+details.expand("customer-42");
+details.collapse("customer-42");
+details.toggle("customer-42");
+details.collapseAll();
+```
+
+Use `rowDetailsStartOpen: true` to seed rows open. A toggle dispatches
+`rowDetailsToggle` with `{ row, rowKey, expanded }`.

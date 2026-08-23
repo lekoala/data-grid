@@ -134,6 +134,31 @@ data-grid caption {
 }
 ```
 
+## Frozen columns and scroll snap
+
+A column with `frozen: "start"` stays pinned to the logical inline-start edge.
+Only `start` is supported. Plugin control columns at the start are stacked
+automatically, and frozen columns are never hidden by `ResponsiveGrid`.
+
+```js
+columns: [
+    { field: "customer", width: 240, frozen: "start" },
+    { field: "email", width: 280 },
+]
+```
+
+Declarative tables use `data-frozen="start"`. Enable proximity-based horizontal
+snapping with `snapColumns: true` or the `snap-columns` attribute. The scroll
+viewport remains native and keyboard-scrollable; the grid does not intercept
+arrow keys.
+
+## Cell annotations and popovers
+
+Notes do not need a grid API. Return a button and a popover from
+`column.renderCell`, using the native Popover API. CSS Anchor Positioning can be
+added under `@supports (position-anchor: --note)` as progressive enhancement;
+the grid itself does not depend on it.
+
 ## Selectors
 
 Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-filter`,

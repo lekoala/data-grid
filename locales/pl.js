@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Zaznacz wszystkie wiersze",
     selectRow: "Wybierz {row}",
     toggleActions: "Pokaż akcje wiersza",
+    showDetails: "Pokaż szczegóły {row}",
+    hideDetails: "Ukryj szczegóły {row}",
     resizeColumn: "Zmień szerokość kolumny",
     noData: "Brak danych",
     loading: "Wczytywanie…",

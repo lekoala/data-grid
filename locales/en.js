@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Select all rows",
     selectRow: "Select {row}",
     toggleActions: "Toggle row actions",
+    showDetails: "Show details for {row}",
+    hideDetails: "Hide details for {row}",
     resizeColumn: "Resize column",
     noData: "No data",
     loading: "Loading…",

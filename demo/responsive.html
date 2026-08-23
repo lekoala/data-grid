@@ -15,6 +15,34 @@
     <script type="module">
       import { createStaticGrid } from "./demo.js";
 
+      function annotatedEmail({ value, row }) {
+        const content = document.createElement("span");
+        content.append(value);
+        if (Number(row.id) % 7 !== 0) return content;
+
+        const id = `email-note-${row.id}`;
+        const anchor = `--${id}`;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "demo-cell-note";
+        button.setAttribute("popovertarget", id);
+        button.setAttribute("aria-label", `Email note for ${row.first_name} ${row.last_name}`);
+        button.style.setProperty("anchor-name", anchor);
+        button.textContent = "i";
+        content.append(button);
+
+        if (!document.getElementById(id)) {
+          const note = document.createElement("div");
+          note.id = id;
+          note.className = "demo-note-card";
+          note.setAttribute("popover", "");
+          note.style.setProperty("position-anchor", anchor);
+          note.textContent = "This address was verified manually and is kept as the primary contact.";
+          document.body.append(note);
+        }
+        return content;
+      }
+
       const grid = await createStaticGrid(
         document.getElementById("responsive-demo"),
         "demo.json",
@@ -23,12 +51,19 @@
           resizable: true,
           sortable: true,
           responsive: true,
+          snapColumns: true,
+          rowLabel: (row) => `${row.first_name} ${row.last_name}`,
+          rowDetails: ({ row }) => {
+            const details = document.createElement("div");
+            details.textContent = `${row.job_title} at ${row.company} — ${row.city}`;
+            return details;
+          },
           initialQuery: { pageSize: 15 },
           columns: [
-            { field: "id", title: "ID", width: 72, responsive: 0 },
+            { field: "id", title: "ID", width: 72, frozen: "start", responsive: 0 },
             { field: "first_name", title: "First Name", responsive: 1 },
             { field: "last_name", title: "Last Name", responsive: 1 },
-            { field: "email", title: "Email", responsive: 2 },
+            { field: "email", title: "Email", responsive: 2, renderCell: annotatedEmail },
             { field: "company", title: "Company", responsive: 3 },
             { field: "job_title", title: "Job Title", responsive: 4 },
             { field: "city", title: "City", responsive: 5 },

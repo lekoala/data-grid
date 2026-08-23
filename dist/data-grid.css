@@ -148,8 +148,23 @@ data-grid > .dg-scroll {
   background: var(--dg-bg);
   border: 1px solid var(--dg-border-color);
   border-radius: var(--dg-radius);
+  overscroll-behavior: contain;
   flex: auto;
   min-height: 0;
+}
+
+data-grid > .dg-scroll:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: 2px;
+}
+
+data-grid.dg-snap-columns > .dg-scroll {
+  scroll-padding-inline-start: var(--dg-frozen-start-width, 0px);
+  scroll-snap-type: inline proximity;
+}
+
+data-grid.dg-snap-columns .dg-head-columns > th:not([hidden]) {
+  scroll-snap-align: start;
 }
 
 data-grid > .dg-scroll > table {
@@ -230,16 +245,7 @@ data-grid th, data-grid td {
 
 data-grid th.dg-wrap, data-grid td.dg-wrap {
   white-space: normal;
-  word-break: break-all;
-}
-
-data-grid .dg-expandable {
-  cursor: pointer;
-}
-
-data-grid .dg-expandable.dg-expanded td {
-  white-space: normal;
-  word-break: break-all;
+  overflow-wrap: anywhere;
 }
 
 data-grid .dg-selectable {
@@ -688,7 +694,8 @@ data-grid[data-error] table {
 }
 
 data-grid tbody tr {
-  background-color: #0000;
+  --dg-row-current-bg: var(--dg-bg);
+  background-color: var(--dg-row-current-bg);
   transition: background-color .12s;
 }
 
@@ -701,24 +708,66 @@ data-grid > .dg-scroll > table > tbody > tr:last-child > td {
 }
 
 data-grid tbody tr:nth-child(2n) {
-  background-color: var(--dg-row-stripe-bg);
+  --dg-row-current-bg: var(--dg-row-stripe-bg);
 }
 
 data-grid tbody tr:hover {
-  background-color: var(--dg-row-hover-bg);
+  --dg-row-current-bg: var(--dg-row-hover-bg);
 }
 
 data-grid tbody tr:focus-within {
-  background-color: var(--dg-row-hover-bg);
+  --dg-row-current-bg: var(--dg-row-hover-bg);
   outline: none;
 }
 
 data-grid tbody tr[data-selected] {
-  background-color: var(--dg-row-selected-bg);
+  --dg-row-current-bg: var(--dg-row-selected-bg);
 }
 
 data-grid tbody tr[data-selected]:hover, data-grid tbody tr[data-selected]:focus-within {
-  background-color: var(--dg-row-selected-hover-bg);
+  --dg-row-current-bg: var(--dg-row-selected-hover-bg);
+}
+
+data-grid [data-frozen="start"] {
+  position: sticky;
+  z-index: 1;
+}
+
+data-grid [data-frozen="start"]:not(:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))) {
+  left: var(--dg-frozen-offset, 0px);
+}
+
+data-grid [data-frozen="start"]:not(:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))) {
+  left: var(--dg-frozen-offset, 0px);
+}
+
+data-grid [data-frozen="start"]:not(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))) {
+  left: var(--dg-frozen-offset, 0px);
+}
+
+data-grid [data-frozen="start"]:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)) {
+  right: var(--dg-frozen-offset, 0px);
+}
+
+data-grid [data-frozen="start"]:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)) {
+  right: var(--dg-frozen-offset, 0px);
+}
+
+data-grid [data-frozen="start"]:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)) {
+  right: var(--dg-frozen-offset, 0px);
+}
+
+data-grid tbody [data-frozen="start"] {
+  background-color: var(--dg-bg);
+  background-image: linear-gradient(var(--dg-row-current-bg), var(--dg-row-current-bg));
+}
+
+data-grid thead [data-frozen="start"] {
+  z-index: 4;
+}
+
+data-grid [data-frozen-edge] {
+  border-inline-end: 1px solid var(--dg-border-color);
 }
 
 data-grid tfoot {
@@ -958,10 +1007,6 @@ data-grid .dg-actions {
 }
 
 data-grid .dg-actions button, data-grid .dg-actions a {
-  margin: 0;
-}
-
-data-grid .dg-actions button, data-grid .dg-actions a {
   display: inline-flex;
   padding: 0 var(--dg-space-2);
   border-radius: var(--dg-space-1);
@@ -973,6 +1018,7 @@ data-grid .dg-actions button, data-grid .dg-actions a {
   align-items:  center;
   min-width: 28px;
   height: 28px;
+  margin: 0;
 }
 
 data-grid .dg-actions button:hover, data-grid .dg-actions a:hover {
@@ -1159,6 +1205,15 @@ data-grid .dg-responsive-toggle {
   padding: 0;
 }
 
+data-grid .dg-responsive-toggle-control {
+  appearance: none;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: 0;
+}
+
 data-grid .dg-responsive-child-row > td {
   padding: 0;
 }
@@ -1178,6 +1233,35 @@ data-grid .dg-responsive-table th {
   color: var(--dg-muted-color);
   max-width: 40%;
   font-weight: 600;
+}
+
+/* css/_row-details.css */
+data-grid .dg-row-details-toggle {
+  text-align: center;
+  padding: 0;
+}
+
+data-grid .dg-row-details-toggle-control {
+  appearance: none;
+  color: inherit;
+  cursor: pointer;
+  user-select: none;
+  background: none;
+  border: 0;
+}
+
+data-grid .dg-row-details-toggle-control svg {
+  transition: transform .16s;
+}
+
+data-grid .dg-row-details-toggle-control-open svg {
+  transform: rotate(90deg);
+}
+
+data-grid .dg-row-details-row > td {
+  background: var(--dg-bg);
+  padding: var(--dg-space-3) var(--dg-padding-x);
+  white-space: normal;
 }
 
 /* css/data-grid.css */

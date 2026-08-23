@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Pilih semua baris",
     selectRow: "Pilih {row}",
     toggleActions: "Tampilkan aksi baris",
+    showDetails: "Tampilkan detail {row}",
+    hideDetails: "Sembunyikan detail {row}",
     resizeColumn: "Ubah ukuran kolom",
     noData: "Tidak ada data",
     loading: "Memuat…",

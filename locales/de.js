@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Alle Zeilen auswählen",
     selectRow: "{row} auswählen",
     toggleActions: "Zeilenaktionen anzeigen",
+    showDetails: "Details für {row} anzeigen",
+    hideDetails: "Details für {row} ausblenden",
     resizeColumn: "Spalte vergrößern",
     noData: "Keine Daten",
     loading: "Wird geladen…",

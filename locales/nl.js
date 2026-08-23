@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Alle rijen selecteren",
     selectRow: "{row} selecteren",
     toggleActions: "Rijacties weergeven",
+    showDetails: "Details voor {row} tonen",
+    hideDetails: "Details voor {row} verbergen",
     resizeColumn: "Kolom aanpassen",
     noData: "Geen gegevens",
     loading: "Laden…",

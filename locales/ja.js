@@ -13,6 +13,8 @@ const labels = {
     selectAll: "すべての行を選択",
     selectRow: "{row} を選択",
     toggleActions: "行のアクションを表示",
+    showDetails: "{row} の詳細を表示",
+    hideDetails: "{row} の詳細を非表示",
     resizeColumn: "列の幅を変更",
     noData: "データがありません",
     loading: "読み込み中…",

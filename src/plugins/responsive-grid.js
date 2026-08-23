@@ -106,6 +106,7 @@ class ResponsiveGrid extends BasePlugin {
             id: "$responsive",
             virtual: true,
             position: "start",
+            frozen: "start",
             width: 40,
             sortable: false,
             title: "",
@@ -113,7 +114,7 @@ class ResponsiveGrid extends BasePlugin {
             hidden: !this.hasHiddenColumns(),
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: () => this.createFilterCell(),
-            renderCell: () => this.createDataCell(),
+            renderCell: (ctx) => this.createDataCell(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
         });
     }
 
@@ -171,24 +172,38 @@ class ResponsiveGrid extends BasePlugin {
     createFilterCell() {}
 
     /**
-     * @returns {HTMLElement}
+     * @param {import("../data-grid.js").CellContext} ctx
+     * @returns {HTMLButtonElement}
      */
-    createDataCell() {
+    createDataCell({ row, rowIndex = 0 }) {
         // Create icon
-        const cell = document.createElement("div");
-        cell.classList.add("dg-clickable-cell");
-        cell.innerHTML = `<svg class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
+        const cell = document.createElement("button");
+        cell.type = "button";
+        cell.classList.add("dg-clickable-cell", `${RESPONSIVE_CLASS}-toggle-control`);
+        cell.setAttribute("aria-expanded", "false");
+        cell.setAttribute("aria-controls", this._detailId(rowIndex));
+        cell.setAttribute(
+            "aria-label",
+            this.grid.formatLabel(this.grid.labels.showDetails, {
+                row: this.grid.getRowLabel(row ?? {}, rowIndex),
+            }),
+        );
+        cell.innerHTML = `<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
   <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>
-<svg class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
+<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
   <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
 </svg>`;
 
         cell.addEventListener("click", this);
-        cell.addEventListener("mousedown", this);
 
         return cell;
+    }
+
+    /** @param {Number} rowIndex */
+    _detailId(rowIndex) {
+        return `dg-responsive-detail-${this.grid.id}-${rowIndex}`;
     }
 
     /**
@@ -368,14 +383,6 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /**
-     * @param {Event} ev
-     */
-    onmousedown(ev) {
-        // Avoid selection through double click
-        ev.preventDefault();
-    }
-
-    /**
      * The real rendered record rows (excludes responsive child rows and fake
      * empty/error rows).
      * @returns {HTMLTableRowElement[]}
@@ -396,7 +403,7 @@ class ResponsiveGrid extends BasePlugin {
         if (!column?.field) {
             return false;
         }
-        if (column.responsive === 0 || column.hidden) {
+        if (column.responsive === 0 || column.hidden || column.frozen === "start") {
             return true;
         }
         if (this.grid.getColumnSortDirection(column.field)) {
@@ -434,6 +441,18 @@ class ResponsiveGrid extends BasePlugin {
      * @param {Boolean} expanded
      */
     _setToggleIcon(tr, expanded) {
+        const control = tr.querySelector(`.${RESPONSIVE_CLASS}-toggle-control`);
+        const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
+        const row = this.grid.rows[rowIndex] ?? {};
+        if (control) {
+            control.setAttribute("aria-expanded", String(expanded));
+            control.setAttribute(
+                "aria-label",
+                this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
+                    row: this.grid.getRowLabel(row, rowIndex),
+                }),
+            );
+        }
         const open = find(tr, `.${RESPONSIVE_CLASS}-open`);
         const close = find(tr, `.${RESPONSIVE_CLASS}-close`);
         if (!open || !close) {
@@ -470,6 +489,8 @@ class ResponsiveGrid extends BasePlugin {
             const detailRow = ce("tr");
             insertAfter(detailRow, tr);
             addClass(detailRow, `${RESPONSIVE_CLASS}-child-row`);
+            const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
+            detailRow.id = this._detailId(rowIndex);
 
             const detailTd = ce("td", detailRow);
             setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
@@ -556,6 +577,12 @@ class ResponsiveGrid extends BasePlugin {
             if (expanded === "true") {
                 this._setRowExpanded(tr, true);
             }
+        }
+    }
+
+    updateLabels() {
+        for (const tr of this._dataRows()) {
+            this._setToggleIcon(tr, tr.dataset.responsiveExpanded === "true");
         }
     }
 

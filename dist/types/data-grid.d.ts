@@ -27,6 +27,10 @@ export type Column = {
      */
     position?: "start" | "end";
     /**
+     * - keep the column pinned to the inline start edge while scrolling
+     */
+    frozen?: "start" | null;
+    /**
      * - the title to display in the header (defaults to "field" if not set)
      */
     title?: string;
@@ -268,9 +272,13 @@ export type Options = {
      */
     collapseActions: boolean;
     /**
-     * Allow cell content to spawn over multiple lines
+     * Allow data cells to wrap over multiple lines
      */
-    expand: boolean;
+    wrap: boolean;
+    /**
+     * Snap horizontal scrolling near column starts
+     */
+    snapColumns: boolean;
     /**
      * Make columns resizable (ColumnResizer module)
      */
@@ -331,6 +339,18 @@ export type Options = {
      * Open responsive detail rows by default when columns are hidden (ResponsiveGrid module)
      */
     responsiveStartOpen: boolean;
+    /**
+     * Render expanded row content (RowDetails module)
+     */
+    rowDetails?: ((ctx: {
+        row: Record<string, any>;
+        rowKey: string;
+        grid: DataGrid;
+    }) => any) | null;
+    /**
+     * Open row details by default (RowDetails module)
+     */
+    rowDetailsStartOpen: boolean;
     /**
      * Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
      */
@@ -398,6 +418,8 @@ export type Labels = {
     selectAll: string;
     selectRow: string;
     toggleActions: string;
+    showDetails: string;
+    hideDetails: string;
     resizeColumn: string;
     search: string;
     noData: string;
@@ -521,6 +543,8 @@ declare class DataGrid extends BaseElement {
      * @type {import("./core/base-plugin.js").RenderContext|null}
      */
     _renderContext: import("./core/base-plugin.js").RenderContext | null;
+    /** @type {Number|null} */
+    _frozenFrame: number | null;
     /**
      * @param {Object} [options]
      */
@@ -644,6 +668,13 @@ declare class DataGrid extends BaseElement {
      */
     getColumns(): Column[];
     /**
+     * Return an instantiated plugin by its registration name.
+     * @public
+     * @param {String} name
+     * @returns {Plugin|undefined}
+     */
+    getPlugin(name: string): Plugin | undefined;
+    /**
      * @param {Record<string, any>|Array<any>} columns
      * @returns {Column[]}
      */
@@ -714,6 +745,9 @@ declare class DataGrid extends BaseElement {
     dirChanged(): void;
     showPageSizeChanged(): void;
     responsiveChanged(): void;
+    snapColumnsChanged(): void;
+    wrapChanged(): void;
+    rowDetailsStartOpenChanged(): void;
     menuChanged(): void;
     selectableChanged(): void;
     reorderChanged(): void;
@@ -871,6 +905,16 @@ declare class DataGrid extends BaseElement {
      * reflect their fresh hidden state.
      */
     _syncColumnVisibility(): void;
+    /** Queue one frozen-column geometry pass for the next frame. */
+    queueFrozenSync(): void;
+    /**
+     * Measure visible frozen columns and assign their logical sticky offsets.
+     * @public
+     */
+    syncFrozenColumns(): void;
+    oncolumnResized(): void;
+    oncolumnReordered(): void;
+    oncolumnVisibility(): void;
     /**
      * @public
      * @param {String} field

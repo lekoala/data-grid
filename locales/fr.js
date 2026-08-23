@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Sélectionner toutes les lignes",
     selectRow: "Sélectionner {row}",
     toggleActions: "Afficher les actions de la ligne",
+    showDetails: "Afficher les détails de {row}",
+    hideDetails: "Masquer les détails de {row}",
     resizeColumn: "Redimensionner la colonne",
     noData: "Aucune donnée",
     loading: "Chargement…",

@@ -44,6 +44,7 @@ class SelectableRows extends BasePlugin {
             id: "$selection",
             virtual: true,
             position: "start",
+            frozen: "start",
             width: 40,
             sortable: false,
             title: "",
@@ -184,7 +185,7 @@ class SelectableRows extends BasePlugin {
         label.classList.add("dg-clickable-cell");
         label.appendChild(input);
 
-        // Prevent unwanted click behaviour on row (expand, default action...)
+        // Prevent unwanted click behaviour on the row (default action, etc.)
         label.addEventListener("click", (event) => {
             event.stopPropagation();
         });

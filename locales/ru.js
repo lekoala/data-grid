@@ -13,6 +13,8 @@ const labels = {
     selectAll: "Выбрать все строки",
     selectRow: "Выбрать {row}",
     toggleActions: "Показать действия строки",
+    showDetails: "Показать сведения о {row}",
+    hideDetails: "Скрыть сведения о {row}",
     resizeColumn: "Изменить ширину столбца",
     noData: "Нет данных",
     loading: "Загрузка…",

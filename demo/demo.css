@@ -57,6 +57,39 @@ code {
   padding: 0.1em 0.3em;
 }
 
+.demo-cell-note {
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-inline-start: 0.4rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--dg-color, #112033);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.7rem;
+  line-height: 1;
+}
+
+.demo-note-card {
+  max-width: min(24rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid #d8e1eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #112033;
+  box-shadow: 0 18px 40px -20px rgb(17 32 51 / 50%);
+}
+
+@supports (position-anchor: --note) {
+  .demo-note-card {
+    position-area: bottom span-left;
+    position-try-fallbacks: flip-block, flip-inline;
+    margin-block-start: 0.5rem;
+  }
+}
+
 header,
 main,
 footer {

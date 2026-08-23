@@ -13,6 +13,8 @@ const labels = {
     selectAll: "모든 행 선택",
     selectRow: "{row} 선택",
     toggleActions: "행 작업 표시",
+    showDetails: "{row} 세부 정보 표시",
+    hideDetails: "{row} 세부 정보 숨기기",
     resizeColumn: "열 너비 조정",
     noData: "데이터 없음",
     loading: "로딩 중…",
