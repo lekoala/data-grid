@@ -168,8 +168,10 @@ If you customized v2 Sass variables or Bootstrap-specific selectors, migrate tho
 
 Do not rely on the internal DOM structure more than necessary.
 
-The v2 `expand=true` option made a row click toggle cell wrapping. In v3,
-wrapping is presentation rather than disclosure, so use `wrap=true`. For real
+The v2 `expand=true` option made a row click toggle cell wrapping. There is no
+direct replacement in v3: wrapping is a permanent layout policy, not a row
+disclosure interaction. Use `column.wrap: true` for columns that contain long
+text, or the grid-wide `wrap: true` when every data column should wrap. For real
 expandable content, use the `RowDetails` plugin through the `rowDetails`
 renderer option.
 

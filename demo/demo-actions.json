@@ -10,7 +10,7 @@
         "field": "first_name",
         "title": "First Name",
         "width": 200,
-        "class": "dg-wrap"
+        "wrap": true
       },
       {
         "field": "last_name",

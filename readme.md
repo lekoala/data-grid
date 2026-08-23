@@ -198,7 +198,8 @@ Some options only work if the proper plugin is loaded.
 
 `rowLabel` falls back to the row key, then the row index. A `dataSource`
 defaults to `FetchDataSource` or `ArrayDataSource`; plugin-backed options are
-described in `docs/plugins.md`.
+described in `docs/plugins.md`. Set `column.wrap` to override the grid-wide
+`wrap` policy for an individual data column.
 
 ### Attributes
 

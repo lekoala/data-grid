@@ -16,13 +16,19 @@ async function makeReadyGrid(options, rows = [{ id: 1, name: "Alice", email: "al
     return inst;
 }
 
-test("wrap is presentational and makes data cells wrap without row interaction", async () => {
-    const inst = await makeReadyGrid({ columns: [{ field: "name" }] });
-    expect(inst.querySelector("tbody td").classList.contains("dg-wrap")).toBe(false);
+test("column wrap overrides the grid-wide wrapping policy without adding row interaction", async () => {
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name", wrap: true }, { field: "email", wrap: false }, { field: "id" }],
+    });
+    expect(inst.querySelector('tbody td[data-column-id="name"]').classList.contains("dg-wrap")).toBe(true);
+    expect(inst.querySelector('tbody td[data-column-id="email"]').classList.contains("dg-wrap")).toBe(false);
+    expect(inst.querySelector('tbody td[data-column-id="id"]').classList.contains("dg-wrap")).toBe(false);
+
     inst.setAttribute("wrap", "");
     const tr = inst.querySelector("tbody tr.dg-data-row");
-    const td = tr.querySelector("td");
-    expect(td.classList.contains("dg-wrap")).toBe(true);
+    expect(tr.querySelector('td[data-column-id="name"]').classList.contains("dg-wrap")).toBe(true);
+    expect(tr.querySelector('td[data-column-id="email"]').classList.contains("dg-wrap")).toBe(false);
+    expect(tr.querySelector('td[data-column-id="id"]').classList.contains("dg-wrap")).toBe(true);
     expect(tr.classList.contains("dg-expandable")).toBe(false);
     tr.click();
     expect(tr.classList.contains("dg-expanded")).toBe(false);

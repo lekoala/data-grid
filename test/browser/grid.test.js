@@ -112,3 +112,62 @@ test.skipIf(IS_WINDOWS)(
     },
     TIMEOUT,
 );
+
+test.skipIf(IS_WINDOWS)(
+    "column wrapping handles long tokens and responds to width changes",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        await v.evaluate(`(async () => {
+            const grid = new window.DataGrid({
+                columns: [
+                    { field: "label", wrap: false },
+                    { field: "description", wrap: true },
+                ],
+                dataSource: new window.ArrayDataSource([{
+                    label: "Compact label",
+                    description: "A normal sentence followed by " + "g".repeat(120),
+                }]),
+            });
+            grid.id = "wrap-grid";
+            grid.style.width = "600px";
+            const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+            document.body.appendChild(grid);
+            window.wrapGrid = grid;
+            await connected;
+        })()`);
+
+        expect(
+            await read(
+                v,
+                "getComputedStyle(window.wrapGrid.querySelector('tbody [data-column-id=\"label\"]')).whiteSpace",
+            ),
+        ).toBe("nowrap");
+        expect(
+            await read(
+                v,
+                "getComputedStyle(window.wrapGrid.querySelector('tbody [data-column-id=\"description\"]')).overflowWrap",
+            ),
+        ).toBe("anywhere");
+
+        const wideHeight = await read(v, "window.wrapGrid.querySelector('tbody tr').offsetHeight");
+        await v.evaluate(`(async () => {
+            window.wrapGrid.style.width = "240px";
+            await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        })()`);
+        const narrowHeight = await read(v, "window.wrapGrid.querySelector('tbody tr').offsetHeight");
+        expect(narrowHeight).toBeGreaterThan(wideHeight);
+        expect(
+            await read(
+                v,
+                `(() => {
+                    const cell = window.wrapGrid.querySelector('tbody [data-column-id="description"]');
+                    return cell.scrollWidth <= cell.clientWidth + 1;
+                })()`,
+            ),
+        ).toBe(true);
+    },
+    TIMEOUT,
+);

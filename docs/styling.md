@@ -134,6 +134,22 @@ data-grid caption {
 }
 ```
 
+## Cell wrapping
+
+Data cells stay on one line with an ellipsis by default. Opt long-text columns
+into wrapping without changing compact identifier, email or status columns:
+
+```js
+columns: [
+    { field: "name" },
+    { field: "description", wrap: true },
+]
+```
+
+`column.wrap` overrides the grid-wide `wrap` option in both directions. In
+declarative tables, use `data-wrap` or `data-wrap="false"` on the corresponding
+`<th>`.
+
 ## Frozen columns and scroll snap
 
 A column with `frozen: "start"` stays pinned to the logical inline-start edge.

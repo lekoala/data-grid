@@ -635,6 +635,9 @@ function parseDeclarativeTable(table) {
     if (th.dataset.filterable !== undefined) {
       column.filterable = parseDeclarativeBoolean(th.dataset.filterable);
     }
+    if (th.dataset.wrap !== undefined) {
+      column.wrap = parseDeclarativeBoolean(th.dataset.wrap);
+    }
     if (th.dataset.filter) {
       column.filterType = th.dataset.filter;
     }
@@ -2540,7 +2543,7 @@ class DataGrid extends base_element_default {
         const td = ce("td");
         setAttribute(td, "data-column-id", column.id ?? field);
         applyColumnDefinition(td, column);
-        if (this.options.wrap) {
+        if (column.wrap ?? this.options.wrap) {
           td.classList.add("dg-wrap");
         }
         td.setAttribute("data-name", column.title ?? "");

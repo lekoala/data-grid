@@ -44,6 +44,7 @@ import {
  * @property {Boolean} [hidden] - hide the column
  * @property {Boolean} [sortable] - disable sorting for this column (defaults to the grid-wide `sortable`)
  * @property {Boolean} [filterable] - disable filtering for this column (defaults to the grid-wide `filterable`)
+ * @property {Boolean} [wrap] - allow this column's data cells to wrap (defaults to the grid-wide `wrap`)
  * @property {String} [transform] - custom value transformation
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
  * @property {String} [editableType] - type of input (EditableColumn module)
@@ -360,6 +361,9 @@ function parseDeclarativeTable(table) {
         }
         if (th.dataset.filterable !== undefined) {
             column.filterable = parseDeclarativeBoolean(th.dataset.filterable);
+        }
+        if (th.dataset.wrap !== undefined) {
+            column.wrap = parseDeclarativeBoolean(th.dataset.wrap);
         }
         if (th.dataset.filter) {
             column.filterType = th.dataset.filter;
@@ -3271,7 +3275,7 @@ class DataGrid extends BaseElement {
                 const td = ce("td");
                 setAttribute(td, "data-column-id", column.id ?? field);
                 applyColumnDefinition(td, column);
-                if (this.options.wrap) {
+                if (column.wrap ?? this.options.wrap) {
                     td.classList.add("dg-wrap");
                 }
                 // Kept for ResponsiveGrid: the expanded child rows label each

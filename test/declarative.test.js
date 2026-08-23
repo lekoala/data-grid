@@ -123,6 +123,24 @@ test("data-filter-placeholder becomes the text filter placeholder", async () => 
     removeGrid(inst);
 });
 
+test("data-wrap configures wrapping for an individual column", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="name" data-wrap>Name</th><th data-field="email" data-wrap="false">Email</th></tr></thead>
+    <tbody><tr><td>A long display name</td><td>a@example.com</td></tr></tbody>
+</table>
+`,
+        { wrap: true },
+    );
+
+    expect(inst.options.columns[0].wrap).toBe(true);
+    expect(inst.options.columns[1].wrap).toBe(false);
+    expect(inst.querySelector('tbody td[data-column-id="name"]').classList.contains("dg-wrap")).toBe(true);
+    expect(inst.querySelector('tbody td[data-column-id="email"]').classList.contains("dg-wrap")).toBe(false);
+    removeGrid(inst);
+});
+
 test("data-row-key is the authoritative row identity", async () => {
     const inst = await makeDeclarativeGrid(
         `

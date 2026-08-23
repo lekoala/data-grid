@@ -59,6 +59,10 @@ export type Column = {
      */
     filterable?: boolean;
     /**
+     * - allow this column's data cells to wrap (defaults to the grid-wide `wrap`)
+     */
+    wrap?: boolean;
+    /**
      * - custom value transformation
      */
     transform?: string;
