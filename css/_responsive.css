@@ -12,6 +12,14 @@ data-grid .dg-responsive-toggle-control {
   user-select: none;
 }
 
+data-grid .dg-responsive-toggle-control svg {
+  transition: transform 160ms ease;
+}
+
+data-grid .dg-responsive-toggle-control-open svg {
+  transform: rotate(90deg);
+}
+
 data-grid .dg-responsive-child-row > td {
   padding: 0;
 }

@@ -3544,13 +3544,7 @@ class ResponsiveGrid extends base_plugin_default {
     cell.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showHiddenColumns, {
       row: this.grid.getRowLabel(row ?? {}, rowIndex)
     }));
-    cell.innerHTML = `<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-open' viewbox="0 0 24 24" height="24" width="24">
-  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-  <line y1="7" x1="12" y2="17" x2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg>
-<svg aria-hidden="true" class='${RESPONSIVE_CLASS}-close' viewbox="0 0 24 24" height="24" width="24" style="display:none">
-  <line x1="7" y1="12" x2="17" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
-</svg>`;
+    cell.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     cell.addEventListener("click", this);
     return cell;
   }
@@ -3716,14 +3710,8 @@ class ResponsiveGrid extends base_plugin_default {
       control.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideHiddenColumns : this.grid.labels.showHiddenColumns, {
         row: this.grid.getRowLabel(row, rowIndex)
       }));
+      control.classList.toggle(`${RESPONSIVE_CLASS}-toggle-control-open`, expanded);
     }
-    const open = find(tr, `.${RESPONSIVE_CLASS}-open`);
-    const close = find(tr, `.${RESPONSIVE_CLASS}-close`);
-    if (!open || !close) {
-      return;
-    }
-    open.style.display = expanded ? "none" : "unset";
-    close.style.display = expanded ? "unset" : "none";
   }
   _setRowExpanded(tr, expanded) {
     tr.dataset.responsiveExpanded = String(expanded);
@@ -3825,11 +3813,6 @@ class ResponsiveGrid extends base_plugin_default {
     const cell = ev.currentTarget;
     const tr = cell.closest("tr");
     if (!tr) {
-      return;
-    }
-    const open = find(cell, `.${RESPONSIVE_CLASS}-open`);
-    const close = find(cell, `.${RESPONSIVE_CLASS}-close`);
-    if (!open || !close) {
       return;
     }
     this.blockObserver();

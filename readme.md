@@ -274,7 +274,7 @@ loads immediately, regardless of visibility.
 `responsiveStartOpen` turns the responsive detail rows into a start-open
 "stacked" view: when columns are hidden on a narrow grid, their values are
 shown immediately inside the existing responsive detail row instead of behind a
-`+` toggle.
+chevron toggle.
 
 ```html
 <data-grid responsive responsive-start-open></data-grid>

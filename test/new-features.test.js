@@ -102,10 +102,14 @@ test("responsive disclosure uses a named native button and controls its detail r
     const inst = await makeReadyGrid({ columns, responsive: true, rowLabel: "name" });
     const button = inst.querySelector("tbody .dg-responsive-toggle-control");
     expect(button.tagName).toBe("BUTTON");
+    expect(button.querySelectorAll("svg").length).toBe(1);
+    expect(button.querySelector("svg path")).not.toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");
+    expect(button.classList.contains("dg-responsive-toggle-control-open")).toBe(false);
     expect(button.getAttribute("aria-label")).toBe("Show additional columns for Alice");
     button.click();
     expect(button.getAttribute("aria-expanded")).toBe("true");
+    expect(button.classList.contains("dg-responsive-toggle-control-open")).toBe(true);
     expect(button.getAttribute("aria-label")).toBe("Hide additional columns for Alice");
     expect(document.getElementById(button.getAttribute("aria-controls"))).toBeTruthy();
     document.body.removeChild(inst);
