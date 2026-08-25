@@ -9,6 +9,7 @@ import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
 import debounce from "./utils/debounce.js";
 import getTextWidth from "./utils/getTextWidth.js";
+import normalizeData from "./utils/normalizeData.js";
 import randstr from "./utils/randstr.js";
 import {
     $,
@@ -30,6 +31,50 @@ import {
 /** @typedef {import("./data-source.js").SortState} SortState */
 
 /**
+ * Non-enumerable symbol keyed on a declarative row. Holds the snapshot of each
+ * declarative cell: its original machine value, its text label and its authored
+ * child nodes, so presentation survives rerenders while the value is unchanged.
+ * @type {unique symbol}
+ */
+const DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
+
+/**
+ * @typedef DeclarativeCellMeta
+ * @property {any} value - the original machine value the cell was authored for
+ * @property {String} label - the user-facing text of the cell
+ * @property {Node[]} content - the authored child nodes, cloned on render
+ */
+
+/**
+ * Read the non-enumerable declarative-cell snapshot of a row.
+ * @param {Record<string, any>} row
+ * @returns {Record<string, DeclarativeCellMeta>|undefined}
+ */
+function declarativeCells(row) {
+    return /** @type {any} */ (row)[DECLARATIVE_CELLS];
+}
+
+/**
+ * Store the declarative-cell snapshot of one field on a row, as a
+ * non-enumerable property so it never leaks into Object.keys / JSON / spread.
+ * @param {Record<string, any>} row
+ * @param {String} field
+ * @param {DeclarativeCellMeta} meta
+ */
+function setDeclarativeCell(row, field, meta) {
+    let cells = declarativeCells(row);
+    if (!cells) {
+        cells = {};
+        Object.defineProperty(row, DECLARATIVE_CELLS, {
+            value: cells,
+            enumerable: false,
+            configurable: true,
+        });
+    }
+    cells[field] = meta;
+}
+
+/**
  * Column definition
  * @typedef Column
  * @property {String} [field] - the key in the data
@@ -38,7 +83,8 @@ import {
  * @property {"start"|"end"} [position] - order group for plugin columns
  * @property {"start"|null} [frozen] - keep the column pinned to the inline start edge while scrolling
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
- * @property {Number} [width] - the width of the column (auto otherwise)
+ * @property {Number} [width] - the preferred width of the column (auto otherwise)
+ * @property {Number} [minWidth] - the column is never compressed below this width
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} [hidden] - hide the column
@@ -402,6 +448,12 @@ function parseDeclarativeTable(table) {
                 column.width = width;
             }
         }
+        if (th.dataset.minWidth !== undefined) {
+            const minWidth = Number(th.dataset.minWidth);
+            if (Number.isFinite(minWidth)) {
+                column.minWidth = minWidth;
+            }
+        }
         const direction = th.dataset.sort;
         if (direction === "asc" || direction === "desc") {
             sort.push({ field, direction });
@@ -486,7 +538,20 @@ function rowsFromTable(table, columns, rowKey = "id") {
             if (!td) {
                 continue;
             }
-            row[column.field] = td.dataset.value ?? td.textContent.trim();
+            const raw = td.dataset.value;
+            if (raw !== undefined) {
+                // data-value is the machine value (typed); the cell content is
+                // the authored user representation, snapshotted so it survives
+                // rerenders while the value is unchanged.
+                row[column.field] = normalizeData(raw);
+                setDeclarativeCell(row, column.field, {
+                    value: row[column.field],
+                    label: td.textContent.trim(),
+                    content: Array.from(td.childNodes),
+                });
+            } else {
+                row[column.field] = td.textContent.trim();
+            }
         }
         const actionsCell = /** @type {HTMLTableCellElement|null} */ (tr.querySelector(":scope > td[data-actions]"));
         if (actionsCell) {
@@ -1093,7 +1158,9 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * The normalized column list of the current render cycle.
+     * The normalized column list of the current render cycle, for inspection.
+     * Read-only: mutating the returned objects is not a supported way to
+     * configure the grid (a rerender rebuilds columns from the options).
      * @public
      * @returns {Column[]}
      */
@@ -3070,9 +3137,12 @@ class DataGrid extends BaseElement {
         if (this.options.responsive) {
             setAttribute(th, "data-responsive", column.responsive || "");
         }
-        // Make sure the header fits (+ add some room for sort icon if necessary)
-        const computedWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
-        th.dataset.minWidth = `${computedWidth}`;
+        // The column is never compressed below its intrinsic header width nor
+        // below an explicit minWidth (data-min-width): its floor is the larger
+        // of the two. `width` stays the preferred width.
+        const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
+        const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0);
+        th.dataset.minWidth = `${effectiveMin}`;
         applyColumnDefinition(th, column);
 
         const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
@@ -3279,10 +3349,30 @@ class DataGrid extends BaseElement {
         }
         // A local data source owns the full collection and can derive options
         if (this.dataSource instanceof ArrayDataSource) {
-            const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => (field ? e[field] : undefined)))]
-                .filter((v) => v !== undefined && v !== null && v !== "")
-                .sort();
-            return [firstFilterOption, ...uniqueValues.map((e) => ({ value: e, text: e }))];
+            // Declarative cells provide a user-facing label (e.g. "Paid") for
+            // the machine value (e.g. "paid"); the first non-empty label wins
+            // when several rows share a value. Raw local values fall back to
+            // value === label.
+            /** @type {Map<any, string>} */
+            const labels = new Map();
+            for (const row of this.dataSource.rows ?? []) {
+                if (!field) {
+                    continue;
+                }
+                const v = row[field];
+                if (v === undefined || v === null || v === "") {
+                    continue;
+                }
+                const meta = declarativeCells(row)?.[field];
+                const text = meta?.label || v;
+                if (!labels.has(v)) {
+                    labels.set(v, text);
+                }
+            }
+            const options = [...labels.entries()]
+                .map(([value, text]) => ({ value, text }))
+                .sort((a, b) => (a.text < b.text ? -1 : a.text > b.text ? 1 : 0));
+            return [firstFilterOption, ...options];
         }
         return [firstFilterOption];
     }
@@ -3414,6 +3504,20 @@ class DataGrid extends BaseElement {
         }
 
         const v = item[field] ?? "";
+
+        // Declarative blueprint: preserve the authored presentation while the
+        // current value still matches the value it was authored for. As soon as
+        // the value changes programmatically, fall back to plain text rendering.
+        const meta = declarativeCells(item)?.[field];
+        if (meta?.content.length && Object.is(v, meta.value)) {
+            const fragment = document.createDocumentFragment();
+            for (const node of meta.content) {
+                fragment.appendChild(node.cloneNode(true));
+            }
+            applyContent(td, fragment);
+            return;
+        }
+
         let tv;
         // TODO: make this modular
         switch (column.transform) {

@@ -43,6 +43,13 @@ $ npm install data-grid-component
 <script type="module" src="./data-grid.js"></script>
 ```
 
+From a CDN, use the **distributed, versioned build** (`dist/data-grid.min.js`)
+rather than relying on the CDN to minify the unbundled source:
+
+```html
+<script type="module" src="https://cdn.jsdelivr.net/npm/data-grid-component@3/dist/data-grid.min.js"></script>
+```
+
 - using the DOM API
 
 ```js
@@ -61,9 +68,9 @@ document.body.appendChild(grid);
 
 ### Declarative HTML
 
-A native `<table>` inside `<data-grid>` is adopted as-is: the grid enhances the
-real table instead of creating its own. `caption`, `colgroup` and the table's
-own classes and attributes are preserved.
+The supplied table provides the structure, the initial dataset and the
+declarative cell presentation; the grid owns subsequent rendering. `caption`,
+`colgroup` and the table's own classes and attributes are preserved.
 
 ```html
 <data-grid sortable filterable searchable page-size="10">
@@ -88,8 +95,9 @@ own classes and attributes are preserved.
 
 `<th data-field>` declares a column: `title` is the cell text, and
 `data-sortable`, `data-filterable`, `data-filter`, `data-responsive`,
-`data-hidden`, `data-editable`, `data-editable-type`, `data-transform` and
-`data-width` map to the matching column options. `data-sort="asc"|"desc"`
+`data-hidden`, `data-editable`, `data-editable-type`, `data-transform`,
+`data-width` (preferred width) and `data-min-width` (never compress below)
+map to the matching column options. `data-sort="asc"|"desc"`
 seeds the initial sort (DOM order is the priority). The host still activates
 the global capabilities — `data-sortable` on a column only opts out, it never
 turns sorting on globally.
@@ -127,10 +135,15 @@ activates the capability, and each `<td data-actions>` cell is normalized into
 ```
 
 When **no** `dataSource`/`src` is configured, the `<tbody>` rows become the
-local dataset: `<td>` maps to the columns by index, `td[data-value]` provides
-a machine-readable value (display text otherwise), and `tr[data-row-key]` is
-the authoritative row key. With a `src`/`dataSource`, the source stays
-authoritative and the `<tbody>` is not consumed as data.
+local dataset: `<td>` maps to the columns by index, `tr[data-row-key]` is the
+authoritative row key. `td[data-value]` is the **machine value** (typed —
+numbers, booleans, null and JSON are parsed), while the cell content is the
+**user representation**, preserved across rerenders as long as the value is
+unchanged (so badges, `<time>`, `<data>` and formatting survive). Without
+`data-value`, the cell text is used as a plain string. Filter `<select>`
+labels are derived from the same `data-value` + cell text when present. With a
+`src`/`dataSource`, the source stays authoritative and the `<tbody>` is not
+consumed as data.
 
 Rule of thumb: **HTML = declarative configuration, JS = behavior.** For
 custom rendering (`renderCell`), validators or a custom data source, use the

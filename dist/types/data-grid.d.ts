@@ -9,6 +9,20 @@ export type PageResult = import("./data-source.js").PageResult;
 export type FilterState = import("./data-source.js").FilterState;
 export type FilterOption = import("./data-source.js").FilterOption;
 export type SortState = import("./data-source.js").SortState;
+export type DeclarativeCellMeta = {
+    /**
+     * - the original machine value the cell was authored for
+     */
+    value: any;
+    /**
+     * - the user-facing text of the cell
+     */
+    label: string;
+    /**
+     * - the authored child nodes, cloned on render
+     */
+    content: Node[];
+};
 export type Column = {
     /**
      * - the key in the data
@@ -35,9 +49,13 @@ export type Column = {
      */
     title?: string;
     /**
-     * - the width of the column (auto otherwise)
+     * - the preferred width of the column (auto otherwise)
      */
     width?: number;
+    /**
+     * - the column is never compressed below this width
+     */
+    minWidth?: number;
     /**
      * - class to set on the column (target body or header with th.class or td.class)
      */
@@ -668,7 +686,9 @@ declare class DataGrid extends BaseElement {
      */
     buildColumns(): Column[];
     /**
-     * The normalized column list of the current render cycle.
+     * The normalized column list of the current render cycle, for inspection.
+     * Read-only: mutating the returned objects is not a supported way to
+     * configure the grid (a rerender rebuilds columns from the options).
      * @public
      * @returns {Column[]}
      */

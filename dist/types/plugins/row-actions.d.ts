@@ -40,8 +40,16 @@ declare class RowActions extends BasePlugin {
      */
     afterRender(context: import("../core/base-plugin.js").RenderContext): void;
     /**
-     * The collapsed vs inline mode depends on the actions actually resolved
-     * for each row, which is only known at render time.
+     * The collapsed vs inline mode is a property of the whole column, not of
+     * individual cells: within one table column every row must share the same
+     * geometry (header, filter and body cells alike), otherwise a fixed-layout
+     * table constrains the column to one width while cells assume another,
+     * creating artificial overflow.
+     *
+     * The mode derives from the widest set of inline actions on the current
+     * page: if every row fits 1-2 inline actions the column sizes to its
+     * intrinsic inline width, otherwise it collapses to the compact `more`
+     * cell (the fixed structural width).
      */
     syncCellModes(): void;
     /**
@@ -91,7 +99,6 @@ declare class RowActions extends BasePlugin {
         el: HTMLElement;
         dispatchAction: (ev: Event) => void;
     };
-    get actionClass(): string;
 }
 export default RowActions;
 //# sourceMappingURL=row-actions.d.ts.map

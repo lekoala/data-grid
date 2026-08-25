@@ -164,7 +164,7 @@
             {
               "kind": "method",
               "name": "getColumns",
-              "description": "The normalized column list of the current render cycle."
+              "description": "The normalized column list of the current render cycle, for inspection. Read-only: mutating the returned objects is not a supported way to configure the grid (a rerender rebuilds columns from the options)."
             },
             {
               "kind": "method",

@@ -23,8 +23,8 @@ data-grid .dg-actions a {
   min-width: 28px;
   height: 28px;
   padding: 0 var(--dg-space-2);
-  background-color: transparent;
-  border: solid 1px transparent;
+  background-color: var(--dg-control-bg);
+  border: solid 1px var(--dg-control-border-color);
   border-radius: var(--dg-space-1);
   color: inherit;
   text-decoration: none;
@@ -33,6 +33,7 @@ data-grid .dg-actions a {
 data-grid .dg-actions button:hover,
 data-grid .dg-actions a:hover {
   background-color: var(--dg-row-hover-bg);
+  border-color: var(--dg-accent);
   opacity: 1;
 }
 

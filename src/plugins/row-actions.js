@@ -50,7 +50,7 @@ class RowActions extends BasePlugin {
             position: "end",
             sortable: false,
             title: "",
-            class: `dg-actions ${this.actionClass}`,
+            class: "dg-actions",
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: () => this.createFilterCell(),
             renderCell: (ctx) => this.makeActionRow(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
@@ -81,30 +81,54 @@ class RowActions extends BasePlugin {
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
+        // The actions column mode depends on the actions resolved in the body,
+        // which is only known after the rows render. The header is created on a
+        // separate render pass (renderTable), so the mode must be applied on
+        // both passes: body cells and the header/filter must share it.
+        this.syncCellModes();
         if (context === "table") {
             this.closeActionMenu();
-        } else if (context === "body") {
-            this.syncCellModes();
         }
     }
 
     /**
-     * The collapsed vs inline mode depends on the actions actually resolved
-     * for each row, which is only known at render time.
+     * The collapsed vs inline mode is a property of the whole column, not of
+     * individual cells: within one table column every row must share the same
+     * geometry (header, filter and body cells alike), otherwise a fixed-layout
+     * table constrains the column to one width while cells assume another,
+     * creating artificial overflow.
+     *
+     * The mode derives from the widest set of inline actions on the current
+     * page: if every row fits 1-2 inline actions the column sizes to its
+     * intrinsic inline width, otherwise it collapses to the compact `more`
+     * cell (the fixed structural width).
      */
     syncCellModes() {
         const grid = this.grid;
-        const cells = findAll(grid, 'tbody td[data-column-id="$actions"]');
-        for (const cell of cells) {
-            const count = cell.querySelectorAll("[data-action]").length;
-            cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
-            if (count === 0) {
-                cell.classList.add("dg-actions-more");
-            } else if (!grid.options.collapseActions && count <= 2) {
-                cell.classList.add(`dg-actions-${count}`);
-            } else {
-                cell.classList.add("dg-actions-more");
+        const collapse = grid.options.collapseActions;
+        let maxCount = 0;
+        for (const row of grid.rows ?? []) {
+            let count = 0;
+            const actions = grid.getActionsForRow(row);
+            const rowKey = grid.resolveRowKey(row);
+            for (const action of actions) {
+                if (action.visible && !action.visible(row, { grid, action, rowKey })) {
+                    continue;
+                }
+                count++;
             }
+            if (count > maxCount) {
+                maxCount = count;
+            }
+        }
+        let mode = "dg-actions-more";
+        if (maxCount > 0 && !collapse && maxCount <= 2) {
+            mode = `dg-actions-${maxCount}`;
+        }
+        const cells = findAll(grid, '[data-column-id="$actions"]');
+        for (const cell of cells) {
+            cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
+            cell.classList.add(mode);
         }
     }
 
@@ -398,17 +422,6 @@ class RowActions extends BasePlugin {
         el.addEventListener("click", dispatchAction);
 
         return { el, dispatchAction };
-    }
-
-    get actionClass() {
-        const { actions, collapseActions, rowActions } = this.grid.options;
-        if (rowActions && actions.length === 0) {
-            return "dg-actions-more";
-        }
-        if (actions.length < 3 && !collapseActions) {
-            return `dg-actions-${actions.length}`;
-        }
-        return "dg-actions-more";
     }
 }
 

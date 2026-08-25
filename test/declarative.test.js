@@ -380,3 +380,93 @@ test("column inference never turns $actions into a data column", async () => {
     expect(inst.options.columns.map((c) => c.field)).toEqual(["name"]);
     removeGrid(inst);
 });
+
+test("data-value is a typed machine value and the authored markup survives rerenders", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="amount">Amount</th><th data-field="ref">Ref</th></tr></thead>
+    <tbody>
+        <tr data-row-key="1"><td data-value="1240"><data class="currency">$1,240.00</data></td><td data-value="001">ABC-001</td></tr>
+    </tbody>
+</table>
+`,
+        {},
+    );
+
+    // data-value is normalized: amounts become numbers, zero-padded ids stay strings.
+    const row = inst.dataSource.rows[0];
+    expect(row.amount).toBe(1240);
+    expect(typeof row.amount).toBe("number");
+    expect(row.ref).toBe("001");
+    expect(typeof row.ref).toBe("string");
+
+    // The authored presentation is preserved on the first render...
+    const cell = inst.querySelector('tbody td[data-column-id="amount"]');
+    expect(cell.querySelector("data.currency").textContent).toBe("$1,240.00");
+
+    // ...and across a rerender that does not touch the value.
+    await inst.setQuery({ page: 1 });
+    const rerendered = inst.querySelector('tbody td[data-column-id="amount"]');
+    expect(rerendered.querySelector("data.currency").textContent).toBe("$1,240.00");
+    removeGrid(inst);
+});
+
+test("updating a declarative row value invalidates its blueprint", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="status">Status</th></tr></thead>
+    <tbody><tr data-row-key="1"><td data-value="paid"><span class="badge success">Paid</span></td></tr></tbody>
+</table>
+`,
+        {},
+    );
+
+    expect(inst.querySelector('tbody td[data-column-id="status"] span.badge')).toBeTruthy();
+
+    inst.updateRow("1", { status: "refunded" });
+    const cell = inst.querySelector('tbody td[data-column-id="status"]');
+    expect(cell.querySelector("span.badge")).toBeNull();
+    expect(cell.textContent).toBe("refunded");
+    removeGrid(inst);
+});
+
+test("filter select labels derive from data-value + textContent", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="status" data-filter="select">Status</th></tr></thead>
+    <tbody>
+        <tr data-row-key="1"><td data-value="paid"><span class="badge success">Paid</span></td></tr>
+        <tr data-row-key="2"><td data-value="refunded"><span class="badge warn">Refunded</span></td></tr>
+    </tbody>
+</table>
+`,
+        { filterable: true },
+    );
+
+    const select = inst.querySelector('thead tr.dg-head-filters th[data-column-id="status"] select');
+    const options = [...select.options].map((o) => ({ value: o.value, text: o.textContent }));
+    expect(options).toContainEqual({ value: "paid", text: "Paid" });
+    expect(options).toContainEqual({ value: "refunded", text: "Refunded" });
+    removeGrid(inst);
+});
+
+test("data-min-width sets a column floor never compressed below", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr><th data-field="date" data-width="140" data-min-width="110">Issued</th></tr></thead>
+    <tbody><tr><td data-value="2026-08-21">2026-08-21</td></tr></tbody>
+</table>
+`,
+        {},
+    );
+
+    expect(inst.options.columns[0].minWidth).toBe(110);
+    const th = inst.querySelector('thead tr.dg-head-columns th[data-column-id="date"]');
+    expect(Number(th.dataset.minWidth)).toBeGreaterThanOrEqual(110);
+    expect(Number(th.getAttribute("width"))).toBeGreaterThanOrEqual(110);
+    removeGrid(inst);
+});

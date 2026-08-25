@@ -544,6 +544,22 @@ function randstr(prefix) {
 }
 
 // src/data-grid.js
+var DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
+function declarativeCells(row) {
+  return row[DECLARATIVE_CELLS];
+}
+function setDeclarativeCell(row, field, meta) {
+  let cells = declarativeCells(row);
+  if (!cells) {
+    cells = {};
+    Object.defineProperty(row, DECLARATIVE_CELLS, {
+      value: cells,
+      enumerable: false,
+      configurable: true
+    });
+  }
+  cells[field] = meta;
+}
 var plugins = {};
 var connectedInstances = new Set;
 var textInputState = new WeakMap;
@@ -673,6 +689,12 @@ function parseDeclarativeTable(table) {
         column.width = width;
       }
     }
+    if (th.dataset.minWidth !== undefined) {
+      const minWidth = Number(th.dataset.minWidth);
+      if (Number.isFinite(minWidth)) {
+        column.minWidth = minWidth;
+      }
+    }
     const direction = th.dataset.sort;
     if (direction === "asc" || direction === "desc") {
       sort.push({ field, direction });
@@ -733,7 +755,17 @@ function rowsFromTable(table, columns, rowKey = "id") {
       if (!td) {
         continue;
       }
-      row[column.field] = td.dataset.value ?? td.textContent.trim();
+      const raw = td.dataset.value;
+      if (raw !== undefined) {
+        row[column.field] = normalizeData(raw);
+        setDeclarativeCell(row, column.field, {
+          value: row[column.field],
+          label: td.textContent.trim(),
+          content: Array.from(td.childNodes)
+        });
+      } else {
+        row[column.field] = td.textContent.trim();
+      }
     }
     const actionsCell = tr.querySelector(":scope > td[data-actions]");
     if (actionsCell) {
@@ -2407,8 +2439,9 @@ class DataGrid extends base_element_default {
     if (this.options.responsive) {
       setAttribute(th, "data-responsive", column.responsive || "");
     }
-    const computedWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
-    th.dataset.minWidth = `${computedWidth}`;
+    const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
+    const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0);
+    th.dataset.minWidth = `${effectiveMin}`;
     applyColumnDefinition(th, column);
     const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
     setAttribute(th, "width", w);
@@ -2550,8 +2583,23 @@ class DataGrid extends base_element_default {
       return [firstFilterOption, ...metaOptions];
     }
     if (this.dataSource instanceof ArrayDataSource) {
-      const uniqueValues = [...new Set((this.dataSource.rows ?? []).map((e) => field ? e[field] : undefined))].filter((v) => v !== undefined && v !== null && v !== "").sort();
-      return [firstFilterOption, ...uniqueValues.map((e) => ({ value: e, text: e }))];
+      const labels2 = new Map;
+      for (const row of this.dataSource.rows ?? []) {
+        if (!field) {
+          continue;
+        }
+        const v = row[field];
+        if (v === undefined || v === null || v === "") {
+          continue;
+        }
+        const meta = declarativeCells(row)?.[field];
+        const text = meta?.label || v;
+        if (!labels2.has(v)) {
+          labels2.set(v, text);
+        }
+      }
+      const options = [...labels2.entries()].map(([value, text]) => ({ value, text })).sort((a, b) => a.text < b.text ? -1 : a.text > b.text ? 1 : 0);
+      return [firstFilterOption, ...options];
     }
     return [firstFilterOption];
   }
@@ -2649,6 +2697,15 @@ class DataGrid extends base_element_default {
       td.dataset.rowIndex = `${i}`;
     }
     const v = item[field] ?? "";
+    const meta = declarativeCells(item)?.[field];
+    if (meta?.content.length && Object.is(v, meta.value)) {
+      const fragment = document.createDocumentFragment();
+      for (const node of meta.content) {
+        fragment.appendChild(node.cloneNode(true));
+      }
+      applyContent(td, fragment);
+      return;
+    }
     let tv;
     switch (column.transform) {
       case "uppercase":
@@ -3853,7 +3910,7 @@ class RowActions extends base_plugin_default {
       position: "end",
       sortable: false,
       title: "",
-      class: `dg-actions ${this.actionClass}`,
+      class: "dg-actions",
       renderHeaderCell: (th) => this.createHeaderCell(th),
       renderFilterCell: () => this.createFilterCell(),
       renderCell: (ctx) => this.makeActionRow(ctx)
@@ -3872,25 +3929,37 @@ class RowActions extends base_plugin_default {
     }
   }
   afterRender(context) {
+    this.syncCellModes();
     if (context === "table") {
       this.closeActionMenu();
-    } else if (context === "body") {
-      this.syncCellModes();
     }
   }
   syncCellModes() {
     const grid = this.grid;
-    const cells = findAll(grid, 'tbody td[data-column-id="$actions"]');
-    for (const cell of cells) {
-      const count = cell.querySelectorAll("[data-action]").length;
-      cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
-      if (count === 0) {
-        cell.classList.add("dg-actions-more");
-      } else if (!grid.options.collapseActions && count <= 2) {
-        cell.classList.add(`dg-actions-${count}`);
-      } else {
-        cell.classList.add("dg-actions-more");
+    const collapse = grid.options.collapseActions;
+    let maxCount = 0;
+    for (const row of grid.rows ?? []) {
+      let count = 0;
+      const actions = grid.getActionsForRow(row);
+      const rowKey = grid.resolveRowKey(row);
+      for (const action of actions) {
+        if (action.visible && !action.visible(row, { grid, action, rowKey })) {
+          continue;
+        }
+        count++;
       }
+      if (count > maxCount) {
+        maxCount = count;
+      }
+    }
+    let mode = "dg-actions-more";
+    if (maxCount > 0 && !collapse && maxCount <= 2) {
+      mode = `dg-actions-${maxCount}`;
+    }
+    const cells = findAll(grid, '[data-column-id="$actions"]');
+    for (const cell of cells) {
+      cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
+      cell.classList.add(mode);
     }
   }
   toggleActionMenu(cell, row) {
@@ -4112,16 +4181,6 @@ class RowActions extends base_plugin_default {
     };
     el.addEventListener("click", dispatchAction);
     return { el, dispatchAction };
-  }
-  get actionClass() {
-    const { actions, collapseActions, rowActions } = this.grid.options;
-    if (rowActions && actions.length === 0) {
-      return "dg-actions-more";
-    }
-    if (actions.length < 3 && !collapseActions) {
-      return `dg-actions-${actions.length}`;
-    }
-    return "dg-actions-more";
   }
 }
 var row_actions_default = RowActions;

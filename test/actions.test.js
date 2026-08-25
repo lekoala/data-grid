@@ -613,3 +613,50 @@ test("a row without actions renders an empty cell without the toggle", async () 
     expect(cells[1].querySelector(".dg-actions-toggle")).toBeTruthy();
     document.body.removeChild(inst);
 });
+
+test("the actions column shares one mode across header and body", async () => {
+    const inst = await makeReadyGrid(
+        { rowActions: true, columns: [{ field: "name" }] },
+        [
+            {
+                id: 1,
+                name: "a",
+                $actions: [
+                    { name: "view", label: "View" },
+                    { name: "delete", label: "Delete" },
+                ],
+            },
+            { id: 2, name: "b", $actions: [{ name: "view", label: "View" }] },
+        ],
+        { RowActions },
+    );
+
+    // Two inline actions at most: the whole column becomes dg-actions-2, so the
+    // header width matches the body cells instead of collapsing to ~40px.
+    const headerTh = inst.querySelector('thead tr.dg-head-columns th[data-column-id="$actions"]');
+    expect(headerTh.classList.contains("dg-actions-2")).toBe(true);
+    expect(headerTh.classList.contains("dg-actions-more")).toBe(false);
+    const bodyCells = inst.querySelectorAll('tbody td[data-column-id="$actions"]');
+    expect(bodyCells.length).toBeGreaterThan(0);
+    for (const cell of bodyCells) {
+        expect(cell.classList.contains("dg-actions-2")).toBe(true);
+        expect(cell.classList.contains("dg-actions-more")).toBe(false);
+    }
+    document.body.removeChild(inst);
+});
+
+test("a row needing more than two inline actions collapses the whole column", async () => {
+    const inst = await makeReadyGrid(
+        { rowActions: true, columns: [{ field: "name" }] },
+        [{ id: 1, name: "a", $actions: [{ name: "x" }, { name: "y" }, { name: "z" }] }],
+        { RowActions },
+    );
+
+    const headerTh = inst.querySelector('thead tr.dg-head-columns th[data-column-id="$actions"]');
+    expect(headerTh.classList.contains("dg-actions-more")).toBe(true);
+    const bodyCells = inst.querySelectorAll('tbody td[data-column-id="$actions"]');
+    for (const cell of bodyCells) {
+        expect(cell.classList.contains("dg-actions-more")).toBe(true);
+    }
+    document.body.removeChild(inst);
+});

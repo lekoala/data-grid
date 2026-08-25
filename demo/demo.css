@@ -312,6 +312,31 @@ tr.pending td {
   right: 1rem;
 }
 
+/* Declarative cell presentation: kept intact across rerenders by the grid. */
+.badge {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  padding: 0.3em 0.6em;
+}
+
+.badge.approved {
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.badge.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.blocked {
+  background: #fdecea;
+  color: #b42318;
+}
+
 @media (max-width: 767px) {
   header {
     padding-top: 2rem;

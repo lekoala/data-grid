@@ -829,8 +829,9 @@ data-grid tfoot .dg-pagination {
 }
 
 data-grid tfoot .dg-pagination button {
-  background-color: transparent;
-  border-color: transparent;
+  background-color: var(--dg-control-bg);
+  border: 1px solid var(--dg-control-border-color);
+  border-radius: var(--dg-radius);
   color: var(--dg-muted-color);
   display: inline-grid;
   place-items: center;
@@ -842,9 +843,9 @@ data-grid tfoot .dg-pagination button {
   height: 2em;
 }
 
-data-grid tfoot .dg-pagination button:hover {
+data-grid tfoot .dg-pagination button:hover:not(:disabled) {
   background-color: var(--dg-bg);
-  border-color: var(--dg-control-border-color);
+  border-color: var(--dg-accent);
   color: var(--dg-color);
 }
 

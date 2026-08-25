@@ -100,6 +100,71 @@
     </section>
 
     <section class="demo-grid">
+      <h2>Declarative row actions</h2>
+      <p class="demo-lead">Inline actions come straight from the markup: a <code>&lt;th data-actions&gt;</code>
+        activates the column and each <code>&lt;td data-actions&gt;</code> cell is normalized into
+        <code>row.$actions</code>. The actions column shares a single width across the header and every row, so no
+        artificial overflow is created. <code>data-value</code> holds the typed machine value (here a number) while
+        the cell keeps its authored presentation, and <code>data-min-width</code> keeps a column from being crushed.
+      </p>
+
+      <div class="demo-frame">
+        <data-grid row-actions>
+          <table>
+            <thead>
+              <tr>
+                <th data-field="name" data-sort="asc">Name</th>
+                <th data-field="status" data-filter="select">Status</th>
+                <th data-field="amount" data-width="140" data-min-width="110">Amount</th>
+                <th data-actions>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td data-value="Ada Lovelace">Ada Lovelace</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+                <td data-value="1240">$1,240.00</td>
+                <td data-actions>
+                  <a data-action="view" href="/users/1" data-intent="primary">View</a>
+                  <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+                </td>
+              </tr>
+              <tr data-row-key="2">
+                <td data-value="Grace Hopper">Grace Hopper</td>
+                <td data-value="pending"><span class="badge pending">Pending</span></td>
+                <td data-value="008">$8.00</td>
+                <td data-actions>
+                  <a data-action="view" href="/users/2" data-intent="primary">View</a>
+                  <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+                </td>
+              </tr>
+              <tr data-row-key="3">
+                <td data-value="Alan Turing">Alan Turing</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+                <td data-value="450">$450.00</td>
+                <td data-actions>
+                  <a data-action="view" href="/users/3" data-intent="primary">View</a>
+                  <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+                </td>
+              </tr>
+              <tr data-row-key="4">
+                <td data-value="Margaret Hamilton">Margaret Hamilton</td>
+                <td data-value="blocked"><span class="badge blocked">Blocked</span></td>
+                <td data-value="1990">$1,990.00</td>
+                <td data-actions>
+                  <a data-action="view" href="/users/4" data-intent="primary">View</a>
+                  <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </data-grid>
+      </div>
+      <p class="demo-note">Resize the page: as long as the column widths fit, no horizontal scrollbar appears; the
+        actions column stays coherent with the header instead of overflowing.</p>
+    </section>
+
+    <section class="demo-grid">
       <h2>HTML columns + server data</h2>
       <p class="demo-lead">With <code>src</code>, the server stays authoritative and only the columns come from the
         markup.</p>
