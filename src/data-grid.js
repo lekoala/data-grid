@@ -95,7 +95,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
  * @property {Number} [width] - the preferred width of the column (auto otherwise)
  * @property {Number} [minWidth] - the column is never compressed below this width
- * @property {"start"|"center"|"end"|null} [align] - cell content alignment (data cells), defaults to the formatter default when `format` is set
+ * @property {"start"|"center"|"end"|null} [align] - horizontal alignment of the column's header and body cells, defaults to the formatter default when `format` is set (filter controls keep their natural alignment)
  * @property {"boolean"|"date"|"datetime"|"number"|null} [format] - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
  * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
@@ -625,6 +625,17 @@ function orderColumns(columns) {
  */
 function isColumnHidden(column) {
     return Boolean(column.hidden || column.responsiveHidden);
+}
+
+/**
+ * Effective alignment of a column: the explicit option wins over the formatter
+ * default. Drives `data-align` on both header and body cells; the filter row
+ * keeps its natural alignment.
+ * @param {Column} column
+ * @returns {String|null}
+ */
+function getColumnAlign(column) {
+    return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
 }
 
 /**
@@ -2336,13 +2347,13 @@ class DataGrid extends BaseElement {
         const cell = document.createElement(tag);
         cell.dataset.columnId = this.getColumnId(column);
         applyColumnDefinition(cell, column);
-        // Formatting hints target data cells only: alignment is a body concern
-        // by default, and `data-format` is a theming hook for the rendered cell.
+        // `data-format` is a body-only theming hook for the rendered cell;
+        // alignment is shared by header and body cells.
         if (tag === "td") {
             if (column.format) {
                 cell.dataset.format = column.format;
             }
-            const align = column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align;
+            const align = getColumnAlign(column);
             if (align) {
                 cell.dataset.align = align;
             }
@@ -3260,6 +3271,12 @@ class DataGrid extends BaseElement {
             // uniformly so header and body share the same geometry and styling
             // hooks, including virtual columns carrying their own width.
             applyColumnDefinition(th, column);
+            // The header follows the column alignment so the title shares the
+            // axis of its values (explicit option > formatter default).
+            const align = getColumnAlign(column);
+            if (align) {
+                th.dataset.align = align;
+            }
 
             tr.appendChild(th);
         }

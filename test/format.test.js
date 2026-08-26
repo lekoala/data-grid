@@ -375,6 +375,60 @@ test("explicit align wins over the formatter default", async () => {
     );
     expect(inst.querySelector('tbody td[data-column-id="price"]').dataset.align).toBe("center");
     expect(inst.querySelector('tbody td[data-column-id="active"]').dataset.align).toBe("center");
+    expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="price"]').dataset.align).toBe("center");
+    removeGrid(inst);
+});
+
+test("the header shares the column alignment", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "price", format: "number" }, { field: "active", format: "boolean" }, { field: "name" }],
+        },
+        [{ price: 1, active: true, name: "a" }],
+        "en-US",
+    );
+    expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="price"]').dataset.align).toBe("end");
+    expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="active"]').dataset.align).toBe("center");
+    // A plain column keeps the natural grid alignment
+    expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="name"]').hasAttribute("data-align")).toBe(
+        false,
+    );
+    removeGrid(inst);
+});
+
+test("filter cells keep their natural alignment", async () => {
+    const inst = await makeReadyGrid(
+        {
+            filterable: true,
+            sortable: true,
+            columns: [{ field: "price", title: "Price", format: "number" }],
+        },
+        [{ price: 1 }],
+        "en-US",
+    );
+    const th = inst.querySelector('.dg-head-filters th[data-column-id="price"]');
+    expect(th.querySelector(".dg-filter")).toBeTruthy();
+    expect(th.hasAttribute("data-align")).toBe(false);
+    removeGrid(inst);
+});
+
+test("a custom renderHeaderCell still receives the column alignment", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "price",
+                    format: "number",
+                    renderHeaderCell: (th) => {
+                        th.textContent = "Price";
+                    },
+                },
+            ],
+        },
+        [{ price: 1 }],
+        "en-US",
+    );
+    expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="price"]').dataset.align).toBe("end");
     removeGrid(inst);
 });
 

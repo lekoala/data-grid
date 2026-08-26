@@ -980,6 +980,9 @@ function orderColumns(columns) {
 function isColumnHidden(column) {
   return Boolean(column.hidden || column.responsiveHidden);
 }
+function getColumnAlign(column) {
+  return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
+}
 function applyColumnDefinition(el, column) {
   if (column.width) {
     const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
@@ -2077,7 +2080,7 @@ class DataGrid extends base_element_default {
       if (column.format) {
         cell.dataset.format = column.format;
       }
-      const align = column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align;
+      const align = getColumnAlign(column);
       if (align) {
         cell.dataset.align = align;
       }
@@ -2651,6 +2654,10 @@ class DataGrid extends base_element_default {
         this.renderDefaultHeaderCell(th, ctx);
       }
       applyColumnDefinition(th, column);
+      const align = getColumnAlign(column);
+      if (align) {
+        th.dataset.align = align;
+      }
       tr.appendChild(th);
     }
     if (seededSample) {

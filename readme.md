@@ -371,7 +371,7 @@ response protection).
 | `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                  |
 | `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value` |
 | `minWidth`                              | `Number`             | never compress below this width                                       |
-| `align`                                 | `String`             | cell alignment: `start` / `center` / `end`                            |
+| `align`                                 | `String`             | header and cell alignment: `start` / `center` / `end`                 |
 | `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`         |
 | `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`               |
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                |

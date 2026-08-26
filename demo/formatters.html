@@ -32,6 +32,7 @@
       <code>datetime</code> and <code>number</code>. DataGrid provides the kind of representation, <code>Intl</code>
       provides its configuration through <code>formatOptions</code>. The formatters never touch cell layout — the core
       resolves geometry (<code>minWidth</code>, <code>align</code>) from the column options and the formatter defaults.
+      The alignment applies to the whole column: header and body cells share the same axis.
     </p>
   </header>
 
@@ -59,8 +60,8 @@
       <p class="demo-kicker">overrides &amp; locale</p>
       <h2>Column geometry, granular Intl and renderCell</h2>
       <p class="demo-lead">Explicit column options win over formatter defaults: <code>align: "center"</code> overrides
-        the right-alignment that <code>number</code> implies, <code>align: "end"</code> overrides the centered boolean,
-        and <code>minWidth</code> raises the floor of a column. Granular <code>Intl</code> options
+        the right-alignment that <code>number</code> implies (header included), <code>align: "end"</code> overrides the
+        centered boolean, and <code>minWidth</code> raises the floor of a column. Granular <code>Intl</code> options
         (<code>year</code>/<code>month</code>/<code>day</code>) suppress the automatic <code>dateStyle</code> default.
         <code>renderCell</code> always takes full control. This grid carries <code>lang="fr-BE"</code>, so every
         formatter renders in French.</p>

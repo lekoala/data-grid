@@ -288,15 +288,19 @@ data-grid td.dg-wrap {
   overflow-wrap: anywhere;
 }
 
-/* Column alignment: set by the core from column.align or the formatter default */
+/* Column alignment: set by the core from column.align or the formatter default,
+   shared by header and body cells */
+data-grid th[data-align="start"],
 data-grid td[data-align="start"] {
   text-align: start;
 }
 
+data-grid th[data-align="center"],
 data-grid td[data-align="center"] {
   text-align: center;
 }
 
+data-grid th[data-align="end"],
 data-grid td[data-align="end"] {
   text-align: end;
 }
@@ -924,6 +928,16 @@ data-grid th.dg-sortable > .dg-sort:focus {
   text-align: inherit;
   text-decoration: none;
   width: 100%;
+}
+
+/* The sort button is a flex row: its justify-content must follow the column
+   alignment too, so the label and its chevron stay together on the same axis. */
+data-grid th[data-align="center"] > .dg-sort {
+  justify-content: center;
+}
+
+data-grid th[data-align="end"] > .dg-sort {
+  justify-content: flex-end;
 }
 
 data-grid th.dg-sortable:focus-within {

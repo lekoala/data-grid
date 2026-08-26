@@ -248,15 +248,15 @@ data-grid th.dg-wrap, data-grid td.dg-wrap {
   overflow-wrap: anywhere;
 }
 
-data-grid td[data-align="start"] {
+data-grid th[data-align="start"], data-grid td[data-align="start"] {
   text-align: start;
 }
 
-data-grid td[data-align="center"] {
+data-grid th[data-align="center"], data-grid td[data-align="center"] {
   text-align: center;
 }
 
-data-grid td[data-align="end"] {
+data-grid th[data-align="end"], data-grid td[data-align="end"] {
   text-align: end;
 }
 
@@ -878,6 +878,14 @@ data-grid th.dg-sortable > .dg-sort, data-grid th.dg-sortable > .dg-sort:hover, 
   height: auto;
   min-height: 0;
   margin: 0;
+}
+
+data-grid th[data-align="center"] > .dg-sort {
+  justify-content: center;
+}
+
+data-grid th[data-align="end"] > .dg-sort {
+  justify-content: flex-end;
 }
 
 data-grid th.dg-sortable:focus-within {
