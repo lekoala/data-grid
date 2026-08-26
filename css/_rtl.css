@@ -13,3 +13,46 @@ data-grid[dir="rtl"] .dg-resizer {
   left: -4px;
   right: auto;
 }
+
+/* Mirrors for the directional physical LTR declarations in _core.css /
+   _actions.css. The RTL contract is the dir attribute on the grid element
+   itself (see demo/i18n.html); generated CSS never uses :lang() selectors. */
+data-grid[dir="rtl"] .dg-topbar-end {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+data-grid[dir="rtl"] .dg-search-icon {
+  left: auto;
+  right: var(--dg-control-padding-inline);
+}
+
+data-grid[dir="rtl"] .dg-selection-count {
+  margin-right: 0;
+  margin-left: 0.5rem;
+}
+
+data-grid[dir="rtl"] select {
+  padding-right: var(--dg-control-padding-inline);
+  padding-left: 32px;
+}
+
+data-grid[dir="rtl"] .dg-select-field::after {
+  right: auto;
+  left: 12px;
+}
+
+data-grid[dir="rtl"] input.dg-search {
+  padding-left: var(--dg-control-padding-inline);
+  padding-right: calc(var(--dg-control-padding-inline) + 20px);
+}
+
+data-grid[dir="rtl"] [data-frozen="start"] {
+  left: auto;
+  right: var(--dg-frozen-offset, 0px);
+}
+
+data-grid[dir="rtl"] [data-frozen-edge] {
+  border-right: 0;
+  border-left: 1px solid var(--dg-border-color);
+}

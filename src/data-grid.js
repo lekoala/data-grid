@@ -99,6 +99,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {"boolean"|"date"|"datetime"|"number"|null} [format] - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
  * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
+ * @property {String|((ctx: CellContext) => String|null|undefined)} [cellClass] - class(es) for body cells only, evaluated per row at render time. Unlike `class`, never applied to header or filter cells
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} [hidden] - hide the column
  * @property {Boolean} [sortable] - disable sorting for this column (defaults to the grid-wide `sortable`)
@@ -3624,6 +3625,13 @@ class DataGrid extends BaseElement {
                 td.setAttribute("data-name", column.title ?? "");
 
                 const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
+                const cellClass = typeof column.cellClass === "function" ? column.cellClass(ctx) : column.cellClass;
+                // A whitespace-only return is truthy but yields [""] below:
+                // normalize before touching the class list.
+                const classes = String(cellClass ?? "").trim();
+                if (classes) {
+                    td.classList.add(...classes.split(/\s+/));
+                }
                 if (column.renderCell) {
                     applyContent(td, column.renderCell(ctx));
                 } else {

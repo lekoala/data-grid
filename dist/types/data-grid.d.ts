@@ -77,6 +77,10 @@ export type Column = {
      */
     class?: string;
     /**
+     * - class(es) for body cells only, evaluated per row at render time. Unlike `class`, never applied to header or filter cells
+     */
+    cellClass?: string | ((ctx: CellContext) => string | null | undefined);
+    /**
      * - don't render the column and set a matching attribute on the row with the value of the field
      */
     attr?: string;

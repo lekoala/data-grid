@@ -42,7 +42,8 @@
       <p class="demo-lead"><code>date</code> renders a <code>&lt;time datetime&gt;</code> with a calendar date,
         <code>datetime</code> renders the instant (converted to <code>Europe/Brussels</code> here),
         <code>number</code> formats currency, percent and units through <code>Intl.NumberFormat</code>, and
-        <code>boolean</code> renders an accessible <code>✓ / –</code>. Invalid or missing values produce an empty cell,
+        <code>boolean</code> renders an empty accessible mark whose check / dash shape is drawn entirely in CSS.
+        Invalid or missing values produce an empty cell,
         never a guessed one: <code>2026-02-29</code> is rejected, <code>null</code> discounts and unshipped orders stay
         blank.</p>
 
@@ -72,6 +73,23 @@
         components, and the <code>Tier</code> column is a plain <code>renderCell</code>, not a formatter. A
         <code>renderCell</code> column carries an explicit <code>width</code>: autosize can only measure raw values, not
         rendered content.</p>
+    </section>
+
+    <section class="demo-grid">
+      <p class="demo-kicker">cellClass</p>
+      <h2>Conditional presentation</h2>
+      <p class="demo-lead"><code>cellClass</code> adds classes to body cells only — per row, at render time. It sits
+        between <code>format</code> (standard semantic representation) and <code>renderCell</code> (full content
+        control): the formatters stay neutral, and this page's stylesheet decides what
+        <code>.positive</code>, <code>.negative</code>, <code>.is-positive</code> or <code>.is-muted</code> look like.</p>
+
+      <div class="demo-frame">
+        <div id="conditional-grid"></div>
+      </div>
+      <p class="demo-note"><code>Change</code> is a percent number with <code>signDisplay: "exceptZero"</code>: the
+        sign comes from Intl, the color from <code>cellClass</code> — zero stays neutral. The boolean column keeps its
+        CSS-drawn mark; because it inherits <code>currentColor</code>, coloring the cell colors the mark. The grid
+        itself contains no green and no red.</p>
     </section>
 
     <section class="demo-grid">
@@ -156,12 +174,12 @@
     import { ArrayDataSource, DataGrid } from "../data-grid.js";
 
     const orders = [
-      { id: 1, product: "Wireless Headphones", ordered: "2026-08-26", shipped: "2026-08-27T09:15:00+02:00", price: 129.9, discount: 0.2, weight: 2.5, active: true },
-      { id: 2, product: "Mechanical Keyboard", ordered: "2026-08-20", shipped: "2026-08-21T14:30:00Z", price: 89.5, discount: 0.05, weight: 1.2, active: true },
-      { id: 3, product: "4K Webcam", ordered: "2026-07-30", shipped: null, price: 179, discount: 0, weight: 0.8, active: false },
-      { id: 4, product: "USB-C Dock", ordered: "2026-02-29", shipped: "2026-03-01T08:00:00+01:00", price: 249.99, discount: 0.15, weight: 1.4, active: true },
-      { id: 5, product: "Ergonomic Mouse", ordered: "2026-08-15", shipped: "2026-08-16T18:45:00-05:00", price: 59, discount: null, weight: 0.3, active: false },
-      { id: 6, product: "Monitor Arm", ordered: "2026-08-10", shipped: "2026-08-11T11:00:00+02:00", price: 74.9, discount: 0.1, weight: 3.1, active: true },
+      { id: 1, product: "Wireless Headphones", ordered: "2026-08-26", shipped: "2026-08-27T09:15:00+02:00", price: 129.9, discount: 0.2, weight: 2.5, active: true, change: 0.124 },
+      { id: 2, product: "Mechanical Keyboard", ordered: "2026-08-20", shipped: "2026-08-21T14:30:00Z", price: 89.5, discount: 0.05, weight: 1.2, active: true, change: -0.031 },
+      { id: 3, product: "4K Webcam", ordered: "2026-07-30", shipped: null, price: 179, discount: 0, weight: 0.8, active: false, change: 0 },
+      { id: 4, product: "USB-C Dock", ordered: "2026-02-29", shipped: "2026-03-01T08:00:00+01:00", price: 249.99, discount: 0.15, weight: 1.4, active: true, change: 0.058 },
+      { id: 5, product: "Ergonomic Mouse", ordered: "2026-08-15", shipped: "2026-08-16T18:45:00-05:00", price: 59, discount: null, weight: 0.3, active: false, change: -0.126 },
+      { id: 6, product: "Monitor Arm", ordered: "2026-08-10", shipped: "2026-08-11T11:00:00+02:00", price: 74.9, discount: 0.1, weight: 3.1, active: true, change: 0.022 },
     ];
 
     const grid1 = new DataGrid({
@@ -196,6 +214,29 @@
     });
     grid2.setAttribute("lang", "fr-BE");
     document.getElementById("overrides-grid").replaceChildren(grid2);
+
+    const grid3 = new DataGrid({
+      dataSource: new ArrayDataSource(orders),
+      sortable: true,
+      columns: [
+        { field: "product", title: "Product" },
+        {
+          field: "change",
+          title: "Change",
+          format: "number",
+          formatOptions: { style: "percent", signDisplay: "exceptZero", maximumFractionDigits: 1 },
+          cellClass: ({ value }) => (value > 0 ? "positive" : value < 0 ? "negative" : ""),
+        },
+        {
+          field: "active",
+          title: "Active",
+          format: "boolean",
+          align: "center",
+          cellClass: ({ value }) => (value ? "is-positive" : "is-muted"),
+        },
+      ],
+    });
+    document.getElementById("conditional-grid").replaceChildren(grid3);
   </script>
 </body>
 

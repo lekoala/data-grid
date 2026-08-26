@@ -283,6 +283,25 @@ footer hr {
   background: #8f1d14;
 }
 
+/* Application-side conditional formatting: column.cellClass lands on body <td>
+   elements and the application decides what every state looks like. The grid
+   never picks business colors by itself. */
+data-grid td.positive {
+  color: #0f7b4d;
+}
+
+data-grid td.negative {
+  color: #b42318;
+}
+
+data-grid td.is-positive .dg-boolean {
+  color: #0f7b4d;
+}
+
+data-grid td.is-muted .dg-boolean {
+  color: var(--dg-muted-color);
+}
+
 tr.approved td {
   color: inherit;
 }

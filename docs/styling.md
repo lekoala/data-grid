@@ -125,6 +125,27 @@ data-grid .dg-boolean[data-value="true"] {
 }
 ```
 
+The mark inherits `currentColor`, so a cell-level state hook drives it without
+touching the formatter:
+
+```js
+columns: [
+    {
+        field: "active",
+        format: "boolean",
+        cellClass: ({ value }) => (value ? "is-positive" : "is-muted"),
+    },
+]
+```
+
+```css
+data-grid td.is-positive .dg-boolean { color: var(--success); }
+data-grid td.is-muted .dg-boolean { color: var(--dg-muted-color); }
+```
+
+`column.cellClass` is evaluated once per row at render time and only lands on
+body cells (`column.class` stays the structural, header + body hook).
+
 ## Selection badge
 
 `bulkActions` renders a `.dg-selection-count` badge that shows the plain count,
@@ -207,3 +228,11 @@ Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`,
 `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
 `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
+
+## Right-to-left
+
+RTL is driven by the `dir` attribute set on the grid element itself
+(`demo/i18n.html` does this per locale). Directional horizontal styles are
+authored as physical LTR declarations mirrored through `data-grid[dir="rtl"]`
+rules in `css/_rtl.css`; generated CSS never uses `:lang()` selectors, so a
+page can set `dir` independently of its language.

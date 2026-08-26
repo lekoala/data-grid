@@ -16,13 +16,34 @@ runtime requirement (no Bun/Node APIs in `src/`).
 - `scripts/custom-elements.js` generates `custom-elements.json` (`bun run manifest`), schema `2.1.0`
 - `bun run check:baseline` (`scripts/check-baseline.js`) greps `src/` for the
   post-baseline APIs below (private members, class fields, `structuredClone`,
-  `Object.hasOwn`, `replaceAll`, `.at(`, `scrollend`, `getRootNode`)
+  `Object.hasOwn`, `replaceAll`, `.at(`, `scrollend`, `getRootNode`) and `css/`
+  for directional inline-axis logical properties (see "Bun CSS workaround")
+- `bun run size` (`scripts/css-size.js`) reports raw/gzip/brotli of the built CSS
 - `bun run ci` = check + check:baseline + typecheck + test + types + manifest +
   build + drift check (`git diff --exit-code -- dist custom-elements.json`) so
   committed artifacts stay in sync
 - Mark the public API surface of `src/data-grid.js` with `@public` in JSDoc: the
   CEM generator and the docs rely on it. No `@deprecated` markers: v3 is a clean
   contract, legacy behavior is removed, not annotated.
+
+### Bun CSS workaround (circumstantial, not a CSS philosophy)
+
+Bun's CSS bundler downlevels directional inline-axis logical properties
+(`margin-inline-start`, `padding-inline-end`, ...) into large generated
+`:lang()` selector sets, because its hardcoded CSS targets predate support
+(no user-facing CSS target option yet; upstream PR oven-sh/bun#40368).
+DataGrid drives RTL through `[dir="rtl"]` on the grid element
+(`css/_rtl.css`), so:
+
+- author directional inline-axis styles as physical LTR declarations plus a
+  `[dir="rtl"]` mirror in `_rtl.css`;
+- logical sizing (`inline-size`, `min-inline-size`, ...) and block-axis
+  properties compile unchanged and stay preferred where they fit;
+- `scripts/build.js` fails if generated CSS contains `:lang(`, and
+  `check:baseline` rejects new inline-direction logicals in `css/`.
+
+Revisit when Bun ships a CSS target option: migrating back to logical
+properties would then be optional, not automatic.
 
 ## Architecture rules
 

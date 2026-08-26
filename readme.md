@@ -382,6 +382,7 @@ response protection).
 | `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
 | `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
 | `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                  |
+| `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                  |
 
 Column sizing follows three notions: `minWidth` is a floor the column is never
 compressed below, `width` is a preferred width, and a column without a preferred

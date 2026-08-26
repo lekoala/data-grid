@@ -2903,6 +2903,11 @@ class DataGrid extends base_element_default {
         }
         td.setAttribute("data-name", column.title ?? "");
         const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
+        const cellClass = typeof column.cellClass === "function" ? column.cellClass(ctx) : column.cellClass;
+        const classes = String(cellClass ?? "").trim();
+        if (classes) {
+          td.classList.add(...classes.split(/\s+/));
+        }
         if (column.renderCell) {
           applyContent(td, column.renderCell(ctx));
         } else {
