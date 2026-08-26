@@ -53,7 +53,10 @@
       </div>
       <p class="demo-note">The locale comes from the closest <code>lang</code> attribute — this grid inherits the
         document's <code>en</code>. The <code>weight</code> column uses the <code>unit</code> shortcut (it implies
-        <code>style: "unit"</code>), and <code>price</code> the <code>currency</code> shortcut.</p>
+        <code>style: "unit"</code>), and <code>price</code> the <code>currency</code> shortcut. Each formatter also
+        suggests a preferred filter mode: <code>active</code> filters with a tri-state select, numbers with typed
+        equality, dates by partial <code>YYYY[-MM[-DD]]</code> prefix — while <code>shipped</code> (datetime) stays a
+        plain text filter.</p>
     </section>
 
     <section class="demo-grid">

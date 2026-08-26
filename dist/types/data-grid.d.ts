@@ -125,9 +125,9 @@ export type Column = {
      */
     responsiveHidden?: boolean;
     /**
-     * - defines a filter field type ("text" or "select" - defaults to "text")
+     * - filter control mode, defaults to the formatter hint when `format` is set (boolean: tri-state select, number: numeric input with typed equality, date: partial YYYY-MM-DD prefix match), otherwise "text"
      */
-    filterType?: string;
+    filterType?: "text" | "select" | "boolean" | "number" | "date" | null;
     /**
      * - a visible hint for the filter control (defaults to "…")
      */
@@ -1261,7 +1261,9 @@ declare class DataGrid extends BaseElement {
      */
     clearSearch(): Promise<void>;
     /**
-     * Collect current filter inputs into the query and reload.
+     * Collect current filter inputs into the query and reload. Each control's
+     * resolved mode (data-filter-mode) decides how its value maps onto a
+     * query operator.
      */
     filterData(): Promise<void>;
     renderTable(): void;

@@ -111,7 +111,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
- * @property {String} [filterType] - defines a filter field type ("text" or "select" - defaults to "text")
+ * @property {"text"|"select"|"boolean"|"number"|"date"|null} [filterType] - filter control mode, defaults to the formatter hint when `format` is set (boolean: tri-state select, number: numeric input with typed equality, date: partial YYYY-MM-DD prefix match), otherwise "text"
  * @property {String} [filterPlaceholder] - a visible hint for the filter control (defaults to "…")
  * @property {Array<any>} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
  * @property {FilterOption} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
@@ -431,7 +431,12 @@ function parseDeclarativeTable(table) {
             column.wrap = parseBooleanAttribute(th.dataset.wrap);
         }
         if (th.dataset.filter) {
-            column.filterType = th.dataset.filter;
+            // Only known modes set an explicit filter type: an invalid value
+            // must not silently become an option, so the resolved default stays.
+            const mode = th.dataset.filter;
+            if (["text", "select", "boolean", "number", "date"].includes(mode)) {
+                column.filterType = /** @type {NonNullable<Column["filterType"]>} */ (mode);
+            }
         }
         if (th.dataset.filterPlaceholder !== undefined) {
             column.filterPlaceholder = th.dataset.filterPlaceholder;
@@ -636,6 +641,17 @@ function isColumnHidden(column) {
  */
 function getColumnAlign(column) {
     return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
+}
+
+/**
+ * Effective filter mode of a column: the explicit option wins over the
+ * formatter hint, then falls back to the generic text filter. Drives both the
+ * rendered control and how `filterData()` maps its value onto a query filter.
+ * @param {Column} column
+ * @returns {"text"|"select"|"boolean"|"number"|"date"}
+ */
+function getColumnFilterType(column) {
+    return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
 }
 
 /**
@@ -1052,7 +1068,9 @@ class DataGrid extends BaseElement {
             transform: null,
             format: null,
             align: null,
-            filterType: "text",
+            // Null means "no explicit choice": the effective mode resolves as
+            // explicit filterType > formatter hint > "text".
+            filterType: null,
             filterPlaceholder: "…",
             firstFilterOption: { value: "", text: "" },
         };
@@ -3095,7 +3113,9 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Collect current filter inputs into the query and reload.
+     * Collect current filter inputs into the query and reload. Each control's
+     * resolved mode (data-filter-mode) decides how its value maps onto a
+     * query operator.
      */
     filterData() {
         this.log("filter data");
@@ -3109,11 +3129,29 @@ class DataGrid extends BaseElement {
             const value = input.value;
             const name = input.dataset.name;
             if (value && name) {
-                const isSelect = /select/i.test(input.tagName);
-                filters[name] = {
-                    operator: isSelect ? "eq" : "contains",
-                    value,
-                };
+                const mode = /** @type {"text"|"select"|"boolean"|"number"|"date"|undefined} */ (
+                    input.dataset.filterMode
+                );
+                if (mode === "boolean") {
+                    filters[name] = { operator: "eq", value: value === "true" };
+                } else if (mode === "number") {
+                    const num = Number(value);
+                    // Canonical numeric input gets typed equality; anything
+                    // else falls back to the permissive text behavior.
+                    filters[name] = Number.isFinite(num)
+                        ? { operator: "eq", value: num }
+                        : { operator: "contains", value };
+                } else if (mode === "date") {
+                    // Partial canonical date: 2026 / 2026-08 / 2026-08-26 all
+                    // prefix-match the ISO value.
+                    filters[name] = { operator: "startsWith", value };
+                } else {
+                    const isSelect = /select/i.test(input.tagName);
+                    filters[name] = {
+                        operator: isSelect ? "eq" : "contains",
+                        value,
+                    };
+                }
             }
         }
         return this.setQuery({ filters });
@@ -3506,11 +3544,31 @@ class DataGrid extends BaseElement {
      * @returns {HTMLInputElement|HTMLSelectElement}
      */
     createFilterElement(column, relatedTh) {
-        const isSelect = column.filterType === "select";
+        const type = getColumnFilterType(column);
+        const isSelect = type === "select" || type === "boolean";
         const filter = isSelect ? document.createElement("select") : document.createElement("input");
         filter.classList.add("dg-filter");
         filter.classList.add("dg-filter-control");
-        if (isSelect) {
+        // The resolved mode travels on the control: filterData() reads it to
+        // map the input value onto the matching query operator.
+        filter.dataset.filterMode = type;
+        if (type === "boolean") {
+            // Tri-state select sharing the boolean formatter semantics: the
+            // empty option filters nothing, "true"/"false" compare through
+            // normalizeBoolean (raw 1 / "1" cells match like the ✓ display).
+            const first = column.firstFilterOption || this.defaultColumn.firstFilterOption || { value: "", text: "" };
+            const options = [
+                first,
+                { value: "true", text: this.labels?.booleanTrue ?? "Yes" },
+                { value: "false", text: this.labels?.booleanFalse ?? "No" },
+            ];
+            for (const e of options) {
+                const opt = document.createElement("option");
+                opt.value = `${e.value}`;
+                opt.text = e.text;
+                /** @type {HTMLSelectElement} */ (filter).add(opt);
+            }
+        } else if (type === "select") {
             for (const e of this.getFilterOptions(column)) {
                 const opt = document.createElement("option");
                 opt.value = `${e.value}`;
@@ -3523,9 +3581,19 @@ class DataGrid extends BaseElement {
         } else {
             const input = /** @type {HTMLInputElement} */ (filter);
             input.type = "text";
-            input.inputMode = "search";
+            // Numeric keyboard for number, standard keyboard for date: partial
+            // values need the "-" separator, which numeric pads often hide.
+            input.inputMode = type === "number" ? "decimal" : "search";
             input.autocomplete = "off";
-            input.placeholder = column.filterPlaceholder ?? "";
+            if (
+                type === "date" &&
+                (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder)
+            ) {
+                // The placeholder communicates the canonical date contract.
+                input.placeholder = "YYYY-MM-DD";
+            } else {
+                input.placeholder = column.filterPlaceholder ?? "";
+            }
             input.spellcheck = false;
         }
         // Allows binding filter to this column

@@ -377,7 +377,7 @@ response protection).
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                |
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                             |
 | `responsive`                            | `Number`             | responsive priority (`0` disables)                                    |
-| `filterType`                            | `"text" \| "select"` | filter field type                                                     |
+| `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`        |
 | `filterList`                            | `FilterOption[]`     | explicit select filter options                                        |
 | `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
 | `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
@@ -399,6 +399,10 @@ are rendering concerns, while `align`, `minWidth` and `width` stay generic colum
 geometry (a formatter only contributes safe defaults for them: an alignment, a
 floor, and a preferred width for predictable formats — `boolean`, `date`,
 `datetime` and percent numbers).
+
+Formatters also suggest a preferred filter mode (`boolean` → tri-state select,
+`number` → typed numeric equality, `date` → partial ISO prefix match); an
+explicit `filterType` always wins. See `docs/filtering.md`.
 
 | Format     | Output                      | Intl options                 |
 |------------|-----------------------------|------------------------------|

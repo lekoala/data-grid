@@ -7,6 +7,8 @@
  *   dataSource.load(query, { signal }) -> Promise<PageResult>
  */
 
+import { normalizeBoolean } from "./utils/formatValue.js";
+
 /**
  * Sort state
  * @typedef {Object} SortState
@@ -122,7 +124,10 @@ function isNumericValue(value) {
  * Semantics:
  * - empty := null | undefined | "" (0 and false are NOT empty)
  * - contains / startsWith / endsWith: case-insensitive string comparison
- * - eq / neq / in: scalar comparison after string coercion (42 matches "42")
+ * - eq / neq: a boolean value compares normalized booleans (true matches
+ *   1, "1" and "true"); otherwise scalar comparison after string coercion
+ *   (42 matches "42")
+ * - in: scalar comparison after string coercion
  * - lt/lte/gt/gte/between: numeric comparison when both operands are finite
  *   numeric values, otherwise string comparison
  * - between requires a 2-value array, in requires an array
@@ -161,11 +166,20 @@ export function applyFilters(rows, filters) {
             const valueLower = String(value).toLowerCase();
             switch (operator) {
                 case "eq":
-                    if (`${cell}` !== String(value)) return false;
+                case "neq": {
+                    // A boolean filter value compares normalized booleans on
+                    // both sides, so raw 1 / "1" / "true" cells match the same
+                    // way the boolean formatter displays them.
+                    let equal;
+                    if (typeof value === "boolean") {
+                        const cellBool = normalizeBoolean(cell);
+                        equal = cellBool === null ? `${cell}` === String(value) : cellBool === value;
+                    } else {
+                        equal = `${cell}` === String(value);
+                    }
+                    if (operator === "eq" ? !equal : equal) return false;
                     break;
-                case "neq":
-                    if (`${cell}` === String(value)) return false;
-                    break;
+                }
                 case "startsWith":
                     if (!cellLower.startsWith(valueLower)) return false;
                     break;

@@ -117,7 +117,10 @@ export declare function encodeSearchParams(value: any, prefix?: string, out?: UR
  * Semantics:
  * - empty := null | undefined | "" (0 and false are NOT empty)
  * - contains / startsWith / endsWith: case-insensitive string comparison
- * - eq / neq / in: scalar comparison after string coercion (42 matches "42")
+ * - eq / neq: a boolean value compares normalized booleans (true matches
+ *   1, "1" and "true"); otherwise scalar comparison after string coercion
+ *   (42 matches "42")
+ * - in: scalar comparison after string coercion
  * - lt/lte/gt/gte/between: numeric comparison when both operands are finite
  *   numeric values, otherwise string comparison
  * - between requires a 2-value array, in requires an array

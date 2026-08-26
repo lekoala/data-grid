@@ -278,6 +278,136 @@ test("select filters apply immediately on change", async () => {
     document.body.removeChild(inst);
 });
 
+test("a boolean eq filter matches normalized cells", () => {
+    const rows = [
+        { id: 1, active: true },
+        { id: 2, active: 1 },
+        { id: 3, active: "1" },
+        { id: 4, active: false },
+        { id: 5, active: 0 },
+        { id: 6, active: "0" },
+    ];
+    const ids = (rows) => rows.map((r) => r.id);
+
+    expect(ids(applyFilters(rows, { active: { operator: "eq", value: true } }))).toEqual([1, 2, 3]);
+    expect(ids(applyFilters(rows, { active: { operator: "eq", value: false } }))).toEqual([4, 5, 6]);
+});
+
+test("boolean columns render a tri-state select sharing the formatter semantics", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "active", format: "boolean" }],
+            filterable: true,
+        },
+        [{ active: true }, { active: 1 }, { active: 0 }, { active: null }],
+    );
+
+    const select = /** @type {HTMLSelectElement} */ (inst.querySelector('.dg-head-filters select[data-name="active"]'));
+    expect(select.dataset.filterMode).toBe("boolean");
+    expect([...select.options].map((o) => o.value)).toEqual(["", "true", "false"]);
+
+    select.value = "true";
+    change(select);
+    await sleep(30);
+    expect(inst.query.filters.active).toEqual({ operator: "eq", value: true });
+    // Raw 1 displays as ✓ and must be matched by the same filter
+    expect(inst.rows).toHaveLength(2);
+
+    select.value = "false";
+    change(select);
+    await sleep(30);
+    expect(inst.query.filters.active).toEqual({ operator: "eq", value: false });
+    expect(inst.rows).toHaveLength(1);
+
+    select.value = "";
+    change(select);
+    await sleep(30);
+    expect(inst.query.filters.active).toBeUndefined();
+    expect(inst.rows).toHaveLength(4);
+    document.body.removeChild(inst);
+});
+
+test("an explicit filterType wins over the formatter-derived filter mode", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "active", format: "boolean", filterType: "text" }],
+            filterable: true,
+        },
+        [{ active: true }],
+    );
+    expect(inst.querySelector('.dg-head-filters input[data-name="active"]')).toBeTruthy();
+    expect(inst.querySelector('.dg-head-filters select[data-name="active"]')).toBeNull();
+    document.body.removeChild(inst);
+});
+
+test("number filters use typed equality for numeric input and stay permissive otherwise", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "price", format: "number", formatOptions: { maximumFractionDigits: 2 } }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ price: 12.5 }, { price: 7 }, { price: 125 }],
+    );
+    const el = inst.querySelector('.dg-head-filters input[data-name="price"]');
+    expect(el.inputMode).toBe("decimal");
+
+    el.value = "12.5";
+    input(el, "12.5");
+    await sleep(80);
+    expect(inst.query.filters.price).toEqual({ operator: "eq", value: 12.5 });
+    expect(inst.rows).toHaveLength(1);
+
+    // A reload rebuilds the controls: re-read the live one
+    const el2 = inst.querySelector('.dg-head-filters input[data-name="price"]');
+    expect(el2.value).toBe("12.5"); // restored from the current query
+
+    el2.value = "nope";
+    input(el2, "nope");
+    await sleep(80);
+    // Non-numeric input falls back to the permissive contains behavior
+    expect(inst.query.filters.price).toEqual({ operator: "contains", value: "nope" });
+    expect(inst.rows).toHaveLength(0);
+    document.body.removeChild(inst);
+});
+
+test("date filters prefix-match the canonical ISO value", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "created", format: "date" }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ created: "2026-08-26" }, { created: "2026-08-27" }, { created: "2025-01-01" }],
+    );
+    const el = inst.querySelector('.dg-head-filters input[data-name="created"]');
+    // The placeholder communicates the canonical date contract
+    expect(el.getAttribute("placeholder")).toBe("YYYY-MM-DD");
+    expect(el.inputMode).not.toBe("numeric");
+
+    el.value = "2026-08";
+    input(el, "2026-08");
+    await sleep(80);
+    expect(inst.query.filters.created).toEqual({ operator: "startsWith", value: "2026-08" });
+    expect(inst.rows).toHaveLength(2);
+    document.body.removeChild(inst);
+});
+
+test("datetime keeps a plain text filter until its semantics are defined", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "lastLogin", format: "datetime" }],
+            filterable: true,
+        },
+        [{ lastLogin: "2026-08-26T08:30:00Z" }],
+    );
+    const input = inst.querySelector('.dg-head-filters input[data-name="lastLogin"]');
+    expect(input.tagName).toBe("INPUT");
+    expect(input.dataset.filterMode ?? "text").toBe("text");
+    expect(input.getAttribute("placeholder")).toBe("…");
+    document.body.removeChild(inst);
+});
+
 test("IME composition is not filtered until compositionend", async () => {
     const { ds, count } = instrumentedSource([{ name: "br" }, { name: "b" }]);
     const inst = await makeReadyGrid({

@@ -124,6 +124,203 @@ class BaseElement extends HTMLElement {
 }
 var base_element_default = BaseElement;
 
+// src/utils/formatValue.js
+var formatDefaults = {
+  boolean: {
+    align: "center",
+    minWidth: 48,
+    width: 56,
+    filter: "boolean"
+  },
+  date: {
+    minWidth: 104,
+    width: 120,
+    filter: "date"
+  },
+  datetime: {
+    minWidth: 152,
+    width: 168
+  },
+  number: {
+    align: "end",
+    filter: "number"
+  }
+};
+var ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+var ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/i;
+var DATE_FORBIDDEN_OPTIONS = [
+  "timeStyle",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "dayPeriod",
+  "timeZone"
+];
+var DATETIME_COMPONENT_KEYS = [
+  "weekday",
+  "era",
+  "year",
+  "month",
+  "day",
+  "dayPeriod",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "timeZoneName"
+];
+function resolveLocale(grid) {
+  return grid?.closest("[lang]")?.getAttribute("lang") || grid?.ownerDocument?.documentElement.lang || undefined;
+}
+function toLocalISODate(date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+function normalizeBoolean(value) {
+  if (value === true || value === "true" || value === 1 || value === "1") {
+    return true;
+  }
+  if (value === false || value === "false" || value === 0 || value === "0") {
+    return false;
+  }
+  return null;
+}
+function formatBoolean(value, ctx) {
+  const bool = normalizeBoolean(value);
+  if (bool === null) {
+    return "";
+  }
+  const grid = ctx.grid;
+  const labels = grid?.labels;
+  const doc = grid?.ownerDocument ?? document;
+  const span = doc.createElement("span");
+  span.className = "dg-boolean";
+  span.dataset.value = bool ? "true" : "false";
+  span.setAttribute("role", "img");
+  span.setAttribute("aria-label", bool ? labels?.booleanTrue ?? "Yes" : labels?.booleanFalse ?? "No");
+  return span;
+}
+function resolveDateTimeOptions(format, formatOptions = {}) {
+  const { style, ...options } = formatOptions;
+  if (format === "date") {
+    for (const key of DATE_FORBIDDEN_OPTIONS) {
+      if (options[key] !== undefined) {
+        throw new TypeError(`The "${format}" formatter does not accept time or timeZone options`);
+      }
+    }
+  }
+  const hasGranular = DATETIME_COMPONENT_KEYS.some((key) => options[key] !== undefined);
+  if (!hasGranular) {
+    if (options.dateStyle === undefined) {
+      options.dateStyle = style ?? "short";
+    }
+    if (format === "datetime" && options.timeStyle === undefined) {
+      options.timeStyle = style ?? "short";
+    }
+  }
+  return options;
+}
+function parseDateValue(value, format) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return null;
+    }
+    return {
+      date: value,
+      datetimeAttr: format === "datetime" ? value.toISOString() : toLocalISODate(value)
+    };
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const date = new Date(value);
+    return {
+      date,
+      datetimeAttr: format === "datetime" ? date.toISOString() : toLocalISODate(date)
+    };
+  }
+  if (typeof value === "string") {
+    if (format === "date") {
+      if (!ISO_DATE.test(value)) {
+        return null;
+      }
+      const [year, month, day] = value.split("-").map(Number);
+      const date2 = new Date(year, month - 1, day);
+      if (date2.getFullYear() !== year || date2.getMonth() !== month - 1 || date2.getDate() !== day) {
+        return null;
+      }
+      return { date: date2, datetimeAttr: value };
+    }
+    if (!ISO_DATETIME.test(value)) {
+      return null;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return { date, datetimeAttr: date.toISOString() };
+  }
+  return null;
+}
+function formatDate(value, format, formatOptions, ctx = {}) {
+  const parsed = parseDateValue(value, format);
+  if (!parsed) {
+    return "";
+  }
+  const options = resolveDateTimeOptions(format, formatOptions);
+  const doc = ctx.grid?.ownerDocument ?? document;
+  const time = doc.createElement("time");
+  time.dateTime = parsed.datetimeAttr;
+  time.textContent = new Intl.DateTimeFormat(resolveLocale(ctx.grid), options).format(parsed.date);
+  return time;
+}
+function formatNumber(value, formatOptions = {}, ctx = {}) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return "";
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "";
+  }
+  const options = { ...formatOptions };
+  if (!options.style && options.currency && options.unit) {
+    throw new TypeError("currency and unit cannot both infer number style");
+  }
+  if (options.style === undefined && options.currency) {
+    options.style = "currency";
+  }
+  if (options.style === undefined && options.unit) {
+    options.style = "unit";
+  }
+  return new Intl.NumberFormat(resolveLocale(ctx.grid), options).format(number);
+}
+function getFormatDefaults(format, formatOptions) {
+  if (format === null || format === undefined) {
+    return null;
+  }
+  if (format === "number" && formatOptions?.style === "percent") {
+    return { align: "end", minWidth: 72, width: 88, filter: "number" };
+  }
+  return formatDefaults[format] || null;
+}
+function formatValue(value, format, formatOptions, ctx = {}) {
+  switch (format) {
+    case "boolean":
+      return formatBoolean(value, ctx);
+    case "date":
+    case "datetime":
+      return formatDate(value, format, formatOptions, ctx);
+    case "number":
+      return formatNumber(value, formatOptions, ctx);
+    default:
+      return value;
+  }
+}
+
 // src/data-source.js
 function encodeSearchParams(value, prefix = "", out = new URLSearchParams) {
   if (value === null || value === undefined) {
@@ -183,13 +380,18 @@ function applyFilters(rows, filters) {
       const valueLower = String(value).toLowerCase();
       switch (operator) {
         case "eq":
-          if (`${cell}` !== String(value))
+        case "neq": {
+          let equal;
+          if (typeof value === "boolean") {
+            const cellBool = normalizeBoolean(cell);
+            equal = cellBool === null ? `${cell}` === String(value) : cellBool === value;
+          } else {
+            equal = `${cell}` === String(value);
+          }
+          if (operator === "eq" ? !equal : equal)
             return false;
           break;
-        case "neq":
-          if (`${cell}` === String(value))
-            return false;
-          break;
+        }
         case "startsWith":
           if (!cellLower.startsWith(valueLower))
             return false;
@@ -464,200 +666,6 @@ function debounce(handler, timeout = 300) {
   return fn;
 }
 
-// src/utils/formatValue.js
-var formatDefaults = {
-  boolean: {
-    align: "center",
-    minWidth: 48,
-    width: 56
-  },
-  date: {
-    minWidth: 104,
-    width: 120
-  },
-  datetime: {
-    minWidth: 152,
-    width: 168
-  },
-  number: {
-    align: "end"
-  }
-};
-var ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-var ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/i;
-var DATE_FORBIDDEN_OPTIONS = [
-  "timeStyle",
-  "hour",
-  "minute",
-  "second",
-  "fractionalSecondDigits",
-  "dayPeriod",
-  "timeZone"
-];
-var DATETIME_COMPONENT_KEYS = [
-  "weekday",
-  "era",
-  "year",
-  "month",
-  "day",
-  "dayPeriod",
-  "hour",
-  "minute",
-  "second",
-  "fractionalSecondDigits",
-  "timeZoneName"
-];
-function resolveLocale(grid) {
-  return grid?.closest("[lang]")?.getAttribute("lang") || grid?.ownerDocument?.documentElement.lang || undefined;
-}
-function toLocalISODate(date) {
-  const year = date.getFullYear();
-  const month = `${date.getMonth() + 1}`.padStart(2, "0");
-  const day = `${date.getDate()}`.padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-function normalizeBoolean(value) {
-  if (value === true || value === "true" || value === 1 || value === "1") {
-    return true;
-  }
-  if (value === false || value === "false" || value === 0 || value === "0") {
-    return false;
-  }
-  return null;
-}
-function formatBoolean(value, ctx) {
-  const bool = normalizeBoolean(value);
-  if (bool === null) {
-    return "";
-  }
-  const grid = ctx.grid;
-  const labels = grid?.labels;
-  const doc = grid?.ownerDocument ?? document;
-  const span = doc.createElement("span");
-  span.className = "dg-boolean";
-  span.dataset.value = bool ? "true" : "false";
-  span.setAttribute("role", "img");
-  span.setAttribute("aria-label", bool ? labels?.booleanTrue ?? "Yes" : labels?.booleanFalse ?? "No");
-  return span;
-}
-function resolveDateTimeOptions(format, formatOptions = {}) {
-  const { style, ...options } = formatOptions;
-  if (format === "date") {
-    for (const key of DATE_FORBIDDEN_OPTIONS) {
-      if (options[key] !== undefined) {
-        throw new TypeError(`The "${format}" formatter does not accept time or timeZone options`);
-      }
-    }
-  }
-  const hasGranular = DATETIME_COMPONENT_KEYS.some((key) => options[key] !== undefined);
-  if (!hasGranular) {
-    if (options.dateStyle === undefined) {
-      options.dateStyle = style ?? "short";
-    }
-    if (format === "datetime" && options.timeStyle === undefined) {
-      options.timeStyle = style ?? "short";
-    }
-  }
-  return options;
-}
-function parseDateValue(value, format) {
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) {
-      return null;
-    }
-    return {
-      date: value,
-      datetimeAttr: format === "datetime" ? value.toISOString() : toLocalISODate(value)
-    };
-  }
-  if (typeof value === "number" && Number.isFinite(value)) {
-    const date = new Date(value);
-    return {
-      date,
-      datetimeAttr: format === "datetime" ? date.toISOString() : toLocalISODate(date)
-    };
-  }
-  if (typeof value === "string") {
-    if (format === "date") {
-      if (!ISO_DATE.test(value)) {
-        return null;
-      }
-      const [year, month, day] = value.split("-").map(Number);
-      const date2 = new Date(year, month - 1, day);
-      if (date2.getFullYear() !== year || date2.getMonth() !== month - 1 || date2.getDate() !== day) {
-        return null;
-      }
-      return { date: date2, datetimeAttr: value };
-    }
-    if (!ISO_DATETIME.test(value)) {
-      return null;
-    }
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
-    return { date, datetimeAttr: date.toISOString() };
-  }
-  return null;
-}
-function formatDate(value, format, formatOptions, ctx = {}) {
-  const parsed = parseDateValue(value, format);
-  if (!parsed) {
-    return "";
-  }
-  const options = resolveDateTimeOptions(format, formatOptions);
-  const doc = ctx.grid?.ownerDocument ?? document;
-  const time = doc.createElement("time");
-  time.dateTime = parsed.datetimeAttr;
-  time.textContent = new Intl.DateTimeFormat(resolveLocale(ctx.grid), options).format(parsed.date);
-  return time;
-}
-function formatNumber(value, formatOptions = {}, ctx = {}) {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  if (typeof value === "string" && value.trim() === "") {
-    return "";
-  }
-  const number = Number(value);
-  if (!Number.isFinite(number)) {
-    return "";
-  }
-  const options = { ...formatOptions };
-  if (!options.style && options.currency && options.unit) {
-    throw new TypeError("currency and unit cannot both infer number style");
-  }
-  if (options.style === undefined && options.currency) {
-    options.style = "currency";
-  }
-  if (options.style === undefined && options.unit) {
-    options.style = "unit";
-  }
-  return new Intl.NumberFormat(resolveLocale(ctx.grid), options).format(number);
-}
-function getFormatDefaults(format, formatOptions) {
-  if (format === null || format === undefined) {
-    return null;
-  }
-  if (format === "number" && formatOptions?.style === "percent") {
-    return { align: "end", minWidth: 72, width: 88 };
-  }
-  return formatDefaults[format] || null;
-}
-function formatValue(value, format, formatOptions, ctx = {}) {
-  switch (format) {
-    case "boolean":
-      return formatBoolean(value, ctx);
-    case "date":
-    case "datetime":
-      return formatDate(value, format, formatOptions, ctx);
-    case "number":
-      return formatNumber(value, formatOptions, ctx);
-    default:
-      return value;
-  }
-}
-
 // src/utils/getTextWidth.js
 var canvas;
 function getTextWidth(text, el = document.body, withPadding = false) {
@@ -830,7 +838,10 @@ function parseDeclarativeTable(table) {
       column.wrap = parseBooleanAttribute(th.dataset.wrap);
     }
     if (th.dataset.filter) {
-      column.filterType = th.dataset.filter;
+      const mode = th.dataset.filter;
+      if (["text", "select", "boolean", "number", "date"].includes(mode)) {
+        column.filterType = mode;
+      }
     }
     if (th.dataset.filterPlaceholder !== undefined) {
       column.filterPlaceholder = th.dataset.filterPlaceholder;
@@ -982,6 +993,9 @@ function isColumnHidden(column) {
 }
 function getColumnAlign(column) {
   return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
+}
+function getColumnFilterType(column) {
+  return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
 }
 function applyColumnDefinition(el, column) {
   if (column.width) {
@@ -1216,7 +1230,7 @@ class DataGrid extends base_element_default {
       transform: null,
       format: null,
       align: null,
-      filterType: "text",
+      filterType: null,
       filterPlaceholder: "…",
       firstFilterOption: { value: "", text: "" }
     };
@@ -2533,11 +2547,21 @@ class DataGrid extends base_element_default {
       const value = input.value;
       const name = input.dataset.name;
       if (value && name) {
-        const isSelect = /select/i.test(input.tagName);
-        filters[name] = {
-          operator: isSelect ? "eq" : "contains",
-          value
-        };
+        const mode = input.dataset.filterMode;
+        if (mode === "boolean") {
+          filters[name] = { operator: "eq", value: value === "true" };
+        } else if (mode === "number") {
+          const num = Number(value);
+          filters[name] = Number.isFinite(num) ? { operator: "eq", value: num } : { operator: "contains", value };
+        } else if (mode === "date") {
+          filters[name] = { operator: "startsWith", value };
+        } else {
+          const isSelect = /select/i.test(input.tagName);
+          filters[name] = {
+            operator: isSelect ? "eq" : "contains",
+            value
+          };
+        }
       }
     }
     return this.setQuery({ filters });
@@ -2815,11 +2839,26 @@ class DataGrid extends base_element_default {
     }
   }
   createFilterElement(column, relatedTh) {
-    const isSelect = column.filterType === "select";
+    const type = getColumnFilterType(column);
+    const isSelect = type === "select" || type === "boolean";
     const filter = isSelect ? document.createElement("select") : document.createElement("input");
     filter.classList.add("dg-filter");
     filter.classList.add("dg-filter-control");
-    if (isSelect) {
+    filter.dataset.filterMode = type;
+    if (type === "boolean") {
+      const first = column.firstFilterOption || this.defaultColumn.firstFilterOption || { value: "", text: "" };
+      const options = [
+        first,
+        { value: "true", text: this.labels?.booleanTrue ?? "Yes" },
+        { value: "false", text: this.labels?.booleanFalse ?? "No" }
+      ];
+      for (const e of options) {
+        const opt = document.createElement("option");
+        opt.value = `${e.value}`;
+        opt.text = e.text;
+        filter.add(opt);
+      }
+    } else if (type === "select") {
       for (const e of this.getFilterOptions(column)) {
         const opt = document.createElement("option");
         opt.value = `${e.value}`;
@@ -2831,9 +2870,13 @@ class DataGrid extends base_element_default {
     } else {
       const input = filter;
       input.type = "text";
-      input.inputMode = "search";
+      input.inputMode = type === "number" ? "decimal" : "search";
       input.autocomplete = "off";
-      input.placeholder = column.filterPlaceholder ?? "";
+      if (type === "date" && (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder)) {
+        input.placeholder = "YYYY-MM-DD";
+      } else {
+        input.placeholder = column.filterPlaceholder ?? "";
+      }
       input.spellcheck = false;
     }
     filter.dataset.name = column.field ?? "";

@@ -52,18 +52,25 @@ function removeGrid(inst) {
 // --- getFormatDefaults -----------------------------------------------------
 
 test("getFormatDefaults exposes the presentation defaults", () => {
-    expect(getFormatDefaults("boolean")).toEqual({ align: "center", minWidth: 48, width: 56 });
-    expect(getFormatDefaults("date")).toEqual({ minWidth: 104, width: 120 });
+    expect(getFormatDefaults("boolean")).toEqual({ align: "center", minWidth: 48, width: 56, filter: "boolean" });
+    expect(getFormatDefaults("date")).toEqual({ minWidth: 104, width: 120, filter: "date" });
+    // No filter hint for datetime: prefixing the raw instant can disagree
+    // with the displayed local date until that semantics is defined.
     expect(getFormatDefaults("datetime")).toEqual({ minWidth: 152, width: 168 });
-    expect(getFormatDefaults("number")).toEqual({ align: "end" });
+    expect(getFormatDefaults("number")).toEqual({ align: "end", filter: "number" });
     expect(getFormatDefaults("money")).toBeNull();
 });
 
 test("percent is the only number style with a sizing hint", () => {
-    expect(getFormatDefaults("number", { style: "percent" })).toEqual({ align: "end", minWidth: 72, width: 88 });
+    expect(getFormatDefaults("number", { style: "percent" })).toEqual({
+        align: "end",
+        minWidth: 72,
+        width: 88,
+        filter: "number",
+    });
     // Currency, unit and plain numbers vary too much: generic defaults only.
-    expect(getFormatDefaults("number", { currency: "EUR" })).toEqual({ align: "end" });
-    expect(getFormatDefaults("number", { unit: "kilometer" })).toEqual({ align: "end" });
+    expect(getFormatDefaults("number", { currency: "EUR" })).toEqual({ align: "end", filter: "number" });
+    expect(getFormatDefaults("number", { unit: "kilometer" })).toEqual({ align: "end", filter: "number" });
 });
 
 // --- boolean ---------------------------------------------------------------

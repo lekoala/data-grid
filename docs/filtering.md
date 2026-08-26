@@ -1,8 +1,40 @@
 # Filtering
 
 Set `filterable` on the grid to show a filter row under the headers. Text inputs
-filter with `contains`, select inputs with `eq`. Change a column's input type
-with `filterType: "select"`.
+filter with `contains`, select inputs with `eq`. Change a column's input mode
+with `filterType`.
+
+## Preferred filter modes
+
+The effective mode of a column resolves as:
+
+```text
+column.filterType explicit
+    > formatter-derived hint (when format is set)
+    > "text"
+```
+
+| Mode      | Control                            | Applied operator                                                      |
+|-----------|------------------------------------|-----------------------------------------------------------------------|
+| `text`    | text input                         | `contains`                                                            |
+| `select`  | select (see options below)         | `eq`                                                                  |
+| `boolean` | tri-state select: empty / Yes / No | `eq` on normalized booleans (`true` matches `1`, `"1"`, `"true"`)     |
+| `number`  | numeric text input                 | `eq(Number(value))` for canonical numeric input, otherwise `contains` |
+| `date`    | text input accepting partial dates | `startsWith` on the canonical ISO value                               |
+
+Notes:
+
+- A `format: "boolean"` column gets the tri-state select automatically; a
+  boolean formatter value and its filter share the same normalization, so what
+  displays as ✓ is exactly what "Yes" matches.
+- The `date` mode matches the canonical contract of the date formatter:
+  `2026`, `2026-08` and `2026-08-26` all prefix-match. The placeholder is
+  `YYYY-MM-DD` unless `filterPlaceholder` is set.
+- `datetime` deliberately keeps a plain text filter: prefixing the raw instant
+  can disagree with the displayed local date, and that semantics is not defined
+  yet.
+- An explicit `filterType` always wins; custom `renderFilterCell` implementations
+  remain the top escape hatch.
 
 ## Filter state
 
@@ -34,19 +66,19 @@ grid.query.filters
 
 Operators:
 
-| Operator      | Behavior                                                          |
-|---------------|-------------------------------------------------------------------|
-| `eq`          | scalar equality (after string coercion, `42` matches `"42"`)       |
-| `neq`         | negation of `eq`                                                   |
-| `contains`    | case-insensitive substring                                         |
-| `startsWith`  | case-insensitive prefix                                            |
-| `endsWith`    | case-insensitive suffix                                            |
-| `lt` / `lte`  | numeric when both operands are finite, otherwise string compare    |
-| `gt` / `gte`  | numeric when both operands are finite, otherwise string compare    |
-| `between`     | inclusive range, requires a 2-value array                          |
-| `in`          | value in a list                                                    |
-| `empty`       | value is `null`, `undefined` or `""`                               |
-| `notEmpty`    | negation of `empty`                                                |
+| Operator     | Behavior                                                                           |
+|--------------|------------------------------------------------------------------------------------|
+| `eq`         | a boolean value compares normalized booleans (`true` matches `1`, `"1"`, `"true"`) |
+| `neq`        | negation of `eq`                                                                   |
+| `contains`   | case-insensitive substring                                                         |
+| `startsWith` | case-insensitive prefix                                                            |
+| `endsWith`   | case-insensitive suffix                                                            |
+| `lt` / `lte` | numeric when both operands are finite, otherwise string compare                    |
+| `gt` / `gte` | numeric when both operands are finite, otherwise string compare                    |
+| `between`    | inclusive range, requires a 2-value array                                          |
+| `in`         | value in a list                                                                    |
+| `empty`      | value is `null`, `undefined` or `""`                                               |
+| `notEmpty`   | negation of `empty`                                                                |
 
 `0` and `false` are real values: they are preserved and only `empty`/`notEmpty`
 match against missing values. Invalid or empty filter values are ignored, not

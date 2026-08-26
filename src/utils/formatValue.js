@@ -23,6 +23,7 @@
  *   align?: "start"|"center"|"end",
  *   minWidth?: number,
  *   width?: number,
+ *   filter?: "boolean"|"number"|"date",
  * }>}
  */
 const formatDefaults = {
@@ -30,17 +31,23 @@ const formatDefaults = {
         align: "center",
         minWidth: 48,
         width: 56,
+        filter: "boolean",
     },
     date: {
         minWidth: 104,
         width: 120,
+        filter: "date",
     },
     datetime: {
         minWidth: 152,
         width: 168,
+        // Intentionally no date filter hint: a prefix on the raw instant can
+        // disagree with the displayed local date (time zone), and that
+        // semantics is not defined yet. Datetime filters stay text.
     },
     number: {
         align: "end",
+        filter: "number",
     },
 };
 
@@ -123,10 +130,12 @@ function toLocalISODate(date) {
 
 /**
  * Normalize a value to a boolean.
+ * Shared by the boolean formatter (display) and the boolean filter mode
+ * (comparison) so a raw `1` displayed as ✓ is also matched by "Yes".
  * @param {*} value
  * @returns {boolean|null} null when the value is not an obvious boolean
  */
-function normalizeBoolean(value) {
+export function normalizeBoolean(value) {
     if (value === true || value === "true" || value === 1 || value === "1") {
         return true;
     }
@@ -296,20 +305,22 @@ function formatNumber(value, formatOptions = {}, ctx = {}) {
 }
 
 /**
- * Presentation defaults of a built-in formatter, consumed by the core to
- * resolve column geometry (header min-width, preferred width, cell alignment).
- * Only predictable formats suggest a preferred width: a percent column is
- * always compact, while currency, unit and plain numbers vary too much.
+ * Defaults derived from a built-in format, consumed by the core to resolve
+ * column geometry (header min-width, preferred width, cell alignment) and the
+ * preferred filter mode. Only predictable formats suggest a preferred width:
+ * a percent column is always compact, while currency, unit and plain numbers
+ * vary too much. `datetime` deliberately suggests no filter mode: prefix
+ * matching a raw instant can disagree with the displayed local date.
  * @param {import("../data-grid.js").Column["format"]} format
  * @param {import("../data-grid.js").DateFormatOptions|import("../data-grid.js").NumberFormatOptions} [formatOptions]
- * @returns {{ align?: "start"|"center"|"end", minWidth?: number, width?: number }|null}
+ * @returns {{ align?: "start"|"center"|"end", minWidth?: number, width?: number, filter?: "boolean"|"number"|"date" }|null}
  */
 export function getFormatDefaults(format, formatOptions) {
     if (format === null || format === undefined) {
         return null;
     }
     if (format === "number" && /** @type {Record<string, any>} */ (formatOptions)?.style === "percent") {
-        return { align: "end", minWidth: 72, width: 88 };
+        return { align: "end", minWidth: 72, width: 88, filter: "number" };
     }
     return formatDefaults[format] || null;
 }
