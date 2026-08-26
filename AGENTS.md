@@ -35,8 +35,14 @@ Bun's CSS bundler downlevels directional inline-axis logical properties
 DataGrid drives RTL through `[dir="rtl"]` on the grid element
 (`css/_rtl.css`), so:
 
-- author directional inline-axis styles as physical LTR declarations plus a
-  `[dir="rtl"]` mirror in `_rtl.css`;
+- logical values that compile cleanly stay preferred: `text-align: start/end`
+  backs `Column.align` and follows the reading direction natively — never
+  replace them with physical declarations plus an RTL mirror;
+- directional layout properties (`margin/padding/inset/border-inline-*`) are
+  authored as physical LTR declarations plus a `[dir="rtl"]` mirror in
+  `_rtl.css` — a bundler constraint, not a CSS philosophy;
+- fixed pictogram geometry (check strokes, icon coordinates) stays
+  intentionally physical: the drawing must not flip in RTL;
 - logical sizing (`inline-size`, `min-inline-size`, ...) and block-axis
   properties compile unchanged and stay preferred where they fit;
 - `scripts/build.js` fails if generated CSS contains `:lang(`, and
