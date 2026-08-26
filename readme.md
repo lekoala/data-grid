@@ -175,7 +175,7 @@ Some options only work if the proper plugin is loaded.
 | `actions`             | `Action[]`           | `[]`                 | Row actions (also resolved from `$actions` / `meta.actions`) |
 | `rowActions`          | `Boolean`            | `false`              | Show the actions column even without static `actions`        |
 | `actionRenderer`      | `Function`           | -                    | Global action renderer                                       |
-| `collapseActions`     | `Boolean`            | `false`              | Group actions under a toggle                                 |
+| `collapseActions`     | `Boolean`            | `false`              | Group actions in a native popover when supported             |
 | `bulkActions`         | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection                        |
 | `resizable`           | `Boolean`            | `false`              | Resizable columns                                            |
 | `reorder`             | `Boolean`            | `false`              | Draggable column headers                                     |

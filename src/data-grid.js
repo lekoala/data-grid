@@ -217,7 +217,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Action[]} actions Row actions (RowActions module)
  * @property {Boolean} rowActions Activate the row actions column even without static `actions` (server/HTML driven $actions)
  * @property {Function} [actionRenderer] - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
- * @property {Boolean} collapseActions Group actions (RowActions module)
+ * @property {Boolean} collapseActions Group actions in a native anchored popover when supported (RowActions module)
  * @property {Boolean} wrap Allow data cells to wrap over multiple lines
  * @property {Boolean} snapColumns Snap horizontal scrolling near column starts
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)

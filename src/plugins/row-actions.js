@@ -3,6 +3,8 @@ import { resolveActionConfirmation } from "../utils/actionConfirm.js";
 import applyContent from "../utils/applyContent.js";
 import { dispatch } from "../utils/dispatch.js";
 import interpolate from "../utils/interpolate.js";
+import { supportsPopoverAnchor } from "../utils/popover.js";
+import randstr from "../utils/randstr.js";
 
 /**
  * Add actions on rows
@@ -15,21 +17,26 @@ class RowActions extends BasePlugin {
         super(grid);
         /** @type {HTMLUListElement|null} */
         this.menu = null;
-        /** @type {HTMLElement|null} */
-        this.openCell = null;
-        /** @type {((e: MouseEvent) => void) | null} */
-        this._boundDocumentClick = null;
-        /** @type {((e: KeyboardEvent) => void) | null} */
-        this._boundKeydown = null;
     }
 
     connected() {
+        const menu = this.grid.ownerDocument.createElement("ul");
+        if (!supportsPopoverAnchor()) {
+            return;
+        }
+        menu.id = randstr("dg-actions-menu-");
+        menu.className = "dg-menu dg-actions-menu";
+        menu.popover = "auto";
+        menu.addEventListener("click", () => menu.hidePopover?.(), true);
+        this.grid.appendChild(menu);
+        this.menu = menu;
         this.grid.addEventListener("click", this);
     }
 
     disconnected() {
         this.grid.removeEventListener("click", this);
-        this.closeActionMenu();
+        this.menu?.remove();
+        this.menu = null;
     }
 
     /**
@@ -47,10 +54,6 @@ class RowActions extends BasePlugin {
         if (!toggle) {
             return;
         }
-        // Stop the click from reaching document listeners (the outside-click
-        // close of the menu itself) before the menu has a chance to open.
-        event.stopPropagation();
-
         const tr = /** @type {HTMLTableRowElement|null} */ (toggle.closest("tr.dg-data-row"));
         if (!tr) {
             return;
@@ -60,11 +63,9 @@ class RowActions extends BasePlugin {
         if (!tr || !row) {
             return;
         }
-        const cell = /** @type {HTMLElement|null} */ (toggle.closest('td[data-column-id="$actions"]'));
-        if (!cell) {
-            return;
-        }
-        this.toggleActionMenu(cell, row);
+        const anchorName = /** @type {HTMLElement} */ (toggle).style.getPropertyValue("anchor-name");
+        this.menu?.style.setProperty("position-anchor", anchorName);
+        this.renderActionMenu(row);
     }
 
     /**
@@ -116,20 +117,16 @@ class RowActions extends BasePlugin {
         }
     }
 
-    /**
-     * Close the popover on any full table render and keep the per-row
-     * collapsed mode in sync with the resolved actions.
-     * @param {import("../core/base-plugin.js").RenderContext} context
-     */
-    afterRender(context) {
+    beforeRender() {
+        this.menu?.hidePopover?.();
+    }
+
+    afterRender() {
         // The actions column mode depends on the actions resolved in the body,
         // which is only known after the rows render. The header is created on a
         // separate render pass (renderTable), so the mode must be applied on
         // both passes: body cells and the header/filter must share it.
         this.syncCellModes();
-        if (context === "table") {
-            this.closeActionMenu();
-        }
     }
 
     /**
@@ -162,128 +159,43 @@ class RowActions extends BasePlugin {
                 maxCount = count;
             }
         }
-        let mode = "dg-actions-more";
-        if (maxCount > 0 && !collapse && maxCount <= 2) {
+        let mode = "dg-actions-inline";
+        if (this.menu && (collapse || maxCount > 2)) {
+            mode = "dg-actions-more";
+        } else if (maxCount > 0 && maxCount <= 2) {
             mode = `dg-actions-${maxCount}`;
         }
         const cells = grid.querySelectorAll('[data-column-id="$actions"]');
         for (const cell of cells) {
-            cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
+            cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
             cell.classList.add(mode);
         }
     }
 
     /**
-     * Toggle the popover menu for a collapsed actions cell.
-     * @param {HTMLElement} cell
+     * Fill the shared popover before the toggle's native default action opens
+     * it. The browser owns opening, dismissal, focus restoration and placement.
      * @param {Record<string, any>} row
      */
-    toggleActionMenu(cell, row) {
-        if (this.openCell === cell) {
-            this.closeActionMenu();
+    renderActionMenu(row) {
+        const grid = this.grid;
+        const menu = this.menu;
+        if (!menu) {
             return;
         }
-        this.openActionMenu(cell, row);
-    }
-
-    /**
-     * Open (and fill) the popover menu anchored to the given actions cell.
-     * @param {HTMLElement} cell
-     * @param {Record<string, any>} row
-     */
-    openActionMenu(cell, row) {
-        const grid = this.grid;
         const labels = grid.labels;
         const rowIndex = grid.rows.indexOf(row);
-        if (!this.menu) {
-            this.menu = document.createElement("ul");
-            this.menu.classList.add("dg-actions-menu");
-            grid.appendChild(this.menu);
-            // Capture: close even when an action handler stops propagation.
-            this.menu.addEventListener("click", () => this.closeActionMenu(), true);
-        }
-        const menu = this.menu;
         menu.replaceChildren();
         const rowKey = grid.resolveRowKey(row, rowIndex);
         for (const action of grid.getActionsForRow(row)) {
             if (action.visible && !action.visible(row, { grid, action, rowKey })) {
                 continue;
             }
-            const li = document.createElement("li");
+            const li = grid.ownerDocument.createElement("li");
             const { el } = this.createActionElement(action, row, rowIndex, grid, labels, true);
             li.appendChild(el);
             menu.appendChild(li);
         }
-        if (!menu.lastChild) {
-            return;
-        }
-        this.openCell = cell;
-        cell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "true");
-        menu.classList.add("dg-actions-open");
-        this.positionActionMenu(cell);
-        this._boundDocumentClick = (/** @type {MouseEvent} */ ev) => {
-            if (!menu.contains(/** @type {Node} */ (ev.target))) {
-                this.closeActionMenu();
-            }
-        };
-        document.addEventListener("click", this._boundDocumentClick);
-        this._boundKeydown = (/** @type {KeyboardEvent} */ ev) => {
-            if (ev.key === "Escape") {
-                this.closeActionMenu();
-            }
-        };
-        document.addEventListener("keydown", this._boundKeydown);
-    }
-
-    /**
-     * Position the menu inside the grid, anchored to the toggle rather than
-     * the whole cell. This matters when another cell makes the row unusually
-     * tall. Flip up or to the left when the toggle sits close to an edge.
-     * The menu stays inside the grid bounds so the grid scroll container never
-     * clips it.
-     * @param {HTMLElement} cell
-     */
-    positionActionMenu(cell) {
-        const menu = this.menu;
-        const grid = this.grid;
-        if (!menu) {
-            return;
-        }
-        const gridRect = grid.getBoundingClientRect();
-        const toggle = /** @type {HTMLElement|null} */ (cell.querySelector(".dg-actions-toggle"));
-        const anchorRect = (toggle ?? cell).getBoundingClientRect();
-        const menuHeight = menu.offsetHeight;
-        const menuWidth = menu.offsetWidth;
-        let top = anchorRect.bottom - gridRect.top;
-        if (top + menuHeight > gridRect.height) {
-            top = anchorRect.top - gridRect.top - menuHeight;
-        }
-        menu.style.top = `${Math.max(0, top)}px`;
-        let right = gridRect.right - anchorRect.right;
-        if (right + menuWidth > gridRect.width) {
-            right = gridRect.width - menuWidth;
-        }
-        menu.style.right = `${Math.max(0, right)}px`;
-        menu.style.left = "auto";
-    }
-
-    /**
-     * Close and reset the popover menu.
-     */
-    closeActionMenu() {
-        if (this._boundDocumentClick) {
-            document.removeEventListener("click", this._boundDocumentClick);
-            this._boundDocumentClick = null;
-        }
-        if (this._boundKeydown) {
-            document.removeEventListener("keydown", this._boundKeydown);
-            this._boundKeydown = null;
-        }
-        if (this.openCell) {
-            this.openCell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "false");
-        }
-        this.openCell = null;
-        this.menu?.classList.remove("dg-actions-open");
     }
 
     /**
@@ -301,15 +213,17 @@ class RowActions extends BasePlugin {
             return fragment;
         }
 
-        // Add menu toggle
-        const actionsToggle = document.createElement("button");
-        actionsToggle.type = "button";
-        actionsToggle.classList.add("dg-actions-toggle");
-        actionsToggle.textContent = "⋯";
-        actionsToggle.setAttribute("aria-label", labels.toggleActions);
-        actionsToggle.setAttribute("aria-expanded", "false");
-        actionsToggle.title = labels.toggleActions;
-        fragment.appendChild(actionsToggle);
+        if (this.menu) {
+            const actionsToggle = document.createElement("button");
+            actionsToggle.type = "button";
+            actionsToggle.classList.add("dg-actions-toggle");
+            actionsToggle.textContent = "⋯";
+            actionsToggle.setAttribute("aria-label", labels.toggleActions);
+            actionsToggle.setAttribute("popovertarget", this.menu.id);
+            actionsToggle.style.setProperty("anchor-name", `--${this.menu.id}-${rowIndex ?? 0}`);
+            actionsToggle.title = labels.toggleActions;
+            fragment.appendChild(actionsToggle);
+        }
 
         let defaultApplied = false;
         const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);

@@ -316,7 +316,7 @@ export type Options = {
      */
     actionRenderer?: Function;
     /**
-     * Group actions (RowActions module)
+     * Group actions in a native anchored popover when supported (RowActions module)
      */
     collapseActions: boolean;
     /**

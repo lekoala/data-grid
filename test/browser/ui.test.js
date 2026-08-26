@@ -281,6 +281,46 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "row actions use a native popover anchored to the invoking toggle",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        await v.evaluate(`(() => {
+            window.grid.options.collapseActions = true;
+            window.grid.renderTable();
+            window.grid.renderBody();
+        })()`);
+        await v.click("#local-grid .dg-actions-toggle");
+        await waitFor(v, "document.querySelector('#local-grid .dg-actions-menu').matches(':popover-open')");
+
+        const alignment = await read(
+            v,
+            `(() => {
+                const toggle = document.querySelector('#local-grid .dg-actions-toggle').getBoundingClientRect();
+                const menu = document.querySelector('#local-grid .dg-actions-menu').getBoundingClientRect();
+                return {
+                    right: Math.abs(menu.right - toggle.right),
+                    top: Math.abs(menu.top - toggle.bottom),
+                };
+            })()`,
+        );
+        expect(alignment.right).toBeLessThanOrEqual(1);
+        expect(alignment.top).toBeLessThanOrEqual(1);
+
+        await v.press("Escape");
+        await waitFor(v, "!document.querySelector('#local-grid .dg-actions-menu').matches(':popover-open')");
+
+        await v.click("#local-grid .dg-actions-toggle");
+        await waitFor(v, "document.querySelector('#local-grid .dg-actions-menu').matches(':popover-open')");
+        await v.evaluate(`(() => window.grid.renderBody())()`);
+        await waitFor(v, "!document.querySelector('#local-grid .dg-actions-menu').matches(':popover-open')");
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "context menu is a native popover positioned at the pointer",
     async () => {
         await using v = view();

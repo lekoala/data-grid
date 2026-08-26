@@ -4439,16 +4439,24 @@ class RowActions extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.menu = null;
-    this.openCell = null;
-    this._boundDocumentClick = null;
-    this._boundKeydown = null;
   }
   connected() {
+    const menu = this.grid.ownerDocument.createElement("ul");
+    if (!supportsPopoverAnchor()) {
+      return;
+    }
+    menu.id = randstr("dg-actions-menu-");
+    menu.className = "dg-menu dg-actions-menu";
+    menu.popover = "auto";
+    menu.addEventListener("click", () => menu.hidePopover?.(), true);
+    this.grid.appendChild(menu);
+    this.menu = menu;
     this.grid.addEventListener("click", this);
   }
   disconnected() {
     this.grid.removeEventListener("click", this);
-    this.closeActionMenu();
+    this.menu?.remove();
+    this.menu = null;
   }
   onclick(event) {
     const target = event.target;
@@ -4459,7 +4467,6 @@ class RowActions extends base_plugin_default {
     if (!toggle) {
       return;
     }
-    event.stopPropagation();
     const tr = toggle.closest("tr.dg-data-row");
     if (!tr) {
       return;
@@ -4469,11 +4476,9 @@ class RowActions extends base_plugin_default {
     if (!tr || !row) {
       return;
     }
-    const cell = toggle.closest('td[data-column-id="$actions"]');
-    if (!cell) {
-      return;
-    }
-    this.toggleActionMenu(cell, row);
+    const anchorName = toggle.style.getPropertyValue("anchor-name");
+    this.menu?.style.setProperty("position-anchor", anchorName);
+    this.renderActionMenu(row);
   }
   hasActions() {
     const grid = this.grid;
@@ -4507,11 +4512,11 @@ class RowActions extends base_plugin_default {
       toggle.setAttribute("title", toggleLabel);
     }
   }
-  afterRender(context) {
+  beforeRender() {
+    this.menu?.hidePopover?.();
+  }
+  afterRender() {
     this.syncCellModes();
-    if (context === "table") {
-      this.closeActionMenu();
-    }
   }
   syncCellModes() {
     const grid = this.grid;
@@ -4531,102 +4536,37 @@ class RowActions extends base_plugin_default {
         maxCount = count;
       }
     }
-    let mode = "dg-actions-more";
-    if (maxCount > 0 && !collapse && maxCount <= 2) {
+    let mode = "dg-actions-inline";
+    if (this.menu && (collapse || maxCount > 2)) {
+      mode = "dg-actions-more";
+    } else if (maxCount > 0 && maxCount <= 2) {
       mode = `dg-actions-${maxCount}`;
     }
     const cells = grid.querySelectorAll('[data-column-id="$actions"]');
     for (const cell of cells) {
-      cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
+      cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
       cell.classList.add(mode);
     }
   }
-  toggleActionMenu(cell, row) {
-    if (this.openCell === cell) {
-      this.closeActionMenu();
+  renderActionMenu(row) {
+    const grid = this.grid;
+    const menu = this.menu;
+    if (!menu) {
       return;
     }
-    this.openActionMenu(cell, row);
-  }
-  openActionMenu(cell, row) {
-    const grid = this.grid;
     const labels2 = grid.labels;
     const rowIndex = grid.rows.indexOf(row);
-    if (!this.menu) {
-      this.menu = document.createElement("ul");
-      this.menu.classList.add("dg-actions-menu");
-      grid.appendChild(this.menu);
-      this.menu.addEventListener("click", () => this.closeActionMenu(), true);
-    }
-    const menu = this.menu;
     menu.replaceChildren();
     const rowKey = grid.resolveRowKey(row, rowIndex);
     for (const action of grid.getActionsForRow(row)) {
       if (action.visible && !action.visible(row, { grid, action, rowKey })) {
         continue;
       }
-      const li = document.createElement("li");
+      const li = grid.ownerDocument.createElement("li");
       const { el } = this.createActionElement(action, row, rowIndex, grid, labels2, true);
       li.appendChild(el);
       menu.appendChild(li);
     }
-    if (!menu.lastChild) {
-      return;
-    }
-    this.openCell = cell;
-    cell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "true");
-    menu.classList.add("dg-actions-open");
-    this.positionActionMenu(cell);
-    this._boundDocumentClick = (ev) => {
-      if (!menu.contains(ev.target)) {
-        this.closeActionMenu();
-      }
-    };
-    document.addEventListener("click", this._boundDocumentClick);
-    this._boundKeydown = (ev) => {
-      if (ev.key === "Escape") {
-        this.closeActionMenu();
-      }
-    };
-    document.addEventListener("keydown", this._boundKeydown);
-  }
-  positionActionMenu(cell) {
-    const menu = this.menu;
-    const grid = this.grid;
-    if (!menu) {
-      return;
-    }
-    const gridRect = grid.getBoundingClientRect();
-    const toggle = cell.querySelector(".dg-actions-toggle");
-    const anchorRect = (toggle ?? cell).getBoundingClientRect();
-    const menuHeight = menu.offsetHeight;
-    const menuWidth = menu.offsetWidth;
-    let top = anchorRect.bottom - gridRect.top;
-    if (top + menuHeight > gridRect.height) {
-      top = anchorRect.top - gridRect.top - menuHeight;
-    }
-    menu.style.top = `${Math.max(0, top)}px`;
-    let right = gridRect.right - anchorRect.right;
-    if (right + menuWidth > gridRect.width) {
-      right = gridRect.width - menuWidth;
-    }
-    menu.style.right = `${Math.max(0, right)}px`;
-    menu.style.left = "auto";
-  }
-  closeActionMenu() {
-    if (this._boundDocumentClick) {
-      document.removeEventListener("click", this._boundDocumentClick);
-      this._boundDocumentClick = null;
-    }
-    if (this._boundKeydown) {
-      document.removeEventListener("keydown", this._boundKeydown);
-      this._boundKeydown = null;
-    }
-    if (this.openCell) {
-      this.openCell.querySelector(".dg-actions-toggle")?.setAttribute("aria-expanded", "false");
-    }
-    this.openCell = null;
-    this.menu?.classList.remove("dg-actions-open");
   }
   makeActionRow({ row, tr, grid, rowIndex }) {
     const labels2 = grid.labels;
@@ -4636,14 +4576,17 @@ class RowActions extends base_plugin_default {
     if (!actions.length) {
       return fragment;
     }
-    const actionsToggle = document.createElement("button");
-    actionsToggle.type = "button";
-    actionsToggle.classList.add("dg-actions-toggle");
-    actionsToggle.textContent = "⋯";
-    actionsToggle.setAttribute("aria-label", labels2.toggleActions);
-    actionsToggle.setAttribute("aria-expanded", "false");
-    actionsToggle.title = labels2.toggleActions;
-    fragment.appendChild(actionsToggle);
+    if (this.menu) {
+      const actionsToggle = document.createElement("button");
+      actionsToggle.type = "button";
+      actionsToggle.classList.add("dg-actions-toggle");
+      actionsToggle.textContent = "⋯";
+      actionsToggle.setAttribute("aria-label", labels2.toggleActions);
+      actionsToggle.setAttribute("popovertarget", this.menu.id);
+      actionsToggle.style.setProperty("anchor-name", `--${this.menu.id}-${rowIndex ?? 0}`);
+      actionsToggle.title = labels2.toggleActions;
+      fragment.appendChild(actionsToggle);
+    }
     let defaultApplied = false;
     const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
     for (const action of actions) {

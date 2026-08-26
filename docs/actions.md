@@ -89,6 +89,17 @@ without dispatching — including on `<a>` and custom renderers.
 `confirm` accepts a boolean (generic `areYouSure` label), a message string, or
 a resolver returning a message string (or `false` to skip confirmation).
 
+## Inline and collapsed presentation
+
+One or two actions render inline by default. More actions, or
+`collapseActions: true`, use a shared native Popover anchored to the `⋯`
+invoker when Popover and CSS Anchor Positioning are both available. The browser
+owns placement, viewport flipping, light dismissal, Escape and focus return.
+
+This is progressive enhancement only. A browser without either capability
+renders every available action inline; no action is hidden behind an unsupported
+menu and no JavaScript positioning fallback is installed.
+
 ## Row click
 
 The `rowClick` option controls what clicking a data row does:

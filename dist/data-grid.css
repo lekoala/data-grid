@@ -1053,6 +1053,11 @@ data-grid[dir="rtl"] .dg-multiselect-panel {
   right: anchor(right);
 }
 
+data-grid[dir="rtl"] .dg-actions-menu {
+  right: auto;
+  left: anchor(left);
+}
+
 data-grid[dir="rtl"] input.dg-search {
   padding-left: var(--dg-control-padding-inline);
   padding-right: calc(var(--dg-control-padding-inline)  + 20px);
@@ -1236,6 +1241,11 @@ data-grid .dg-actions.dg-actions-2 {
   min-width: 68px;
 }
 
+data-grid .dg-actions.dg-actions-inline {
+  max-inline-size: none;
+  width: auto;
+}
+
 data-grid .dg-actions.dg-actions-more button, data-grid .dg-actions.dg-actions-more a {
   display: none;
 }
@@ -1245,22 +1255,14 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 }
 
 data-grid .dg-actions-menu {
-  position: absolute;
-  z-index: 3;
-  list-style: none;
-  padding: var(--dg-space-2);
-  background-color: var(--dg-bg);
-  border: 1px solid var(--dg-border-color);
-  border-radius: var(--dg-radius);
-  display: none;
-  min-width: 180px;
+  position: fixed;
+  inset: auto;
+  top: anchor(bottom);
+  right: anchor(right);
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+  width: max-content;
   max-width: 240px;
   margin: 0;
-  box-shadow: 0 12px 24px #0f172a1a;
-}
-
-data-grid .dg-actions-menu.dg-actions-open {
-  display: block;
 }
 
 data-grid .dg-actions-menu li {
@@ -1273,6 +1275,7 @@ data-grid .dg-actions-menu li + li {
 }
 
 data-grid .dg-actions-menu button, data-grid .dg-actions-menu a {
+  box-sizing: border-box;
   display: flex;
   justify-content: flex-start;
   align-items:  center;

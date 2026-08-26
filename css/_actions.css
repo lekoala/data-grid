@@ -74,6 +74,11 @@ data-grid .dg-actions.dg-actions-2 {
   width: auto;
 }
 
+data-grid .dg-actions.dg-actions-inline {
+  max-inline-size: none;
+  width: auto;
+}
+
 data-grid .dg-actions.dg-actions-more button,
 data-grid .dg-actions.dg-actions-more a {
   display: none;
@@ -84,22 +89,14 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 }
 
 data-grid .dg-actions-menu {
-  position: absolute;
-  z-index: 3;
-  list-style: none;
+  position: fixed;
+  inset: auto;
+  top: anchor(bottom);
+  right: anchor(right);
   margin: 0;
-  padding: var(--dg-space-2);
-  min-width: 180px;
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   max-width: 240px;
-  background-color: var(--dg-bg);
-  border: 1px solid var(--dg-border-color);
-  border-radius: var(--dg-radius);
-  box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
-  display: none;
-}
-
-data-grid .dg-actions-menu.dg-actions-open {
-  display: block;
+  width: max-content;
 }
 
 data-grid .dg-actions-menu li {
@@ -113,6 +110,7 @@ data-grid .dg-actions-menu li + li {
 
 data-grid .dg-actions-menu button,
 data-grid .dg-actions-menu a {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: flex-start;

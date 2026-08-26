@@ -225,7 +225,7 @@ test("default action makes the row clickable", async () => {
     document.body.removeChild(inst);
 });
 
-test("more than two actions collapse into a popover menu", async () => {
+test("more than two actions use one shared native popover", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name" }],
@@ -245,50 +245,25 @@ test("more than two actions collapse into a popover menu", async () => {
     const toggle = cell.querySelector("button.dg-actions-toggle");
     toggle.click();
     const menu = inst.querySelector(".dg-actions-menu");
-    expect(menu.classList.contains("dg-actions-open")).toBe(true);
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(menu.getAttribute("popover")).toBe("auto");
+    expect(toggle.getAttribute("popovertarget")).toBe(menu.id);
+    expect(menu.style.getPropertyValue("position-anchor")).toBe(toggle.style.getPropertyValue("anchor-name"));
+    expect(toggle.hasAttribute("aria-expanded")).toBe(false);
     const items = menu.querySelectorAll("button[data-action]");
     expect(items.length).toBe(3);
     // The menu shows the label next to the (icon-only) custom content
     expect(Array.from(items).map((b) => b.textContent)).toEqual(["One", "Two", "Three"]);
 
-    // Selecting an action dispatches it and closes the menu
+    // Selecting an action dispatches it and asks the native popover to close.
     let detail = null;
+    let closes = 0;
+    menu.hidePopover = () => closes++;
     inst.addEventListener("action", (ev) => {
         detail = ev.detail;
     });
     menu.querySelector('button[data-action="two"]').click();
     expect(detail.name).toBe("two");
-    expect(menu.classList.contains("dg-actions-open")).toBe(false);
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    document.body.removeChild(inst);
-});
-
-test("the actions popover is anchored to the toggle in a tall row", async () => {
-    const inst = await makeReadyGrid(
-        {
-            columns: [{ field: "name", wrap: true }],
-            actions: [{ name: "one" }, { name: "two" }, { name: "three" }],
-        },
-        [{ name: "A very long row" }],
-        { RowActions },
-    );
-    const cell = inst.tbody.querySelector('td[data-column-id="$actions"]');
-    const toggle = cell.querySelector(".dg-actions-toggle");
-    toggle.click();
-    const menu = inst.querySelector(".dg-actions-menu");
-    const plugin = inst.getPlugin("RowActions");
-
-    inst.getBoundingClientRect = () => ({ top: 100, right: 600, height: 500 });
-    cell.getBoundingClientRect = () => ({ top: 150, right: 580, bottom: 350 });
-    toggle.getBoundingClientRect = () => ({ top: 160, right: 570, bottom: 188 });
-    Object.defineProperty(menu, "offsetHeight", { configurable: true, value: 120 });
-    Object.defineProperty(menu, "offsetWidth", { configurable: true, value: 180 });
-
-    plugin.positionActionMenu(cell);
-
-    expect(menu.style.top).toBe("88px");
-    expect(menu.style.right).toBe("30px");
+    expect(closes).toBe(1);
     document.body.removeChild(inst);
 });
 
@@ -314,30 +289,6 @@ test("icon-only render keeps its label visible in the menu", async () => {
         expect(item.querySelector(".dg-action-label")?.textContent).toBeTruthy();
     }
     expect(Array.from(items).map((b) => b.querySelector(".dg-action-label")?.textContent)).toEqual(["Edit", "Delete"]);
-    document.body.removeChild(inst);
-});
-
-test("Escape closes the actions popover", async () => {
-    const inst = await makeReadyGrid(
-        {
-            columns: [{ field: "name" }],
-            actions: [
-                { name: "one", label: "One" },
-                { name: "two", label: "Two" },
-                { name: "three", label: "Three" },
-            ],
-        },
-        [{ name: "a" }],
-        { RowActions },
-    );
-    const toggle = inst.tbody.querySelector('td[data-column-id="$actions"] button.dg-actions-toggle');
-    toggle.click();
-    const menu = inst.querySelector(".dg-actions-menu");
-    expect(menu.classList.contains("dg-actions-open")).toBe(true);
-
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
-    expect(menu.classList.contains("dg-actions-open")).toBe(false);
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
     document.body.removeChild(inst);
 });
 
@@ -659,4 +610,31 @@ test("a row needing more than two inline actions collapses the whole column", as
         expect(cell.classList.contains("dg-actions-more")).toBe(true);
     }
     document.body.removeChild(inst);
+});
+
+test("actions stay inline when native floating UI is unavailable", async () => {
+    const popoverDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "popover");
+    delete HTMLElement.prototype.popover;
+    try {
+        const inst = await makeReadyGrid(
+            {
+                collapseActions: true,
+                columns: [{ field: "name" }],
+                actions: [{ name: "one" }, { name: "two" }, { name: "three" }],
+            },
+            [{ name: "a" }],
+            { RowActions },
+        );
+
+        const cell = inst.tbody.querySelector('td[data-column-id="$actions"]');
+        expect(cell.classList.contains("dg-actions-inline")).toBe(true);
+        expect(cell.querySelector(".dg-actions-toggle")).toBeNull();
+        expect(cell.querySelectorAll("[data-action]")).toHaveLength(3);
+        expect(inst.querySelector(".dg-actions-menu")).toBeNull();
+        document.body.removeChild(inst);
+    } finally {
+        if (popoverDescriptor) {
+            Object.defineProperty(HTMLElement.prototype, "popover", popoverDescriptor);
+        }
+    }
 });

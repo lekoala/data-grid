@@ -191,7 +191,7 @@ test("icon-only custom content keeps label as the accessible name", async () => 
     document.body.removeChild(inst);
 });
 
-test("the row actions toggle has an accessible name and aria-expanded state", async () => {
+test("the row actions toggle has an accessible name and native popover target", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "name", title: "Name" }],
@@ -202,12 +202,11 @@ test("the row actions toggle has an accessible name and aria-expanded state", as
     );
 
     const toggle = inst.tbody.querySelector("td[data-column-id='$actions'] button.dg-actions-toggle");
+    const menu = inst.querySelector(".dg-actions-menu");
     expect(toggle.getAttribute("aria-label")).toBe("Toggle row actions");
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
-    toggle.click();
-    expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    toggle.click();
-    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("popovertarget")).toBe(menu.id);
+    expect(toggle.style.getPropertyValue("anchor-name")).toBe(`--${menu.id}-0`);
+    expect(toggle.hasAttribute("aria-expanded")).toBe(false);
     document.body.removeChild(inst);
 });
 

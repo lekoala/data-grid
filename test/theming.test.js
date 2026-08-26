@@ -41,6 +41,13 @@ test("multi-select filters use top-layer anchor positioning", () => {
     expect(coreCss).toMatch(/\.dg-filter-control \{[\s\S]*?box-sizing: border-box;/);
 });
 
+test("row action menus use top-layer anchor positioning", () => {
+    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position: fixed;/);
+    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?top: anchor\(bottom\);/);
+    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?right: anchor\(right\);/);
+    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position-try-fallbacks:/);
+});
+
 test("multi-select keyboard focus is drawn on the filter control", () => {
     expect(coreCss).toMatch(/\.dg-multiselect-trigger:focus-visible \{\s*outline: 0;/);
     expect(coreCss).toMatch(
