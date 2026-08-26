@@ -255,7 +255,7 @@ data-grid td {
   box-sizing: border-box;
   empty-cells: show;
   padding: var(--dg-padding-y) var(--dg-padding-x);
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 }
 
@@ -277,7 +277,6 @@ data-grid th,
 data-grid td {
   position: relative;
   overflow: hidden;
-  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

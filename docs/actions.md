@@ -224,3 +224,5 @@ await grid.refresh();
 
 Actions render as `<a>` when `href` is set, `<button>` otherwise, and follow the
 `--dg-*` control tokens. `intent: "danger"` maps to the `--dg-danger-*` tokens.
+The `$actions` column aligns to the end of the reading axis by default: right in
+LTR and left in RTL.

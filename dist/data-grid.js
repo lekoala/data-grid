@@ -4487,6 +4487,7 @@ class RowActions extends base_plugin_default {
       id: "$actions",
       virtual: true,
       position: "end",
+      align: "end",
       sortable: false,
       title: "",
       class: "dg-actions",

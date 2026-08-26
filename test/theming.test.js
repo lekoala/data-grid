@@ -63,6 +63,14 @@ test("generated css never downlevels logical properties into :lang() sets", () =
     expect(coreCss).not.toContain(":lang(");
 });
 
+test("cell alignment stays logical in both text directions", () => {
+    expect(coreCss).toMatch(/data-grid th,\s*data-grid td \{[\s\S]*?text-align: start;/);
+    expect(coreCss).toMatch(
+        /data-grid th\[data-align=["']?end["']?\],\s*data-grid td\[data-align=["']?end["']?\] \{\s*text-align: end;/,
+    );
+    expect(coreCss).not.toMatch(/data-grid\[dir=rtl\] th,\s*data-grid\[dir=rtl\] td \{\s*text-align: right;/);
+});
+
 test("bootstrap theme maps --dg-* onto --bs-* and covers dark mode", () => {
     expect(themeCss).toContain("--dg-bg: var(--bs-body-bg");
     expect(themeCss).toContain("--dg-accent: var(--bs-primary");

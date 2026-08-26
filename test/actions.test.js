@@ -564,6 +564,24 @@ test("a row without actions renders an empty cell without the toggle", async () 
     document.body.removeChild(inst);
 });
 
+test("the actions column aligns header, filter placeholder, and body to the inline end", async () => {
+    const inst = await makeReadyGrid(
+        {
+            filterable: true,
+            columns: [{ field: "name" }],
+            actions: [{ name: "view", label: "View" }],
+        },
+        [{ name: "a" }],
+        { RowActions },
+    );
+
+    const selector = '[data-column-id="$actions"]';
+    expect(inst.querySelector(`thead tr.dg-head-columns ${selector}`).dataset.align).toBe("end");
+    expect(inst.querySelector(`thead tr.dg-head-filters ${selector}`).dataset.align).toBe("end");
+    expect(inst.querySelector(`tbody ${selector}`).dataset.align).toBe("end");
+    document.body.removeChild(inst);
+});
+
 test("the actions column shares one mode across header and body", async () => {
     const inst = await makeReadyGrid(
         { rowActions: true, columns: [{ field: "name" }] },

@@ -7,7 +7,6 @@ data-grid .dg-actions {
   max-inline-size: var(--dg-actions-column-width);
   padding-left: var(--dg-space-1);
   padding-right: var(--dg-space-1);
-  text-align: center;
   white-space: nowrap !important;
 }
 

@@ -88,6 +88,7 @@ class RowActions extends BasePlugin {
             id: "$actions",
             virtual: true,
             position: "end",
+            align: "end",
             sortable: false,
             title: "",
             class: "dg-actions",

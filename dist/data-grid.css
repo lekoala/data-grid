@@ -218,7 +218,7 @@ data-grid th, data-grid td {
   box-sizing: border-box;
   empty-cells: show;
   padding: var(--dg-padding-y) var(--dg-padding-x);
-  text-align: left;
+  text-align: start;
   vertical-align: middle;
 }
 
@@ -238,7 +238,6 @@ data-grid th {
 data-grid th, data-grid td {
   position: relative;
   overflow: hidden;
-  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1004,10 +1003,6 @@ data-grid .dg-boolean[data-value="false"]:after {
 }
 
 /* css/_rtl.css */
-data-grid[dir="rtl"] th, data-grid[dir="rtl"] td {
-  text-align: right;
-}
-
 data-grid[dir="rtl"] tfoot .dg-meta {
   text-align: right;
   margin-left: auto;
@@ -1172,7 +1167,6 @@ data-grid .dg-actions {
   max-inline-size: var(--dg-actions-column-width);
   padding-left: var(--dg-space-1);
   padding-right: var(--dg-space-1);
-  text-align: center;
   white-space: nowrap !important;
 }
 
