@@ -22,6 +22,8 @@ const labels = {
     loading: "Memuat…",
     areYouSure: "Apakah Anda yakin?",
     networkError: "Gagal memuat",
+    booleanTrue: "Ya",
+    booleanFalse: "Tidak",
 };
 
 DataGrid.setLabels(labels);

@@ -10,6 +10,7 @@ import applyContent from "./utils/applyContent.js";
 import { parseBooleanAttribute, parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
+import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import normalizeData from "./utils/normalizeData.js";
 import randstr from "./utils/randstr.js";
@@ -68,6 +69,22 @@ function setDeclarativeCell(row, field, meta) {
 }
 
 /**
+ * Options of the `date`/`datetime` formatters: native `Intl.DateTimeFormatOptions`
+ * plus the `style` shortcut that maps to `dateStyle`/`timeStyle`. Explicit Intl
+ * options win over the shortcut; granular component options suppress the
+ * automatic default style.
+ * @typedef {Intl.DateTimeFormatOptions & {
+ *   style?: "full"|"long"|"medium"|"short"
+ * }} DateFormatOptions
+ */
+
+/**
+ * Options of the `number` formatter: native `Intl.NumberFormatOptions`. The
+ * `currency`/`unit` shortcuts imply `style` unless it is set explicitly.
+ * @typedef {Intl.NumberFormatOptions} NumberFormatOptions
+ */
+
+/**
  * Column definition
  * @typedef Column
  * @property {String} [field] - the key in the data
@@ -78,6 +95,9 @@ function setDeclarativeCell(row, field, meta) {
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
  * @property {Number} [width] - the preferred width of the column (auto otherwise)
  * @property {Number} [minWidth] - the column is never compressed below this width
+ * @property {"start"|"center"|"end"|null} [align] - cell content alignment (data cells), defaults to the formatter default when `format` is set
+ * @property {"boolean"|"date"|"datetime"|"number"|null} [format] - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
+ * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
  * @property {Boolean} [hidden] - hide the column
@@ -248,6 +268,8 @@ function setDeclarativeCell(row, field, meta) {
  * @property {String} loading
  * @property {String} areYouSure
  * @property {String} networkError
+ * @property {String} booleanTrue - accessible label of a `format: "boolean"` cell with a true value
+ * @property {String} booleanFalse - accessible label of a `format: "boolean"` cell with a false value
  */
 
 /**
@@ -303,6 +325,8 @@ let labels = {
     loading: "Loading…",
     areYouSure: "Are you sure?",
     networkError: "Network response error",
+    booleanTrue: "Yes",
+    booleanFalse: "No",
 };
 
 const LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
@@ -431,6 +455,16 @@ function parseDeclarativeTable(table) {
         }
         if (th.dataset.transform) {
             column.transform = /** @type {NonNullable<Column["transform"]>} */ (th.dataset.transform);
+        }
+        if (th.dataset.format) {
+            column.format = /** @type {NonNullable<Column["format"]>} */ (th.dataset.format);
+        }
+        if (th.dataset.align) {
+            // Only known values set an explicit alignment: an invalid value must
+            // not silently become an option, so the normal grid behavior stays.
+            if (["start", "center", "end"].includes(th.dataset.align)) {
+                column.align = /** @type {NonNullable<Column["align"]>} */ (th.dataset.align);
+            }
         }
         if (th.dataset.width !== undefined) {
             const width = Number(th.dataset.width);
@@ -599,7 +633,10 @@ function isColumnHidden(column) {
  */
 function applyColumnDefinition(el, column) {
     if (column.width) {
-        el.setAttribute("width", String(column.width));
+        // The declared min-width (data-min-width) is an invariant: a preferred
+        // width below the floor is raised to it.
+        const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
+        el.setAttribute("width", String(Math.max(column.width, minWidth)));
     }
     if (column.class) {
         el.classList.add(...column.class.trim().split(/\s+/));
@@ -1001,6 +1038,8 @@ class DataGrid extends BaseElement {
             responsiveHidden: false,
             frozen: null,
             transform: null,
+            format: null,
+            align: null,
             filterType: "text",
             filterPlaceholder: "…",
             firstFilterOption: { value: "", text: "" },
@@ -1037,7 +1076,10 @@ class DataGrid extends BaseElement {
             rowLabel: null,
             bulkActions: [],
             resizable: false,
-            autosize: true,
+            // Off by default: columns without a preferred width stay flexible
+            // and absorb the remaining space. Turning it on asks the plugin to
+            // measure those columns and pin them to a computed width.
+            autosize: false,
             wrap: false,
             snapColumns: false,
             autoheight: true,
@@ -2293,6 +2335,17 @@ class DataGrid extends BaseElement {
         const cell = document.createElement(tag);
         cell.dataset.columnId = this.getColumnId(column);
         applyColumnDefinition(cell, column);
+        // Formatting hints target data cells only: alignment is a body concern
+        // by default, and `data-format` is a theming hook for the rendered cell.
+        if (tag === "td") {
+            if (column.format) {
+                cell.dataset.format = column.format;
+            }
+            const align = column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align;
+            if (align) {
+                cell.dataset.align = align;
+            }
+        }
         return cell;
     }
 
@@ -3181,7 +3234,6 @@ class DataGrid extends BaseElement {
         }
 
         // Create columns
-        let totalWidth = 0;
         this.log("createColumnHeaders - columns", this.getColumns());
 
         for (const column of this.getColumns()) {
@@ -3209,23 +3261,11 @@ class DataGrid extends BaseElement {
             applyColumnDefinition(th, column);
 
             tr.appendChild(th);
-            if (!isColumnHidden(column)) {
-                totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
-            }
         }
 
         // The measurement cell seeded for a declarative table is not a column.
         if (seededSample) {
             sampleTh.remove();
-        }
-
-        // There is too much available width, and we want to avoid fixed layout to split remaining amount
-        if (totalWidth < availableWidth) {
-            const visibleCols = tr.querySelectorAll("th:not([hidden],.dg-not-resizable)");
-            if (visibleCols.length) {
-                const lastCol = visibleCols[visibleCols.length - 1];
-                lastCol.removeAttribute("width");
-            }
         }
 
         if (thead && oldRow) {
@@ -3280,19 +3320,30 @@ class DataGrid extends BaseElement {
         if (this.options.responsive) {
             th.setAttribute("data-responsive", String(column.responsive || ""));
         }
-        // The column is never compressed below its intrinsic header width nor
-        // below an explicit minWidth (data-min-width): its floor is the larger
-        // of the two. `width` stays the preferred width.
+        // Column sizing contract: the minimum is the largest of the intrinsic
+        // header width, an explicit minWidth and the formatter floor; the
+        // preferred width is the explicit `width` or the formatter suggestion;
+        // without a preferred width the column stays flexible and absorbs the
+        // remaining space. Never emit an invalid width: no attribute at all.
+        const defaults = getFormatDefaults(column.format, column.formatOptions);
         const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
-        const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0);
+        const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0, defaults?.minWidth ?? 0);
         th.dataset.minWidth = `${effectiveMin}`;
         applyColumnDefinition(th, column);
 
-        const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
-        th.setAttribute("width", String(w));
-        // Preferred width before the compression phase: ResponsiveGrid reasons
-        // on this value instead of the post-compression width.
-        th.dataset.preferredWidth = `${w}`;
+        // `column.width` is 0 when unset (defaultColumn), so the falsy check is
+        // intentional: 0 means "no preferred width".
+        const preferredWidth = column.width || defaults?.width;
+        if (preferredWidth !== undefined && Number.isFinite(preferredWidth)) {
+            const width = Math.max(effectiveMin, preferredWidth);
+            th.setAttribute("width", String(width));
+            // Preferred width before the compression phase: ResponsiveGrid
+            // reasons on this value instead of the post-compression width.
+            th.dataset.preferredWidth = String(width);
+        } else {
+            th.removeAttribute("width");
+            delete th.dataset.preferredWidth;
+        }
         if (isColumnHidden(column)) {
             th.setAttribute("hidden", "");
         }
@@ -3654,7 +3705,12 @@ class DataGrid extends BaseElement {
             return;
         }
 
-        td.textContent = transformValue(value, column.transform, ctx);
+        const transformed = transformValue(value, column.transform, ctx);
+        if (column.format) {
+            applyContent(td, formatValue(transformed, column.format, column.formatOptions, ctx));
+        } else {
+            td.textContent = transformed;
+        }
     }
 
     paginate() {

@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Grid Demo - Formatters</title>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+  <link rel="stylesheet" href="../dist/data-grid.css" />
+  <link rel="stylesheet" href="demo.css" />
+
+  <script type="module" src="../data-grid.js"></script>
+</head>
+
+<body>
+  <header>
+    <nav aria-label="Demo navigation">
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Default</a></li>
+        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link" href="lazy.html">Lazy</a></li>
+        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+        <li><a class="demo-nav-link" href="api.html">API</a></li>
+        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
+        <li><a class="demo-nav-link" href="declarative.html">Declarative</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="#">Formatters</a></li>
+      </ul>
+    </nav>
+    <h1>Built-in formatters</h1>
+    <p>Four built-in formatters turn raw values into semantic HTML: <code>boolean</code>, <code>date</code>,
+      <code>datetime</code> and <code>number</code>. DataGrid provides the kind of representation, <code>Intl</code>
+      provides its configuration through <code>formatOptions</code>. The formatters never touch cell layout — the core
+      resolves geometry (<code>minWidth</code>, <code>align</code>) from the column options and the formatter defaults.
+    </p>
+  </header>
+
+  <main>
+    <section class="demo-grid">
+      <p class="demo-kicker">format / formatOptions</p>
+      <h2>All four formatters</h2>
+      <p class="demo-lead"><code>date</code> renders a <code>&lt;time datetime&gt;</code> with a calendar date,
+        <code>datetime</code> renders the instant (converted to <code>Europe/Brussels</code> here),
+        <code>number</code> formats currency, percent and units through <code>Intl.NumberFormat</code>, and
+        <code>boolean</code> renders an accessible <code>✓ / –</code>. Invalid or missing values produce an empty cell,
+        never a guessed one: <code>2026-02-29</code> is rejected, <code>null</code> discounts and unshipped orders stay
+        blank.</p>
+
+      <div class="demo-frame">
+        <div id="formatters-grid"></div>
+      </div>
+      <p class="demo-note">The locale comes from the closest <code>lang</code> attribute — this grid inherits the
+        document's <code>en</code>. The <code>weight</code> column uses the <code>unit</code> shortcut (it implies
+        <code>style: "unit"</code>), and <code>price</code> the <code>currency</code> shortcut.</p>
+    </section>
+
+    <section class="demo-grid">
+      <p class="demo-kicker">overrides &amp; locale</p>
+      <h2>Column geometry, granular Intl and renderCell</h2>
+      <p class="demo-lead">Explicit column options win over formatter defaults: <code>align: "center"</code> overrides
+        the right-alignment that <code>number</code> implies, <code>align: "end"</code> overrides the centered boolean,
+        and <code>minWidth</code> raises the floor of a column. Granular <code>Intl</code> options
+        (<code>year</code>/<code>month</code>/<code>day</code>) suppress the automatic <code>dateStyle</code> default.
+        <code>renderCell</code> always takes full control. This grid carries <code>lang="fr-BE"</code>, so every
+        formatter renders in French.</p>
+
+      <div class="demo-frame">
+        <div id="overrides-grid"></div>
+      </div>
+      <p class="demo-note"><code>price</code> uses <code>{ currency: "EUR" }</code> without <code>style</code> (the
+        shortcut infers it), the <code>ordered</code> date is formatted with explicit <code>year</code>/<code>month</code>/<code>day</code>
+        components, and the <code>Tier</code> column is a plain <code>renderCell</code>, not a formatter. A
+        <code>renderCell</code> column carries an explicit <code>width</code>: autosize can only measure raw values, not
+        rendered content.</p>
+    </section>
+
+    <section class="demo-grid">
+      <p class="demo-kicker">declarative</p>
+      <h2>data-format in the markup</h2>
+      <p class="demo-lead">A column can opt into the built-in defaults with <code>data-format</code> (and
+        <code>data-align</code>). The <code>&lt;tbody&gt;</code> becomes the local dataset: plain string values are
+        parsed by the formatters — <code>"129.9"</code>, <code>"true"</code> and ISO strings all work. Advanced
+        <code>Intl</code> options stay JavaScript-only.</p>
+
+      <div class="demo-frame">
+        <data-grid sortable filterable>
+          <table>
+            <caption>Declarative orders</caption>
+            <thead>
+              <tr>
+                <th data-field="id">#</th>
+                <th data-field="product">Product</th>
+                <th data-field="ordered" data-format="date">Ordered</th>
+                <th data-field="shipped" data-format="datetime">Shipped</th>
+                <th data-field="price" data-format="number">Price</th>
+                <th data-field="active" data-format="boolean" data-align="center">Active</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td>1</td>
+                <td>Wireless Headphones</td>
+                <td>2026-08-26</td>
+                <td>2026-08-27T09:15:00+02:00</td>
+                <td>129.9</td>
+                <td>true</td>
+              </tr>
+              <tr data-row-key="2">
+                <td>2</td>
+                <td>Mechanical Keyboard</td>
+                <td>2026-08-20</td>
+                <td>2026-08-21T14:30:00Z</td>
+                <td>89.5</td>
+                <td>true</td>
+              </tr>
+              <tr data-row-key="3">
+                <td>3</td>
+                <td>4K Webcam</td>
+                <td>2026-07-30</td>
+                <td>2026-08-16T18:45:00-05:00</td>
+                <td>179</td>
+                <td>false</td>
+              </tr>
+              <tr data-row-key="4">
+                <td>4</td>
+                <td>USB-C Dock</td>
+                <td>2026-02-29</td>
+                <td></td>
+                <td>249.99</td>
+                <td>true</td>
+              </tr>
+              <tr data-row-key="5">
+                <td>5</td>
+                <td>Ergonomic Mouse</td>
+                <td>2026-08-15</td>
+                <td>2026-08-16T09:00:00Z</td>
+                <td></td>
+                <td>false</td>
+              </tr>
+            </tbody>
+          </table>
+        </data-grid>
+      </div>
+      <p class="demo-note"><code>2026-02-29</code> is not a real calendar date and the empty <code>price</code> stays
+        blank instead of becoming <code>0</code>. Both are by design: the formatters recognize obvious values, they do
+        not guess.</p>
+    </section>
+  </main>
+
+  <footer>
+    <hr />
+    <p>data-grid-component - built-in formatters demo</p>
+  </footer>
+
+  <script type="module">
+    import { ArrayDataSource, DataGrid } from "../data-grid.js";
+
+    const orders = [
+      { id: 1, product: "Wireless Headphones", ordered: "2026-08-26", shipped: "2026-08-27T09:15:00+02:00", price: 129.9, discount: 0.2, weight: 2.5, active: true },
+      { id: 2, product: "Mechanical Keyboard", ordered: "2026-08-20", shipped: "2026-08-21T14:30:00Z", price: 89.5, discount: 0.05, weight: 1.2, active: true },
+      { id: 3, product: "4K Webcam", ordered: "2026-07-30", shipped: null, price: 179, discount: 0, weight: 0.8, active: false },
+      { id: 4, product: "USB-C Dock", ordered: "2026-02-29", shipped: "2026-03-01T08:00:00+01:00", price: 249.99, discount: 0.15, weight: 1.4, active: true },
+      { id: 5, product: "Ergonomic Mouse", ordered: "2026-08-15", shipped: "2026-08-16T18:45:00-05:00", price: 59, discount: null, weight: 0.3, active: false },
+      { id: 6, product: "Monitor Arm", ordered: "2026-08-10", shipped: "2026-08-11T11:00:00+02:00", price: 74.9, discount: 0.1, weight: 3.1, active: true },
+    ];
+
+    const grid1 = new DataGrid({
+      dataSource: new ArrayDataSource(orders),
+      sortable: true,
+      filterable: true,
+      columns: [
+        { field: "id", title: "#", width: 64 },
+        { field: "product", title: "Product" },
+        { field: "ordered", title: "Ordered", format: "date" },
+        { field: "shipped", title: "Shipped", format: "datetime", formatOptions: { timeZone: "Europe/Brussels" } },
+        { field: "price", title: "Price", format: "number", formatOptions: { style: "currency", currency: "EUR" } },
+        { field: "discount", title: "Discount", format: "number", formatOptions: { style: "percent", maximumFractionDigits: 1 } },
+        { field: "weight", title: "Weight", format: "number", formatOptions: { unit: "kilogram", unitDisplay: "short" } },
+        { field: "active", title: "Active", format: "boolean" },
+      ],
+    });
+    document.getElementById("formatters-grid").replaceChildren(grid1);
+
+    const grid2 = new DataGrid({
+      dataSource: new ArrayDataSource(orders),
+      sortable: true,
+      columns: [
+        { field: "id", title: "#", width: 64 },
+        { field: "product", title: "Product" },
+        { field: "tier", title: "Tier", width: 140, renderCell: ({ row }) => (row.price > 100 ? "Premium" : "Standard") },
+        { field: "ordered", title: "Ordered", format: "date", minWidth: 140 },
+        { field: "price", title: "Price", format: "number", formatOptions: { currency: "EUR" }, align: "center" },
+        { field: "discount", title: "Discount", format: "number", formatOptions: { style: "percent" } },
+        { field: "active", title: "Active", format: "boolean", align: "end" },
+      ],
+    });
+    grid2.setAttribute("lang", "fr-BE");
+    document.getElementById("overrides-grid").replaceChildren(grid2);
+  </script>
+</body>
+
+</html>

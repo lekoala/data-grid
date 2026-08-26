@@ -248,6 +248,18 @@ data-grid th.dg-wrap, data-grid td.dg-wrap {
   overflow-wrap: anywhere;
 }
 
+data-grid td[data-align="start"] {
+  text-align: start;
+}
+
+data-grid td[data-align="center"] {
+  text-align: center;
+}
+
+data-grid td[data-align="end"] {
+  text-align: end;
+}
+
 data-grid .dg-selectable {
   inline-size: var(--dg-selection-column-width);
   min-inline-size: var(--dg-selection-column-width);

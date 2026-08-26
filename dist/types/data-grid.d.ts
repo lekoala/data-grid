@@ -23,6 +23,10 @@ export type DeclarativeCellMeta = {
      */
     content: Node[];
 };
+export type DateFormatOptions = Intl.DateTimeFormatOptions & {
+    style?: "full" | "long" | "medium" | "short";
+};
+export type NumberFormatOptions = Intl.NumberFormatOptions;
 export type Column = {
     /**
      * - the key in the data
@@ -56,6 +60,18 @@ export type Column = {
      * - the column is never compressed below this width
      */
     minWidth?: number;
+    /**
+     * - cell content alignment (data cells), defaults to the formatter default when `format` is set
+     */
+    align?: "start" | "center" | "end" | null;
+    /**
+     * - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
+     */
+    format?: "boolean" | "date" | "datetime" | "number" | null;
+    /**
+     * - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
+     */
+    formatOptions?: DateFormatOptions | NumberFormatOptions;
     /**
      * - class to set on the column (target body or header with th.class or td.class)
      */
@@ -455,6 +471,14 @@ export type Labels = {
     loading: string;
     areYouSure: string;
     networkError: string;
+    /**
+     * - accessible label of a `format: "boolean"` cell with a true value
+     */
+    booleanTrue: string;
+    /**
+     * - accessible label of a `format: "boolean"` cell with a false value
+     */
+    booleanFalse: string;
 };
 export type TextInputState = {
     composing: boolean;

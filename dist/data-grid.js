@@ -464,6 +464,200 @@ function debounce(handler, timeout = 300) {
   return fn;
 }
 
+// src/utils/formatValue.js
+var formatDefaults = {
+  boolean: {
+    align: "center",
+    minWidth: 48,
+    width: 56
+  },
+  date: {
+    minWidth: 104,
+    width: 120
+  },
+  datetime: {
+    minWidth: 152,
+    width: 168
+  },
+  number: {
+    align: "end"
+  }
+};
+var ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+var ISO_DATETIME = /^\d{4}-\d{2}-\d{2}T.+(?:Z|[+-]\d{2}:\d{2})$/i;
+var DATE_FORBIDDEN_OPTIONS = [
+  "timeStyle",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "dayPeriod",
+  "timeZone"
+];
+var DATETIME_COMPONENT_KEYS = [
+  "weekday",
+  "era",
+  "year",
+  "month",
+  "day",
+  "dayPeriod",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "timeZoneName"
+];
+function resolveLocale(grid) {
+  return grid?.closest("[lang]")?.getAttribute("lang") || grid?.ownerDocument?.documentElement.lang || undefined;
+}
+function toLocalISODate(date) {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+function normalizeBoolean(value) {
+  if (value === true || value === "true" || value === 1 || value === "1") {
+    return true;
+  }
+  if (value === false || value === "false" || value === 0 || value === "0") {
+    return false;
+  }
+  return null;
+}
+function formatBoolean(value, ctx) {
+  const bool = normalizeBoolean(value);
+  if (bool === null) {
+    return "";
+  }
+  const grid = ctx.grid;
+  const labels = grid?.labels;
+  const doc = grid?.ownerDocument ?? document;
+  const span = doc.createElement("span");
+  span.className = "dg-boolean";
+  span.setAttribute("role", "img");
+  span.setAttribute("aria-label", bool ? labels?.booleanTrue ?? "Yes" : labels?.booleanFalse ?? "No");
+  span.textContent = bool ? "✓" : "–";
+  return span;
+}
+function resolveDateTimeOptions(format, formatOptions = {}) {
+  const { style, ...options } = formatOptions;
+  if (format === "date") {
+    for (const key of DATE_FORBIDDEN_OPTIONS) {
+      if (options[key] !== undefined) {
+        throw new TypeError(`The "${format}" formatter does not accept time or timeZone options`);
+      }
+    }
+  }
+  const hasGranular = DATETIME_COMPONENT_KEYS.some((key) => options[key] !== undefined);
+  if (!hasGranular) {
+    if (options.dateStyle === undefined) {
+      options.dateStyle = style ?? "short";
+    }
+    if (format === "datetime" && options.timeStyle === undefined) {
+      options.timeStyle = style ?? "short";
+    }
+  }
+  return options;
+}
+function parseDateValue(value, format) {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return null;
+    }
+    return {
+      date: value,
+      datetimeAttr: format === "datetime" ? value.toISOString() : toLocalISODate(value)
+    };
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const date = new Date(value);
+    return {
+      date,
+      datetimeAttr: format === "datetime" ? date.toISOString() : toLocalISODate(date)
+    };
+  }
+  if (typeof value === "string") {
+    if (format === "date") {
+      if (!ISO_DATE.test(value)) {
+        return null;
+      }
+      const [year, month, day] = value.split("-").map(Number);
+      const date2 = new Date(year, month - 1, day);
+      if (date2.getFullYear() !== year || date2.getMonth() !== month - 1 || date2.getDate() !== day) {
+        return null;
+      }
+      return { date: date2, datetimeAttr: value };
+    }
+    if (!ISO_DATETIME.test(value)) {
+      return null;
+    }
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+    return { date, datetimeAttr: date.toISOString() };
+  }
+  return null;
+}
+function formatDate(value, format, formatOptions, ctx = {}) {
+  const parsed = parseDateValue(value, format);
+  if (!parsed) {
+    return "";
+  }
+  const options = resolveDateTimeOptions(format, formatOptions);
+  const doc = ctx.grid?.ownerDocument ?? document;
+  const time = doc.createElement("time");
+  time.dateTime = parsed.datetimeAttr;
+  time.textContent = new Intl.DateTimeFormat(resolveLocale(ctx.grid), options).format(parsed.date);
+  return time;
+}
+function formatNumber(value, formatOptions = {}, ctx = {}) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return "";
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "";
+  }
+  const options = { ...formatOptions };
+  if (!options.style && options.currency && options.unit) {
+    throw new TypeError("currency and unit cannot both infer number style");
+  }
+  if (options.style === undefined && options.currency) {
+    options.style = "currency";
+  }
+  if (options.style === undefined && options.unit) {
+    options.style = "unit";
+  }
+  return new Intl.NumberFormat(resolveLocale(ctx.grid), options).format(number);
+}
+function getFormatDefaults(format, formatOptions) {
+  if (format === null || format === undefined) {
+    return null;
+  }
+  if (format === "number" && formatOptions?.style === "percent") {
+    return { align: "end", minWidth: 72, width: 88 };
+  }
+  return formatDefaults[format] || null;
+}
+function formatValue(value, format, formatOptions, ctx = {}) {
+  switch (format) {
+    case "boolean":
+      return formatBoolean(value, ctx);
+    case "date":
+    case "datetime":
+      return formatDate(value, format, formatOptions, ctx);
+    case "number":
+      return formatNumber(value, formatOptions, ctx);
+    default:
+      return value;
+  }
+}
+
 // src/utils/getTextWidth.js
 var canvas;
 function getTextWidth(text, el = document.body, withPadding = false) {
@@ -566,7 +760,9 @@ var labels = {
   noData: "No data",
   loading: "Loading…",
   areYouSure: "Are you sure?",
-  networkError: "Network response error"
+  networkError: "Network response error",
+  booleanTrue: "Yes",
+  booleanFalse: "No"
 };
 var LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
 function formatLabel(template, values) {
@@ -659,6 +855,14 @@ function parseDeclarativeTable(table) {
     }
     if (th.dataset.transform) {
       column.transform = th.dataset.transform;
+    }
+    if (th.dataset.format) {
+      column.format = th.dataset.format;
+    }
+    if (th.dataset.align) {
+      if (["start", "center", "end"].includes(th.dataset.align)) {
+        column.align = th.dataset.align;
+      }
     }
     if (th.dataset.width !== undefined) {
       const width = Number(th.dataset.width);
@@ -778,7 +982,8 @@ function isColumnHidden(column) {
 }
 function applyColumnDefinition(el, column) {
   if (column.width) {
-    el.setAttribute("width", String(column.width));
+    const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
+    el.setAttribute("width", String(Math.max(column.width, minWidth)));
   }
   if (column.class) {
     el.classList.add(...column.class.trim().split(/\s+/));
@@ -1006,6 +1211,8 @@ class DataGrid extends base_element_default {
       responsiveHidden: false,
       frozen: null,
       transform: null,
+      format: null,
+      align: null,
       filterType: "text",
       filterPlaceholder: "…",
       firstFilterOption: { value: "", text: "" }
@@ -1038,7 +1245,7 @@ class DataGrid extends base_element_default {
       rowLabel: null,
       bulkActions: [],
       resizable: false,
-      autosize: true,
+      autosize: false,
       wrap: false,
       snapColumns: false,
       autoheight: true,
@@ -1866,6 +2073,15 @@ class DataGrid extends base_element_default {
     const cell = document.createElement(tag);
     cell.dataset.columnId = this.getColumnId(column);
     applyColumnDefinition(cell, column);
+    if (tag === "td") {
+      if (column.format) {
+        cell.dataset.format = column.format;
+      }
+      const align = column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align;
+      if (align) {
+        cell.dataset.align = align;
+      }
+    }
     return cell;
   }
   visibleColumns() {
@@ -2416,7 +2632,6 @@ class DataGrid extends base_element_default {
         thead?.appendChild(tr);
       }
     }
-    let totalWidth = 0;
     this.log("createColumnHeaders - columns", this.getColumns());
     for (const column of this.getColumns()) {
       if (column.attr) {
@@ -2437,19 +2652,9 @@ class DataGrid extends base_element_default {
       }
       applyColumnDefinition(th, column);
       tr.appendChild(th);
-      if (!isColumnHidden(column)) {
-        totalWidth += Number.parseInt(th.getAttribute("width") ?? "") || 0;
-      }
     }
     if (seededSample) {
       sampleTh.remove();
-    }
-    if (totalWidth < availableWidth) {
-      const visibleCols = tr.querySelectorAll("th:not([hidden],.dg-not-resizable)");
-      if (visibleCols.length) {
-        const lastCol = visibleCols[visibleCols.length - 1];
-        lastCol.removeAttribute("width");
-      }
     }
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
@@ -2491,13 +2696,20 @@ class DataGrid extends base_element_default {
     if (this.options.responsive) {
       th.setAttribute("data-responsive", String(column.responsive || ""));
     }
+    const defaults = getFormatDefaults(column.format, column.formatOptions);
     const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
-    const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0);
+    const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0, defaults?.minWidth ?? 0);
     th.dataset.minWidth = `${effectiveMin}`;
     applyColumnDefinition(th, column);
-    const w = Math.max(Number.parseInt(th.dataset.minWidth ?? ""), Number.parseInt(th.getAttribute("width") ?? ""));
-    th.setAttribute("width", String(w));
-    th.dataset.preferredWidth = `${w}`;
+    const preferredWidth = column.width || defaults?.width;
+    if (preferredWidth !== undefined && Number.isFinite(preferredWidth)) {
+      const width = Math.max(effectiveMin, preferredWidth);
+      th.setAttribute("width", String(width));
+      th.dataset.preferredWidth = String(width);
+    } else {
+      th.removeAttribute("width");
+      delete th.dataset.preferredWidth;
+    }
     if (isColumnHidden(column)) {
       th.setAttribute("hidden", "");
     }
@@ -2748,7 +2960,12 @@ class DataGrid extends base_element_default {
       applyContent(td, fragment);
       return;
     }
-    td.textContent = transformValue(value, column.transform, ctx);
+    const transformed = transformValue(value, column.transform, ctx);
+    if (column.format) {
+      applyContent(td, formatValue(transformed, column.format, column.formatOptions, ctx));
+    } else {
+      td.textContent = transformed;
+    }
   }
   paginate() {
     this.log("paginate");

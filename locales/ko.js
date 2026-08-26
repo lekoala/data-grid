@@ -22,6 +22,8 @@ const labels = {
     loading: "로딩 중…",
     areYouSure: "확실합니까?",
     networkError: "불러오기 실패",
+    booleanTrue: "예",
+    booleanFalse: "아니오",
 };
 
 DataGrid.setLabels(labels);

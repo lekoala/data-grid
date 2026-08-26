@@ -89,4 +89,4 @@ Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `pageRange`, `pageStatus`, `resultCount`,
 `selectedCount`, `selectAll`, `selectRow`, `toggleActions`, `resizeColumn`,
 `showDetails`, `hideDetails`, `showHiddenColumns`, `hideHiddenColumns`, `search`,
-`noData`, `loading`, `areYouSure`, `networkError`.
+`noData`, `loading`, `areYouSure`, `networkError`, `booleanTrue`, `booleanFalse`.

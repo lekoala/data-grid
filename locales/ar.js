@@ -22,6 +22,8 @@ const labels = {
     loading: "جارٍ التحميل…",
     areYouSure: "هل أنت متأكد؟",
     networkError: "خطأ في التحميل",
+    booleanTrue: "نعم",
+    booleanFalse: "لا",
 };
 
 DataGrid.setLabels(labels);

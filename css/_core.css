@@ -288,6 +288,19 @@ data-grid td.dg-wrap {
   overflow-wrap: anywhere;
 }
 
+/* Column alignment: set by the core from column.align or the formatter default */
+data-grid td[data-align="start"] {
+  text-align: start;
+}
+
+data-grid td[data-align="center"] {
+  text-align: center;
+}
+
+data-grid td[data-align="end"] {
+  text-align: end;
+}
+
 data-grid .dg-selectable {
   font-size: 1em;
   inline-size: var(--dg-selection-column-width);

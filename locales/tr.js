@@ -22,6 +22,8 @@ const labels = {
     loading: "Yükleniyor…",
     areYouSure: "Emin misiniz?",
     networkError: "Yükleme hatası",
+    booleanTrue: "Evet",
+    booleanFalse: "Hayır",
 };
 
 DataGrid.setLabels(labels);

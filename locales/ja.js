@@ -22,6 +22,8 @@ const labels = {
     loading: "読み込み中…",
     areYouSure: "よろしいですか？",
     networkError: "読み込みに失敗しました",
+    booleanTrue: "はい",
+    booleanFalse: "いいえ",
 };
 
 DataGrid.setLabels(labels);

@@ -96,7 +96,8 @@ declarative cell presentation; the grid owns subsequent rendering. `caption`,
 `<th data-field>` declares a column: `title` is the cell text, and
 `data-sortable`, `data-filterable`, `data-filter`, `data-responsive`,
 `data-hidden`, `data-editable`, `data-editable-type`, `data-transform`,
-`data-width` (preferred width) and `data-min-width` (never compress below)
+`data-format`, `data-align`, `data-width` (preferred width) and
+`data-min-width` (never compress below)
 map to the matching column options. `data-sort="asc"|"desc"`
 seeds the initial sort (DOM order is the priority). The host still activates
 the global capabilities — `data-sortable` on a column only opts out, it never
@@ -184,7 +185,7 @@ Some options only work if the proper plugin is loaded.
 | `responsiveStartOpen` | `Boolean`            | `false`              | Open responsive detail rows by default                       |
 | `rowDetails`          | `Function`           | -                    | Render expandable application content for a row              |
 | `rowDetailsStartOpen` | `Boolean`            | `false`              | Open row details by default                                  |
-| `autosize`            | `Boolean`            | `true`               | Compute column sizes from data                               |
+| `autosize`            | `Boolean`            | `false`              | Measure widthless columns to give them a preferred width     |
 | `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
 | `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits                          |
 | `wrap`                | `Boolean`            | `false`              | Allow data cells to wrap over multiple lines                 |
@@ -362,13 +363,17 @@ response protection).
 | `field`                                 | `String`             | the key in the data                                                   |
 | `title`                                 | `String`             | header title (defaults to `field`)                                    |
 | `id`                                    | `String`             | stable identifier (defaults to `field`)                               |
-| `width`                                 | `Number`             | column width (auto otherwise)                                         |
+| `width`                                 | `Number`             | preferred width (the column stays flexible without one)               |
 | `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                         |
 | `attr`                                  | `String`             | set a row attribute instead of rendering                              |
 | `hidden`                                | `Boolean`            | hide the column                                                       |
 | `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                    |
 | `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                  |
 | `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value` |
+| `minWidth`                              | `Number`             | never compress below this width                                       |
+| `align`                                 | `String`             | cell alignment: `start` / `center` / `end`                            |
+| `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`         |
+| `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`               |
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                |
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                             |
 | `responsive`                            | `Number`             | responsive priority (`0` disables)                                    |
@@ -377,6 +382,69 @@ response protection).
 | `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
 | `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
 | `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                  |
+
+Column sizing follows three notions: `minWidth` is a floor the column is never
+compressed below, `width` is a preferred width, and a column without a preferred
+width stays flexible and absorbs the remaining space. Formatter defaults
+contribute a floor — and a preferred width for predictable formats — unless the
+column sets its own. With `autosize`, widthless text columns are measured once
+at render and pinned to a computed width instead of staying flexible.
+
+### Formatting
+
+A column can format its cell values with a built-in formatter. The formatter
+owns the representation, the column owns the sizing: `format` and `formatOptions`
+are rendering concerns, while `align`, `minWidth` and `width` stay generic column
+geometry (a formatter only contributes safe defaults for them: an alignment, a
+floor, and a preferred width for predictable formats — `boolean`, `date`,
+`datetime` and percent numbers).
+
+| Format     | Output                      | Intl options                 |
+|------------|-----------------------------|------------------------------|
+| `boolean`  | accessible `<span>` `✓ / –` | none                         |
+| `date`     | `<time datetime>`           | `Intl.DateTimeFormatOptions` |
+| `datetime` | `<time datetime>`           | `Intl.DateTimeFormatOptions` |
+| `number`   | formatted text              | `Intl.NumberFormatOptions`   |
+
+```js
+{
+    field: "created",
+    format: "date",
+}
+
+{
+    field: "price",
+    format: "number",
+    formatOptions: {
+        style: "currency",
+        currency: "EUR",
+    },
+}
+
+{
+    field: "active",
+    format: "boolean",
+}
+```
+
+`format: "date"` is a calendar date without a time zone: it accepts `Date`,
+timestamp or a validated `YYYY-MM-DD`, and rejects time / `timeZone` options.
+`format: "datetime"` is an instant: `Date`, timestamp or an ISO datetime string
+with a time zone (`2026-08-26T08:30:00Z`, `2026-08-26T10:30:00+02:00`). The
+locale comes from the closest `lang` attribute (the grid itself included),
+falling back to the document element. Custom DOM rendering stays in `renderCell`,
+which always takes precedence over `format`.
+
+`formatOptions` are passed to Intl after applying the formatter defaults and
+convenience inferences: `{ currency }` / `{ unit }` imply `style`, and a date
+`{ style }` maps to `dateStyle` / `timeStyle`. When granular date options
+(`year`, `month`, ...) are present, no default `dateStyle` / `timeStyle` is
+injected. An invalid Intl configuration throws visibly, so a misconfigured
+column is never silently hidden.
+
+```text
+explicit column option > formatter default > normal grid behavior
+```
 
 ## Action
 

@@ -22,6 +22,8 @@ const labels = {
     loading: "Chargement…",
     areYouSure: "Êtes-vous sûr ?",
     networkError: "Erreur lors du chargement",
+    booleanTrue: "Oui",
+    booleanFalse: "Non",
 };
 
 DataGrid.setLabels(labels);

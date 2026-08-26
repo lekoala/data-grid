@@ -22,6 +22,8 @@ const labels = {
     loading: "加载中…",
     areYouSure: "确定吗？",
     networkError: "加载失败",
+    booleanTrue: "是",
+    booleanFalse: "否",
 };
 
 DataGrid.setLabels(labels);
