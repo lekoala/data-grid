@@ -1,6 +1,7 @@
 import { start } from "../../demo/server.js";
 
 export const IS_WINDOWS = process.platform === "win32";
+export const IS_CHROME_BACKEND = process.platform === "linux";
 
 let server;
 let base;
@@ -36,7 +37,7 @@ export function stopServer() {
  * @returns {Bun.WebView}
  */
 export function view() {
-    if (process.platform === "linux") {
+    if (IS_CHROME_BACKEND) {
         return new Bun.WebView({
             width: 1280,
             height: 3000,

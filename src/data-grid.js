@@ -5,13 +5,18 @@
 
 import BaseElement from "./core/base-element.js";
 import { ArrayDataSource, FetchDataSource } from "./data-source.js";
+import {
+    formatDateFilterQuery,
+    formatTextFilterQuery,
+    parseDateFilterQuery,
+    parseTextFilterQuery,
+} from "./filter-query.js";
 import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
 import { parseBooleanAttribute, parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
-import { formatDateFilterQuery, formatTextFilterQuery, parseDateFilterQuery, parseTextFilterQuery } from "./filter-query.js";
 import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import {
@@ -3584,9 +3589,10 @@ class DataGrid extends BaseElement {
                     /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery(filterState);
                 } else if (filter.dataset.filterMode === "number") {
                     const numericValue = Number(filterState.value);
-                    const value = filter.dataset.percent === "true" && Number.isFinite(numericValue)
-                        ? numericValue * 100
-                        : filterState.value;
+                    const value =
+                        filter.dataset.percent === "true" && Number.isFinite(numericValue)
+                            ? numericValue * 100
+                            : filterState.value;
                     /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery({
                         operator: filterState.operator,
                         value,

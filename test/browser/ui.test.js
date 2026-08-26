@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { ensureServer, IS_WINDOWS, read, stopServer, view, waitFor } from "./helpers.js";
+import { ensureServer, IS_CHROME_BACKEND, IS_WINDOWS, read, stopServer, view, waitFor } from "./helpers.js";
 
 const FIXTURE = "test/browser/fixtures/grid.html";
 const TIMEOUT = 15000;
@@ -43,6 +43,7 @@ test.skipIf(IS_WINDOWS)(
         await using v = view();
         await v.navigate(`${ensureServer()}/demo/declarative.html`);
         await waitFor(v, "document.querySelector('#declarative-actions-grid tbody [data-action=delete]')");
+        await v.evaluate("new Promise((resolve) => requestAnimationFrame(() => resolve()))");
 
         const geometry = JSON.parse(
             await read(
@@ -350,7 +351,7 @@ test.skipIf(IS_WINDOWS)(
     TIMEOUT,
 );
 
-test.skipIf(IS_WINDOWS)(
+test.skipIf(IS_WINDOWS || !IS_CHROME_BACKEND)(
     "context menu is a native popover positioned at the pointer",
     async () => {
         await using v = view();

@@ -75,9 +75,7 @@ test("applyFilters text operators are case- and accent-insensitive", () => {
     expect(applyFilters(rows, { name: { operator: "startsWith", value: "elodie" } })).toEqual([
         { name: "Élodie Martin" },
     ]);
-    expect(applyFilters(rows, { name: { operator: "endsWith", value: "strom" } })).toEqual([
-        { name: "Ångström" },
-    ]);
+    expect(applyFilters(rows, { name: { operator: "endsWith", value: "strom" } })).toEqual([{ name: "Ångström" }]);
     expect(
         applyFilters(rows, { name: { operator: "in", value: ["cafe central", "elodie martin"] } }).map((r) => r.name),
     ).toEqual(["Café Central", "Élodie Martin"]);

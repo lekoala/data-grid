@@ -1,7 +1,12 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
-import { formatDateFilterQuery, formatTextFilterQuery, parseDateFilterQuery, parseTextFilterQuery } from "../src/filter-query.js";
 import { ArrayDataSource, applyFilters, encodeSearchParams } from "../src/data-source.js";
+import {
+    formatDateFilterQuery,
+    formatTextFilterQuery,
+    parseDateFilterQuery,
+    parseTextFilterQuery,
+} from "../src/filter-query.js";
 import { change, input } from "./helpers.js";
 
 async function makeReadyGrid(opts = {}, data = null) {
@@ -339,11 +344,14 @@ test("typing several characters triggers a single debounced filter", async () =>
 
 test("text filter expressions flow end to end through the grid", async () => {
     const data = [{ age: 18 }, { age: 30 }, { age: 31 }, { age: 45 }];
-    const inst = await makeReadyGrid({
-        columns: [{ field: "age", filterType: "text" }],
-        filterable: true,
-        filterDelay: 20,
-    }, data);
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "age", filterType: "text" }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        data,
+    );
 
     typeFilter(inst, "age", ">30");
     await sleep(80);
@@ -958,12 +966,7 @@ test("date filters treat partial dates as exact periods", async () => {
             filterable: true,
             filterDelay: 20,
         },
-        [
-            { created: "2024-12-31" },
-            { created: "2025-01-01" },
-            { created: "2025-08-26" },
-            { created: "2026-08-27" },
-        ],
+        [{ created: "2024-12-31" }, { created: "2025-01-01" }, { created: "2025-08-26" }, { created: "2026-08-27" }],
     );
     const el = inst.querySelector('.dg-head-filters input[data-name="created"]');
     // The placeholder communicates the canonical date contract
