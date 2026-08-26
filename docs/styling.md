@@ -36,7 +36,7 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-header-padding-y`   | `8px`              | header vertical padding                  |
 | `--dg-control-height`     | `32px`             | filter/footer control height             |
 | `--dg-selection-column-width` | `40px`        | selection column width                   |
-| `--dg-actions-column-width`   | `40px`        | collapsed actions column width           |
+| `--dg-actions-column-width`   | `48px`        | collapsed actions column width           |
 | `--dg-radius`             | `8px`              | table / control / menu radius            |
 
 ## Density

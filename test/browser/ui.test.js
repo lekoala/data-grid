@@ -38,6 +38,36 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "declarative inline actions do not create horizontal overflow",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/demo/declarative.html`);
+        await waitFor(v, "document.querySelector('#declarative-actions-grid tbody [data-action=delete]')");
+
+        const geometry = JSON.parse(
+            await read(
+                v,
+                `JSON.stringify((() => {
+                    const grid = document.querySelector('#declarative-actions-grid');
+                    const scroll = grid.querySelector('.dg-scroll');
+                    const cell = grid.querySelector('tbody td[data-column-id="$actions"]');
+                    const lastAction = cell.querySelector('[data-action="delete"]');
+                    return {
+                        scrollWidth: scroll.scrollWidth,
+                        clientWidth: scroll.clientWidth,
+                        actionRight: lastAction.getBoundingClientRect().right,
+                        cellRight: cell.getBoundingClientRect().right,
+                    };
+                })())`,
+            ),
+        );
+        expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth + 1);
+        expect(geometry.actionRight).toBeLessThanOrEqual(geometry.cellRight + 1);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "keyboard selection preserves checkbox focus",
     async () => {
         await using v = view();

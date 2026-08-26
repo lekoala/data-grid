@@ -60,7 +60,7 @@ data-grid {
   --dg-control-padding-inline: var(--dg-space-2);
   --dg-control-height: 32px;
   --dg-selection-column-width: 40px;
-  --dg-actions-column-width: 40px;
+  --dg-actions-column-width: 48px;
   --dg-radius: 8px;
 
   /* internal tokens */
@@ -695,8 +695,8 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
 
 data-grid thead tr.dg-head-filters th.dg-selectable,
 data-grid thead tr.dg-head-filters th.dg-actions {
-  padding-left: var(--dg-space-1);
-  padding-right: var(--dg-space-1);
+  padding-left: var(--dg-space-2);
+  padding-right: var(--dg-space-2);
 }
 
 data-grid tbody td.dg-editable-col {

@@ -2,11 +2,11 @@ data-grid .dg-actions {
   box-sizing: border-box;
   text-overflow: initial;
   overflow: visible;
-  inline-size: var(--dg-actions-column-width);
-  min-inline-size: var(--dg-actions-column-width);
-  max-inline-size: var(--dg-actions-column-width);
-  padding-left: var(--dg-space-1);
-  padding-right: var(--dg-space-1);
+  inline-size: var(--dg-actions-effective-width, var(--dg-actions-column-width));
+  min-inline-size: var(--dg-actions-effective-width, var(--dg-actions-column-width));
+  max-inline-size: var(--dg-actions-effective-width, var(--dg-actions-column-width));
+  padding-left: var(--dg-space-2);
+  padding-right: var(--dg-space-2);
   white-space: nowrap !important;
 }
 
@@ -56,26 +56,9 @@ data-grid .dg-actions .dg-actions-toggle {
   width: 28px;
 }
 
-data-grid .dg-actions.dg-actions-1 {
-  max-inline-size: none;
-  min-width: var(--dg-actions-column-width);
-  width: auto;
-}
-
 data-grid .dg-actions.dg-actions-2 button,
 data-grid .dg-actions.dg-actions-2 a {
   min-width: 32px;
-}
-
-data-grid .dg-actions.dg-actions-2 {
-  max-inline-size: none;
-  min-width: 68px;
-  width: auto;
-}
-
-data-grid .dg-actions.dg-actions-inline {
-  max-inline-size: none;
-  width: auto;
 }
 
 data-grid .dg-actions.dg-actions-more button,

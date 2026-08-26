@@ -364,6 +364,7 @@ test("a td data-actions cell becomes row.$actions without shifting data cells", 
 
     // `<th data-actions>` activates the capability and renders the column.
     expect(inst.options.rowActions).toBe(true);
+    expect(inst.querySelector('thead th[data-column-id="$actions"]').getAttribute("width")).toBe("148");
     const cell = inst.querySelector('tbody td[data-column-id="$actions"]');
     expect(cell.querySelector('a[data-action="view"]').getAttribute("href")).toBe("/users/1");
     expect(cell.querySelector('button[data-action="delete"]')).toBeTruthy();

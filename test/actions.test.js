@@ -579,6 +579,7 @@ test("the actions column aligns header, filter placeholder, and body to the inli
     expect(inst.querySelector(`thead tr.dg-head-columns ${selector}`).dataset.align).toBe("end");
     expect(inst.querySelector(`thead tr.dg-head-filters ${selector}`).dataset.align).toBe("end");
     expect(inst.querySelector(`tbody ${selector}`).dataset.align).toBe("end");
+    expect(inst.querySelector(`thead tr.dg-head-columns ${selector}`).getAttribute("width")).toBe("80");
     document.body.removeChild(inst);
 });
 
@@ -600,10 +601,13 @@ test("the actions column shares one mode across header and body", async () => {
     );
 
     // Two inline actions at most: the whole column becomes dg-actions-2, so the
-    // header width matches the body cells instead of collapsing to ~40px.
+    // header width matches the body cells instead of collapsing to ~48px.
     const headerTh = inst.querySelector('thead tr.dg-head-columns th[data-column-id="$actions"]');
     expect(headerTh.classList.contains("dg-actions-2")).toBe(true);
     expect(headerTh.classList.contains("dg-actions-more")).toBe(false);
+    expect(headerTh.getAttribute("width")).toBe("148");
+    expect(headerTh.dataset.minWidth).toBe("148");
+    expect(headerTh.dataset.preferredWidth).toBe("148");
     const bodyCells = inst.querySelectorAll('tbody td[data-column-id="$actions"]');
     expect(bodyCells.length).toBeGreaterThan(0);
     for (const cell of bodyCells) {
@@ -622,6 +626,8 @@ test("a row needing more than two inline actions collapses the whole column", as
 
     const headerTh = inst.querySelector('thead tr.dg-head-columns th[data-column-id="$actions"]');
     expect(headerTh.classList.contains("dg-actions-more")).toBe(true);
+    expect(headerTh.getAttribute("width")).toBe("48");
+    expect(headerTh.dataset.minWidth).toBe("48");
     const bodyCells = inst.querySelectorAll('tbody td[data-column-id="$actions"]');
     for (const cell of bodyCells) {
         expect(cell.classList.contains("dg-actions-more")).toBe(true);
@@ -645,6 +651,7 @@ test("actions stay inline when native floating UI is unavailable", async () => {
 
         const cell = inst.tbody.querySelector('td[data-column-id="$actions"]');
         expect(cell.classList.contains("dg-actions-inline")).toBe(true);
+        expect(cell.getAttribute("width")).toBe("216");
         expect(cell.querySelector(".dg-actions-toggle")).toBeNull();
         expect(cell.querySelectorAll("[data-action]")).toHaveLength(3);
         expect(inst.querySelector(".dg-actions-menu")).toBeNull();

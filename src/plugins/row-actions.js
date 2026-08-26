@@ -6,6 +6,24 @@ import interpolate from "../utils/interpolate.js";
 import { supportsPopoverAnchor } from "../utils/popover.js";
 import randstr from "../utils/randstr.js";
 
+const COLLAPSED_ACTIONS_WIDTH = 48;
+const INLINE_ACTION_WIDTH = 64;
+const INLINE_ACTION_GAP = 4;
+const ACTIONS_CELL_PADDING = 16;
+
+/**
+ * Stable sizing heuristic for inline action controls: cell padding, one
+ * compact control width per action, and the gap between controls.
+ * @param {Number} count
+ * @returns {Number}
+ */
+function inlineActionsWidth(count) {
+    if (count <= 0) {
+        return COLLAPSED_ACTIONS_WIDTH;
+    }
+    return ACTIONS_CELL_PADDING + count * INLINE_ACTION_WIDTH + (count - 1) * INLINE_ACTION_GAP;
+}
+
 /**
  * Add actions on rows
  */
@@ -91,6 +109,8 @@ class RowActions extends BasePlugin {
             align: "end",
             sortable: false,
             title: "",
+            width: COLLAPSED_ACTIONS_WIDTH,
+            minWidth: COLLAPSED_ACTIONS_WIDTH,
             class: "dg-actions",
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: () => this.createFilterCell(),
@@ -164,10 +184,24 @@ class RowActions extends BasePlugin {
         } else if (maxCount > 0 && maxCount <= 2) {
             mode = `dg-actions-${maxCount}`;
         }
-        const cells = grid.querySelectorAll('[data-column-id="$actions"]');
+        const width = mode === "dg-actions-more" ? COLLAPSED_ACTIONS_WIDTH : inlineActionsWidth(maxCount);
+        const column = grid.getColumnById("$actions");
+        if (column) {
+            column.width = width;
+            column.minWidth = width;
+        }
+        const cells = /** @type {NodeListOf<HTMLTableCellElement>} */ (
+            grid.querySelectorAll('[data-column-id="$actions"]')
+        );
         for (const cell of cells) {
             cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
             cell.classList.add(mode);
+            cell.style.setProperty("--dg-actions-effective-width", `${width}px`);
+            cell.setAttribute("width", String(width));
+            if (cell.matches("thead tr.dg-head-columns th")) {
+                cell.dataset.minWidth = String(width);
+                cell.dataset.preferredWidth = String(width);
+            }
         }
     }
 
