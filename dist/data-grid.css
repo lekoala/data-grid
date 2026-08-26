@@ -880,11 +880,11 @@ data-grid th.dg-sortable > .dg-sort, data-grid th.dg-sortable > .dg-sort:hover, 
   margin: 0;
 }
 
-data-grid th[data-align="center"] > .dg-sort {
+data-grid th[data-align="center"] > .dg-sort, data-grid th[data-align="center"] > .dg-sort:hover, data-grid th[data-align="center"] > .dg-sort:active, data-grid th[data-align="center"] > .dg-sort:focus {
   justify-content: center;
 }
 
-data-grid th[data-align="end"] > .dg-sort {
+data-grid th[data-align="end"] > .dg-sort, data-grid th[data-align="end"] > .dg-sort:hover, data-grid th[data-align="end"] > .dg-sort:active, data-grid th[data-align="end"] > .dg-sort:focus {
   justify-content: flex-end;
 }
 
