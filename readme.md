@@ -368,7 +368,7 @@ response protection).
 | `hidden`                                | `Boolean`            | hide the column                                      |
 | `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)   |
 | `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid) |
-| `transform`                             | `String`             | `uppercase` / `lowercase`                            |
+| `transform`                             | `String \| Function` | built-in `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value` |
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)               |
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`            |
 | `responsive`                            | `Number`             | responsive priority (`0` disables)                   |

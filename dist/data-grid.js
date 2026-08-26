@@ -507,6 +507,22 @@ function createSpanningRow(grid, { id, className } = {}) {
   return { row, cell };
 }
 
+// src/utils/transformValue.js
+var transforms = {
+  uppercase: (value) => String(value).toUpperCase(),
+  lowercase: (value) => String(value).toLowerCase(),
+  array: (value) => Array.isArray(value) ? value.join(", ") : value
+};
+function transformValue(value, transform, ctx) {
+  if (typeof transform === "function") {
+    return transform(value, ctx);
+  }
+  if (typeof transform === "string" && transforms[transform]) {
+    return transforms[transform](value, ctx);
+  }
+  return value;
+}
+
 // src/data-grid.js
 var DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
 function declarativeCells(row) {
@@ -989,7 +1005,7 @@ class DataGrid extends base_element_default {
       responsive: 1,
       responsiveHidden: false,
       frozen: null,
-      transform: "",
+      transform: null,
       filterType: "text",
       filterPlaceholder: "…",
       firstFilterOption: { value: "", text: "" }
@@ -2722,9 +2738,9 @@ class DataGrid extends base_element_default {
       td.dataset.field = field;
       td.dataset.rowIndex = `${i}`;
     }
-    const v = item[field] ?? "";
+    const value = item[field] ?? "";
     const meta = declarativeCells(item)?.[field];
-    if (meta?.content.length && Object.is(v, meta.value)) {
+    if (meta?.content.length && Object.is(value, meta.value)) {
       const fragment = document.createDocumentFragment();
       for (const node of meta.content) {
         fragment.appendChild(node.cloneNode(true));
@@ -2732,19 +2748,7 @@ class DataGrid extends base_element_default {
       applyContent(td, fragment);
       return;
     }
-    let tv;
-    switch (column.transform) {
-      case "uppercase":
-        tv = String(v).toUpperCase();
-        break;
-      case "lowercase":
-        tv = String(v).toLowerCase();
-        break;
-      default:
-        tv = v;
-        break;
-    }
-    td.textContent = tv;
+    td.textContent = transformValue(value, column.transform, ctx);
   }
   paginate() {
     this.log("paginate");

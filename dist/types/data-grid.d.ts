@@ -81,9 +81,9 @@ export type Column = {
      */
     wrap?: boolean;
     /**
-     * - custom value transformation
+     * - transforms the value displayed by the default cell renderer. Use renderCell for custom DOM/content rendering.
      */
-    transform?: string;
+    transform?: "uppercase" | "lowercase" | "array" | ValueTransform | null;
     /**
      * - replace with input (EditableColumn module)
      */
@@ -144,6 +144,7 @@ export type CellContext = {
     availableWidth?: number;
     colMaxWidth?: number;
 };
+export type ValueTransform = (value: any, ctx: CellContext) => any;
 export type ActionContext = {
     grid: DataGrid;
     action: Action;

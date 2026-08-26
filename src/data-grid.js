@@ -14,6 +14,7 @@ import getTextWidth from "./utils/getTextWidth.js";
 import normalizeData from "./utils/normalizeData.js";
 import randstr from "./utils/randstr.js";
 import { createSpanningRow } from "./utils/spanningRow.js";
+import transformValue from "./utils/transformValue.js";
 
 /** @typedef {import("./data-source.js").DataSource} DataSource */
 /** @typedef {import("./data-source.js").QueryState} QueryState */
@@ -83,7 +84,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Boolean} [sortable] - disable sorting for this column (defaults to the grid-wide `sortable`)
  * @property {Boolean} [filterable] - disable filtering for this column (defaults to the grid-wide `filterable`)
  * @property {Boolean} [wrap] - allow this column's data cells to wrap (defaults to the grid-wide `wrap`)
- * @property {String} [transform] - custom value transformation
+ * @property {"uppercase"|"lowercase"|"array"|ValueTransform|null} [transform] - transforms the value displayed by the default cell renderer. Use renderCell for custom DOM/content rendering.
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
  * @property {String} [editableType] - type of input (EditableColumn module)
  * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
@@ -111,6 +112,12 @@ function setDeclarativeCell(row, field, meta) {
  * @property {HTMLTableCellElement} [sampleTh]
  * @property {Number} [availableWidth]
  * @property {Number} [colMaxWidth]
+ */
+
+/**
+ * Custom cell value transformer: `(value, ctx) => *`. Returns the value to
+ * display in the default cell renderer.
+ * @typedef {(value: *, ctx: CellContext) => *} ValueTransform
  */
 
 /**
@@ -423,7 +430,7 @@ function parseDeclarativeTable(table) {
             column.editableType = th.dataset.editableType;
         }
         if (th.dataset.transform) {
-            column.transform = th.dataset.transform;
+            column.transform = /** @type {NonNullable<Column["transform"]>} */ (th.dataset.transform);
         }
         if (th.dataset.width !== undefined) {
             const width = Number(th.dataset.width);
@@ -993,7 +1000,7 @@ class DataGrid extends BaseElement {
             responsive: 1,
             responsiveHidden: false,
             frozen: null,
-            transform: "",
+            transform: null,
             filterType: "text",
             filterPlaceholder: "…",
             firstFilterOption: { value: "", text: "" },
@@ -3632,13 +3639,13 @@ class DataGrid extends BaseElement {
             td.dataset.rowIndex = `${i}`;
         }
 
-        const v = item[field] ?? "";
+        const value = item[field] ?? "";
 
         // Declarative blueprint: preserve the authored presentation while the
         // current value still matches the value it was authored for. As soon as
         // the value changes programmatically, fall back to plain text rendering.
         const meta = declarativeCells(item)?.[field];
-        if (meta?.content.length && Object.is(v, meta.value)) {
+        if (meta?.content.length && Object.is(value, meta.value)) {
             const fragment = document.createDocumentFragment();
             for (const node of meta.content) {
                 fragment.appendChild(node.cloneNode(true));
@@ -3647,20 +3654,7 @@ class DataGrid extends BaseElement {
             return;
         }
 
-        let tv;
-        // TODO: make this modular
-        switch (column.transform) {
-            case "uppercase":
-                tv = String(v).toUpperCase();
-                break;
-            case "lowercase":
-                tv = String(v).toLowerCase();
-                break;
-            default:
-                tv = v;
-                break;
-        }
-        td.textContent = tv;
+        td.textContent = transformValue(value, column.transform, ctx);
     }
 
     paginate() {
