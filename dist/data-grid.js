@@ -618,86 +618,6 @@ class ArrayDataSource {
   }
 }
 
-// src/utils/addSelectOption.js
-function addSelectOption(el, value, label, checked = false) {
-  const opt = document.createElement("option");
-  opt.value = `${value}`;
-  if (checked) {
-    opt.selected = true;
-  }
-  opt.label = label;
-  el.appendChild(opt);
-}
-
-// src/utils/applyContent.js
-function applyContent(el, content) {
-  if (content === undefined || content === null) {
-    return;
-  }
-  if (content instanceof Node) {
-    el.appendChild(content);
-    return;
-  }
-  if (typeof content === "object" && content.html !== undefined) {
-    el.innerHTML = content.html;
-    return;
-  }
-  el.textContent = content;
-}
-
-// src/utils/attributes.js
-function parseBooleanAttribute(value) {
-  return value === "" || value === "true" || value === "1";
-}
-function parseIntegerListAttribute(value) {
-  return value.split(",").map((item) => Number.parseInt(item, 10)).filter((item) => Number.isFinite(item));
-}
-function parseEnumAttribute(value, allowed, fallback) {
-  return allowed.includes(value) ? value : fallback;
-}
-
-// src/utils/columnWidth.js
-var MIN_COLUMN_WIDTH = 40;
-function getColumnMinWidth(th) {
-  const renderedMin = Number.parseFloat(th.dataset.minWidth ?? "");
-  return Math.max(MIN_COLUMN_WIDTH, Number.isFinite(renderedMin) ? renderedMin : 0);
-}
-
-// src/utils/debounce.js
-function debounce(handler, timeout = 300) {
-  let timer = null;
-  let lastArgs = null;
-  const fn = (...args) => {
-    lastArgs = args;
-    if (timer !== null) {
-      clearTimeout(timer);
-    }
-    timer = setTimeout(() => {
-      timer = null;
-      lastArgs = null;
-      handler(...args);
-    }, timeout);
-  };
-  fn.cancel = () => {
-    if (timer !== null) {
-      clearTimeout(timer);
-      timer = null;
-    }
-    lastArgs = null;
-  };
-  fn.flush = () => {
-    if (timer === null) {
-      return;
-    }
-    clearTimeout(timer);
-    timer = null;
-    const args = lastArgs ?? [];
-    lastArgs = null;
-    handler(...args);
-  };
-  return fn;
-}
-
 // src/filter-query.js
 var TEXT_FILTER_OPERATORS = [
   [">=", "gte"],
@@ -989,6 +909,86 @@ function formatDateFilterQuery(filter) {
     default:
       return text;
   }
+}
+
+// src/utils/addSelectOption.js
+function addSelectOption(el, value, label, checked = false) {
+  const opt = document.createElement("option");
+  opt.value = `${value}`;
+  if (checked) {
+    opt.selected = true;
+  }
+  opt.label = label;
+  el.appendChild(opt);
+}
+
+// src/utils/applyContent.js
+function applyContent(el, content) {
+  if (content === undefined || content === null) {
+    return;
+  }
+  if (content instanceof Node) {
+    el.appendChild(content);
+    return;
+  }
+  if (typeof content === "object" && content.html !== undefined) {
+    el.innerHTML = content.html;
+    return;
+  }
+  el.textContent = content;
+}
+
+// src/utils/attributes.js
+function parseBooleanAttribute(value) {
+  return value === "" || value === "true" || value === "1";
+}
+function parseIntegerListAttribute(value) {
+  return value.split(",").map((item) => Number.parseInt(item, 10)).filter((item) => Number.isFinite(item));
+}
+function parseEnumAttribute(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+// src/utils/columnWidth.js
+var MIN_COLUMN_WIDTH = 40;
+function getColumnMinWidth(th) {
+  const renderedMin = Number.parseFloat(th.dataset.minWidth ?? "");
+  return Math.max(MIN_COLUMN_WIDTH, Number.isFinite(renderedMin) ? renderedMin : 0);
+}
+
+// src/utils/debounce.js
+function debounce(handler, timeout = 300) {
+  let timer = null;
+  let lastArgs = null;
+  const fn = (...args) => {
+    lastArgs = args;
+    if (timer !== null) {
+      clearTimeout(timer);
+    }
+    timer = setTimeout(() => {
+      timer = null;
+      lastArgs = null;
+      handler(...args);
+    }, timeout);
+  };
+  fn.cancel = () => {
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+    lastArgs = null;
+  };
+  fn.flush = () => {
+    if (timer === null) {
+      return;
+    }
+    clearTimeout(timer);
+    timer = null;
+    const args = lastArgs ?? [];
+    lastArgs = null;
+    handler(...args);
+  };
+  return fn;
 }
 
 // src/utils/getTextWidth.js
@@ -3758,16 +3758,7 @@ class ContextMenu extends base_plugin_default {
     const y = event.clientY;
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
-    const showMenu = () => {
-      if (!menu.matches(":popover-open")) {
-        menu.showPopover();
-      }
-    };
-    if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(showMenu);
-    } else {
-      setTimeout(showMenu, 0);
-    }
+    menu.showPopover();
     const rect = menu.getBoundingClientRect();
     const viewport = menu.ownerDocument.documentElement;
     menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
