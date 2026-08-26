@@ -17,12 +17,6 @@ export declare function updateMultiSelectSummary(root: HTMLElement): void;
  */
 export declare function createMultiSelect(column: import("../data-grid.js").Column, options: Array<import("../data-source.js").FilterOption>, relatedTh: HTMLTableCellElement): HTMLDivElement;
 /**
- * Whether the checkbox panel is currently shown.
- * @param {HTMLElement} root
- * @returns {Boolean}
- */
-export declare function isMultiSelectOpen(root: HTMLElement): boolean;
-/**
  * Checked values, in DOM order.
  * @param {HTMLElement} root
  * @returns {String[]}

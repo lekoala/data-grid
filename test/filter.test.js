@@ -341,22 +341,13 @@ test("filterMultiple renders a checkbox panel emitting the in operator", async (
     const panel = /** @type {HTMLUListElement} */ (root.querySelector(".dg-multiselect-panel"));
     const trigger = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-trigger"));
     const summary = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-summary"));
-    expect(panel.hidden).toBe(true);
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-
-    trigger.click();
-    expect(panel.hidden).toBe(false);
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    // A click outside the control closes it again
-    document.body.dispatchEvent(new Event("click", { bubbles: true }));
-    expect(panel.hidden).toBe(true);
-
-    trigger.click();
-    panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(panel.hidden).toBe(true);
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    // An explicit dismissal restores focus to the trigger
-    expect(document.activeElement).toBe(trigger);
+    expect(panel.getAttribute("popover")).toBe("auto");
+    expect(trigger.getAttribute("popovertarget")).toBe(panel.id);
+    expect(trigger.getAttribute("aria-controls")).toBe(panel.id);
+    expect(trigger.style.getPropertyValue("anchor-name")).toBe(`--${panel.id}`);
+    expect(panel.style.getPropertyValue("position-anchor")).toBe(`--${panel.id}`);
+    // The native invoker relationship owns the expanded state.
+    expect(trigger.hasAttribute("aria-expanded")).toBe(false);
 
     const before = count();
     boxes[0].checked = true;
@@ -381,6 +372,44 @@ test("filterMultiple renders a checkbox panel emitting the in operator", async (
     await sleep(30);
     expect(inst.rows).toHaveLength(3);
     document.body.removeChild(inst);
+});
+
+test("filterMultiple falls back to a single select without native floating UI", async () => {
+    const popoverDescriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "popover");
+    delete HTMLElement.prototype.popover;
+    try {
+        const inst = await makeReadyGrid(
+            {
+                columns: [
+                    {
+                        field: "country",
+                        filterType: "select",
+                        filterMultiple: true,
+                        filterList: [
+                            { value: "", text: "All" },
+                            { value: "BE", text: "Belgium" },
+                            { value: "FR", text: "France" },
+                        ],
+                    },
+                ],
+                filterable: true,
+            },
+            [{ country: "BE" }, { country: "FR" }],
+        );
+
+        const select = /** @type {HTMLSelectElement} */ (inst.querySelector('select[data-name="country"]'));
+        expect(select).toBeTruthy();
+        expect(inst.querySelector(".dg-multiselect")).toBeNull();
+
+        select.value = "FR";
+        change(select);
+        expect(inst.query.filters.country).toEqual({ operator: "eq", value: "FR" });
+        document.body.removeChild(inst);
+    } finally {
+        if (popoverDescriptor) {
+            Object.defineProperty(HTMLElement.prototype, "popover", popoverDescriptor);
+        }
+    }
 });
 
 test("the closed-state summary joins labels up to two then counts the rest", async () => {
@@ -465,7 +494,7 @@ test("the empty selection shows the firstFilterOption label when it has one", as
     document.body.removeChild(inst);
 });
 
-test("a rebuilt filter row closes the open panel and drops its listeners", async () => {
+test("a rebuilt filter row creates a fresh valid popover target pair", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [
@@ -485,23 +514,17 @@ test("a rebuilt filter row closes the open panel and drops its listeners", async
     );
 
     const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
-    /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-trigger")).click();
     const panel = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-panel"));
-    expect(panel.hidden).toBe(false);
 
     // A rerender rebuilds the whole table chrome including the filter row
     await inst.renderTable();
     const nextRoot = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
     expect(nextRoot).not.toBe(root);
     const nextPanel = /** @type {HTMLElement} */ (nextRoot.querySelector(".dg-multiselect-panel"));
-    expect(nextPanel.hidden).toBe(true);
-
-    // The stale document listener is gone: an outside click is a no-op and
-    // the fresh panel can be opened again
-    document.body.dispatchEvent(new Event("click", { bubbles: true }));
-    expect(nextPanel.hidden).toBe(true);
-    /** @type {HTMLElement} */ (nextRoot.querySelector(".dg-multiselect-trigger")).click();
-    expect(nextPanel.hidden).toBe(false);
+    const nextTrigger = /** @type {HTMLElement} */ (nextRoot.querySelector(".dg-multiselect-trigger"));
+    expect(nextPanel.getAttribute("popover")).toBe("auto");
+    expect(nextTrigger.getAttribute("popovertarget")).toBe(nextPanel.id);
+    expect(nextTrigger.getAttribute("popovertarget")).not.toBe(panel.id);
     document.body.removeChild(inst);
 });
 

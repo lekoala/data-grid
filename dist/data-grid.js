@@ -688,36 +688,6 @@ function getTextWidth(text, el = document.body, withPadding = false) {
   return Math.floor(metrics.width) + padding;
 }
 
-// src/utils/menu.js
-function openMenu({ root, trigger = null, panel }) {
-  const doc = panel.ownerDocument;
-  function close(restoreFocus) {
-    doc.removeEventListener("click", onDocClick);
-    doc.removeEventListener("keydown", onDocKeydown);
-    panel.hidden = true;
-    trigger?.setAttribute("aria-expanded", "false");
-    if (restoreFocus && trigger?.isConnected) {
-      trigger.focus();
-    }
-  }
-  function onDocClick(ev) {
-    if (!root.contains(ev.target)) {
-      close(false);
-    }
-  }
-  function onDocKeydown(ev) {
-    if (ev.key === "Escape") {
-      ev.preventDefault();
-      close(true);
-    }
-  }
-  panel.hidden = false;
-  trigger?.setAttribute("aria-expanded", "true");
-  doc.addEventListener("click", onDocClick);
-  doc.addEventListener("keydown", onDocKeydown);
-  return () => close(false);
-}
-
 // src/utils/randstr.js
 function randstr(prefix) {
   return Math.random().toString(36).replace("0.", prefix || "");
@@ -759,8 +729,10 @@ function createMultiSelect(column, options, relatedTh) {
   const trigger = doc.createElement("button");
   trigger.type = "button";
   trigger.className = "dg-multiselect-trigger";
-  trigger.setAttribute("aria-expanded", "false");
   const panelId = randstr("dg-multiselect-");
+  trigger.setAttribute("popovertarget", panelId);
+  const anchorName = `--${panelId}`;
+  trigger.style.setProperty("anchor-name", anchorName);
   trigger.setAttribute("aria-controls", panelId);
   const headerId = relatedTh.getAttribute("id");
   if (headerId) {
@@ -772,7 +744,8 @@ function createMultiSelect(column, options, relatedTh) {
   const panel = doc.createElement("ul");
   panel.className = "dg-menu dg-multiselect-panel";
   panel.id = panelId;
-  panel.hidden = true;
+  panel.popover = "auto";
+  panel.style.setProperty("position-anchor", anchorName);
   for (const option of options) {
     if (`${option.value}` === "") {
       continue;
@@ -791,10 +764,6 @@ function createMultiSelect(column, options, relatedTh) {
   root.appendChild(panel);
   updateMultiSelectSummary(root);
   return root;
-}
-function isMultiSelectOpen(root) {
-  const panel = root.querySelector(".dg-multiselect-panel");
-  return Boolean(panel && !panel.hidden);
 }
 function readMultiSelect(root) {
   const values = [];
@@ -1123,6 +1092,9 @@ function getColumnAlign(column) {
 function getColumnFilterType(column) {
   return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
 }
+function supportsMultiSelectPopover() {
+  return "popover" in HTMLElement.prototype && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("top", "anchor(bottom)") && CSS.supports("min-width", "anchor-size(width)") && CSS.supports("position-try-fallbacks", "flip-block flip-inline");
+}
 function isPercentColumn(column) {
   return column.format === "number" && column.formatOptions?.style === "percent";
 }
@@ -1161,7 +1133,6 @@ class DataGrid extends base_element_default {
     this._selection = { mode: "explicit", ids: new Set, except: new Set };
     this._requestSeq = 0;
     this._controller = null;
-    this._multiSelectCleanup = null;
     this.initialResult = null;
     this._initialResult = this.options.initialResult || this.initialResult || null;
     this.rows = [];
@@ -1942,7 +1913,6 @@ class DataGrid extends base_element_default {
     this._loadObserver?.disconnect();
     this._loadObserver = null;
     this._controller?.abort();
-    this._closeMultiSelectPanel();
     for (const input of this.querySelectorAll("input")) {
       textInputState.get(input)?.apply.cancel();
       textInputState.delete(input);
@@ -2018,19 +1988,6 @@ class DataGrid extends base_element_default {
       cell.removeAttribute("data-dg-overflow-title");
     }
   }
-  _openMultiSelectPanel(root) {
-    this._closeMultiSelectPanel();
-    const trigger = root.querySelector(".dg-multiselect-trigger");
-    const panel = root.querySelector(".dg-multiselect-panel");
-    if (!trigger || !panel) {
-      return;
-    }
-    this._multiSelectCleanup = openMenu({ root, trigger, panel });
-  }
-  _closeMultiSelectPanel() {
-    this._multiSelectCleanup?.();
-    this._multiSelectCleanup = null;
-  }
   _cancelTextInputs(root) {
     for (const input of root.querySelectorAll("input")) {
       textInputState.get(input)?.apply.cancel();
@@ -2038,18 +1995,6 @@ class DataGrid extends base_element_default {
     }
   }
   _handleClick(event, target) {
-    const multiTrigger = target.closest(".dg-multiselect-trigger");
-    if (multiTrigger && this._ownsControl(multiTrigger)) {
-      const root = multiTrigger.closest(".dg-multiselect");
-      if (root) {
-        const wasOpen = isMultiSelectOpen(root);
-        this._closeMultiSelectPanel();
-        if (!wasOpen) {
-          this._openMultiSelectPanel(root);
-        }
-      }
-      return;
-    }
     const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
     if (pager && this._ownsControl(pager)) {
       if (pager.classList.contains("dg-btn-first"))
@@ -2980,7 +2925,6 @@ class DataGrid extends base_element_default {
     const oldRow = thead?.querySelector("tr.dg-head-filters");
     if (oldRow) {
       this._cancelTextInputs(oldRow);
-      this._closeMultiSelectPanel();
     }
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
@@ -3023,7 +2967,7 @@ class DataGrid extends base_element_default {
   }
   createFilterElement(column, relatedTh) {
     const type = getColumnFilterType(column);
-    if (type === "select" && column.filterMultiple) {
+    if (type === "select" && column.filterMultiple && supportsMultiSelectPopover()) {
       return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
     }
     const isSelect = type === "select" || type === "boolean";

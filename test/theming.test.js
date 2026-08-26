@@ -34,8 +34,10 @@ test("all selects share the component caret", () => {
     expect(coreCss).not.toContain("dg-filter-cell:has(select)");
 });
 
-test("multi-select filters can escape their cell without overflowing their width", () => {
-    expect(coreCss).toMatch(/th\.dg-filter-cell \{[\s\S]*?overflow: visible;/);
+test("multi-select filters use top-layer anchor positioning", () => {
+    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position: fixed;/);
+    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?top: anchor\(bottom\);/);
+    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position-try-fallbacks:/);
     expect(coreCss).toMatch(/\.dg-filter-control \{[\s\S]*?box-sizing: border-box;/);
 });
 

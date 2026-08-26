@@ -141,7 +141,8 @@ export type Column = {
      */
     firstFilterOption?: FilterOption;
     /**
-     * - select filters accept several checked values and emit an `in` filter with an array; ignored for other filter modes
+     * - supported select filters use a checkbox popover and emit `in`; older
+     * browsers fall back to a single select emitting `eq`
      */
     filterMultiple?: boolean;
     /**
@@ -528,13 +529,6 @@ declare class DataGrid extends BaseElement {
     /** @type {?AbortController} */
     _controller: AbortController | null;
     /**
-     * Cleanup handle of the open multi-select panel. The grid owns it so a
-     * rebuilt filter row or a disconnect can never leak the transient
-     * listeners installed by utils/menu.js.
-     * @type {(() => void)|null}
-     */
-    _multiSelectCleanup: (() => void) | null;
-    /**
      * Optional initial result, can be set as a property before connection
      * @type {PageResult|null}
      */
@@ -898,17 +892,6 @@ declare class DataGrid extends BaseElement {
      * @param {Element} target
      */
     _handleMouseover(target: Element): void;
-    /**
-     * Open a multi-select panel. The open/dismiss lifecycle lives in
-     * utils/menu.js; only the cleanup handle is owned here, so a rebuilt
-     * filter row or a disconnect always detaches its listeners.
-     * @param {HTMLElement} root
-     */
-    _openMultiSelectPanel(root: HTMLElement): void;
-    /**
-     * Close the open multi-select panel, if any, and drop its handle.
-     */
-    _closeMultiSelectPanel(): void;
     /**
      * Cancel the pending text-input debounces of inputs within `root` and drop
      * their state. Used before replacing a filter row so a stale update never

@@ -380,7 +380,7 @@ response protection).
 | `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`        |
 | `filterList`                            | `FilterOption[]`     | explicit select filter options                                        |
 | `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
-| `filterMultiple`                        | `Boolean`            | select filters emit an `in` filter with an array of checked values    |
+| `filterMultiple`                        | `Boolean`            | checkbox popover (`in`) when supported; otherwise single select (`eq`)   |
 | `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
 | `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                  |
 | `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                  |
@@ -520,7 +520,10 @@ All UI labels are plain strings, overridable at runtime through `setLabels()`,
 
 ## Browser Support
 
-Only modern browsers (anything that supports ES modules).
+The core runtime targets modern evergreen browsers with native ES modules and
+commonly available Web Platform APIs (~2020). `filterMultiple` additionally
+requires native Popover API and CSS Anchor Positioning support. Browsers that
+miss those capabilities keep a working single-select filter emitting `eq`.
 
 ## License
 

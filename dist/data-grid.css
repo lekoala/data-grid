@@ -636,7 +636,6 @@ data-grid thead tr.dg-head-filters th > * {
 }
 
 data-grid thead tr.dg-head-filters th.dg-filter-cell {
-  overflow: visible;
   padding: 0;
 }
 
@@ -1051,7 +1050,7 @@ data-grid[dir="rtl"] .dg-multiselect-trigger {
 
 data-grid[dir="rtl"] .dg-multiselect-panel {
   left: auto;
-  right: 0;
+  right: anchor(right);
 }
 
 data-grid[dir="rtl"] input.dg-search {
@@ -1108,10 +1107,6 @@ data-grid .dg-menu input {
 }
 
 /* css/_multiselect.css */
-data-grid .dg-multiselect {
-  position: relative;
-}
-
 data-grid .dg-multiselect-trigger {
   cursor: pointer;
   display: flex;
@@ -1155,14 +1150,17 @@ data-grid .dg-multiselect-summary.dg-multiselect-empty {
 }
 
 data-grid .dg-multiselect-panel {
+  position: fixed;
+  inset: auto;
+  top: anchor(bottom);
+  left: anchor(left);
+  min-width: anchor-size(width);
   overflow-y: auto;
+  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   width: max-content;
-  min-width: 100%;
   max-width: 260px;
   max-height: 280px;
-  top: 100%;
-  left: 0;
-  right: auto;
+  margin: 0;
 }
 
 /* css/_actions.css */

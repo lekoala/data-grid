@@ -48,7 +48,7 @@ data-grid[dir="rtl"] .dg-multiselect-trigger {
 
 data-grid[dir="rtl"] .dg-multiselect-panel {
   left: auto;
-  right: 0;
+  right: anchor(right);
 }
 
 data-grid[dir="rtl"] input.dg-search {

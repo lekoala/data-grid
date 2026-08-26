@@ -169,7 +169,17 @@ test.skipIf(IS_WINDOWS)(
         await v.evaluate(`(() => {
             document.querySelector('#local-grid .dg-multiselect-trigger').click();
         })()`);
-        expect(await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden")).toBe(false);
+        await waitFor(v, "document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
+        const alignment = await read(
+            v,
+            `(() => {
+                const trigger = document.querySelector('#local-grid .dg-multiselect-trigger').getBoundingClientRect();
+                const panel = document.querySelector('#local-grid .dg-multiselect-panel').getBoundingClientRect();
+                return { left: Math.abs(panel.left - trigger.left), top: Math.abs(panel.top - trigger.bottom) };
+            })()`,
+        );
+        expect(alignment.left).toBeLessThanOrEqual(1);
+        expect(alignment.top).toBeLessThanOrEqual(1);
         expect(
             await read(
                 v,
@@ -188,6 +198,18 @@ test.skipIf(IS_WINDOWS)(
             ),
         ).not.toBe("none");
 
+        // Popover toggles declaratively through the invoker relationship.
+        await v.click("#local-grid .dg-multiselect-trigger");
+        await waitFor(v, "!document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
+        await v.click("#local-grid .dg-multiselect-trigger");
+        await waitFor(v, "document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
+
+        // Native light-dismiss leaves the grid's query untouched.
+        await v.click("body");
+        await waitFor(v, "!document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
+        await v.click("#local-grid .dg-multiselect-trigger");
+        await waitFor(v, "document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
+
         const check = (value, checked) =>
             `(() => {
                 const box = document.querySelector('#local-grid .dg-multiselect input[data-value="${value}"]');
@@ -202,7 +224,9 @@ test.skipIf(IS_WINDOWS)(
         expect(await read(v, "JSON.stringify(window.grid.query.filters.company)")).toBe(
             JSON.stringify({ operator: "in", value: ["Acme"] }),
         );
-        expect(await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden")).toBe(false);
+        expect(
+            await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')"),
+        ).toBe(true);
         expect(await read(v, "document.querySelectorAll('#local-grid tbody tr.dg-data-row').length")).toBe(10);
 
         await v.evaluate(check("Google", true));
@@ -224,11 +248,10 @@ test.skipIf(IS_WINDOWS)(
 
         // Escape dismisses and restores focus to the trigger
         await v.evaluate(`(() => {
-            document.querySelector('#local-grid .dg-multiselect-trigger').click();
-            document.querySelector('#local-grid .dg-multiselect-panel').focus();
+            document.querySelector('#local-grid .dg-multiselect-panel input').focus();
         })()`);
         await v.press("Escape");
-        await waitFor(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden === true");
+        await waitFor(v, "!document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
         expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
         expect(
             await read(v, "getComputedStyle(document.querySelector('#local-grid .dg-multiselect')).boxShadow"),

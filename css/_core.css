@@ -639,10 +639,6 @@ data-grid thead tr.dg-head-filters th > * {
 /* Filters belong to the grid, not to a form: the control fills its cell with
    no box of its own, so the row reads as part of the table structure. */
 data-grid thead tr.dg-head-filters th.dg-filter-cell {
-  /* Menu-like filters render their panel outside the cell box. The table
-     viewport remains the clipping boundary, but the cell itself must not hide
-     the disclosure panel. */
-  overflow: visible;
   padding: 0;
 }
 

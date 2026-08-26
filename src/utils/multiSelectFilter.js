@@ -8,8 +8,8 @@ import randstr from "./randstr.js";
  * DataGrid.filterData()).
  *
  * The control is passive: it owns no listeners. Opening and closing are routed
- * through the grid delegation (trigger click) and the open/dismiss lifecycle
- * lives in utils/menu.js, whose cleanup handle is owned by DataGrid.
+ * through the native Popover API. CSS Anchor Positioning keeps the panel
+ * aligned with the trigger while the grid or page scrolls.
  */
 
 /**
@@ -81,9 +81,13 @@ export function createMultiSelect(column, options, relatedTh) {
     const trigger = doc.createElement("button");
     trigger.type = "button";
     trigger.className = "dg-multiselect-trigger";
-    trigger.setAttribute("aria-expanded", "false");
 
     const panelId = randstr("dg-multiselect-");
+    trigger.setAttribute("popovertarget", panelId);
+    // Do not rely on the browser's implicit popover anchor: explicit unique
+    // names keep anchor() deterministic when several grids share a document.
+    const anchorName = `--${panelId}`;
+    trigger.style.setProperty("anchor-name", anchorName);
     trigger.setAttribute("aria-controls", panelId);
     // Same accessible-name mechanism as the other filters: the column header
     const headerId = relatedTh.getAttribute("id");
@@ -98,7 +102,8 @@ export function createMultiSelect(column, options, relatedTh) {
     const panel = doc.createElement("ul");
     panel.className = "dg-menu dg-multiselect-panel";
     panel.id = panelId;
-    panel.hidden = true;
+    panel.popover = "auto";
+    panel.style.setProperty("position-anchor", anchorName);
 
     for (const option of options) {
         if (`${option.value}` === "") {
@@ -119,16 +124,6 @@ export function createMultiSelect(column, options, relatedTh) {
     root.appendChild(panel);
     updateMultiSelectSummary(root);
     return root;
-}
-
-/**
- * Whether the checkbox panel is currently shown.
- * @param {HTMLElement} root
- * @returns {Boolean}
- */
-export function isMultiSelectOpen(root) {
-    const panel = /** @type {HTMLElement|null} */ (root.querySelector(".dg-multiselect-panel"));
-    return Boolean(panel && !panel.hidden);
 }
 
 /**

@@ -66,6 +66,18 @@ properties would then be optional, not automatic.
 compatible by construction — never transpiled, and matching a ~2020 browser
 target. This is enforced by review, not by a build step.
 
+Optional floating UI may use newer native platform APIs when that materially
+removes custom lifecycle or positioning code. The feature must be capability
+detected and unsupported browsers must lose or simplify only that optional UI,
+never the grid itself. `filterMultiple` is the first such exception: browsers
+with Popover API and CSS Anchor Positioning get the checkbox popover emitting
+`in`; older browsers receive the ordinary single select emitting `eq`. Do not
+add a polyfill or a JavaScript positioning fallback for this feature.
+
+This exception does not change the package-wide JS baseline or the
+`check:baseline` rules. Keep the core runtime compatible with the established
+~2020 contract.
+
 Allowed:
 - ES modules, async/await, `for...of`
 - `Object.entries` / `Object.fromEntries`

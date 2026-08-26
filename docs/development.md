@@ -61,6 +61,16 @@ Runtime code targets modern evergreen browsers with native ES modules and
 commonly available Web Platform APIs (~2020). No JavaScript polyfills are
 included or required.
 
+`filterMultiple` is a progressive enhancement with a narrower, capability-based
+floor: it requires the native Popover API plus CSS Anchor Positioning, including
+the combined viewport fallback tactic. The exact test is performed at runtime
+with `HTMLElement.prototype` and `CSS.supports`, so the core grid still works on
+the established ~2020 floor. Unsupported browsers render the ordinary native
+single select and emit `eq`; they do not receive a multi-select polyfill or
+broken popover markup. This newer requirement is intentional because native
+Popover owns top-layer rendering, light dismissal, Escape handling and focus
+restoration, while Anchor Positioning keeps the panel aligned during scrolling.
+
 ## Release
 
 The publish decision stays human; the CI only validates that the package is
@@ -94,4 +104,3 @@ publishable (`bun run ci` + `npm pack --dry-run` + `bun run check:package`).
    ```bash
    npm view data-grid-component@3.0.0
    ```
-

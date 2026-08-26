@@ -12,11 +12,9 @@ import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
 import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
 import getTextWidth from "./utils/getTextWidth.js";
-import { openMenu } from "./utils/menu.js";
 import {
     clearMultiSelect,
     createMultiSelect,
-    isMultiSelectOpen,
     readMultiSelect,
     setMultiSelectValues,
     updateMultiSelectSummary,
@@ -124,7 +122,8 @@ function setDeclarativeCell(row, field, meta) {
  * @property {String} [filterPlaceholder] - a visible hint for the filter control (defaults to "…")
  * @property {Array<any>} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
  * @property {FilterOption} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
- * @property {Boolean} [filterMultiple] - select filters accept several checked values and emit an `in` filter with an array; ignored for other filter modes
+ * @property {Boolean} [filterMultiple] - supported select filters use a checkbox popover and emit `in`; older
+ * browsers fall back to a single select emitting `eq`
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
  * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
@@ -666,6 +665,23 @@ function getColumnFilterType(column) {
 }
 
 /**
+ * Multi-select filters use native Popover for lifecycle and CSS Anchor
+ * Positioning for placement. Unsupported browsers use the ordinary select
+ * path instead of receiving a polyfill or incomplete floating UI.
+ * @returns {Boolean}
+ */
+function supportsMultiSelectPopover() {
+    return (
+        "popover" in HTMLElement.prototype &&
+        typeof CSS !== "undefined" &&
+        typeof CSS.supports === "function" &&
+        CSS.supports("top", "anchor(bottom)") &&
+        CSS.supports("min-width", "anchor-size(width)") &&
+        CSS.supports("position-try-fallbacks", "flip-block flip-inline")
+    );
+}
+
+/**
  * A percent column is the only numeric case whose displayed scale differs from
  * the raw value: `Intl.NumberFormat` multiplies by 100, so a filter typed as
  * the visible "20" must query the raw `0.2`. Kept as a small exception of the
@@ -750,14 +766,6 @@ class DataGrid extends BaseElement {
 
         /** @type {?AbortController} */
         this._controller = null;
-
-        /**
-         * Cleanup handle of the open multi-select panel. The grid owns it so a
-         * rebuilt filter row or a disconnect can never leak the transient
-         * listeners installed by utils/menu.js.
-         * @type {(() => void)|null}
-         */
-        this._multiSelectCleanup = null;
 
         /**
          * Optional initial result, can be set as a property before connection
@@ -1953,8 +1961,6 @@ class DataGrid extends BaseElement {
         this._loadObserver?.disconnect();
         this._loadObserver = null;
         this._controller?.abort();
-        // An open multi-select panel must not outlive its document listeners.
-        this._closeMultiSelectPanel();
         // Cancel any pending per-input debounce before it can fire on a
         // detached element.
         for (const input of this.querySelectorAll("input")) {
@@ -2059,30 +2065,6 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Open a multi-select panel. The open/dismiss lifecycle lives in
-     * utils/menu.js; only the cleanup handle is owned here, so a rebuilt
-     * filter row or a disconnect always detaches its listeners.
-     * @param {HTMLElement} root
-     */
-    _openMultiSelectPanel(root) {
-        this._closeMultiSelectPanel();
-        const trigger = /** @type {HTMLElement|null} */ (root.querySelector(".dg-multiselect-trigger"));
-        const panel = /** @type {HTMLElement|null} */ (root.querySelector(".dg-multiselect-panel"));
-        if (!trigger || !panel) {
-            return;
-        }
-        this._multiSelectCleanup = openMenu({ root, trigger, panel });
-    }
-
-    /**
-     * Close the open multi-select panel, if any, and drop its handle.
-     */
-    _closeMultiSelectPanel() {
-        this._multiSelectCleanup?.();
-        this._multiSelectCleanup = null;
-    }
-
-    /**
      * Cancel the pending text-input debounces of inputs within `root` and drop
      * their state. Used before replacing a filter row so a stale update never
      * fires on a detached element.
@@ -2101,20 +2083,6 @@ class DataGrid extends BaseElement {
      * @returns {*}
      */
     _handleClick(event, target) {
-        // Multi-select triggers toggle their checkbox panel; only one stays open
-        const multiTrigger = target.closest(".dg-multiselect-trigger");
-        if (multiTrigger && this._ownsControl(multiTrigger)) {
-            const root = /** @type {HTMLElement|null} */ (multiTrigger.closest(".dg-multiselect"));
-            if (root) {
-                const wasOpen = isMultiSelectOpen(root);
-                this._closeMultiSelectPanel();
-                if (!wasOpen) {
-                    this._openMultiSelectPanel(root);
-                }
-            }
-            return;
-        }
-
         const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
         if (pager && this._ownsControl(pager)) {
             if (pager.classList.contains("dg-btn-first")) return this.getFirst();
@@ -3580,12 +3548,9 @@ class DataGrid extends BaseElement {
 
         const oldRow = thead?.querySelector("tr.dg-head-filters");
         // A replaced filter row must have its pending text-input debounces
-        // cancelled, or a stale update could fire on a detached element. Its
-        // open multi-select panel is closed with it: the transient listeners
-        // belong to this grid and never outlive their row.
+        // cancelled, or a stale update could fire on a detached element.
         if (oldRow) {
             this._cancelTextInputs(oldRow);
-            this._closeMultiSelectPanel();
         }
         if (thead && oldRow) {
             thead.replaceChild(tr, oldRow);
@@ -3657,9 +3622,10 @@ class DataGrid extends BaseElement {
      */
     createFilterElement(column, relatedTh) {
         const type = getColumnFilterType(column);
-        // A multi select renders as a checkbox panel instead of a native
-        // control: Ctrl-click listboxes are unusable in a narrow column.
-        if (type === "select" && column.filterMultiple) {
+        // A capable browser gets a checkbox panel instead of a native control:
+        // Ctrl-click listboxes are unusable in a narrow column. Older browsers
+        // keep the ordinary select as the intentional degradation.
+        if (type === "select" && column.filterMultiple && supportsMultiSelectPopover()) {
             return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
         }
         const isSelect = type === "select" || type === "boolean";
