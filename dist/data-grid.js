@@ -1395,6 +1395,9 @@ class DataGrid extends base_element_default {
   }
   singleSelectChanged() {
     this._syncSelectionOptions();
+    if (this.options.singleSelect) {
+      this._clearSelectionIfNeeded();
+    }
     this.selectableChanged();
   }
   rowClickChanged() {

@@ -1550,6 +1550,15 @@ class DataGrid extends BaseElement {
 
     singleSelectChanged() {
         this._syncSelectionOptions();
+
+        // Switching from multi to single select restarts from an empty
+        // selection, so the "singleSelect implies at most one selected row"
+        // invariant always holds without an arbitrary pick among the previous
+        // ids (which may also be a mode "all" selection).
+        if (this.options.singleSelect) {
+            this._clearSelectionIfNeeded();
+        }
+
         this.selectableChanged();
     }
 

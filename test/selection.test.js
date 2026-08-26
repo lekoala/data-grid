@@ -216,6 +216,29 @@ test("single select radios are scoped per grid so two grids stay independent", a
     document.body.removeChild(b);
 });
 
+test("switching to singleSelect at runtime clears the multi selection", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
+
+    toggle(firstCheckbox(inst));
+    toggle(inst.querySelectorAll('tbody tr td[data-column-id="$selection"] input')[1]);
+    expect(inst.getSelectionState().ids.size).toBe(2);
+
+    let fires = 0;
+    inst.addEventListener("selectionChange", () => fires++);
+
+    inst.setAttribute("single-select", "");
+    const state = inst.getSelectionState();
+    expect(state.mode).toBe("explicit");
+    expect(state.ids.size).toBe(0);
+    expect(inst.options.selectable).toBe(true);
+
+    // The checkboxes were replaced by radios and only the non-empty clear fired.
+    const input = inst.querySelector('tbody td[data-column-id="$selection"] input');
+    expect(input.type).toBe("radio");
+    expect(fires).toBe(1);
+    document.body.removeChild(inst);
+});
+
 test("toggling selectable at runtime updates header and body", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }] });
 
