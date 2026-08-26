@@ -10,7 +10,7 @@ export type SortState = {
     field: string;
     direction: "asc" | "desc";
 };
-export type FilterOperator = "eq" | "neq" | "contains" | "startsWith" | "endsWith" | * "lt" | "lte" | "gt" | "gte" | "between" | "in" | "empty" | "notEmpty";
+export type FilterOperator = "eq" | "neq" | "contains" | "notContains" | "startsWith" | "notStartsWith" | "endsWith" | "notEndsWith" | * "lt" | "lte" | "gt" | "gte" | "between" | "in" | "empty" | "notEmpty";
 export type FilterState = {
     operator: FilterOperator;
     value?: any;
@@ -54,7 +54,7 @@ export type DataSource = {
  */
 /**
  * Supported filter operators
- * @typedef {"eq"|"neq"|"contains"|"startsWith"|"endsWith"|
+ * @typedef {"eq"|"neq"|"contains"|"notContains"|"startsWith"|"notStartsWith"|"endsWith"|"notEndsWith"|
  * "lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
  */
 /**
@@ -116,11 +116,14 @@ export declare function encodeSearchParams(value: any, prefix?: string, out?: UR
  * Apply structured filters to an array.
  * Semantics:
  * - empty := null | undefined | "" (0 and false are NOT empty)
- * - contains / startsWith / endsWith: case-insensitive string comparison
+ * - contains / notContains / startsWith / notStartsWith / endsWith /
+ *   notEndsWith: case- and accent-insensitive string comparison
  * - eq / neq: a boolean value compares normalized booleans (true matches
- *   1, "1" and "true"); otherwise scalar comparison after string coercion
- *   (42 matches "42")
- * - in: scalar comparison after string coercion
+ *   1, "1" and "true"); otherwise scalar comparison after string coercion,
+ *   case- and accent-insensitive for text (42 matches "42", "Café" matches
+ *   "cafe")
+ * - in: scalar comparison after string coercion, case- and accent-insensitive
+ *   for text
  * - lt/lte/gt/gte/between: numeric comparison when both operands are finite
  *   numeric values, otherwise string comparison
  * - between requires a 2-value array, in requires a non-empty array
@@ -159,10 +162,11 @@ export declare function paginate(rows: Array<Record<string, any>>, page: number,
  */
 export declare function parseResult(json: any): PageResult;
 /**
- * Apply a global search locally: case-insensitive `contains` over the scalar
- * values of each row. This is a convenient default for client-side data, not a
- * contract for server backends: `QueryState.search` only means "the user asked
- * for a global search", the server decides which fields it covers.
+ * Apply a global search locally: case- and accent-insensitive `contains` over
+ * the scalar values of each row. This is a convenient default for client-side
+ * data, not a contract for server backends: `QueryState.search` only means
+ * "the user asked for a global search", the server decides which fields it
+ * covers.
  * @param {Array<Record<string, any>>} rows
  * @param {String} search
  * @returns {Array<Record<string, any>>}

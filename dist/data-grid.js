@@ -351,6 +351,9 @@ function isNumericValue(value) {
   }
   return Number.isFinite(Number(value));
 }
+function normalizeText(value) {
+  return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+}
 function applyFilters(rows, filters) {
   if (!filters) {
     return rows.slice();
@@ -376,8 +379,8 @@ function applyFilters(rows, filters) {
       if (value === null || value === undefined || value === "") {
         continue;
       }
-      const cellLower = `${cell ?? ""}`.toLowerCase();
-      const valueLower = String(value).toLowerCase();
+      const cellText = normalizeText(cell);
+      const valueText = normalizeText(value);
       switch (operator) {
         case "eq":
         case "neq": {
@@ -386,18 +389,30 @@ function applyFilters(rows, filters) {
             const cellBool = normalizeBoolean(cell);
             equal = cellBool === null ? `${cell}` === String(value) : cellBool === value;
           } else {
-            equal = `${cell}` === String(value);
+            equal = cellText === valueText;
           }
           if (operator === "eq" ? !equal : equal)
             return false;
           break;
         }
         case "startsWith":
-          if (!cellLower.startsWith(valueLower))
+          if (!cellText.startsWith(valueText))
+            return false;
+          break;
+        case "notStartsWith":
+          if (cellText.startsWith(valueText))
             return false;
           break;
         case "endsWith":
-          if (!cellLower.endsWith(valueLower))
+          if (!cellText.endsWith(valueText))
+            return false;
+          break;
+        case "notEndsWith":
+          if (cellText.endsWith(valueText))
+            return false;
+          break;
+        case "notContains":
+          if (cellText.includes(valueText))
             return false;
           break;
         case "lt":
@@ -448,11 +463,21 @@ function applyFilters(rows, filters) {
           if (!Array.isArray(value) || !value.length) {
             continue;
           }
-          if (!value.some((v) => `${v}` === `${cell}`))
+          if (!value.some((v) => {
+            const cellBool = normalizeBoolean(cell);
+            if (cellBool !== null) {
+              const optionBool = normalizeBoolean(v);
+              if (optionBool !== null) {
+                return optionBool === cellBool;
+              }
+            }
+            return normalizeText(v) === cellText;
+          })) {
             return false;
+          }
           break;
         default:
-          if (!cellLower.includes(valueLower))
+          if (!cellText.includes(valueText))
             return false;
       }
     }
@@ -502,10 +527,10 @@ function applySearch(rows, search) {
   if (!search) {
     return rows;
   }
-  const needle = search.toLowerCase();
+  const needle = normalizeText(search);
   return rows.filter((row) => {
     for (const value of Object.values(row)) {
-      if (value !== null && value !== undefined && `${value}`.toLowerCase().includes(needle)) {
+      if (value !== null && value !== undefined && normalizeText(value).includes(needle)) {
         return true;
       }
     }
@@ -671,6 +696,299 @@ function debounce(handler, timeout = 300) {
     handler(...args);
   };
   return fn;
+}
+
+// src/filter-query.js
+var TEXT_FILTER_OPERATORS = [
+  [">=", "gte"],
+  ["<=", "lte"],
+  ["!=", "neq"],
+  [">", "gt"],
+  ["<", "lt"],
+  ["=", "eq"]
+];
+var LEADING_QUERY_CHARS = "!=<>%";
+function isEscapedAt(value, index) {
+  let slashes = 0;
+  for (let i = index - 1;i >= 0 && value[i] === "\\"; i--) {
+    slashes++;
+  }
+  return slashes % 2 === 1;
+}
+function unescapeFilterQueryText(value) {
+  let result = "";
+  for (let i = 0;i < value.length; i++) {
+    if (value[i] === "\\" && i + 1 < value.length) {
+      result += value[i + 1];
+      i++;
+      continue;
+    }
+    result += value[i];
+  }
+  return result;
+}
+function escapePatternText(value) {
+  let result = "";
+  for (let i = 0;i < value.length; i++) {
+    const char = value[i];
+    if (char === "\\") {
+      result += "\\\\";
+      continue;
+    }
+    if (i === 0 && LEADING_QUERY_CHARS.includes(char) || char === "%" && i === value.length - 1) {
+      result += `\\${char}`;
+      continue;
+    }
+    result += char;
+  }
+  return result;
+}
+function parsePatternFilter(value, containsOperator, startsWithOperator, endsWithOperator) {
+  const hasLeadingPercent = value.startsWith("%");
+  const hasTrailingPercent = value.endsWith("%") && !isEscapedAt(value, value.length - 1);
+  if (value.length > 2 && hasLeadingPercent && hasTrailingPercent) {
+    return { operator: containsOperator, value: unescapeFilterQueryText(value.slice(1, -1)) };
+  }
+  if (value.length > 1 && hasTrailingPercent) {
+    return { operator: startsWithOperator, value: unescapeFilterQueryText(value.slice(0, -1)) };
+  }
+  if (value.length > 1 && hasLeadingPercent) {
+    return { operator: endsWithOperator, value: unescapeFilterQueryText(value.slice(1)) };
+  }
+  return { operator: containsOperator, value: unescapeFilterQueryText(value) };
+}
+var DATE_YEAR_PATTERN = /^(\d{4})$/;
+var DATE_MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
+var DATE_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+function daysInMonth(year, month) {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+function pad2(value) {
+  return String(value).padStart(2, "0");
+}
+function parseCanonicalDateFragment(value) {
+  const yearMatch = DATE_YEAR_PATTERN.exec(value);
+  if (yearMatch) {
+    return {
+      precision: "year",
+      raw: yearMatch[1],
+      start: `${yearMatch[1]}-01-01`,
+      end: `${yearMatch[1]}-12-31`
+    };
+  }
+  const monthMatch = DATE_MONTH_PATTERN.exec(value);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const month = Number(monthMatch[2]);
+    if (month < 1 || month > 12) {
+      return null;
+    }
+    return {
+      precision: "month",
+      raw: `${monthMatch[1]}-${monthMatch[2]}`,
+      start: `${monthMatch[1]}-${monthMatch[2]}-01`,
+      end: `${monthMatch[1]}-${monthMatch[2]}-${pad2(daysInMonth(year, month))}`
+    };
+  }
+  const dayMatch = DATE_DAY_PATTERN.exec(value);
+  if (dayMatch) {
+    const year = Number(dayMatch[1]);
+    const month = Number(dayMatch[2]);
+    const day = Number(dayMatch[3]);
+    if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
+      return null;
+    }
+    return {
+      precision: "day",
+      raw: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
+      start: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
+      end: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`
+    };
+  }
+  return null;
+}
+function fallbackDateFilter(operator, value) {
+  if (operator === "eq") {
+    return { operator: "startsWith", value };
+  }
+  return { operator, value };
+}
+function readLeadingOperator(value) {
+  for (const [token, operator] of TEXT_FILTER_OPERATORS) {
+    if (!value.startsWith(token)) {
+      continue;
+    }
+    const nextValue = value.slice(token.length);
+    return { complete: Boolean(nextValue), operator, value: nextValue };
+  }
+  return null;
+}
+function compressDateRange(start, end) {
+  if (start === end && parseCanonicalDateFragment(start)?.precision === "day") {
+    return start;
+  }
+  const yearMatch = /^(\d{4})-01-01$/.exec(start);
+  if (yearMatch && end === `${yearMatch[1]}-12-31`) {
+    return yearMatch[1];
+  }
+  const monthMatch = /^(\d{4})-(\d{2})-01$/.exec(start);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const month = Number(monthMatch[2]);
+    if (end === `${monthMatch[1]}-${monthMatch[2]}-${pad2(daysInMonth(year, month))}`) {
+      return `${monthMatch[1]}-${monthMatch[2]}`;
+    }
+  }
+  return null;
+}
+function compressDateLowerBound(value) {
+  const yearMatch = /^(\d{4})-01-01$/.exec(value);
+  if (yearMatch) {
+    return yearMatch[1];
+  }
+  const monthMatch = /^(\d{4})-(\d{2})-01$/.exec(value);
+  if (monthMatch) {
+    return `${monthMatch[1]}-${monthMatch[2]}`;
+  }
+  return null;
+}
+function compressDateUpperBound(value) {
+  const yearMatch = /^(\d{4})-12-31$/.exec(value);
+  if (yearMatch) {
+    return yearMatch[1];
+  }
+  const monthMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (monthMatch) {
+    const year = Number(monthMatch[1]);
+    const month = Number(monthMatch[2]);
+    if (Number(monthMatch[3]) === daysInMonth(year, month)) {
+      return `${monthMatch[1]}-${monthMatch[2]}`;
+    }
+  }
+  return null;
+}
+function parseTextFilterQuery(value) {
+  const leading = readLeadingOperator(value);
+  if (leading?.complete) {
+    return { operator: leading.operator, value: leading.value };
+  }
+  if (leading) {
+    return { operator: "contains", value };
+  }
+  if (value.startsWith("!") && value.length > 1) {
+    return parsePatternFilter(value.slice(1), "notContains", "notStartsWith", "notEndsWith");
+  }
+  return parsePatternFilter(value, "contains", "startsWith", "endsWith");
+}
+function parseDateFilterQuery(value) {
+  const leading = readLeadingOperator(value);
+  if (leading && !leading.complete) {
+    return fallbackDateFilter("eq", value);
+  }
+  const operator = leading?.operator ?? "eq";
+  const rawValue = leading?.value ?? value;
+  const fragment = parseCanonicalDateFragment(rawValue);
+  if (!fragment) {
+    return fallbackDateFilter(operator, rawValue);
+  }
+  if (operator === "eq") {
+    if (fragment.precision === "day") {
+      return { operator: "eq", value: fragment.start };
+    }
+    return { operator: "between", value: [fragment.start, fragment.end] };
+  }
+  if (operator === "neq") {
+    if (fragment.precision === "day") {
+      return { operator: "neq", value: fragment.start };
+    }
+    return { operator: "notStartsWith", value: fragment.raw };
+  }
+  if (operator === "gt") {
+    return { operator: "gt", value: fragment.end };
+  }
+  if (operator === "gte") {
+    return { operator: "gte", value: fragment.start };
+  }
+  if (operator === "lt") {
+    return { operator: "lt", value: fragment.start };
+  }
+  if (operator === "lte") {
+    return { operator: "lte", value: fragment.end };
+  }
+  return { operator, value: rawValue };
+}
+function formatTextFilterQuery(filter) {
+  if (!filter) {
+    return "";
+  }
+  const value = filter.value;
+  if (value === undefined || value === null) {
+    return "";
+  }
+  const text = String(value);
+  switch (filter.operator) {
+    case "eq":
+      return `=${text}`;
+    case "neq":
+      return `!=${text}`;
+    case "gt":
+      return `>${text}`;
+    case "gte":
+      return `>=${text}`;
+    case "lt":
+      return `<${text}`;
+    case "lte":
+      return `<=${text}`;
+    case "notContains":
+      return `!${escapePatternText(text)}`;
+    case "notStartsWith":
+      return `!${escapePatternText(text)}%`;
+    case "notEndsWith":
+      return `!%${escapePatternText(text)}`;
+    case "startsWith":
+      return `${escapePatternText(text)}%`;
+    case "endsWith":
+      return `%${escapePatternText(text)}`;
+    default:
+      return escapePatternText(text);
+  }
+}
+function formatDateFilterQuery(filter) {
+  if (!filter) {
+    return "";
+  }
+  if (filter.operator === "between" && Array.isArray(filter.value) && filter.value.length === 2) {
+    return compressDateRange(String(filter.value[0]), String(filter.value[1])) ?? "";
+  }
+  const value = filter.value;
+  if (value === undefined || value === null) {
+    return "";
+  }
+  const text = String(value);
+  switch (filter.operator) {
+    case "eq":
+      return parseCanonicalDateFragment(text)?.precision === "day" ? text : `=${text}`;
+    case "neq":
+      return `!=${text}`;
+    case "gt": {
+      return `>${compressDateUpperBound(text) ?? text}`;
+    }
+    case "gte": {
+      return `>=${compressDateLowerBound(text) ?? text}`;
+    }
+    case "lt": {
+      return `<${compressDateLowerBound(text) ?? text}`;
+    }
+    case "lte": {
+      return `<=${compressDateUpperBound(text) ?? text}`;
+    }
+    case "notStartsWith":
+      return `!=${text}`;
+    case "startsWith":
+      return text;
+    default:
+      return text;
+  }
 }
 
 // src/utils/getTextWidth.js
@@ -2672,17 +2990,20 @@ class DataGrid extends base_element_default {
       const value = input.value;
       if (value) {
         const mode = input.dataset.filterMode;
-        if (mode === "boolean") {
+        if (mode === "text") {
+          filters[name] = parseTextFilterQuery(value);
+        } else if (mode === "boolean") {
           filters[name] = { operator: "eq", value: value === "true" };
         } else if (mode === "number") {
-          const num = Number(value);
+          const parsed = parseTextFilterQuery(value);
+          const num = Number(parsed.value);
           const isPercent = input.dataset.percent === "true";
           filters[name] = {
-            operator: "contains",
-            value: Number.isFinite(num) ? isPercent ? num / 100 : num : value
+            operator: parsed.operator,
+            value: Number.isFinite(num) ? isPercent ? num / 100 : num : parsed.value
           };
         } else if (mode === "date") {
-          filters[name] = { operator: "startsWith", value };
+          filters[name] = parseDateFilterQuery(value);
         } else {
           const isSelect = /select/i.test(input.tagName);
           filters[name] = {
@@ -2956,6 +3277,17 @@ class DataGrid extends base_element_default {
       if (filterState) {
         if (filter.dataset.filterMode === "multi") {
           setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
+        } else if (filter.dataset.filterMode === "text") {
+          filter.value = formatTextFilterQuery(filterState);
+        } else if (filter.dataset.filterMode === "number") {
+          const numericValue = Number(filterState.value);
+          const value = filter.dataset.percent === "true" && Number.isFinite(numericValue) ? numericValue * 100 : filterState.value;
+          filter.value = formatTextFilterQuery({
+            operator: filterState.operator,
+            value
+          });
+        } else if (filter.dataset.filterMode === "date") {
+          filter.value = formatDateFilterQuery(filterState);
         } else {
           filter.value = filter.dataset.percent === "true" ? String(Number(filterState.value) * 100) : String(filterState.value ?? "");
         }

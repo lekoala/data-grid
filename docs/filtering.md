@@ -1,8 +1,9 @@
 # Filtering
 
-Set `filterable` on the grid to show a filter row under the headers. Text inputs
-filter with `contains`, select inputs with `eq`. Change a column's input mode
-with `filterType`.
+Set `filterable` on the grid to show a filter row under the headers. Text-based
+inputs accept a minimal operator syntax, while select inputs use `eq`. Text
+matching is case- and accent-insensitive by default. Change a column's input
+mode with `filterType`.
 
 ## Preferred filter modes
 
@@ -16,11 +17,11 @@ column.filterType explicit
 
 | Mode      | Control                            | Applied operator                                                  |
 |-----------|------------------------------------|-------------------------------------------------------------------|
-| `text`    | text input                         | `contains`                                                        |
+| `text`    | text input                         | `contains` by default; see text query syntax below                |
 | `select`  | select (see options below)         | `eq`                                                              |
 | `boolean` | tri-state select: empty / Yes / No | `eq` on normalized booleans (`true` matches `1`, `"1"`, `"true"`) |
-| `number`  | numeric text input                 | `contains` on the stringified value (typing `12` matches `129.9`); percent divides by 100 (`20`→`0.2`) |
-| `date`    | text input accepting partial dates | `startsWith` on the canonical ISO value                           |
+| `number`  | numeric text input                 | `contains` by default; explicit operators like `>100`             |
+| `date`    | text input accepting partial dates | exact period matching or explicit comparisons like `>2025`        |
 
 Notes:
 
@@ -30,9 +31,12 @@ Notes:
 - `filterMultiple: true` on a `select` column swaps the native control for a
   checkbox panel emitting an `in` filter - see "Multiple select" below. It is
   ignored for other modes (a multi boolean would degenerate into no filter).
-- The `date` mode matches the canonical contract of the date formatter:
-  `2026`, `2026-08` and `2026-08-26` all prefix-match. The placeholder is
-  `YYYY-MM-DD` unless `filterPlaceholder` is set.
+- The `date` mode uses canonical ISO fragments with real date semantics:
+  `2026` means any date in 2026, `2026-08` means any date in August 2026, and
+  `2026-08-26` means that exact day. Explicit comparisons resolve to real
+  bounds, so `>2025` becomes `gt 2025-12-31` and `>=2025` becomes
+  `gte 2025-01-01`. The placeholder is `YYYY-MM-DD` unless
+  `filterPlaceholder` is set.
 - `datetime` deliberately keeps a plain text filter: prefixing the raw instant
   can disagree with the displayed local date, and that semantics is not defined
   yet.
@@ -44,6 +48,53 @@ Notes:
   (`0.2` displays as `20`).
 - An explicit `filterType` always wins; custom `renderFilterCell` implementations
   remain the top escape hatch.
+
+## Text query syntax
+
+Plain text keeps the existing `contains` behavior. Text-based inputs, including
+`number` filters, also accept a small expression syntax that maps directly to
+`FilterState`:
+
+| Input     | Operator        |
+|-----------|-----------------|
+| `alice`   | `contains`      |
+| `!alice`  | `notContains`   |
+| `=alice`  | `eq`            |
+| `!=alice` | `neq`           |
+| `>30`     | `gt`            |
+| `>=30`    | `gte`           |
+| `<30`     | `lt`            |
+| `<=30`    | `lte`           |
+| `ali%`    | `startsWith`    |
+| `!ali%`   | `notStartsWith` |
+| `%ice`    | `endsWith`      |
+| `!%ice`   | `notEndsWith`   |
+| `%lic%`   | `contains`      |
+| `!%lic%`  | `notContains`   |
+
+Operator prefixes win over `%` matching. For example, `=%ice` means an exact
+match on the literal `%ice`, not `endsWith("ice")`.
+
+Use `\` to keep the mini-language literal when a value starts with an operator
+or ends with `%`: `\!jean`, `foo\%`, `\=foo`.
+
+## Date query syntax
+
+Date filters expect canonical ISO fragments and normalize them into explicit
+date bounds that serialize cleanly for a server data source:
+
+| Input        | Canonical filter state                 |
+|--------------|----------------------------------------|
+| `2025`       | `between ["2025-01-01", "2025-12-31"]` |
+| `2025-08`    | `between ["2025-08-01", "2025-08-31"]` |
+| `2025-08-26` | `eq "2025-08-26"`                      |
+| `>2025`      | `gt "2025-12-31"`                      |
+| `>=2025`     | `gte "2025-01-01"`                     |
+| `<2025`      | `lt "2025-01-01"`                      |
+| `<=2025`     | `lte "2025-12-31"`                     |
+
+`datetime` is still excluded from this syntax: its display value is localized,
+so comparing the raw instant as a date would still be misleading.
 
 ## Filter state
 
@@ -75,23 +126,35 @@ grid.query.filters
 
 Operators:
 
-| Operator     | Behavior                                                                           |
-|--------------|------------------------------------------------------------------------------------|
-| `eq`         | a boolean value compares normalized booleans (`true` matches `1`, `"1"`, `"true"`) |
-| `neq`        | negation of `eq`                                                                   |
-| `contains`   | case-insensitive substring                                                         |
-| `startsWith` | case-insensitive prefix                                                            |
-| `endsWith`   | case-insensitive suffix                                                            |
-| `lt` / `lte` | numeric when both operands are finite, otherwise string compare                    |
-| `gt` / `gte` | numeric when both operands are finite, otherwise string compare                    |
-| `between`    | inclusive range, requires a 2-value array                                          |
-| `in`         | value in a list                                                                    |
-| `empty`      | value is `null`, `undefined` or `""`                                               |
-| `notEmpty`   | negation of `empty`                                                                |
+> Text comparisons are case- and accent-insensitive for `eq`, `neq`, `contains`,
+> `notContains`, `startsWith`, `notStartsWith`, `endsWith`, `notEndsWith`, and
+> `in`. Boolean `eq` also normalizes values like `true`, `1`, `"1"`, and
+> `"true"`.
+
+| Operator        | Behavior                                                       |
+|-----------------|----------------------------------------------------------------|
+| `eq`            | equality; booleans compare after normalization                 |
+| `neq`           | negation of `eq`                                               |
+| `contains`      | substring match                                                |
+| `notContains`   | negation of `contains`                                         |
+| `startsWith`    | prefix match                                                   |
+| `notStartsWith` | negation of `startsWith`                                       |
+| `endsWith`      | suffix match                                                   |
+| `notEndsWith`   | negation of `endsWith`                                         |
+| `lt` / `lte`    | numeric if both operands are finite, otherwise lexical compare |
+| `gt` / `gte`    | numeric if both operands are finite, otherwise lexical compare |
+| `between`       | inclusive range, requires a 2-value array                      |
+| `in`            | matches any value in a list                                    |
+| `empty`         | `null`, `undefined`, or empty string                           |
+| `notEmpty`      | negation of `empty`                                            |
 
 `0` and `false` are real values: they are preserved and only `empty`/`notEmpty`
 match against missing values. Invalid or empty filter values are ignored, not
 treated as "match nothing".
+
+Server data sources should apply equivalent case- and accent-insensitive
+semantics for textual operators (`eq`, `contains`, `startsWith`, `endsWith`,
+`in` and their negations).
 
 You can set filters programmatically:
 

@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
+import { formatDateFilterQuery, formatTextFilterQuery, parseDateFilterQuery, parseTextFilterQuery } from "../src/filter-query.js";
 import { ArrayDataSource, applyFilters, encodeSearchParams } from "../src/data-source.js";
 import { change, input } from "./helpers.js";
 
@@ -47,6 +48,74 @@ function typeFilter(inst, field, text) {
     return el;
 }
 
+test("text filter query helpers parse and format the minimal syntax", () => {
+    expect(parseTextFilterQuery("alice")).toEqual({ operator: "contains", value: "alice" });
+    expect(parseTextFilterQuery("=alice")).toEqual({ operator: "eq", value: "alice" });
+    expect(parseTextFilterQuery("!alice")).toEqual({ operator: "notContains", value: "alice" });
+    expect(parseTextFilterQuery("!ali%")).toEqual({ operator: "notStartsWith", value: "ali" });
+    expect(parseTextFilterQuery("!%ice")).toEqual({ operator: "notEndsWith", value: "ice" });
+    expect(parseTextFilterQuery("!%lic%")).toEqual({ operator: "notContains", value: "lic" });
+    expect(parseTextFilterQuery("!=alice")).toEqual({ operator: "neq", value: "alice" });
+    expect(parseTextFilterQuery(">=30")).toEqual({ operator: "gte", value: "30" });
+    expect(parseTextFilterQuery("%son")).toEqual({ operator: "endsWith", value: "son" });
+    expect(parseTextFilterQuery("Ali%")).toEqual({ operator: "startsWith", value: "Ali" });
+    expect(parseTextFilterQuery("%ali%")).toEqual({ operator: "contains", value: "ali" });
+    expect(parseTextFilterQuery(">")).toEqual({ operator: "contains", value: ">" });
+    expect(parseTextFilterQuery(">=")).toEqual({ operator: "contains", value: ">=" });
+    expect(parseTextFilterQuery("!=")).toEqual({ operator: "contains", value: "!=" });
+    expect(parseTextFilterQuery("=")).toEqual({ operator: "contains", value: "=" });
+    expect(parseTextFilterQuery("!")).toEqual({ operator: "contains", value: "!" });
+    expect(parseTextFilterQuery("%")).toEqual({ operator: "contains", value: "%" });
+    expect(parseTextFilterQuery("\\!jean")).toEqual({ operator: "contains", value: "!jean" });
+    expect(parseTextFilterQuery("foo\\%")).toEqual({ operator: "contains", value: "foo%" });
+    expect(parseTextFilterQuery("\\=foo")).toEqual({ operator: "contains", value: "=foo" });
+
+    expect(formatTextFilterQuery({ operator: "eq", value: "alice" })).toBe("=alice");
+    expect(formatTextFilterQuery({ operator: "neq", value: "alice" })).toBe("!=alice");
+    expect(formatTextFilterQuery({ operator: "notContains", value: "alice" })).toBe("!alice");
+    expect(formatTextFilterQuery({ operator: "notStartsWith", value: "Ali" })).toBe("!Ali%");
+    expect(formatTextFilterQuery({ operator: "notEndsWith", value: "ice" })).toBe("!%ice");
+    expect(formatTextFilterQuery({ operator: "gte", value: 30 })).toBe(">=30");
+    expect(formatTextFilterQuery({ operator: "startsWith", value: "Ali" })).toBe("Ali%");
+    expect(formatTextFilterQuery({ operator: "contains", value: "alice" })).toBe("alice");
+
+    const roundTrips = [
+        { operator: "contains", value: "!jean" },
+        { operator: "contains", value: "foo%" },
+        { operator: "contains", value: "=foo" },
+        { operator: "contains", value: "%foo" },
+        { operator: "contains", value: "foo\\bar" },
+        { operator: "startsWith", value: "%foo" },
+        { operator: "endsWith", value: "foo%" },
+        { operator: "notContains", value: "=foo" },
+        { operator: "notStartsWith", value: "%foo" },
+        { operator: "notEndsWith", value: "foo%" },
+        { operator: "neq", value: "cafe" },
+    ];
+    for (const filter of roundTrips) {
+        expect(parseTextFilterQuery(formatTextFilterQuery(filter))).toEqual(filter);
+    }
+});
+
+test("date filter query helpers expand partial dates into real bounds", () => {
+    expect(parseDateFilterQuery("2025")).toEqual({ operator: "between", value: ["2025-01-01", "2025-12-31"] });
+    expect(parseDateFilterQuery("2025-08")).toEqual({
+        operator: "between",
+        value: ["2025-08-01", "2025-08-31"],
+    });
+    expect(parseDateFilterQuery("2025-08-26")).toEqual({ operator: "eq", value: "2025-08-26" });
+    expect(parseDateFilterQuery(">2025")).toEqual({ operator: "gt", value: "2025-12-31" });
+    expect(parseDateFilterQuery(">=2025")).toEqual({ operator: "gte", value: "2025-01-01" });
+    expect(parseDateFilterQuery("<2025-08")).toEqual({ operator: "lt", value: "2025-08-01" });
+    expect(parseDateFilterQuery("<=2025-08")).toEqual({ operator: "lte", value: "2025-08-31" });
+    expect(parseDateFilterQuery("!=2025")).toEqual({ operator: "notStartsWith", value: "2025" });
+
+    expect(formatDateFilterQuery({ operator: "between", value: ["2025-01-01", "2025-12-31"] })).toBe("2025");
+    expect(formatDateFilterQuery({ operator: "gt", value: "2025-12-31" })).toBe(">2025");
+    expect(formatDateFilterQuery({ operator: "gte", value: "2025-01-01" })).toBe(">=2025");
+    expect(formatDateFilterQuery({ operator: "eq", value: "2025-08-26" })).toBe("2025-08-26");
+});
+
 test("applyFilters implements all operators", () => {
     const rows = [
         { id: 1, name: "Alice", age: 30, active: true },
@@ -61,8 +130,11 @@ test("applyFilters implements all operators", () => {
     expect(ids(applyFilters(rows, { id: { operator: "eq", value: "1" } }))).toEqual([1]);
     expect(ids(applyFilters(rows, { name: { operator: "neq", value: "bob" } }))).toEqual([1, 3, 4, 5]);
     expect(ids(applyFilters(rows, { name: { operator: "contains", value: "A" } }))).toEqual([1, 3]);
+    expect(ids(applyFilters(rows, { name: { operator: "notContains", value: "A" } }))).toEqual([2, 4, 5]);
     expect(ids(applyFilters(rows, { name: { operator: "startsWith", value: "al" } }))).toEqual([1]);
+    expect(ids(applyFilters(rows, { name: { operator: "notStartsWith", value: "al" } }))).toEqual([2, 3, 4, 5]);
     expect(ids(applyFilters(rows, { name: { operator: "endsWith", value: "E" } }))).toEqual([1, 3]);
+    expect(ids(applyFilters(rows, { name: { operator: "notEndsWith", value: "E" } }))).toEqual([2, 4, 5]);
     expect(ids(applyFilters(rows, { age: { operator: "lt", value: 30 } }))).toEqual([2, 4]);
     expect(ids(applyFilters(rows, { age: { operator: "lte", value: 25 } }))).toEqual([2, 4]);
     expect(ids(applyFilters(rows, { age: { operator: "gt", value: 30 } }))).toEqual([3, 5]);
@@ -262,6 +334,109 @@ test("typing several characters triggers a single debounced filter", async () =>
     await sleep(80);
     expect(count()).toBe(before + 1); // one application after the last keystroke
     expect(inst.query.filters.name).toEqual({ operator: "contains", value: "bru" });
+    document.body.removeChild(inst);
+});
+
+test("text filter expressions flow end to end through the grid", async () => {
+    const data = [{ age: 18 }, { age: 30 }, { age: 31 }, { age: 45 }];
+    const inst = await makeReadyGrid({
+        columns: [{ field: "age", filterType: "text" }],
+        filterable: true,
+        filterDelay: 20,
+    }, data);
+
+    typeFilter(inst, "age", ">30");
+    await sleep(80);
+
+    expect(inst.query.filters.age).toEqual({ operator: "gt", value: "30" });
+    expect(inst.rows.map((row) => row.age)).toEqual([31, 45]);
+    document.body.removeChild(inst);
+});
+
+test("text filters match accents end to end", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "product", filterType: "text" }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ product: "Café de Paris" }, { product: "Tea House" }],
+    );
+
+    typeFilter(inst, "product", "cafe");
+    await sleep(80);
+
+    expect(inst.query.filters.product).toEqual({ operator: "contains", value: "cafe" });
+    expect(inst.rows.map((row) => row.product)).toEqual(["Café de Paris"]);
+    document.body.removeChild(inst);
+});
+
+test("text notContains query is case-insensitive end to end", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "product", filterType: "text" }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ product: "Café de Paris" }, { product: "Tea House" }],
+    );
+
+    typeFilter(inst, "product", "!cafe");
+    await sleep(80);
+
+    expect(inst.query.filters.product).toEqual({ operator: "notContains", value: "cafe" });
+    expect(inst.rows.map((row) => row.product)).toEqual(["Tea House"]);
+    document.body.removeChild(inst);
+});
+
+test("text neq query uses the != syntax end to end", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "product", filterType: "text" }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ product: "Mechanical Keyboard" }, { product: "Mouse" }],
+    );
+
+    typeFilter(inst, "product", "!=mechanical keyboard");
+    await sleep(80);
+
+    expect(inst.query.filters.product).toEqual({ operator: "neq", value: "mechanical keyboard" });
+    expect(inst.rows.map((row) => row.product)).toEqual(["Mouse"]);
+    document.body.removeChild(inst);
+});
+
+test("text eq query matches accents end to end", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "product", filterType: "text" }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ product: "Élodie" }, { product: "Alice" }],
+    );
+
+    typeFilter(inst, "product", "=elodie");
+    await sleep(80);
+
+    expect(inst.query.filters.product).toEqual({ operator: "eq", value: "elodie" });
+    expect(inst.rows.map((row) => row.product)).toEqual(["Élodie"]);
+    document.body.removeChild(inst);
+});
+
+test("text query filters are reflected back into text inputs", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "age", filterType: "text" }],
+            filterable: true,
+            initialQuery: { filters: { age: { operator: "gte", value: 30 } } },
+        },
+        [{ age: 31 }],
+    );
+
+    const filter = /** @type {HTMLInputElement} */ (inst.querySelector('.dg-head-filters input[data-name="age"]'));
+    expect(filter.value).toBe(">=30");
     document.body.removeChild(inst);
 });
 
@@ -701,6 +876,27 @@ test("number filters use typed equality for numeric input and stay permissive ot
     document.body.removeChild(inst);
 });
 
+test("number filters accept explicit query operators", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "price", format: "number", formatOptions: { style: "currency", currency: "EUR" } }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ price: 89.5 }, { price: 129.9 }, { price: 179 }],
+    );
+    const el = /** @type {HTMLInputElement} */ (inst.querySelector('.dg-head-filters input[data-name="price"]'));
+
+    input(el, ">100");
+    await sleep(80);
+    expect(inst.query.filters.price).toEqual({ operator: "gt", value: 100 });
+    expect(inst.rows.map((row) => row.price)).toEqual([129.9, 179]);
+
+    const el2 = /** @type {HTMLInputElement} */ (inst.querySelector('.dg-head-filters input[data-name="price"]'));
+    expect(el2.value).toBe(">100");
+    document.body.removeChild(inst);
+});
+
 test("percent columns divide the typed value by 100 (visible scale -> raw)", async () => {
     const inst = await makeReadyGrid(
         {
@@ -737,29 +933,63 @@ test("a percent filter can be restored from an initial query", async () => {
         [{ discount: 0.2 }, { discount: 0.05 }],
     );
     const el = inst.querySelector('.dg-head-filters input[data-name="discount"]');
-    expect(el.value).toBe("20"); // raw 0.2 shown as the visible 20
+    expect(el.value).toBe("=20"); // raw 0.2 shown as the visible 20 with its explicit operator
     document.body.removeChild(inst);
 });
 
-test("date filters prefix-match the canonical ISO value", async () => {
+test("a percent filter restore does not show NaN for non-numeric external values", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "discount", format: "number", formatOptions: { style: "percent" } }],
+            filterable: true,
+            initialQuery: { filters: { discount: { operator: "contains", value: "nope" } } },
+        },
+        [{ discount: 0.2 }, { discount: 0.05 }],
+    );
+    const el = /** @type {HTMLInputElement} */ (inst.querySelector('.dg-head-filters input[data-name="discount"]'));
+    expect(el.value).toBe("nope");
+    document.body.removeChild(inst);
+});
+
+test("date filters treat partial dates as exact periods", async () => {
     const inst = await makeReadyGrid(
         {
             columns: [{ field: "created", format: "date" }],
             filterable: true,
             filterDelay: 20,
         },
-        [{ created: "2026-08-26" }, { created: "2026-08-27" }, { created: "2025-01-01" }],
+        [
+            { created: "2024-12-31" },
+            { created: "2025-01-01" },
+            { created: "2025-08-26" },
+            { created: "2026-08-27" },
+        ],
     );
     const el = inst.querySelector('.dg-head-filters input[data-name="created"]');
     // The placeholder communicates the canonical date contract
     expect(el.getAttribute("placeholder")).toBe("YYYY-MM-DD");
     expect(el.inputMode).not.toBe("numeric");
 
-    el.value = "2026-08";
-    input(el, "2026-08");
+    input(el, "2025");
     await sleep(80);
-    expect(inst.query.filters.created).toEqual({ operator: "startsWith", value: "2026-08" });
+    expect(inst.query.filters.created).toEqual({ operator: "between", value: ["2025-01-01", "2025-12-31"] });
     expect(inst.rows).toHaveLength(2);
+
+    const el2 = /** @type {HTMLInputElement} */ (inst.querySelector('.dg-head-filters input[data-name="created"]'));
+    expect(el2.value).toBe("2025");
+
+    input(el2, ">2025");
+    await sleep(80);
+    expect(inst.query.filters.created).toEqual({ operator: "gt", value: "2025-12-31" });
+    expect(inst.rows.map((row) => row.created)).toEqual(["2026-08-27"]);
+
+    const el3 = /** @type {HTMLInputElement} */ (inst.querySelector('.dg-head-filters input[data-name="created"]'));
+    expect(el3.value).toBe(">2025");
+
+    input(el3, ">=2025");
+    await sleep(80);
+    expect(inst.query.filters.created).toEqual({ operator: "gte", value: "2025-01-01" });
+    expect(inst.rows.map((row) => row.created)).toEqual(["2025-01-01", "2025-08-26", "2026-08-27"]);
     document.body.removeChild(inst);
 });
 

@@ -55,8 +55,8 @@
         document's <code>en</code>. The <code>weight</code> column uses the <code>unit</code> shortcut (it implies
         <code>style: "unit"</code>), and <code>price</code> the <code>currency</code> shortcut. Each formatter also
         suggests a preferred filter mode: <code>active</code> filters with a tri-state select, numbers with typed
-        equality, dates by partial <code>YYYY[-MM[-DD]]</code> prefix — while <code>shipped</code> (datetime) stays a
-        plain text filter.</p>
+        equality, dates by exact <code>YYYY[-MM[-DD]]</code> periods and explicit comparisons like <code>&gt;2025</code>
+        — while <code>shipped</code> (datetime) stays a plain text filter.</p>
     </section>
 
     <section class="demo-grid">
@@ -184,6 +184,9 @@
       { id: 4, product: "USB-C Dock", ordered: "2026-02-29", shipped: "2026-03-01T08:00:00+01:00", price: 249.99, discount: 0.15, weight: 1.4, active: true, change: 0.058 },
       { id: 5, product: "Ergonomic Mouse", ordered: "2026-08-15", shipped: "2026-08-16T18:45:00-05:00", price: 59, discount: null, weight: 0.3, active: false, change: -0.126 },
       { id: 6, product: "Monitor Arm", ordered: "2026-08-10", shipped: "2026-08-11T11:00:00+02:00", price: 74.9, discount: 0.1, weight: 3.1, active: true, change: 0.022 },
+      { id: 7, product: "Laptop Sleeve", ordered: "2025-12-18", shipped: "2025-12-19T07:45:00Z", price: 39.9, discount: 0.12, weight: 0.5, active: true, change: -0.014 },
+      { id: 8, product: "Standing Desk", ordered: "2025-01-09", shipped: "2025-01-15T10:30:00+01:00", price: 499, discount: 0.08, weight: 28.4, active: true, change: 0.091 },
+      { id: 9, product: "Archive HDD", ordered: "2024-03-22", shipped: "2024-03-25T16:10:00-04:00", price: 109, discount: 0.18, weight: 0.7, active: false, change: -0.043 },
     ];
 
     // Derived "tier" lives on the row so the sort comparator and renderCell

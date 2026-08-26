@@ -40,10 +40,60 @@ test("applyFilters filters by contains and eq", () => {
     expect(eq.map((r) => r.name)).toEqual(["Jane"]);
 });
 
-test("applySearch matches any scalar value case-insensitively", () => {
-    const rows = [{ name: "John", email: "john@acme.com" }, { name: "Jane", email: "jane@acme.com" }, { name: "Bob" }];
+test("applyFilters compares eq and neq case-insensitively for text", () => {
+    const rows = [{ name: "Mechanical Keyboard" }, { name: "Mouse" }];
+
+    expect(applyFilters(rows, { name: { operator: "eq", value: "mechanical keyboard" } })).toEqual([
+        { name: "Mechanical Keyboard" },
+    ]);
+    expect(applyFilters(rows, { name: { operator: "neq", value: "mechanical keyboard" } })).toEqual([
+        { name: "Mouse" },
+    ]);
+});
+
+test("applyFilters text operators are case- and accent-insensitive", () => {
+    const rows = [
+        { name: "Café Central" },
+        { name: "CAFETERIA" },
+        { name: "Élodie Martin" },
+        { name: "Ångström" },
+        { name: "Cafe\u0301 noir" },
+        { name: "Restaurant" },
+    ];
+
+    expect(applyFilters(rows, { name: { operator: "eq", value: "cafe central" } })).toEqual([{ name: "Café Central" }]);
+    expect(applyFilters(rows, { name: { operator: "contains", value: "cafe" } }).map((r) => r.name)).toEqual([
+        "Café Central",
+        "CAFETERIA",
+        "Cafe\u0301 noir",
+    ]);
+    expect(applyFilters(rows, { name: { operator: "notContains", value: "cafe" } }).map((r) => r.name)).toEqual([
+        "Élodie Martin",
+        "Ångström",
+        "Restaurant",
+    ]);
+    expect(applyFilters(rows, { name: { operator: "startsWith", value: "elodie" } })).toEqual([
+        { name: "Élodie Martin" },
+    ]);
+    expect(applyFilters(rows, { name: { operator: "endsWith", value: "strom" } })).toEqual([
+        { name: "Ångström" },
+    ]);
+    expect(
+        applyFilters(rows, { name: { operator: "in", value: ["cafe central", "elodie martin"] } }).map((r) => r.name),
+    ).toEqual(["Café Central", "Élodie Martin"]);
+});
+
+test("applySearch matches any scalar value case- and accent-insensitively", () => {
+    const rows = [
+        { name: "John", email: "john@acme.com" },
+        { name: "Jane", email: "jane@acme.com" },
+        { name: "Café Central" },
+        { name: "Cafe\u0301 noir" },
+        { name: "Bob" },
+    ];
     expect(applySearch(rows, "JOHN").map((r) => r.name)).toEqual(["John"]);
     expect(applySearch(rows, "acme").map((r) => r.name)).toEqual(["John", "Jane"]);
+    expect(applySearch(rows, "cafe").map((r) => r.name)).toEqual(["Café Central", "Cafe\u0301 noir"]);
     expect(applySearch(rows, "")).toEqual(rows);
     expect(applySearch(rows, "zzz")).toEqual([]);
 });

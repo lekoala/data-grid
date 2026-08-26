@@ -18,7 +18,7 @@ import { normalizeBoolean } from "./utils/formatValue.js";
 
 /**
  * Supported filter operators
- * @typedef {"eq"|"neq"|"contains"|"startsWith"|"endsWith"|
+ * @typedef {"eq"|"neq"|"contains"|"notContains"|"startsWith"|"notStartsWith"|"endsWith"|"notEndsWith"|
  * "lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
  */
 
@@ -120,14 +120,29 @@ function isNumericValue(value) {
 }
 
 /**
+ * Fold text for accent- and case-insensitive matching.
+ * @param {any} value
+ * @returns {string}
+ */
+function normalizeText(value) {
+    return String(value ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+}
+
+/**
  * Apply structured filters to an array.
  * Semantics:
  * - empty := null | undefined | "" (0 and false are NOT empty)
- * - contains / startsWith / endsWith: case-insensitive string comparison
+ * - contains / notContains / startsWith / notStartsWith / endsWith /
+ *   notEndsWith: case- and accent-insensitive string comparison
  * - eq / neq: a boolean value compares normalized booleans (true matches
- *   1, "1" and "true"); otherwise scalar comparison after string coercion
- *   (42 matches "42")
- * - in: scalar comparison after string coercion
+ *   1, "1" and "true"); otherwise scalar comparison after string coercion,
+ *   case- and accent-insensitive for text (42 matches "42", "Café" matches
+ *   "cafe")
+ * - in: scalar comparison after string coercion, case- and accent-insensitive
+ *   for text
  * - lt/lte/gt/gte/between: numeric comparison when both operands are finite
  *   numeric values, otherwise string comparison
  * - between requires a 2-value array, in requires a non-empty array
@@ -162,8 +177,8 @@ export function applyFilters(rows, filters) {
             if (value === null || value === undefined || value === "") {
                 continue;
             }
-            const cellLower = `${cell ?? ""}`.toLowerCase();
-            const valueLower = String(value).toLowerCase();
+            const cellText = normalizeText(cell);
+            const valueText = normalizeText(value);
             switch (operator) {
                 case "eq":
                 case "neq": {
@@ -175,16 +190,25 @@ export function applyFilters(rows, filters) {
                         const cellBool = normalizeBoolean(cell);
                         equal = cellBool === null ? `${cell}` === String(value) : cellBool === value;
                     } else {
-                        equal = `${cell}` === String(value);
+                        equal = cellText === valueText;
                     }
                     if (operator === "eq" ? !equal : equal) return false;
                     break;
                 }
                 case "startsWith":
-                    if (!cellLower.startsWith(valueLower)) return false;
+                    if (!cellText.startsWith(valueText)) return false;
+                    break;
+                case "notStartsWith":
+                    if (cellText.startsWith(valueText)) return false;
                     break;
                 case "endsWith":
-                    if (!cellLower.endsWith(valueLower)) return false;
+                    if (!cellText.endsWith(valueText)) return false;
+                    break;
+                case "notEndsWith":
+                    if (cellText.endsWith(valueText)) return false;
+                    break;
+                case "notContains":
+                    if (cellText.includes(valueText)) return false;
                     break;
                 case "lt":
                 case "lte":
@@ -225,10 +249,23 @@ export function applyFilters(rows, filters) {
                     if (!Array.isArray(value) || !value.length) {
                         continue;
                     }
-                    if (!value.some((v) => `${v}` === `${cell}`)) return false;
+                    if (
+                        !value.some((v) => {
+                            const cellBool = normalizeBoolean(cell);
+                            if (cellBool !== null) {
+                                const optionBool = normalizeBoolean(v);
+                                if (optionBool !== null) {
+                                    return optionBool === cellBool;
+                                }
+                            }
+                            return normalizeText(v) === cellText;
+                        })
+                    ) {
+                        return false;
+                    }
                     break;
                 default:
-                    if (!cellLower.includes(valueLower)) return false;
+                    if (!cellText.includes(valueText)) return false;
             }
         }
         return true;
@@ -303,10 +340,11 @@ export function parseResult(json) {
 }
 
 /**
- * Apply a global search locally: case-insensitive `contains` over the scalar
- * values of each row. This is a convenient default for client-side data, not a
- * contract for server backends: `QueryState.search` only means "the user asked
- * for a global search", the server decides which fields it covers.
+ * Apply a global search locally: case- and accent-insensitive `contains` over
+ * the scalar values of each row. This is a convenient default for client-side
+ * data, not a contract for server backends: `QueryState.search` only means
+ * "the user asked for a global search", the server decides which fields it
+ * covers.
  * @param {Array<Record<string, any>>} rows
  * @param {String} search
  * @returns {Array<Record<string, any>>}
@@ -315,10 +353,10 @@ export function applySearch(rows, search) {
     if (!search) {
         return rows;
     }
-    const needle = search.toLowerCase();
+    const needle = normalizeText(search);
     return rows.filter((row) => {
         for (const value of Object.values(row)) {
-            if (value !== null && value !== undefined && `${value}`.toLowerCase().includes(needle)) {
+            if (value !== null && value !== undefined && normalizeText(value).includes(needle)) {
                 return true;
             }
         }

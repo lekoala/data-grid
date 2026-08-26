@@ -11,6 +11,7 @@ import { parseBooleanAttribute, parseEnumAttribute, parseIntegerListAttribute } 
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
+import { formatDateFilterQuery, formatTextFilterQuery, parseDateFilterQuery, parseTextFilterQuery } from "./filter-query.js";
 import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import {
@@ -3177,23 +3178,24 @@ class DataGrid extends BaseElement {
                 const mode = /** @type {"text"|"select"|"boolean"|"number"|"date"|undefined} */ (
                     input.dataset.filterMode
                 );
-                if (mode === "boolean") {
+                if (mode === "text") {
+                    filters[name] = parseTextFilterQuery(value);
+                } else if (mode === "boolean") {
                     filters[name] = { operator: "eq", value: value === "true" };
                 } else if (mode === "number") {
-                    const num = Number(value);
+                    const parsed = parseTextFilterQuery(value);
+                    const num = Number(parsed.value);
                     const isPercent = input.dataset.percent === "true";
                     // Substring match on the raw value so partial digits match
                     // (12 -> 129.9). A percent column divides by 100: the user
                     // types the visible scale (20) and queries the raw fraction
                     // (0.2).
                     filters[name] = {
-                        operator: "contains",
-                        value: Number.isFinite(num) ? (isPercent ? num / 100 : num) : value,
+                        operator: parsed.operator,
+                        value: Number.isFinite(num) ? (isPercent ? num / 100 : num) : parsed.value,
                     };
                 } else if (mode === "date") {
-                    // Partial canonical date: 2026 / 2026-08 / 2026-08-26 all
-                    // prefix-match the ISO value.
-                    filters[name] = { operator: "startsWith", value };
+                    filters[name] = parseDateFilterQuery(value);
                 } else {
                     const isSelect = /select/i.test(input.tagName);
                     filters[name] = {
@@ -3578,6 +3580,19 @@ class DataGrid extends BaseElement {
                 if (filter.dataset.filterMode === "multi") {
                     // A multi select restores its checked boxes from the array
                     setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
+                } else if (filter.dataset.filterMode === "text") {
+                    /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery(filterState);
+                } else if (filter.dataset.filterMode === "number") {
+                    const numericValue = Number(filterState.value);
+                    const value = filter.dataset.percent === "true" && Number.isFinite(numericValue)
+                        ? numericValue * 100
+                        : filterState.value;
+                    /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery({
+                        operator: filterState.operator,
+                        value,
+                    });
+                } else if (filter.dataset.filterMode === "date") {
+                    /** @type {HTMLInputElement} */ (filter).value = formatDateFilterQuery(filterState);
                 } else {
                     // A percent query stores the raw fraction; show the visible
                     // scale (0.2 -> 20) so the control matches what was typed.
