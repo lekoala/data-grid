@@ -38,14 +38,14 @@ export function stopServer() {
  */
 export function view() {
     if (IS_CHROME_BACKEND) {
+        const chromeStderr = process.env.CI || process.env.BROWSER_DEBUG === "1" ? "inherit" : "ignore";
         return new Bun.WebView({
             width: 1280,
             height: 3000,
             backend: {
                 type: "chrome",
                 url: false,
-                stdout: "inherit",
-                stderr: "inherit",
+                stderr: chromeStderr,
             },
         });
     }
