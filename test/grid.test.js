@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
+import ResponsiveGrid from "../src/plugins/responsive-grid.js";
+import SelectableRows from "../src/plugins/selectable-rows.js";
 
 /**
  * Create a connected grid instance, ready for assertions
@@ -205,6 +207,72 @@ test("scalar options are reflected as curated HTML attributes", async () => {
     expect(inst.options.errorMessage).toBe("Unable to load");
     expect(inst.options.pageSizes).toEqual([10, 25, 50]);
     removeGrid(inst);
+});
+
+test("column wrap overrides the grid-wide wrapping policy without adding row interaction", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name", wrap: true }, { field: "email", wrap: false }, { field: "id" }],
+        },
+        [{ id: 1, name: "Alice", email: "alice@example.com" }],
+    );
+    expect(inst.querySelector('tbody td[data-column-id="name"]').classList.contains("dg-wrap")).toBe(true);
+    expect(inst.querySelector('tbody td[data-column-id="email"]').classList.contains("dg-wrap")).toBe(false);
+    expect(inst.querySelector('tbody td[data-column-id="id"]').classList.contains("dg-wrap")).toBe(false);
+
+    inst.setAttribute("wrap", "");
+    const tr = inst.querySelector("tbody tr.dg-data-row");
+    expect(tr.querySelector('td[data-column-id="name"]').classList.contains("dg-wrap")).toBe(true);
+    expect(tr.querySelector('td[data-column-id="email"]').classList.contains("dg-wrap")).toBe(false);
+    expect(tr.querySelector('td[data-column-id="id"]').classList.contains("dg-wrap")).toBe(true);
+    expect(tr.classList.contains("dg-expandable")).toBe(false);
+    tr.click();
+    expect(tr.classList.contains("dg-expanded")).toBe(false);
+    removeGrid(inst);
+});
+
+test("frozen columns stack after frozen control columns and mark the edge", async () => {
+    DataGrid.registerPlugins({ SelectableRows, ResponsiveGrid });
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                { field: "name", frozen: "start", width: 120 },
+                { field: "email", width: 180 },
+            ],
+            selectable: true,
+            responsive: true,
+        },
+        [{ id: 1, name: "Alice", email: "alice@example.com" }],
+    );
+    const selection = inst.querySelector('thead th[data-column-id="$selection"]');
+    const name = inst.querySelector('thead th[data-column-id="name"]');
+    Object.defineProperty(selection, "offsetWidth", { configurable: true, value: 40 });
+    Object.defineProperty(name, "offsetWidth", { configurable: true, value: 120 });
+    inst.syncFrozenColumns();
+
+    expect(selection.dataset.frozen).toBe("start");
+    expect(name.dataset.frozen).toBe("start");
+    expect(selection.style.getPropertyValue("--dg-frozen-offset")).toBe("0px");
+    expect(name.style.getPropertyValue("--dg-frozen-offset")).toBe("40px");
+    expect(name.hasAttribute("data-frozen-edge")).toBe(true);
+    expect(inst.scrollEl.style.getPropertyValue("--dg-frozen-start-width")).toBe("160px");
+    expect(inst.getPlugin("ResponsiveGrid")._isEssential(inst.getCol("name"))).toBe(true);
+
+    inst.hideColumn("name");
+    inst.syncFrozenColumns();
+    expect(selection.hasAttribute("data-frozen-edge")).toBe(true);
+    expect(inst.scrollEl.style.getPropertyValue("--dg-frozen-start-width")).toBe("40px");
+    inst.showColumn("name");
+    inst.syncFrozenColumns();
+    expect(inst.scrollEl.style.getPropertyValue("--dg-frozen-start-width")).toBe("160px");
+    removeGrid(inst);
+});
+
+test("snapColumns enables proximity snapping and has an observed attribute", () => {
+    const inst = new DataGrid({ snapColumns: true });
+    inst.snapColumnsChanged();
+    expect(inst.classList.contains("dg-snap-columns")).toBe(true);
+    expect(DataGrid.observedAttributes).toContain("snap-columns");
 });
 
 test("clearFilters clears the filter inputs", async () => {

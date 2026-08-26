@@ -266,6 +266,18 @@ test("options.caption creates a real table caption", async () => {
     document.body.removeChild(inst);
 });
 
+test("the scroll viewport is focusable and only becomes a named region with a business label", async () => {
+    const unnamed = await makeReadyGrid({ columns: [{ field: "name" }] });
+    expect(unnamed.scrollEl.tabIndex).toBe(0);
+    expect(unnamed.scrollEl.hasAttribute("role")).toBe(false);
+    document.body.removeChild(unnamed);
+
+    const named = await makeReadyGrid({ columns: [{ field: "name" }], caption: "Customers" });
+    expect(named.scrollEl.getAttribute("role")).toBe("region");
+    expect(named.scrollEl.getAttribute("aria-label")).toBe("Customers");
+    document.body.removeChild(named);
+});
+
 test("table inherits the host aria-labelledby / aria-label when there is no caption", async () => {
     const labelledby = document.createElement("h1");
     labelledby.id = "users-title";

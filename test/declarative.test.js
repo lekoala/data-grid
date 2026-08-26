@@ -470,3 +470,13 @@ test("data-min-width sets a column floor never compressed below", async () => {
     expect(Number(th.getAttribute("width"))).toBeGreaterThanOrEqual(110);
     removeGrid(inst);
 });
+
+test("a frozen declarative column is parsed and rendered", async () => {
+    const inst = await makeDeclarativeGrid(
+        `<table><thead><tr><th data-field="name" data-frozen="start">Name</th></tr></thead><tbody></tbody></table>`,
+        { dataSource: new ArrayDataSource([{ name: "Alice" }]) },
+    );
+    expect(inst.options.columns[0].frozen).toBe("start");
+    expect(inst.querySelector('th[data-column-id="name"]').dataset.frozen).toBe("start");
+    removeGrid(inst);
+});

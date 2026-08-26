@@ -69,6 +69,17 @@ Avoid (post-baseline APIs and syntax):
   `Object.hasOwn`
 - Docs and commit messages in English
 
+## Testing
+
+- Tests live in `test/*.test.js`, grouped by feature or plugin: each distinct
+  subject gets its own file (e.g. `row-details.test.js`, `editing.test.js`).
+  Never accumulate in a catch-all file.
+- Prefer the shared semantic helpers from `test/helpers.js` (`change()`,
+  `input()`) over inline `dispatchEvent` for repeated user interactions; keep
+  rare or specific cases explicit locally.
+- Simulated events must bubble like real interactions: the grid and its
+  plugins rely on delegated listeners.
+
 ## Documentation
 
 - Markdown table rows must fit on one line and be properly formatted
