@@ -73,14 +73,17 @@ test("boolean formats obvious booleans and rejects other conventions", () => {
         const span = formatValue(truthy, "boolean", undefined, ctx);
         expect(span.nodeName).toBe("SPAN");
         expect(span.className).toBe("dg-boolean");
+        expect(span.dataset.value).toBe("true");
         expect(span.getAttribute("role")).toBe("img");
         expect(span.getAttribute("aria-label")).toBe("Yes");
-        expect(span.textContent).toBe("✓");
+        // The shape is CSS-drawn: the contract is state only, never a glyph.
+        expect(span.textContent).toBe("");
     }
     for (const falsy of [false, 0, "0", "false"]) {
         const span = formatValue(falsy, "boolean", undefined, ctx);
+        expect(span.dataset.value).toBe("false");
         expect(span.getAttribute("aria-label")).toBe("No");
-        expect(span.textContent).toBe("–");
+        expect(span.textContent).toBe("");
     }
     for (const other of [null, undefined, "", "yes", "on", "enabled", 2]) {
         expect(formatValue(other, "boolean", undefined, ctx)).toBe("");
@@ -296,7 +299,7 @@ test("the host lang drives the Intl locale", async () => {
     removeGrid(inst);
 });
 
-test("boolean renders an accessible glyph per row", async () => {
+test("boolean renders an accessible stateful mark per row", async () => {
     const inst = await makeReadyGrid(
         { columns: [{ field: "active", format: "boolean" }] },
         [{ active: true }, { active: false }],
@@ -305,9 +308,10 @@ test("boolean renders an accessible glyph per row", async () => {
     const cells = inst.querySelectorAll('tbody td[data-column-id="active"] span.dg-boolean');
     expect(cells[0].getAttribute("role")).toBe("img");
     expect(cells[0].getAttribute("aria-label")).toBe("Yes");
-    expect(cells[0].textContent).toBe("✓");
+    expect(cells[0].dataset.value).toBe("true");
+    expect(cells[0].textContent).toBe("");
     expect(cells[1].getAttribute("aria-label")).toBe("No");
-    expect(cells[1].textContent).toBe("–");
+    expect(cells[1].dataset.value).toBe("false");
     removeGrid(inst);
 });
 

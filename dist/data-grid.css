@@ -1000,6 +1000,62 @@ data-grid th[aria-sort] .dg-sort-indicator {
   color: var(--dg-accent);
 }
 
+data-grid .dg-boolean {
+  --dg-boolean-size: 1em;
+  --dg-boolean-stroke: .12em;
+  position: relative;
+  display: inline-block;
+  inline-size: var(--dg-boolean-size);
+  block-size: var(--dg-boolean-size);
+  vertical-align: -.125em;
+  color: currentColor;
+}
+
+data-grid .dg-boolean:after {
+  content: "";
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+}
+
+data-grid .dg-boolean:not(:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))):after {
+  left: 50%;
+}
+
+data-grid .dg-boolean:not(:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))):after {
+  left: 50%;
+}
+
+data-grid .dg-boolean:not(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi))):after {
+  left: 50%;
+}
+
+data-grid .dg-boolean:-webkit-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)):after {
+  right: 50%;
+}
+
+data-grid .dg-boolean:-moz-any(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)):after {
+  right: 50%;
+}
+
+data-grid .dg-boolean:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)):after {
+  right: 50%;
+}
+
+data-grid .dg-boolean[data-value="true"]:after {
+  inline-size: calc(var(--dg-boolean-size) * .55);
+  block-size: calc(var(--dg-boolean-size) * .3);
+  border-left: var(--dg-boolean-stroke) solid currentColor;
+  border-bottom: var(--dg-boolean-stroke) solid currentColor;
+  transform: translate(-50%, -65%)rotate(-45deg);
+}
+
+data-grid .dg-boolean[data-value="false"]:after {
+  inline-size: calc(var(--dg-boolean-size) * .55);
+  border-block-start: var(--dg-boolean-stroke) solid currentColor;
+  transform: translate(-50%, -50%);
+}
+
 /* css/_rtl.css */
 data-grid[dir="rtl"] th, data-grid[dir="rtl"] td {
   text-align: right;

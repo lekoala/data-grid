@@ -104,6 +104,27 @@ The sort indicator is drawn entirely in CSS, driven by the `th` state
 `.dg-sort-indicator` element stays empty; the JS only manages the state. To
 swap the glyph, restyle `.dg-sort-indicator` (`::before` / `::after`).
 
+## Boolean marks
+
+A `format: "boolean"` cell renders an empty
+`<span class="dg-boolean" data-value="true|false" role="img">`. The accessible
+name comes from the `booleanTrue` / `booleanFalse` labels; the check / dash
+shape is drawn by the core CSS from `[data-value]`, so no glyph ever lives in
+the DOM. Themes recolor or reshape the mark through `color` and two custom
+properties:
+
+```css
+data-grid .dg-boolean {
+  --dg-boolean-size: 1em;
+  --dg-boolean-stroke: 0.12em;
+}
+
+/* Example: highlight true values */
+data-grid .dg-boolean[data-value="true"] {
+  color: var(--dg-accent);
+}
+```
+
 ## Selection badge
 
 `bulkActions` renders a `.dg-selection-count` badge that shows the plain count,
@@ -181,7 +202,7 @@ the grid itself does not depend on it.
 
 ## Selectors
 
-Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-filter`,
+Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`,
 `.dg-actions`, `.dg-footer`, `.dg-topbar`, `.dg-topbar-start`,
 `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
 `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`.

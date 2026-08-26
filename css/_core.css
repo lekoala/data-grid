@@ -976,3 +976,44 @@ data-grid th[data-sort="desc"] .dg-sort-indicator::after {
 data-grid th[aria-sort] .dg-sort-indicator {
   color: var(--dg-accent);
 }
+
+/* The boolean mark is drawn entirely in CSS from data-value: the span stays
+   empty and the JS only manages state and the accessible name (role="img" +
+   aria-label from the booleanTrue/booleanFalse labels). Themes recolor or
+   reshape it through color and the two custom properties below. */
+data-grid .dg-boolean {
+  --dg-boolean-size: 1em;
+  --dg-boolean-stroke: 0.12em;
+
+  position: relative;
+  display: inline-block;
+  inline-size: var(--dg-boolean-size);
+  block-size: var(--dg-boolean-size);
+  vertical-align: -0.125em;
+  color: currentColor;
+}
+
+data-grid .dg-boolean::after {
+  content: "";
+  box-sizing: border-box;
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+}
+
+/* true: a check. The glyph is a fixed-shape pictogram, so its own borders stay
+   physical to keep the same shape in RTL; only the positioning is logical. */
+data-grid .dg-boolean[data-value="true"]::after {
+  inline-size: calc(var(--dg-boolean-size) * 0.55);
+  block-size: calc(var(--dg-boolean-size) * 0.3);
+  border-left: var(--dg-boolean-stroke) solid currentColor;
+  border-bottom: var(--dg-boolean-stroke) solid currentColor;
+  transform: translate(-50%, -65%) rotate(-45deg);
+}
+
+/* false: a dash */
+data-grid .dg-boolean[data-value="false"]::after {
+  inline-size: calc(var(--dg-boolean-size) * 0.55);
+  border-block-start: var(--dg-boolean-stroke) solid currentColor;
+  transform: translate(-50%, -50%);
+}

@@ -5,7 +5,9 @@
  * (minWidth, align) from `getFormatDefaults()`.
  *
  * Contract:
- * - `boolean`  -> <span role="img" aria-label>✓ / –</span>
+ * - `boolean`  -> <span class="dg-boolean" data-value="true|false" role="img"
+ *                 aria-label>: an empty, stateful mark whose shape is drawn
+ *                 entirely by CSS (_core.css), never a glyph or SVG in the DOM
  * - `date`     -> <time datetime="YYYY-MM-DD">, calendar date without time zone
  *                 (Date | timestamp | validated YYYY-MM-DD); time/timeZone options throw
  * - `datetime` -> <time datetime=ISO>, instant (Date | timestamp | ISO datetime

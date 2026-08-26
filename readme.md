@@ -401,7 +401,7 @@ floor, and a preferred width for predictable formats — `boolean`, `date`,
 
 | Format     | Output                      | Intl options                 |
 |------------|-----------------------------|------------------------------|
-| `boolean`  | accessible `<span>` `✓ / –` | none                         |
+| `boolean`  | accessible `<span>` mark, CSS-drawn | none                         |
 | `date`     | `<time datetime>`           | `Intl.DateTimeFormatOptions` |
 | `datetime` | `<time datetime>`           | `Intl.DateTimeFormatOptions` |
 | `number`   | formatted text              | `Intl.NumberFormatOptions`   |

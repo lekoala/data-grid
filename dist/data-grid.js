@@ -535,9 +535,9 @@ function formatBoolean(value, ctx) {
   const doc = grid?.ownerDocument ?? document;
   const span = doc.createElement("span");
   span.className = "dg-boolean";
+  span.dataset.value = bool ? "true" : "false";
   span.setAttribute("role", "img");
   span.setAttribute("aria-label", bool ? labels?.booleanTrue ?? "Yes" : labels?.booleanFalse ?? "No");
-  span.textContent = bool ? "✓" : "–";
   return span;
 }
 function resolveDateTimeOptions(format, formatOptions = {}) {
