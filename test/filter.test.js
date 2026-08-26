@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
-import { ArrayDataSource, applyFilters } from "../src/data-source.js";
+import { ArrayDataSource, applyFilters, encodeSearchParams } from "../src/data-source.js";
 import { change, input } from "./helpers.js";
 
 async function makeReadyGrid(opts = {}, data = null) {
@@ -104,6 +104,29 @@ test("invalid between/in filters are ignored", () => {
     expect(applyFilters(rows, { age: { operator: "between", value: [1] } })).toEqual(rows);
     expect(applyFilters(rows, { age: { operator: "between", value: "25,30" } })).toEqual(rows);
     expect(applyFilters(rows, { id: { operator: "in", value: "1" } })).toEqual(rows);
+});
+
+test("an empty in list means no filter, not match nothing", () => {
+    const rows = [{ id: 1 }, { id: 2 }];
+    expect(applyFilters(rows, { id: { operator: "in", value: [] } })).toEqual(rows);
+});
+
+test("an empty array value is dropped when the query is normalized", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            initialQuery: {
+                filters: {
+                    name: { operator: "in", value: [] },
+                    other: { operator: "in", value: ["a"] },
+                },
+            },
+        },
+        [{ name: "Alice" }],
+    );
+    expect(inst.query.filters.name).toBeUndefined();
+    expect(inst.query.filters.other).toEqual({ operator: "in", value: ["a"] });
+    document.body.removeChild(inst);
 });
 
 test("scalar shorthand filters normalize to contains", async () => {
@@ -275,6 +298,292 @@ test("select filters apply immediately on change", async () => {
     change(select);
     expect(count()).toBe(before + 1);
     expect(inst.query.filters.status).toEqual({ operator: "eq", value: "active" });
+    document.body.removeChild(inst);
+});
+
+/**
+ * @param {HTMLElement} inst
+ * @param {String} field
+ * @returns {HTMLElement|null}
+ */
+function multiSelectRoot(inst, field) {
+    return inst.querySelector(`.dg-head-filters .dg-multiselect[data-name="${field}"]`);
+}
+
+test("filterMultiple renders a checkbox panel emitting the in operator", async () => {
+    const { ds, count } = instrumentedSource([{ country: "BE" }, { country: "FR" }, { country: "DE" }]);
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "country",
+                    title: "Country",
+                    filterType: "select",
+                    filterMultiple: true,
+                    firstFilterOption: { value: "", text: "All" },
+                },
+            ],
+            filterable: true,
+            dataSource: ds,
+        },
+        null,
+    );
+
+    const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    expect(root).toBeTruthy();
+    // No native multiple listbox: the panel is a checkbox menu instead
+    expect(inst.querySelector(".dg-head-filters select")).toBeNull();
+    // The empty placeholder option never participates in a set; derived
+    // options arrive sorted by label
+    const boxes = /** @type {HTMLInputElement[]} */ ([...root.querySelectorAll("input[data-value]")]);
+    expect(boxes.map((b) => b.dataset.value)).toEqual(["BE", "DE", "FR"]);
+
+    const panel = /** @type {HTMLUListElement} */ (root.querySelector(".dg-multiselect-panel"));
+    const trigger = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-trigger"));
+    const summary = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-summary"));
+    expect(panel.hidden).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+
+    trigger.click();
+    expect(panel.hidden).toBe(false);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    // A click outside the control closes it again
+    document.body.dispatchEvent(new Event("click", { bubbles: true }));
+    expect(panel.hidden).toBe(true);
+
+    trigger.click();
+    panel.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(panel.hidden).toBe(true);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    // An explicit dismissal restores focus to the trigger
+    expect(document.activeElement).toBe(trigger);
+
+    const before = count();
+    boxes[0].checked = true;
+    change(boxes[0]);
+    expect(summary.textContent).toBe("BE");
+    expect(count()).toBe(before + 1); // applied immediately, like selects
+    expect(inst.query.filters.country).toEqual({ operator: "in", value: ["BE"] });
+    await sleep(30);
+    expect(inst.rows).toHaveLength(1);
+    expect(inst.query.page).toBe(1);
+
+    boxes[2].checked = true;
+    change(boxes[2]);
+    expect(inst.query.filters.country).toEqual({ operator: "in", value: ["BE", "FR"] });
+
+    // Unchecking everything means no filter at all
+    boxes[0].checked = false;
+    change(boxes[0]);
+    boxes[2].checked = false;
+    change(boxes[2]);
+    expect(inst.query.filters.country).toBeUndefined();
+    await sleep(30);
+    expect(inst.rows).toHaveLength(3);
+    document.body.removeChild(inst);
+});
+
+test("the closed-state summary joins labels up to two then counts the rest", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "country",
+                    filterType: "select",
+                    filterMultiple: true,
+                    filterList: [
+                        { value: "", text: "All" },
+                        { value: "BE", text: "Belgium" },
+                        { value: "FR", text: "France" },
+                        { value: "NL", text: "Netherlands" },
+                    ],
+                },
+            ],
+            filterable: true,
+        },
+        [{ country: "BE" }],
+    );
+
+    const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    const summary = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-summary"));
+    const boxes = /** @type {HTMLInputElement[]} */ ([...root.querySelectorAll("input[data-value]")]);
+    expect(boxes.map((b) => b.dataset.value)).toEqual(["BE", "FR", "NL"]); // "All" dropped
+
+    const check = (i, checked) => {
+        boxes[i].checked = checked;
+        change(boxes[i]);
+    };
+
+    check(0, true);
+    expect(summary.textContent).toBe("Belgium");
+    check(1, true);
+    expect(summary.textContent).toBe("Belgium, France");
+    check(2, true);
+    expect(summary.textContent).toBe("Belgium, France +1");
+    check(0, false);
+    check(1, false);
+    check(2, false);
+    // Back to the empty state: the filter placeholder, muted through CSS
+    expect(summary.textContent).toBe("…");
+    expect(summary.classList.contains("dg-multiselect-empty")).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("the empty selection shows the firstFilterOption label when it has one", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "country",
+                    filterType: "select",
+                    filterMultiple: true,
+                    firstFilterOption: { value: "", text: "All" },
+                    filterList: [
+                        { value: "BE", text: "Belgium" },
+                        { value: "FR", text: "France" },
+                    ],
+                },
+            ],
+            filterable: true,
+        },
+        [{ country: "BE" }],
+    );
+
+    const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    const summary = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-summary"));
+    expect(summary.textContent).toBe("All");
+
+    const box = /** @type {HTMLInputElement} */ (root.querySelector('input[data-value="BE"]'));
+    box.checked = true;
+    change(box);
+    expect(summary.textContent).toBe("Belgium");
+    expect(summary.classList.contains("dg-multiselect-empty")).toBe(false);
+
+    box.checked = false;
+    change(box);
+    expect(summary.textContent).toBe("All");
+    document.body.removeChild(inst);
+});
+
+test("a rebuilt filter row closes the open panel and drops its listeners", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "country",
+                    filterType: "select",
+                    filterMultiple: true,
+                    filterList: [
+                        { value: "BE", text: "Belgium" },
+                        { value: "FR", text: "France" },
+                    ],
+                },
+            ],
+            filterable: true,
+        },
+        [{ country: "BE" }, { country: "FR" }],
+    );
+
+    const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-trigger")).click();
+    const panel = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-panel"));
+    expect(panel.hidden).toBe(false);
+
+    // A rerender rebuilds the whole table chrome including the filter row
+    await inst.renderTable();
+    const nextRoot = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    expect(nextRoot).not.toBe(root);
+    const nextPanel = /** @type {HTMLElement} */ (nextRoot.querySelector(".dg-multiselect-panel"));
+    expect(nextPanel.hidden).toBe(true);
+
+    // The stale document listener is gone: an outside click is a no-op and
+    // the fresh panel can be opened again
+    document.body.dispatchEvent(new Event("click", { bubbles: true }));
+    expect(nextPanel.hidden).toBe(true);
+    /** @type {HTMLElement} */ (nextRoot.querySelector(".dg-multiselect-trigger")).click();
+    expect(nextPanel.hidden).toBe(false);
+    document.body.removeChild(inst);
+});
+
+test("an in filter serializes for remote transport", () => {
+    const params = encodeSearchParams({
+        filters: { country: { operator: "in", value: ["BE", "FR"] } },
+    });
+    expect(params.get("filters[country][operator]")).toBe("in");
+    expect(params.get("filters[country][value][0]")).toBe("BE");
+    expect(params.get("filters[country][value][1]")).toBe("FR");
+});
+
+test("an in filter restores its checked boxes and summary", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "country",
+                    filterType: "select",
+                    filterMultiple: true,
+                    filterList: [
+                        { value: "", text: "All" },
+                        { value: "BE", text: "Belgium" },
+                        { value: "FR", text: "France" },
+                        { value: "NL", text: "Netherlands" },
+                    ],
+                },
+            ],
+            filterable: true,
+            initialQuery: { filters: { country: { operator: "in", value: ["BE", "NL"] } } },
+        },
+        [{ country: "BE" }, { country: "FR" }],
+    );
+
+    const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    const summary = /** @type {HTMLElement} */ (root.querySelector(".dg-multiselect-summary"));
+    const checked = [...root.querySelectorAll("input[data-value]:checked")];
+    expect(checked.map((b) => b.dataset.value)).toEqual(["BE", "NL"]);
+    expect(summary.textContent).toBe("Belgium, Netherlands");
+    expect(inst.query.filters.country).toEqual({ operator: "in", value: ["BE", "NL"] });
+    expect(inst.rows).toHaveLength(1);
+    document.body.removeChild(inst);
+});
+
+test("clearFilters also clears multi-select panels", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "country",
+                    filterType: "select",
+                    filterMultiple: true,
+                    filterList: [
+                        { value: "BE", text: "Belgium" },
+                        { value: "FR", text: "France" },
+                    ],
+                },
+            ],
+            filterable: true,
+            initialQuery: { filters: { country: { operator: "in", value: ["FR"] } } },
+        },
+        [{ country: "BE" }, { country: "FR" }],
+    );
+
+    await inst.clearFilters();
+    expect(inst.query.filters.country).toBeUndefined();
+    const root = /** @type {HTMLElement} */ (multiSelectRoot(inst, "country"));
+    expect(root.querySelectorAll("input[data-value]:checked")).toHaveLength(0);
+    expect(inst.rows).toHaveLength(2);
+    document.body.removeChild(inst);
+});
+
+test("filterMultiple is ignored outside the select mode", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "active", format: "boolean", filterMultiple: true }],
+            filterable: true,
+        },
+        [{ active: true }],
+    );
+    expect(inst.querySelector('.dg-head-filters select[data-name="active"]')).toBeTruthy();
+    expect(multiSelectRoot(inst, "active")).toBeNull();
     document.body.removeChild(inst);
 });
 

@@ -130,7 +130,7 @@ function isNumericValue(value) {
  * - in: scalar comparison after string coercion
  * - lt/lte/gt/gte/between: numeric comparison when both operands are finite
  *   numeric values, otherwise string comparison
- * - between requires a 2-value array, in requires an array
+ * - between requires a 2-value array, in requires a non-empty array
  * - empty/invalid filter values are ignored, not treated as "match nothing"
  * @param {Array<Record<string, any>>} rows
  * @param {Record<string, FilterInput>} [filters]
@@ -221,7 +221,8 @@ export function applyFilters(rows, filters) {
                     break;
                 }
                 case "in":
-                    if (!Array.isArray(value)) {
+                    // An empty selection means "no filter", never "match nothing"
+                    if (!Array.isArray(value) || !value.length) {
                         continue;
                     }
                     if (!value.some((v) => `${v}` === `${cell}`)) return false;

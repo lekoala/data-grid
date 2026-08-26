@@ -553,18 +553,24 @@ data-grid .dg-select-field {
   position: relative;
 }
 
-data-grid .dg-select-field::after {
+/* Shared caret geometry for disclosure controls; each component positions its
+   own instance below (_multiselect.css for the multi-select trigger). */
+data-grid :is(.dg-select-field, .dg-multiselect-trigger)::after {
   content: "";
-  position: absolute;
-  right: 12px;
-  top: 50%;
   width: 6px;
   height: 6px;
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
+  transform: rotate(45deg);
+  opacity: 0.65;
+}
+
+data-grid .dg-select-field::after {
+  position: absolute;
+  right: 12px;
+  top: 50%;
   transform: translateY(-70%) rotate(45deg);
   pointer-events: none;
-  opacity: 0.65;
 }
 
 data-grid input.dg-search {

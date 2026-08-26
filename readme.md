@@ -380,6 +380,7 @@ response protection).
 | `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`        |
 | `filterList`                            | `FilterOption[]`     | explicit select filter options                                        |
 | `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
+| `filterMultiple`                        | `Boolean`            | select filters emit an `in` filter with an array of checked values    |
 | `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
 | `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                  |
 | `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                  |

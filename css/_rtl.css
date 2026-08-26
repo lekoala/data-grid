@@ -42,6 +42,15 @@ data-grid[dir="rtl"] .dg-select-field::after {
   left: 12px;
 }
 
+data-grid[dir="rtl"] .dg-multiselect-trigger {
+  text-align: right;
+}
+
+data-grid[dir="rtl"] .dg-multiselect-panel {
+  left: auto;
+  right: 0;
+}
+
 data-grid[dir="rtl"] input.dg-search {
   padding-left: var(--dg-control-padding-inline);
   padding-right: calc(var(--dg-control-padding-inline) + 20px);

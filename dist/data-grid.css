@@ -517,15 +517,39 @@ data-grid .dg-select-field {
   max-inline-size: 100%;
 }
 
-data-grid .dg-select-field:after {
+data-grid :-webkit-any(.dg-select-field, .dg-multiselect-trigger):after {
   content: "";
-  position: absolute;
-  pointer-events: none;
   opacity: .65;
   border-bottom: 1.5px solid;
   border-right: 1.5px solid;
   width: 6px;
   height: 6px;
+  transform: rotate(45deg);
+}
+
+data-grid :-moz-any(.dg-select-field, .dg-multiselect-trigger):after {
+  content: "";
+  opacity: .65;
+  border-bottom: 1.5px solid;
+  border-right: 1.5px solid;
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+}
+
+data-grid :is(.dg-select-field, .dg-multiselect-trigger):after {
+  content: "";
+  opacity: .65;
+  border-bottom: 1.5px solid;
+  border-right: 1.5px solid;
+  width: 6px;
+  height: 6px;
+  transform: rotate(45deg);
+}
+
+data-grid .dg-select-field:after {
+  position: absolute;
+  pointer-events: none;
   top: 50%;
   right: 12px;
   transform: translateY(-70%)rotate(45deg);
@@ -1019,6 +1043,15 @@ data-grid[dir="rtl"] .dg-select-field:after {
   right: auto;
 }
 
+data-grid[dir="rtl"] .dg-multiselect-trigger {
+  text-align: right;
+}
+
+data-grid[dir="rtl"] .dg-multiselect-panel {
+  left: auto;
+  right: 0;
+}
+
 data-grid[dir="rtl"] input.dg-search {
   padding-left: var(--dg-control-padding-inline);
   padding-right: calc(var(--dg-control-padding-inline)  + 20px);
@@ -1070,6 +1103,59 @@ data-grid .dg-menu label:hover {
 
 data-grid .dg-menu input {
   margin: 0;
+}
+
+/* css/_multiselect.css */
+data-grid .dg-multiselect {
+  position: relative;
+}
+
+data-grid .dg-multiselect-trigger {
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  align-items:  center;
+  gap: var(--dg-space-2);
+  min-height: var(--dg-control-height);
+  text-align: left;
+  background: none;
+  border: 0;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+data-grid .dg-multiselect-trigger:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+}
+
+data-grid .dg-multiselect-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: auto;
+}
+
+data-grid .dg-multiselect-trigger:after {
+  flex-shrink: 0;
+  margin-top: -3px;
+}
+
+data-grid .dg-multiselect-summary.dg-multiselect-empty {
+  color: var(--dg-muted-color);
+}
+
+data-grid .dg-multiselect-panel {
+  overflow-y: auto;
+  width: max-content;
+  min-width: 100%;
+  max-width: 260px;
+  max-height: 280px;
+  top: 100%;
+  left: 0;
+  right: auto;
 }
 
 /* css/_actions.css */

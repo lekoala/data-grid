@@ -12,6 +12,15 @@ import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
 import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
 import getTextWidth from "./utils/getTextWidth.js";
+import { openMenu } from "./utils/menu.js";
+import {
+    clearMultiSelect,
+    createMultiSelect,
+    isMultiSelectOpen,
+    readMultiSelect,
+    setMultiSelectValues,
+    updateMultiSelectSummary,
+} from "./utils/multiSelectFilter.js";
 import normalizeData from "./utils/normalizeData.js";
 import randstr from "./utils/randstr.js";
 import { createSpanningRow } from "./utils/spanningRow.js";
@@ -115,6 +124,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {String} [filterPlaceholder] - a visible hint for the filter control (defaults to "…")
  * @property {Array<any>} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
  * @property {FilterOption} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
+ * @property {Boolean} [filterMultiple] - select filters accept several checked values and emit an `in` filter with an array; ignored for other filter modes
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
  * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
@@ -381,8 +391,10 @@ function normalizeQuery(query) {
                 value = filter;
             }
             // Preserve valid falsy values (0, false); drop empty ones, unless
-            // the operator works without a value (empty/notEmpty).
-            const hasValue = value !== undefined && value !== null && value !== "";
+            // the operator works without a value (empty/notEmpty). An empty
+            // array is an empty selection ("no filter"), not a value.
+            const hasValue =
+                value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
             if (hasValue || operator === "empty" || operator === "notEmpty") {
                 filters[key] = /** @type {FilterState} */ (hasValue ? { operator, value } : { operator });
             }
@@ -740,6 +752,14 @@ class DataGrid extends BaseElement {
         this._controller = null;
 
         /**
+         * Cleanup handle of the open multi-select panel. The grid owns it so a
+         * rebuilt filter row or a disconnect can never leak the transient
+         * listeners installed by utils/menu.js.
+         * @type {(() => void)|null}
+         */
+        this._multiSelectCleanup = null;
+
+        /**
          * Optional initial result, can be set as a property before connection
          * @type {PageResult|null}
          */
@@ -1084,6 +1104,7 @@ class DataGrid extends BaseElement {
             filterType: null,
             filterPlaceholder: "…",
             firstFilterOption: { value: "", text: "" },
+            filterMultiple: false,
         };
     }
 
@@ -1932,6 +1953,8 @@ class DataGrid extends BaseElement {
         this._loadObserver?.disconnect();
         this._loadObserver = null;
         this._controller?.abort();
+        // An open multi-select panel must not outlive its document listeners.
+        this._closeMultiSelectPanel();
         // Cancel any pending per-input debounce before it can fire on a
         // detached element.
         for (const input of this.querySelectorAll("input")) {
@@ -2036,6 +2059,30 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Open a multi-select panel. The open/dismiss lifecycle lives in
+     * utils/menu.js; only the cleanup handle is owned here, so a rebuilt
+     * filter row or a disconnect always detaches its listeners.
+     * @param {HTMLElement} root
+     */
+    _openMultiSelectPanel(root) {
+        this._closeMultiSelectPanel();
+        const trigger = /** @type {HTMLElement|null} */ (root.querySelector(".dg-multiselect-trigger"));
+        const panel = /** @type {HTMLElement|null} */ (root.querySelector(".dg-multiselect-panel"));
+        if (!trigger || !panel) {
+            return;
+        }
+        this._multiSelectCleanup = openMenu({ root, trigger, panel });
+    }
+
+    /**
+     * Close the open multi-select panel, if any, and drop its handle.
+     */
+    _closeMultiSelectPanel() {
+        this._multiSelectCleanup?.();
+        this._multiSelectCleanup = null;
+    }
+
+    /**
      * Cancel the pending text-input debounces of inputs within `root` and drop
      * their state. Used before replacing a filter row so a stale update never
      * fires on a detached element.
@@ -2054,6 +2101,20 @@ class DataGrid extends BaseElement {
      * @returns {*}
      */
     _handleClick(event, target) {
+        // Multi-select triggers toggle their checkbox panel; only one stays open
+        const multiTrigger = target.closest(".dg-multiselect-trigger");
+        if (multiTrigger && this._ownsControl(multiTrigger)) {
+            const root = /** @type {HTMLElement|null} */ (multiTrigger.closest(".dg-multiselect"));
+            if (root) {
+                const wasOpen = isMultiSelectOpen(root);
+                this._closeMultiSelectPanel();
+                if (!wasOpen) {
+                    this._openMultiSelectPanel(root);
+                }
+            }
+            return;
+        }
+
         const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
         if (pager && this._ownsControl(pager)) {
             if (pager.classList.contains("dg-btn-first")) return this.getFirst();
@@ -2167,6 +2228,13 @@ class DataGrid extends BaseElement {
         // Select column filters apply on change; text filters run through input.
         const filter = /** @type {HTMLSelectElement|null} */ (target.closest(this._filterSelector));
         if (filter && this._ownsControl(filter) && /select/i.test(filter.tagName)) {
+            return this.filterData();
+        }
+
+        // Multi-select checkboxes apply on change like selects do
+        const multi = target.closest(".dg-multiselect");
+        if (multi && this._ownsControl(multi)) {
+            updateMultiSelectSummary(/** @type {HTMLElement} */ (multi));
             return this.filterData();
         }
     }
@@ -3085,11 +3153,15 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     clearFilters() {
-        const inputs = /** @type {NodeListOf<HTMLInputElement|HTMLSelectElement>} */ (
+        const inputs = /** @type {NodeListOf<HTMLInputElement|HTMLSelectElement|HTMLDivElement>} */ (
             this.querySelectorAll(this._filterSelector)
         );
         for (const input of inputs) {
-            input.value = "";
+            if (input.dataset.filterMode === "multi") {
+                clearMultiSelect(input);
+                continue;
+            }
+            /** @type {HTMLInputElement|HTMLSelectElement} */ (input).value = "";
         }
         return this.filterData();
     }
@@ -3131,13 +3203,25 @@ class DataGrid extends BaseElement {
 
         /** @type {Record<string, FilterState>} */
         const filters = {};
-        const inputs = /** @type {NodeListOf<HTMLInputElement|HTMLSelectElement>} */ (
+        const inputs = /** @type {NodeListOf<HTMLInputElement|HTMLSelectElement|HTMLDivElement>} */ (
             this.querySelectorAll(this._filterSelector)
         );
         for (const input of inputs) {
-            const value = input.value;
             const name = input.dataset.name;
-            if (value && name) {
+            if (!name) {
+                continue;
+            }
+            // A multi select maps its checked boxes onto an `in` filter; an
+            // empty selection means no filter at all.
+            if (input.dataset.filterMode === "multi") {
+                const values = readMultiSelect(input);
+                if (values.length) {
+                    filters[name] = { operator: "in", value: values };
+                }
+                continue;
+            }
+            const value = /** @type {HTMLInputElement|HTMLSelectElement} */ (input).value;
+            if (value) {
                 const mode = /** @type {"text"|"select"|"boolean"|"number"|"date"|undefined} */ (
                     input.dataset.filterMode
                 );
@@ -3496,9 +3580,12 @@ class DataGrid extends BaseElement {
 
         const oldRow = thead?.querySelector("tr.dg-head-filters");
         // A replaced filter row must have its pending text-input debounces
-        // cancelled, or a stale update could fire on a detached element.
+        // cancelled, or a stale update could fire on a detached element. Its
+        // open multi-select panel is closed with it: the transient listeners
+        // belong to this grid and never outlive their row.
         if (oldRow) {
             this._cancelTextInputs(oldRow);
+            this._closeMultiSelectPanel();
         }
         if (thead && oldRow) {
             thead.replaceChild(tr, oldRow);
@@ -3512,7 +3599,9 @@ class DataGrid extends BaseElement {
         // re-attachment.
         const filteredRows = tr.querySelectorAll(this._filterSelector);
         for (const el of filteredRows) {
-            if (/select/i.test(el.tagName)) {
+            // Native selects apply on change; the multi select is not a text
+            // input either, only plain inputs need a debounced state here.
+            if (/select/i.test(el.tagName) || el.classList.contains("dg-multiselect")) {
                 continue;
             }
             const input = /** @type {HTMLInputElement} */ (el);
@@ -3532,17 +3621,22 @@ class DataGrid extends BaseElement {
     renderDefaultFilterCell(th, column, relatedTh) {
         const filter = this.createFilterElement(column, relatedTh);
 
-        // Reflect the current query filters into the input
+        // Reflect the current query filters into the control
         const field = column.field;
         if (field) {
             const filterState = /** @type {FilterState|undefined} */ (this._query.filters?.[field]);
             if (filterState) {
-                // A percent query stores the raw fraction; show the visible
-                // scale (0.2 -> 20) so the control matches what was typed.
-                filter.value =
-                    filter.dataset.percent === "true"
-                        ? String(Number(filterState.value) * 100)
-                        : String(filterState.value ?? "");
+                if (filter.dataset.filterMode === "multi") {
+                    // A multi select restores its checked boxes from the array
+                    setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
+                } else {
+                    // A percent query stores the raw fraction; show the visible
+                    // scale (0.2 -> 20) so the control matches what was typed.
+                    /** @type {HTMLInputElement|HTMLSelectElement} */ (filter).value =
+                        filter.dataset.percent === "true"
+                            ? String(Number(filterState.value) * 100)
+                            : String(filterState.value ?? "");
+                }
             }
         }
 
@@ -3559,10 +3653,15 @@ class DataGrid extends BaseElement {
     /**
      * @param {Column} column
      * @param {HTMLTableCellElement} relatedTh
-     * @returns {HTMLInputElement|HTMLSelectElement}
+     * @returns {HTMLInputElement|HTMLSelectElement|HTMLDivElement}
      */
     createFilterElement(column, relatedTh) {
         const type = getColumnFilterType(column);
+        // A multi select renders as a checkbox panel instead of a native
+        // control: Ctrl-click listboxes are unusable in a narrow column.
+        if (type === "select" && column.filterMultiple) {
+            return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
+        }
         const isSelect = type === "select" || type === "boolean";
         const filter = isSelect ? document.createElement("select") : document.createElement("input");
         filter.classList.add("dg-filter");

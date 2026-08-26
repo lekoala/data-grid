@@ -27,6 +27,9 @@ Notes:
 - A `format: "boolean"` column gets the tri-state select automatically; a
   boolean formatter value and its filter share the same normalization, so what
   displays as ✓ is exactly what "Yes" matches.
+- `filterMultiple: true` on a `select` column swaps the native control for a
+  checkbox panel emitting an `in` filter - see "Multiple select" below. It is
+  ignored for other modes (a multi boolean would degenerate into no filter).
 - The `date` mode matches the canonical contract of the date formatter:
   `2026`, `2026-08` and `2026-08-26` all prefix-match. The placeholder is
   `YYYY-MM-DD` unless `filterPlaceholder` is set.
@@ -114,6 +117,38 @@ filter cell so the row stays aligned, but renders no control). A column without
 
 It never derives options from the currently loaded page, so a server grid must
 either set `filterList` or return `meta.filters`.
+
+## Multiple select
+
+A select column can accept several values with `filterMultiple: true`. The
+native `<select>` is replaced by a compact control summarizing the selection
+("Belgium, France +1") that opens a checkbox panel reusing the context menu
+presentation:
+
+```js
+{
+    field: "country",
+    filterType: "select",
+    filterMultiple: true,
+}
+```
+
+The contract follows the mode, not the cardinality:
+
+- Checked boxes emit `{ operator: "in", value: ["BE", "FR"] }` - always `in`,
+  even when a single value is checked.
+- An empty selection means no filter at all: the entry is dropped from the
+  query instead of matching nothing.
+- Each change applies immediately, like single selects, and resets the page to
+  1. `Escape` closes the panel, a click outside closes and keeps it applied.
+- Options resolve through `getFilterOptions()` like single selects, but
+  empty-valued options ("All", placeholders) are never rendered: an empty
+  value cannot participate in a set.
+- Restore works both ways: an `in` initial query checks the matching boxes,
+  and `clearFilters()` unchecks them.
+
+Server grids receive the array through the standard bracket encoding
+(`filters[country][value][0]=BE`), and `ArrayDataSource` matches it natively.
 
 ## Live filtering
 

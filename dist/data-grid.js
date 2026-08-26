@@ -445,7 +445,7 @@ function applyFilters(rows, filters) {
           break;
         }
         case "in":
-          if (!Array.isArray(value)) {
+          if (!Array.isArray(value) || !value.length) {
             continue;
           }
           if (!value.some((v) => `${v}` === `${cell}`))
@@ -688,9 +688,135 @@ function getTextWidth(text, el = document.body, withPadding = false) {
   return Math.floor(metrics.width) + padding;
 }
 
+// src/utils/menu.js
+function openMenu({ root, trigger = null, panel }) {
+  const doc = panel.ownerDocument;
+  function close(restoreFocus) {
+    doc.removeEventListener("click", onDocClick);
+    doc.removeEventListener("keydown", onDocKeydown);
+    panel.hidden = true;
+    trigger?.setAttribute("aria-expanded", "false");
+    if (restoreFocus && trigger?.isConnected) {
+      trigger.focus();
+    }
+  }
+  function onDocClick(ev) {
+    if (!root.contains(ev.target)) {
+      close(false);
+    }
+  }
+  function onDocKeydown(ev) {
+    if (ev.key === "Escape") {
+      ev.preventDefault();
+      close(true);
+    }
+  }
+  panel.hidden = false;
+  trigger?.setAttribute("aria-expanded", "true");
+  doc.addEventListener("click", onDocClick);
+  doc.addEventListener("keydown", onDocKeydown);
+  return () => close(false);
+}
+
 // src/utils/randstr.js
 function randstr(prefix) {
   return Math.random().toString(36).replace("0.", prefix || "");
+}
+
+// src/utils/multiSelectFilter.js
+function checkboxes(root) {
+  return root.querySelectorAll(".dg-multiselect-panel input[data-value]");
+}
+function summarize(labels) {
+  if (labels.length <= 2) {
+    return labels.join(", ");
+  }
+  return `${labels.slice(0, 2).join(", ")} +${labels.length - 2}`;
+}
+function updateMultiSelectSummary(root) {
+  const summary = root.querySelector(".dg-multiselect-summary");
+  if (!summary) {
+    return;
+  }
+  const labels = [];
+  for (const box of checkboxes(root)) {
+    if (box.checked) {
+      const label = box.closest("label");
+      labels.push(label ? label.textContent.trim() : `${box.dataset.value}`);
+    }
+  }
+  summary.textContent = labels.length ? summarize(labels) : `${root.dataset.emptyText ?? ""}`;
+  summary.classList.toggle("dg-multiselect-empty", labels.length === 0);
+}
+function createMultiSelect(column, options, relatedTh) {
+  const doc = relatedTh.ownerDocument;
+  const root = doc.createElement("div");
+  root.className = "dg-multiselect dg-filter-control";
+  root.id = randstr("dg-filter-");
+  root.dataset.name = column.field ?? "";
+  root.dataset.filterMode = "multi";
+  root.dataset.emptyText = column.firstFilterOption?.text || column.filterPlaceholder || "";
+  const trigger = doc.createElement("button");
+  trigger.type = "button";
+  trigger.className = "dg-multiselect-trigger";
+  trigger.setAttribute("aria-expanded", "false");
+  const panelId = randstr("dg-multiselect-");
+  trigger.setAttribute("aria-controls", panelId);
+  const headerId = relatedTh.getAttribute("id");
+  if (headerId) {
+    trigger.setAttribute("aria-labelledby", headerId);
+  }
+  const summary = doc.createElement("span");
+  summary.className = "dg-multiselect-summary";
+  trigger.appendChild(summary);
+  const panel = doc.createElement("ul");
+  panel.className = "dg-menu dg-multiselect-panel";
+  panel.id = panelId;
+  panel.hidden = true;
+  for (const option of options) {
+    if (`${option.value}` === "") {
+      continue;
+    }
+    const li = doc.createElement("li");
+    const label = doc.createElement("label");
+    const checkbox = doc.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.dataset.value = `${option.value}`;
+    label.appendChild(checkbox);
+    label.appendChild(doc.createTextNode(`${option.text}`));
+    li.appendChild(label);
+    panel.appendChild(li);
+  }
+  root.appendChild(trigger);
+  root.appendChild(panel);
+  updateMultiSelectSummary(root);
+  return root;
+}
+function isMultiSelectOpen(root) {
+  const panel = root.querySelector(".dg-multiselect-panel");
+  return Boolean(panel && !panel.hidden);
+}
+function readMultiSelect(root) {
+  const values = [];
+  for (const box of checkboxes(root)) {
+    if (box.checked) {
+      values.push(`${box.dataset.value}`);
+    }
+  }
+  return values;
+}
+function setMultiSelectValues(root, values) {
+  const selected = (values ?? []).map((v) => `${v}`);
+  for (const box of checkboxes(root)) {
+    box.checked = selected.includes(`${box.dataset.value}`);
+  }
+  updateMultiSelectSummary(root);
+}
+function clearMultiSelect(root) {
+  for (const box of checkboxes(root)) {
+    box.checked = false;
+  }
+  updateMultiSelectSummary(root);
 }
 
 // src/utils/spanningRow.js
@@ -803,7 +929,7 @@ function normalizeQuery(query) {
         operator = "contains";
         value = filter;
       }
-      const hasValue = value !== undefined && value !== null && value !== "";
+      const hasValue = value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
       if (hasValue || operator === "empty" || operator === "notEmpty") {
         filters[key] = hasValue ? { operator, value } : { operator };
       }
@@ -1035,6 +1161,7 @@ class DataGrid extends base_element_default {
     this._selection = { mode: "explicit", ids: new Set, except: new Set };
     this._requestSeq = 0;
     this._controller = null;
+    this._multiSelectCleanup = null;
     this.initialResult = null;
     this._initialResult = this.options.initialResult || this.initialResult || null;
     this.rows = [];
@@ -1235,7 +1362,8 @@ class DataGrid extends base_element_default {
       align: null,
       filterType: null,
       filterPlaceholder: "…",
-      firstFilterOption: { value: "", text: "" }
+      firstFilterOption: { value: "", text: "" },
+      filterMultiple: false
     };
   }
   get defaultOptions() {
@@ -1814,6 +1942,7 @@ class DataGrid extends base_element_default {
     this._loadObserver?.disconnect();
     this._loadObserver = null;
     this._controller?.abort();
+    this._closeMultiSelectPanel();
     for (const input of this.querySelectorAll("input")) {
       textInputState.get(input)?.apply.cancel();
       textInputState.delete(input);
@@ -1889,6 +2018,19 @@ class DataGrid extends base_element_default {
       cell.removeAttribute("data-dg-overflow-title");
     }
   }
+  _openMultiSelectPanel(root) {
+    this._closeMultiSelectPanel();
+    const trigger = root.querySelector(".dg-multiselect-trigger");
+    const panel = root.querySelector(".dg-multiselect-panel");
+    if (!trigger || !panel) {
+      return;
+    }
+    this._multiSelectCleanup = openMenu({ root, trigger, panel });
+  }
+  _closeMultiSelectPanel() {
+    this._multiSelectCleanup?.();
+    this._multiSelectCleanup = null;
+  }
   _cancelTextInputs(root) {
     for (const input of root.querySelectorAll("input")) {
       textInputState.get(input)?.apply.cancel();
@@ -1896,6 +2038,18 @@ class DataGrid extends base_element_default {
     }
   }
   _handleClick(event, target) {
+    const multiTrigger = target.closest(".dg-multiselect-trigger");
+    if (multiTrigger && this._ownsControl(multiTrigger)) {
+      const root = multiTrigger.closest(".dg-multiselect");
+      if (root) {
+        const wasOpen = isMultiSelectOpen(root);
+        this._closeMultiSelectPanel();
+        if (!wasOpen) {
+          this._openMultiSelectPanel(root);
+        }
+      }
+      return;
+    }
     const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
     if (pager && this._ownsControl(pager)) {
       if (pager.classList.contains("dg-btn-first"))
@@ -1968,6 +2122,11 @@ class DataGrid extends base_element_default {
     }
     const filter = target.closest(this._filterSelector);
     if (filter && this._ownsControl(filter) && /select/i.test(filter.tagName)) {
+      return this.filterData();
+    }
+    const multi = target.closest(".dg-multiselect");
+    if (multi && this._ownsControl(multi)) {
+      updateMultiSelectSummary(multi);
       return this.filterData();
     }
   }
@@ -2523,6 +2682,10 @@ class DataGrid extends base_element_default {
   clearFilters() {
     const inputs = this.querySelectorAll(this._filterSelector);
     for (const input of inputs) {
+      if (input.dataset.filterMode === "multi") {
+        clearMultiSelect(input);
+        continue;
+      }
       input.value = "";
     }
     return this.filterData();
@@ -2545,9 +2708,19 @@ class DataGrid extends base_element_default {
     const filters = {};
     const inputs = this.querySelectorAll(this._filterSelector);
     for (const input of inputs) {
-      const value = input.value;
       const name = input.dataset.name;
-      if (value && name) {
+      if (!name) {
+        continue;
+      }
+      if (input.dataset.filterMode === "multi") {
+        const values = readMultiSelect(input);
+        if (values.length) {
+          filters[name] = { operator: "in", value: values };
+        }
+        continue;
+      }
+      const value = input.value;
+      if (value) {
         const mode = input.dataset.filterMode;
         if (mode === "boolean") {
           filters[name] = { operator: "eq", value: value === "true" };
@@ -2807,6 +2980,7 @@ class DataGrid extends base_element_default {
     const oldRow = thead?.querySelector("tr.dg-head-filters");
     if (oldRow) {
       this._cancelTextInputs(oldRow);
+      this._closeMultiSelectPanel();
     }
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
@@ -2815,7 +2989,7 @@ class DataGrid extends base_element_default {
     }
     const filteredRows = tr.querySelectorAll(this._filterSelector);
     for (const el of filteredRows) {
-      if (/select/i.test(el.tagName)) {
+      if (/select/i.test(el.tagName) || el.classList.contains("dg-multiselect")) {
         continue;
       }
       const input = el;
@@ -2831,7 +3005,11 @@ class DataGrid extends base_element_default {
     if (field) {
       const filterState = this._query.filters?.[field];
       if (filterState) {
-        filter.value = filter.dataset.percent === "true" ? String(Number(filterState.value) * 100) : String(filterState.value ?? "");
+        if (filter.dataset.filterMode === "multi") {
+          setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
+        } else {
+          filter.value = filter.dataset.percent === "true" ? String(Number(filterState.value) * 100) : String(filterState.value ?? "");
+        }
       }
     }
     if (filter instanceof HTMLSelectElement) {
@@ -2845,6 +3023,9 @@ class DataGrid extends base_element_default {
   }
   createFilterElement(column, relatedTh) {
     const type = getColumnFilterType(column);
+    if (type === "select" && column.filterMultiple) {
+      return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
+    }
     const isSelect = type === "select" || type === "boolean";
     const filter = isSelect ? document.createElement("select") : document.createElement("input");
     filter.classList.add("dg-filter");

@@ -139,6 +139,72 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "multi-select filter keeps its panel usable across immediate applies",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        await v.evaluate(`(() => {
+            const column = window.grid.options.columns.find((c) => c.field === "company");
+            column.filterType = "select";
+            column.filterMultiple = true;
+            window.grid.renderTable();
+        })()`);
+        await waitFor(v, "document.querySelector('#local-grid .dg-head-filters .dg-multiselect')");
+
+        await v.evaluate(`(() => {
+            document.querySelector('#local-grid .dg-multiselect-trigger').click();
+        })()`);
+        expect(await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden")).toBe(false);
+
+        const check = (value, checked) =>
+            `(() => {
+                const box = document.querySelector('#local-grid .dg-multiselect input[data-value="${value}"]');
+                box.checked = ${checked};
+                box.dispatchEvent(new Event('change', { bubbles: true }));
+            })()`;
+
+        // Each change applies immediately; the panel must stay open and keep
+        // the same usable nodes instead of being rebuilt by the reload
+        await v.evaluate(check("Acme", true));
+        await waitFor(v, "window.grid.query.filters.company.value.length === 1");
+        expect(await read(v, "JSON.stringify(window.grid.query.filters.company)")).toBe(
+            JSON.stringify({ operator: "in", value: ["Acme"] }),
+        );
+        expect(await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden")).toBe(false);
+        expect(await read(v, "document.querySelectorAll('#local-grid tbody tr.dg-data-row').length")).toBe(10);
+
+        await v.evaluate(check("Google", true));
+        await waitFor(v, "window.grid.query.filters.company.value.length === 2");
+        expect(await read(v, "JSON.stringify(window.grid.query.filters.company.value)")).toBe(
+            JSON.stringify(["Acme", "Google"]),
+        );
+
+        await v.evaluate(check("Acme", false));
+        await waitFor(v, "window.grid.query.filters.company.value.length === 1");
+        expect(await read(v, "JSON.stringify(window.grid.query.filters.company.value)")).toBe(
+            JSON.stringify(["Google"]),
+        );
+
+        // Unchecking everything drops the filter entirely
+        await v.evaluate(check("Google", false));
+        await waitFor(v, "window.grid.query.filters.company === undefined");
+        expect(await read(v, "document.querySelectorAll('#local-grid tbody tr.dg-data-row').length")).toBe(10);
+
+        // Escape dismisses and restores focus to the trigger
+        await v.evaluate(`(() => {
+            document.querySelector('#local-grid .dg-multiselect-trigger').click();
+            document.querySelector('#local-grid .dg-multiselect-panel').focus();
+        })()`);
+        await v.press("Escape");
+        await waitFor(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden === true");
+        expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "responsive mode hides columns on a narrow viewport",
     async () => {
         await using v = view();
