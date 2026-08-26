@@ -68,3 +68,7 @@ Avoid (post-baseline APIs and syntax):
 - ~2020 browser baseline; no polyfills; avoid `structuredClone`, `Array.at`,
   `Object.hasOwn`
 - Docs and commit messages in English
+
+## Documentation
+
+- Markdown table rows must fit on one line and be properly formatted

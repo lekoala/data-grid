@@ -357,26 +357,26 @@ response protection).
 
 ## Column
 
-| Name                                    | Type                 | Description                                          |
-|-----------------------------------------|----------------------|------------------------------------------------------|
-| `field`                                 | `String`             | the key in the data                                  |
-| `title`                                 | `String`             | header title (defaults to `field`)                   |
-| `id`                                    | `String`             | stable identifier (defaults to `field`)              |
-| `width`                                 | `Number`             | column width (auto otherwise)                        |
-| `class`                                 | `String`             | class on the column (`th.class` / `td.class`)        |
-| `attr`                                  | `String`             | set a row attribute instead of rendering             |
-| `hidden`                                | `Boolean`            | hide the column                                      |
-| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)   |
-| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid) |
-| `transform`                             | `String \| Function` | built-in `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value` |
-| `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)               |
-| `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`            |
-| `responsive`                            | `Number`             | responsive priority (`0` disables)                   |
-| `filterType`                            | `"text" \| "select"` | filter field type                                    |
-| `filterList`                            | `FilterOption[]`     | explicit select filter options                       |
-| `firstFilterOption`                     | `FilterOption`       | first select option                                  |
-| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)           |
-| `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`) |
+| Name                                    | Type                 | Description                                                           |
+|-----------------------------------------|----------------------|-----------------------------------------------------------------------|
+| `field`                                 | `String`             | the key in the data                                                   |
+| `title`                                 | `String`             | header title (defaults to `field`)                                    |
+| `id`                                    | `String`             | stable identifier (defaults to `field`)                               |
+| `width`                                 | `Number`             | column width (auto otherwise)                                         |
+| `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                         |
+| `attr`                                  | `String`             | set a row attribute instead of rendering                              |
+| `hidden`                                | `Boolean`            | hide the column                                                       |
+| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                    |
+| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                  |
+| `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value` |
+| `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                |
+| `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                             |
+| `responsive`                            | `Number`             | responsive priority (`0` disables)                                    |
+| `filterType`                            | `"text" \| "select"` | filter field type                                                     |
+| `filterList`                            | `FilterOption[]`     | explicit select filter options                                        |
+| `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
+| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
+| `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                  |
 
 ## Action
 
