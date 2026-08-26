@@ -623,6 +623,7 @@ data-grid thead tr.dg-head-filters .dg-filter-control {
   min-height: var(--dg-control-height);
   outline: 0;
   padding: 4px var(--dg-padding-x);
+  text-align: inherit;
   background-color: #0000;
   border: 0;
   border-radius: 0;

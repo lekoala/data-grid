@@ -403,7 +403,7 @@ test("the header shares the column alignment", async () => {
     removeGrid(inst);
 });
 
-test("filter cells keep their natural alignment", async () => {
+test("filter cells follow the column alignment", async () => {
     const inst = await makeReadyGrid(
         {
             filterable: true,
@@ -415,7 +415,22 @@ test("filter cells keep their natural alignment", async () => {
     );
     const th = inst.querySelector('.dg-head-filters th[data-column-id="price"]');
     expect(th.querySelector(".dg-filter")).toBeTruthy();
-    expect(th.hasAttribute("data-align")).toBe(false);
+    // The formatter default (number -> end) propagates to the filter control.
+    expect(th.dataset.align).toBe("end");
+    removeGrid(inst);
+});
+
+test("an explicit filter alignment overrides the formatter default", async () => {
+    const inst = await makeReadyGrid(
+        {
+            filterable: true,
+            columns: [{ field: "price", title: "Price", format: "number", align: "center" }],
+        },
+        [{ price: 1 }],
+        "en-US",
+    );
+    const th = inst.querySelector('.dg-head-filters th[data-column-id="price"]');
+    expect(th.dataset.align).toBe("center");
     removeGrid(inst);
 });
 

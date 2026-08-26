@@ -95,7 +95,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
  * @property {Number} [width] - the preferred width of the column (auto otherwise)
  * @property {Number} [minWidth] - the column is never compressed below this width
- * @property {"start"|"center"|"end"|null} [align] - horizontal alignment of the column's header and body cells, defaults to the formatter default when `format` is set (filter controls keep their natural alignment)
+ * @property {"start"|"center"|"end"|null} [align] - horizontal alignment of the column's header, body, and filter control, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
  * @property {"boolean"|"date"|"datetime"|"number"|null} [format] - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
  * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
@@ -634,8 +634,7 @@ function isColumnHidden(column) {
 
 /**
  * Effective alignment of a column: the explicit option wins over the formatter
- * default. Drives `data-align` on both header and body cells; the filter row
- * keeps its natural alignment.
+ * default. Drives `data-align` on header, body, and filter cells.
  * @param {Column} column
  * @returns {String|null}
  */
@@ -2377,16 +2376,14 @@ class DataGrid extends BaseElement {
         const cell = document.createElement(tag);
         cell.dataset.columnId = this.getColumnId(column);
         applyColumnDefinition(cell, column);
-        // `data-format` is a body-only theming hook for the rendered cell;
-        // alignment is shared by header and body cells.
-        if (tag === "td") {
-            if (column.format) {
-                cell.dataset.format = column.format;
-            }
-            const align = getColumnAlign(column);
-            if (align) {
-                cell.dataset.align = align;
-            }
+        // Alignment is shared by header, body, and filter cells; `data-format`
+        // stays a body-only theming hook for the rendered cell.
+        const align = getColumnAlign(column);
+        if (align) {
+            cell.dataset.align = align;
+        }
+        if (tag === "td" && column.format) {
+            cell.dataset.format = column.format;
         }
         return cell;
     }

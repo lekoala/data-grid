@@ -61,7 +61,7 @@ export type Column = {
      */
     minWidth?: number;
     /**
-     * - horizontal alignment of the column's header and body cells, defaults to the formatter default when `format` is set (filter controls keep their natural alignment)
+     * - horizontal alignment of the column's header, body, and filter control, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
      */
     align?: "start" | "center" | "end" | null;
     /**

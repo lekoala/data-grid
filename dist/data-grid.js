@@ -2093,14 +2093,12 @@ class DataGrid extends base_element_default {
     const cell = document.createElement(tag);
     cell.dataset.columnId = this.getColumnId(column);
     applyColumnDefinition(cell, column);
-    if (tag === "td") {
-      if (column.format) {
-        cell.dataset.format = column.format;
-      }
-      const align = getColumnAlign(column);
-      if (align) {
-        cell.dataset.align = align;
-      }
+    const align = getColumnAlign(column);
+    if (align) {
+      cell.dataset.align = align;
+    }
+    if (tag === "td" && column.format) {
+      cell.dataset.format = column.format;
     }
     return cell;
   }

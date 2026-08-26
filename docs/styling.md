@@ -227,9 +227,9 @@ Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`,
 `.dg-actions`, `.dg-footer`, `.dg-topbar`, `.dg-topbar-start`,
 `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
 `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`.
-Column alignment lands on both header and body cells as
+Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
-formatter default); filter cells keep their natural alignment.
+formatter default); the filter control inherits the same `text-align`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
 
 ## Right-to-left
