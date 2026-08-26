@@ -2821,6 +2821,20 @@ function elementOffset(el) {
 
 // src/plugins/column-resizer.js
 class ColumnResizer extends base_plugin_default {
+  constructor(grid) {
+    super(grid);
+    this._resizeController = null;
+  }
+  connected() {
+    this.grid.addEventListener("mousedown", this);
+    this.grid.addEventListener("click", this);
+  }
+  disconnected() {
+    this.grid.removeEventListener("mousedown", this);
+    this.grid.removeEventListener("click", this);
+    this._resizeController?.abort();
+    this._resizeController = null;
+  }
   afterRender(context) {
     if (context !== "table") {
       return;
@@ -2835,12 +2849,7 @@ class ColumnResizer extends base_plugin_default {
     }
   }
   renderResizer(resizeLabel) {
-    const grid = this.grid;
-    const table = grid.table;
-    if (!table) {
-      return;
-    }
-    const cols = grid.querySelectorAll("thead tr.dg-head-columns th");
+    const cols = this.grid.querySelectorAll("thead tr.dg-head-columns th");
     for (const col of cols) {
       if (col.classList.contains("dg-not-resizable")) {
         continue;
@@ -2849,64 +2858,82 @@ class ColumnResizer extends base_plugin_default {
       resizer.classList.add("dg-resizer");
       resizer.ariaLabel = resizeLabel;
       col.appendChild(resizer);
-      let startX = 0;
-      let startW = 0;
-      let remainingSpace = 0;
-      let max = 0;
-      const mouseMoveHandler = (e) => {
-        if (e.clientX > max) {
-          return;
-        }
-        const newWidth = startW + (e.clientX - startX);
-        if (col.dataset.minWidth && newWidth > Number.parseInt(col.dataset.minWidth)) {
-          col.setAttribute("width", String(newWidth));
-        }
-      };
-      const mouseUpHandler = () => {
-        grid.log("resized column");
-        resizer.classList.remove("dg-resizer-active");
-        if (grid.options.reorder) {
-          col.draggable = true;
-        }
-        col.style.overflow = "hidden";
-        document.removeEventListener("mousemove", mouseMoveHandler);
-        document.removeEventListener("mouseup", mouseUpHandler);
-        dispatch(grid, "columnResized", {
-          col: col.getAttribute("field"),
-          width: col.getAttribute("width")
-        });
-      };
-      resizer.addEventListener("click", (e) => {
-        e.stopPropagation();
-      });
-      resizer.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const target = e.target;
-        const currentCols = [...grid.querySelectorAll("thead tr.dg-head-columns th")];
-        const visibleCols = currentCols.filter((col2) => {
-          return !col2.hasAttribute("hidden");
-        });
-        const columnIndex = visibleCols.findIndex((col2) => col2 === target.parentNode);
-        grid.log("resize column");
-        resizer.classList.add("dg-resizer-active");
-        col.removeAttribute("draggable");
-        col.style.overflow = "visible";
-        resizer.style.height = `${table.offsetHeight - 1}px`;
-        startX = e.clientX;
-        startW = col.offsetWidth;
-        remainingSpace = (visibleCols.length - columnIndex) * 30;
-        max = elementOffset(target).left + grid.offsetWidth - remainingSpace;
-        col.setAttribute("width", String(startW));
-        for (let j = 0;j < visibleCols.length; j++) {
-          if (j > columnIndex) {
-            visibleCols[j].removeAttribute("width");
-          }
-        }
-        document.addEventListener("mousemove", mouseMoveHandler);
-        document.addEventListener("mouseup", mouseUpHandler);
-      });
     }
+  }
+  onclick(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
+    }
+    if (target.closest(".dg-resizer")) {
+      event.stopPropagation();
+    }
+  }
+  onmousedown(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
+    }
+    const resizer = target.closest(".dg-resizer");
+    if (!resizer) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const grid = this.grid;
+    const table = grid.table;
+    const col = resizer.closest("th");
+    if (!table || !col) {
+      return;
+    }
+    const currentCols = [...grid.querySelectorAll("thead tr.dg-head-columns th")];
+    const visibleCols = currentCols.filter((col2) => {
+      return !col2.hasAttribute("hidden");
+    });
+    const columnIndex = visibleCols.findIndex((col2) => col2 === resizer.parentNode);
+    grid.log("resize column");
+    resizer.classList.add("dg-resizer-active");
+    col.removeAttribute("draggable");
+    col.style.overflow = "visible";
+    resizer.style.height = `${table.offsetHeight - 1}px`;
+    const startX = event.clientX;
+    const startW = col.offsetWidth;
+    const remainingSpace = (visibleCols.length - columnIndex) * 30;
+    const max = elementOffset(resizer).left + grid.offsetWidth - remainingSpace;
+    col.setAttribute("width", String(startW));
+    for (let j = 0;j < visibleCols.length; j++) {
+      if (j > columnIndex) {
+        visibleCols[j].removeAttribute("width");
+      }
+    }
+    this._resizeController?.abort();
+    this._resizeController = new AbortController;
+    const { signal } = this._resizeController;
+    const mouseMoveHandler = (e) => {
+      if (e.clientX > max) {
+        return;
+      }
+      const newWidth = startW + (e.clientX - startX);
+      if (col.dataset.minWidth && newWidth > Number.parseInt(col.dataset.minWidth)) {
+        col.setAttribute("width", String(newWidth));
+      }
+    };
+    const mouseUpHandler = () => {
+      grid.log("resized column");
+      resizer.classList.remove("dg-resizer-active");
+      if (grid.options.reorder) {
+        col.draggable = true;
+      }
+      col.style.overflow = "hidden";
+      this._resizeController?.abort();
+      this._resizeController = null;
+      dispatch(grid, "columnResized", {
+        col: col.getAttribute("field"),
+        width: col.getAttribute("width")
+      });
+    };
+    document.addEventListener("mousemove", mouseMoveHandler, { signal });
+    document.addEventListener("mouseup", mouseUpHandler, { signal, once: true });
   }
 }
 var column_resizer_default = ColumnResizer;
@@ -2920,12 +2947,12 @@ class ContextMenu extends base_plugin_default {
   }
   connected() {
     this.menu = this.grid.querySelector(".dg-menu");
+    this.grid.addEventListener("contextmenu", this);
+    this.grid.addEventListener("change", this);
   }
   disconnected() {
-    const grid = this.grid;
-    if (grid.headerRow) {
-      grid.headerRow.removeEventListener("contextmenu", this);
-    }
+    this.grid.removeEventListener("contextmenu", this);
+    this.grid.removeEventListener("change", this);
     if (this._docClickHandler) {
       document.removeEventListener("click", this._docClickHandler);
       this._docClickHandler = null;
@@ -2936,17 +2963,17 @@ class ContextMenu extends base_plugin_default {
       return;
     }
     this.createMenu();
-    this.attachContextMenu();
   }
-  attachContextMenu() {
-    const grid = this.grid;
-    if (grid.headerRow) {
-      grid.headerRow.addEventListener("contextmenu", this);
+  onchange(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
     }
-  }
-  onchange(e) {
+    const t = target.closest(".dg-menu input[data-name]");
+    if (!t) {
+      return;
+    }
     const grid = this.grid;
-    const t = e.target;
     const field = t.dataset.name;
     if (!field) {
       return;
@@ -2962,16 +2989,23 @@ class ContextMenu extends base_plugin_default {
     }
     grid.fixPage();
   }
-  oncontextmenu(e) {
-    e.preventDefault();
-    const target = e.target.closest("thead");
-    const menu = this.menu;
-    if (!menu || !target) {
+  oncontextmenu(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
       return;
     }
-    const rect = target.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const header = target.closest("thead");
+    if (!header) {
+      return;
+    }
+    event.preventDefault();
+    const menu = this.menu;
+    if (!menu) {
+      return;
+    }
+    const rect = header.getBoundingClientRect();
+    let x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
     menu.style.top = `${y}px`;
     menu.style.left = `${x}px`;
     menu.removeAttribute("hidden");
@@ -2996,7 +3030,6 @@ class ContextMenu extends base_plugin_default {
       return;
     }
     menu.replaceChildren();
-    menu.addEventListener("change", this);
     for (const col of grid.options.columns) {
       if (col.attr) {
         continue;
@@ -3021,63 +3054,86 @@ var context_menu_default = ContextMenu;
 
 // src/plugins/draggable-headers.js
 class DraggableHeaders extends base_plugin_default {
+  connected() {
+    this.grid.addEventListener("dragstart", this);
+    this.grid.addEventListener("dragover", this);
+    this.grid.addEventListener("drop", this);
+  }
+  disconnected() {
+    this.grid.removeEventListener("dragstart", this);
+    this.grid.removeEventListener("dragover", this);
+    this.grid.removeEventListener("drop", this);
+  }
   afterRender(context) {
     if (context !== "table") {
       return;
     }
     const headers = this.grid.querySelectorAll('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
     for (const th of headers) {
-      this.makeHeaderDraggable(th);
+      th.draggable = true;
     }
   }
-  makeHeaderDraggable(th) {
-    const grid = this.grid;
-    th.draggable = true;
-    th.addEventListener("dragstart", (e) => {
-      grid.log("reorder col");
-      const dt = e.dataTransfer;
-      if (!dt) {
-        return;
-      }
-      dt.effectAllowed = "move";
-      dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
-    });
-    th.addEventListener("dragover", (e) => {
-      e.preventDefault();
-      if (e.dataTransfer) {
-        e.dataTransfer.dropEffect = "move";
-      }
-    });
-    th.addEventListener("drop", (e) => {
-      e.stopPropagation();
-      const target = e.target.closest("th");
-      const dt = e.dataTransfer;
-      if (!dt) {
-        return;
-      }
-      const draggedId = dt.getData("text/plain");
-      const targetId = target?.getAttribute("data-column-id");
-      if (!targetId || draggedId === targetId) {
-        grid.log("reordered col stayed the same");
-        return;
-      }
-      if (draggedId.startsWith("$") || targetId.startsWith("$")) {
-        return;
-      }
-      grid.log(`reordered col from ${draggedId} to ${targetId}`);
-      const cols = grid.options.columns;
-      const from = cols.findIndex((c) => grid.getColumnId(c) === draggedId);
-      const to = cols.findIndex((c) => grid.getColumnId(c) === targetId);
-      if (from === -1 || to === -1) {
-        return;
-      }
-      [cols[from], cols[to]] = [cols[to], cols[from]];
-      grid.renderTable();
-      dispatch(grid, "columnReordered", {
-        col: draggedId,
-        from,
-        to
-      });
+  _draggableHeader(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return null;
+    }
+    return target.closest('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
+  }
+  ondragstart(event) {
+    const th = this._draggableHeader(event);
+    if (!th) {
+      return;
+    }
+    this.grid.log("reorder col");
+    const dt = event.dataTransfer;
+    if (!dt) {
+      return;
+    }
+    dt.effectAllowed = "move";
+    dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
+  }
+  ondragover(event) {
+    if (!this._draggableHeader(event)) {
+      return;
+    }
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = "move";
+    }
+  }
+  ondrop(event) {
+    const target = this._draggableHeader(event);
+    if (!target) {
+      return;
+    }
+    event.stopPropagation();
+    const dt = event.dataTransfer;
+    if (!dt) {
+      return;
+    }
+    const draggedId = dt.getData("text/plain");
+    const targetId = target.getAttribute("data-column-id");
+    if (!targetId || draggedId === targetId) {
+      this.grid.log("reordered col stayed the same");
+      return;
+    }
+    if (draggedId.startsWith("$") || targetId.startsWith("$")) {
+      return;
+    }
+    this.grid.log(`reordered col from ${draggedId} to ${targetId}`);
+    const cols = this.grid.options.columns;
+    const from = cols.findIndex((c) => this.grid.getColumnId(c) === draggedId);
+    const to = cols.findIndex((c) => this.grid.getColumnId(c) === targetId);
+    if (from === -1 || to === -1) {
+      return;
+    }
+    [cols[from], cols[to]] = [cols[to], cols[from]];
+    this.grid.renderTable();
+    dispatch(this.grid, "columnReordered", {
+      col: draggedId,
+      from,
+      to
     });
   }
 }
@@ -3138,14 +3194,85 @@ class SelectableRows extends base_plugin_default {
   }
   connected() {
     this.grid.addEventListener("selectionChange", this);
+    this.grid.addEventListener("change", this);
+    this.grid.addEventListener("click", this);
   }
   disconnected() {
     this.grid.removeEventListener("selectionChange", this);
+    this.grid.removeEventListener("change", this);
+    this.grid.removeEventListener("click", this);
   }
-  handleEvent(event) {
-    if (event.type === "selectionChange") {
-      this.syncSelection();
+  onselectionChange() {
+    this.syncSelection();
+  }
+  onchange(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
     }
+    const grid = this.grid;
+    if (!grid.options.selectable) {
+      return;
+    }
+    const selectAll = target.closest(`.${SELECT_ALL_CLASS}`);
+    if (selectAll) {
+      if (selectAll.checked) {
+        grid.selectAll();
+      } else {
+        grid.clearSelection();
+      }
+      return;
+    }
+    const checkbox = target.closest(`.${SELECTABLE_CLASS} input[type="checkbox"]`);
+    if (checkbox) {
+      const rowIndex = this._rowIndex(checkbox);
+      if (rowIndex === null) {
+        return;
+      }
+      const row = grid.rows[rowIndex];
+      if (row !== undefined) {
+        grid.toggleRow(row, rowIndex);
+      }
+    }
+  }
+  onclick(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
+    }
+    const grid = this.grid;
+    if (!grid.options.selectable) {
+      return;
+    }
+    if (target.closest("label.dg-clickable-cell")) {
+      event.stopPropagation();
+    }
+    const radio = target.closest(`.${SELECTABLE_CLASS} input[type="radio"]`);
+    if (!radio) {
+      return;
+    }
+    event.preventDefault();
+    const rowIndex = this._rowIndex(radio);
+    if (rowIndex === null) {
+      return;
+    }
+    const row = grid.rows[rowIndex];
+    if (row === undefined) {
+      return;
+    }
+    if (grid.isRowSelected(row, rowIndex)) {
+      grid.deselectRow(row, rowIndex);
+    } else {
+      grid.selectRow(row, rowIndex);
+    }
+  }
+  _rowIndex(element) {
+    const tr = element.closest("tr");
+    if (!tr) {
+      return null;
+    }
+    const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "", 10);
+    return Number.isInteger(rowIndex) ? rowIndex : null;
   }
   extendColumns(columns) {
     if (!this.grid.options.selectable) {
@@ -3230,13 +3357,6 @@ class SelectableRows extends base_plugin_default {
     this.selectAll.type = "checkbox";
     this.selectAll.classList.add(SELECT_ALL_CLASS);
     this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
-    this.selectAll.addEventListener("change", () => {
-      if (this.selectAll?.checked) {
-        this.grid.selectAll();
-      } else {
-        this.grid.clearSelection();
-      }
-    });
     const label = document.createElement("label");
     label.hidden = this.isSingleSelect;
     label.classList.add("dg-clickable-cell");
@@ -3257,25 +3377,6 @@ class SelectableRows extends base_plugin_default {
     const label = document.createElement("label");
     label.classList.add("dg-clickable-cell");
     label.appendChild(input);
-    label.addEventListener("click", (event) => {
-      event.stopPropagation();
-    });
-    if (this.isSingleSelect) {
-      input.addEventListener("click", (event) => {
-        event.preventDefault();
-        if (row && grid.isRowSelected(row, rowIndex ?? 0)) {
-          grid.deselectRow(row, rowIndex ?? 0);
-        } else if (row) {
-          grid.selectRow(row, rowIndex ?? 0);
-        }
-      });
-    } else {
-      input.addEventListener("change", () => {
-        if (row) {
-          grid.toggleRow(row, rowIndex ?? 0);
-        }
-      });
-    }
     return label;
   }
 }
@@ -3378,10 +3479,8 @@ class BulkActions extends base_plugin_default {
     this.grid.removeEventListener("selectionChange", this);
     this.bar?.remove();
   }
-  handleEvent(event) {
-    if (event.type === "selectionChange") {
-      this.render();
-    }
+  onselectionChange() {
+    this.render();
   }
   afterRender(context) {
     if (context === "body") {
@@ -3938,8 +4037,37 @@ class RowActions extends base_plugin_default {
     this._boundDocumentClick = null;
     this._boundKeydown = null;
   }
+  connected() {
+    this.grid.addEventListener("click", this);
+  }
   disconnected() {
+    this.grid.removeEventListener("click", this);
     this.closeActionMenu();
+  }
+  onclick(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
+    }
+    const toggle = target.closest(".dg-actions-toggle");
+    if (!toggle) {
+      return;
+    }
+    event.stopPropagation();
+    const tr = toggle.closest("tr.dg-data-row");
+    if (!tr) {
+      return;
+    }
+    const rowIndex = Number(tr.dataset.rowIndex);
+    const row = this.grid.rows[rowIndex];
+    if (!tr || !row) {
+      return;
+    }
+    const cell = toggle.closest('td[data-column-id="$actions"]');
+    if (!cell) {
+      return;
+    }
+    this.toggleActionMenu(cell, row);
   }
   hasActions() {
     const grid = this.grid;
@@ -4109,13 +4237,6 @@ class RowActions extends base_plugin_default {
     actionsToggle.setAttribute("aria-label", labels2.toggleActions);
     actionsToggle.setAttribute("aria-expanded", "false");
     actionsToggle.title = labels2.toggleActions;
-    actionsToggle.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      const cell = actionsToggle.closest("td") ?? actionsToggle.parentElement;
-      if (cell) {
-        this.toggleActionMenu(cell, rowData);
-      }
-    });
     fragment.appendChild(actionsToggle);
     let defaultApplied = false;
     const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
@@ -4449,6 +4570,34 @@ class RowDetails extends base_plugin_default {
     this.expanded = new Set;
     this.collapsed = new Set;
   }
+  connected() {
+    this.grid.addEventListener("click", this);
+  }
+  disconnected() {
+    this.grid.removeEventListener("click", this);
+  }
+  onclick(event) {
+    const target = event.target;
+    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+      return;
+    }
+    const button = target.closest(`.${DETAILS_CLASS}-toggle-control`);
+    if (!button) {
+      return;
+    }
+    event.stopPropagation();
+    const tr = button.closest("tr.dg-data-row");
+    if (!tr) {
+      return;
+    }
+    const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "", 10);
+    const row = this.grid.rows[rowIndex];
+    if (!Number.isInteger(rowIndex) || !row) {
+      return;
+    }
+    const key = this.grid.resolveRowKey(row, rowIndex);
+    this.toggle(key);
+  }
   extendColumns(columns) {
     if (typeof this.grid.options.rowDetails !== "function") {
       return;
@@ -4516,10 +4665,6 @@ class RowDetails extends base_plugin_default {
     button.setAttribute("aria-controls", this._detailId(rowIndex));
     this._syncToggle(button, row, rowIndex, expanded);
     button.innerHTML += `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
-      this.toggle(key);
-    });
     return button;
   }
   _syncToggle(button, row, rowIndex, expanded) {

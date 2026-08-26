@@ -100,13 +100,8 @@ class BulkActions extends BasePlugin {
         this.bar?.remove();
     }
 
-    /**
-     * @param {Event} event
-     */
-    handleEvent(event) {
-        if (event.type === "selectionChange") {
-            this.render();
-        }
+    onselectionChange() {
+        this.render();
     }
 
     /**

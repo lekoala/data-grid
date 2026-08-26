@@ -4,6 +4,7 @@ import { ArrayDataSource, FetchDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
 import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { input } from "./helpers.js";
 
 DataGrid.registerPlugins({ SelectableRows, BulkActions, RowActions });
 
@@ -259,9 +260,8 @@ test("local sort, search and pagination work on the declarative dataset", async 
     expect(inst.rows.map((r) => r.name)).toEqual(["User C", "User D"]);
 
     // Global search narrows locally.
-    const input = inst.querySelector(".dg-search");
-    input.value = "User E";
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+    const searchInput = inst.querySelector(".dg-search");
+    input(searchInput, "User E");
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(inst.rows.map((r) => r.name)).toEqual(["User E"]);
     removeGrid(inst);

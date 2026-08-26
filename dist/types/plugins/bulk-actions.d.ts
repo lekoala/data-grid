@@ -21,10 +21,7 @@ declare class BulkActions extends BasePlugin {
     constructor(grid: import("../data-grid.js").default);
     connected(): void;
     disconnected(): void;
-    /**
-     * @param {Event} event
-     */
-    handleEvent(event: Event): void;
+    onselectionChange(): void;
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */

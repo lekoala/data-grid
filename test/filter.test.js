@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource, applyFilters } from "../src/data-source.js";
+import { change, input } from "./helpers.js";
 
 async function makeReadyGrid(opts = {}, data = null) {
     DataGrid.registerPlugins({});
@@ -37,12 +38,13 @@ function instrumentedSource(data) {
 
 /** Type into a text filter input, dispatching an input event per character. */
 function typeFilter(inst, field, text) {
-    const input = inst.querySelector(`.dg-head-filters input[data-name="${field}"]`);
+    const el = inst.querySelector(`.dg-head-filters input[data-name="${field}"]`);
+    let value = "";
     for (const ch of text) {
-        input.value += ch;
-        input.dispatchEvent(new Event("input", { bubbles: true }));
+        value += ch;
+        input(el, value);
     }
-    return input;
+    return el;
 }
 
 test("applyFilters implements all operators", () => {
@@ -270,7 +272,7 @@ test("select filters apply immediately on change", async () => {
     const before = count();
     const select = inst.querySelector(".dg-head-filters select");
     select.value = "active";
-    select.dispatchEvent(new Event("change", { bubbles: true }));
+    change(select);
     expect(count()).toBe(before + 1);
     expect(inst.query.filters.status).toEqual({ operator: "eq", value: "active" });
     document.body.removeChild(inst);

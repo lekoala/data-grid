@@ -17,19 +17,114 @@ class SelectableRows extends BasePlugin {
 
     connected() {
         this.grid.addEventListener("selectionChange", this);
+        this.grid.addEventListener("change", this);
+        this.grid.addEventListener("click", this);
     }
 
     disconnected() {
         this.grid.removeEventListener("selectionChange", this);
+        this.grid.removeEventListener("change", this);
+        this.grid.removeEventListener("click", this);
+    }
+
+    onselectionChange() {
+        this.syncSelection();
     }
 
     /**
+     * Header select-all and body multi-select checkboxes. Delegated to the
+     * grid so rerendered rows keep working without re-attaching.
      * @param {Event} event
      */
-    handleEvent(event) {
-        if (event.type === "selectionChange") {
-            this.syncSelection();
+    onchange(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+            return;
         }
+        const grid = this.grid;
+        if (!grid.options.selectable) {
+            return;
+        }
+
+        const selectAll = target.closest(`.${SELECT_ALL_CLASS}`);
+        if (selectAll) {
+            if (/** @type {HTMLInputElement} */ (selectAll).checked) {
+                grid.selectAll();
+            } else {
+                grid.clearSelection();
+            }
+            return;
+        }
+
+        const checkbox = /** @type {HTMLInputElement|null} */ (
+            target.closest(`.${SELECTABLE_CLASS} input[type="checkbox"]`)
+        );
+        if (checkbox) {
+            const rowIndex = this._rowIndex(checkbox);
+            if (rowIndex === null) {
+                return;
+            }
+            const row = grid.rows[rowIndex];
+            if (row !== undefined) {
+                grid.toggleRow(row, rowIndex);
+            }
+        }
+    }
+
+    /**
+     * Body radio buttons and their full-cell labels. The radio flow is kept on
+     * `click` (not `change`) on purpose: a radio already selected must be
+     * deselectable, which native radios do not allow without preventDefault.
+     * @param {MouseEvent} event
+     */
+    onclick(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+            return;
+        }
+        const grid = this.grid;
+        if (!grid.options.selectable) {
+            return;
+        }
+
+        // The label spans the whole cell: clicking it must not trigger the row.
+        if (target.closest("label.dg-clickable-cell")) {
+            event.stopPropagation();
+        }
+
+        const radio = /** @type {HTMLInputElement|null} */ (target.closest(`.${SELECTABLE_CLASS} input[type="radio"]`));
+        if (!radio) {
+            return;
+        }
+        event.preventDefault();
+        const rowIndex = this._rowIndex(radio);
+        if (rowIndex === null) {
+            return;
+        }
+        const row = grid.rows[rowIndex];
+        if (row === undefined) {
+            return;
+        }
+        if (grid.isRowSelected(row, rowIndex)) {
+            grid.deselectRow(row, rowIndex);
+        } else {
+            grid.selectRow(row, rowIndex);
+        }
+    }
+
+    /**
+     * The row index of a control living in a data row, or null when the DOM
+     * does not carry one.
+     * @param {Element} element
+     * @returns {Number|null}
+     */
+    _rowIndex(element) {
+        const tr = element.closest("tr");
+        if (!tr) {
+            return null;
+        }
+        const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "", 10);
+        return Number.isInteger(rowIndex) ? rowIndex : null;
     }
 
     /**
@@ -142,13 +237,6 @@ class SelectableRows extends BasePlugin {
         this.selectAll.type = "checkbox";
         this.selectAll.classList.add(SELECT_ALL_CLASS);
         this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
-        this.selectAll.addEventListener("change", () => {
-            if (this.selectAll?.checked) {
-                this.grid.selectAll();
-            } else {
-                this.grid.clearSelection();
-            }
-        });
 
         const label = document.createElement("label");
         label.hidden = this.isSingleSelect;
@@ -184,29 +272,6 @@ class SelectableRows extends BasePlugin {
         const label = document.createElement("label");
         label.classList.add("dg-clickable-cell");
         label.appendChild(input);
-
-        // Prevent unwanted click behaviour on the row (default action, etc.)
-        label.addEventListener("click", (event) => {
-            event.stopPropagation();
-        });
-
-        if (this.isSingleSelect) {
-            // Radio buttons can't be unchecked natively: control the state manually
-            input.addEventListener("click", (event) => {
-                event.preventDefault();
-                if (row && grid.isRowSelected(row, rowIndex ?? 0)) {
-                    grid.deselectRow(row, rowIndex ?? 0);
-                } else if (row) {
-                    grid.selectRow(row, rowIndex ?? 0);
-                }
-            });
-        } else {
-            input.addEventListener("change", () => {
-                if (row) {
-                    grid.toggleRow(row, rowIndex ?? 0);
-                }
-            });
-        }
 
         return label;
     }

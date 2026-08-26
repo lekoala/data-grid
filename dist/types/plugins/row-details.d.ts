@@ -7,6 +7,15 @@ declare class RowDetails extends BasePlugin {
     collapsed: Set<string>;
     /** @param {import("../data-grid.js").default} grid */
     constructor(grid: import("../data-grid.js").default);
+    connected(): void;
+    disconnected(): void;
+    /**
+     * Delegate the expand/collapse toggle. The row is resolved from the DOM
+     * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
+     * working across body rerenders without re-attaching anything.
+     * @param {MouseEvent} event
+     */
+    onclick(event: MouseEvent): void;
     /** @param {import("../data-grid.js").Column[]} columns */
     extendColumns(columns: import("../data-grid.js").Column[]): void;
     /** @public @param {String} rowKey @returns {Boolean} */

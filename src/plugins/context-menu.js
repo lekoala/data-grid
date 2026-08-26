@@ -19,12 +19,12 @@ class ContextMenu extends BasePlugin {
          * @type {HTMLUListElement|null}
          */
         this.menu = this.grid.querySelector(".dg-menu");
+        this.grid.addEventListener("contextmenu", this);
+        this.grid.addEventListener("change", this);
     }
     disconnected() {
-        const grid = this.grid;
-        if (grid.headerRow) {
-            grid.headerRow.removeEventListener("contextmenu", this);
-        }
+        this.grid.removeEventListener("contextmenu", this);
+        this.grid.removeEventListener("change", this);
         if (this._docClickHandler) {
             document.removeEventListener("click", this._docClickHandler);
             this._docClickHandler = null;
@@ -39,19 +39,24 @@ class ContextMenu extends BasePlugin {
             return;
         }
         this.createMenu();
-        this.attachContextMenu();
     }
 
-    attachContextMenu() {
-        const grid = this.grid;
-        if (grid.headerRow) {
-            grid.headerRow.addEventListener("contextmenu", this);
+    /**
+     * Only the column-visibility checkboxes inside the menu trigger this: the
+     * `change` listener is delegated to the whole grid, so anything else
+     * (pager, filters, selection) must be ignored.
+     * @param {Event} event
+     */
+    onchange(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+            return;
         }
-    }
-
-    onchange(/** @type {Event} */ e) {
+        const t = /** @type {HTMLInputElement|null} */ (target.closest(".dg-menu input[data-name]"));
+        if (!t) {
+            return;
+        }
         const grid = this.grid;
-        const t = /** @type {HTMLInputElement} */ (e.target);
         const field = t.dataset.name;
         if (!field) {
             return;
@@ -70,16 +75,26 @@ class ContextMenu extends BasePlugin {
         grid.fixPage(); //fixes Chrome footer flexbox resize issues that may appear when there is a large number of columns (i.e. more than 10).
     }
 
-    oncontextmenu(/** @type {MouseEvent} */ e) {
-        e.preventDefault();
-        const target = /** @type {HTMLElement} */ (e.target).closest("thead");
-        const menu = this.menu;
-        if (!menu || !target) {
+    /**
+     * @param {MouseEvent} event
+     */
+    oncontextmenu(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
             return;
         }
-        const rect = target.getBoundingClientRect();
-        let x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const header = target.closest("thead");
+        if (!header) {
+            return;
+        }
+        event.preventDefault();
+        const menu = this.menu;
+        if (!menu) {
+            return;
+        }
+        const rect = header.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
 
         menu.style.top = `${y}px`;
         menu.style.left = `${x}px`;
@@ -107,7 +122,6 @@ class ContextMenu extends BasePlugin {
             return;
         }
         menu.replaceChildren();
-        menu.addEventListener("change", this);
 
         for (const col of grid.options.columns) {
             if (col.attr) {

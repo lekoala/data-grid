@@ -15,7 +15,15 @@ declare class RowActions extends BasePlugin {
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid: import("../data-grid.js").default);
+    connected(): void;
     disconnected(): void;
+    /**
+     * Delegate the collapsed-menu toggle. The row is resolved from the DOM
+     * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
+     * working across body rerenders without re-attaching anything.
+     * @param {MouseEvent} event
+     */
+    onclick(event: MouseEvent): void;
     /**
      * Whether the actions column is active: static `options.actions`, the
      * `rowActions` capability or a declarative `<th data-actions>`.

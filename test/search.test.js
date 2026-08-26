@@ -3,6 +3,7 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change, input } from "./helpers.js";
 
 DataGrid.registerPlugins({ SelectableRows, BulkActions });
 
@@ -28,9 +29,10 @@ function removeGrid(inst) {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 20));
 
-function typeInto(input, value) {
-    input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+// The tests name the input `input`, which would shadow the shared helper: keep
+// the local alias, delegating to the shared semantics.
+function typeInto(el, value) {
+    input(el, value);
 }
 
 test("searchable renders a named, labelled search input with a decorative icon", async () => {
@@ -177,7 +179,7 @@ test("changing the search clears the selection", async () => {
     const first = inst.querySelector('tbody tr td[data-column-id="$selection"] input');
 
     first.checked = true;
-    first.dispatchEvent(new Event("change"));
+    change(first);
     expect(inst.getSelectionState().ids.size).toBe(1);
 
     typeInto(input, "Person 2");
@@ -192,7 +194,7 @@ test("editing the search input clears the selection before the commit", async ()
     const first = inst.querySelector('tbody tr td[data-column-id="$selection"] input');
 
     first.checked = true;
-    first.dispatchEvent(new Event("change"));
+    change(first);
     expect(inst.getSelectionState().ids.size).toBe(1);
 
     // Below min and never committed, yet the selection is already invalidated

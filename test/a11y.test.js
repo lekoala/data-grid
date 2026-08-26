@@ -5,6 +5,7 @@ import BulkActions from "../src/plugins/bulk-actions.js";
 import EditableColumn from "../src/plugins/editable-column.js";
 import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change } from "./helpers.js";
 
 async function makeReadyGrid(opts = {}, data = null, pluginSet = {}) {
     DataGrid.registerPlugins(pluginSet);
@@ -247,7 +248,7 @@ test("the pagination group exposes the page context and the selection badge is a
 
     const input = inst.tbody.querySelector('td[data-column-id="$selection"] input');
     input.checked = true;
-    input.dispatchEvent(new Event("change"));
+    change(input);
     expect(count.hidden).toBe(false);
     expect(count.querySelector('[aria-hidden="true"]').textContent).toBe("1");
     expect(count.querySelector(".dg-visually-hidden").textContent).toBe("1 selected");

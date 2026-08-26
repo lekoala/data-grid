@@ -16,6 +16,44 @@ class RowDetails extends BasePlugin {
         this.collapsed = new Set();
     }
 
+    connected() {
+        this.grid.addEventListener("click", this);
+    }
+
+    disconnected() {
+        this.grid.removeEventListener("click", this);
+    }
+
+    /**
+     * Delegate the expand/collapse toggle. The row is resolved from the DOM
+     * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
+     * working across body rerenders without re-attaching anything.
+     * @param {MouseEvent} event
+     */
+    onclick(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+            return;
+        }
+        const button = target.closest(`.${DETAILS_CLASS}-toggle-control`);
+        if (!button) {
+            return;
+        }
+        event.stopPropagation();
+
+        const tr = /** @type {HTMLTableRowElement|null} */ (button.closest("tr.dg-data-row"));
+        if (!tr) {
+            return;
+        }
+        const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "", 10);
+        const row = this.grid.rows[rowIndex];
+        if (!Number.isInteger(rowIndex) || !row) {
+            return;
+        }
+        const key = this.grid.resolveRowKey(row, rowIndex);
+        this.toggle(key);
+    }
+
     /** @param {import("../data-grid.js").Column[]} columns */
     extendColumns(columns) {
         if (typeof this.grid.options.rowDetails !== "function") {
@@ -100,10 +138,6 @@ class RowDetails extends BasePlugin {
         button.setAttribute("aria-controls", this._detailId(rowIndex));
         this._syncToggle(button, row, rowIndex, expanded);
         button.innerHTML += `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
-        button.addEventListener("click", (event) => {
-            event.stopPropagation();
-            this.toggle(key);
-        });
         return button;
     }
 

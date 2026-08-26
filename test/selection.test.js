@@ -3,6 +3,7 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change } from "./helpers.js";
 
 const rows = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `row${i}` }));
 
@@ -24,7 +25,7 @@ function firstCheckbox(inst) {
 
 function toggle(input) {
     input.checked = !input.checked;
-    input.dispatchEvent(new Event("change"));
+    change(input);
 }
 
 test("selection survives a page change", async () => {
@@ -114,7 +115,7 @@ test("selectVisibleOnly=false switches to mode 'all' with an except set", async 
 
     const selectAll = inst.querySelector(".dg-select-all");
     selectAll.checked = true;
-    selectAll.dispatchEvent(new Event("change"));
+    change(selectAll);
 
     let state = inst.getSelectionState();
     expect(state.mode).toBe("all");
@@ -133,7 +134,7 @@ test("selectVisibleOnly=false switches to mode 'all' with an except set", async 
 
     // Unchecking select-all clears the whole selection
     selectAll.checked = false;
-    selectAll.dispatchEvent(new Event("change"));
+    change(selectAll);
     state = inst.getSelectionState();
     expect(state.mode).toBe("explicit");
     expect(state.ids.size).toBe(0);
@@ -188,16 +189,16 @@ test("single select keeps at most one selected row and allows toggling off", asy
     const inst = await makeReadyGrid({ columns: [{ field: "name" }], singleSelect: true });
 
     const radios = inst.querySelectorAll('tbody tr td[data-column-id="$selection"] input');
-    radios[0].dispatchEvent(new Event("click"));
+    radios[0].dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(inst.getSelectionState().ids.has("1")).toBe(true);
 
-    radios[1].dispatchEvent(new Event("click"));
+    radios[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
     const state = inst.getSelectionState();
     expect(state.ids.has("2")).toBe(true);
     expect(state.ids.has("1")).toBe(false);
     expect(state.ids.size).toBe(1);
 
-    radios[1].dispatchEvent(new Event("click"));
+    radios[1].dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(inst.getSelectionState().ids.size).toBe(0);
     document.body.removeChild(inst);
 });

@@ -3,6 +3,7 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import ResponsiveGrid from "../src/plugins/responsive-grid.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change } from "./helpers.js";
 
 const ROWS = [{ a: 1, b: 2, c: 3, d: 4 }];
 
@@ -282,7 +283,7 @@ test("selection maps rows correctly when responsive child rows are present", asy
     const checkboxes = inst.querySelectorAll("tbody tr.dg-data-row .dg-selectable input");
     expect(checkboxes.length).toBe(rows.length);
     checkboxes[1].checked = true;
-    checkboxes[1].dispatchEvent(new Event("change"));
+    change(checkboxes[1]);
     expect(Array.from(inst.getSelectionState().ids)).toEqual(["2"]);
     document.body.removeChild(inst);
 });

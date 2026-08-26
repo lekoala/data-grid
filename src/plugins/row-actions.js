@@ -23,8 +23,48 @@ class RowActions extends BasePlugin {
         this._boundKeydown = null;
     }
 
+    connected() {
+        this.grid.addEventListener("click", this);
+    }
+
     disconnected() {
+        this.grid.removeEventListener("click", this);
         this.closeActionMenu();
+    }
+
+    /**
+     * Delegate the collapsed-menu toggle. The row is resolved from the DOM
+     * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
+     * working across body rerenders without re-attaching anything.
+     * @param {MouseEvent} event
+     */
+    onclick(event) {
+        const target = event.target;
+        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+            return;
+        }
+        const toggle = target.closest(".dg-actions-toggle");
+        if (!toggle) {
+            return;
+        }
+        // Stop the click from reaching document listeners (the outside-click
+        // close of the menu itself) before the menu has a chance to open.
+        event.stopPropagation();
+
+        const tr = /** @type {HTMLTableRowElement|null} */ (toggle.closest("tr.dg-data-row"));
+        if (!tr) {
+            return;
+        }
+        const rowIndex = Number(tr.dataset.rowIndex);
+        const row = this.grid.rows[rowIndex];
+        if (!tr || !row) {
+            return;
+        }
+        const cell = /** @type {HTMLElement|null} */ (toggle.closest('td[data-column-id="$actions"]'));
+        if (!cell) {
+            return;
+        }
+        this.toggleActionMenu(cell, row);
     }
 
     /**
@@ -269,13 +309,6 @@ class RowActions extends BasePlugin {
         actionsToggle.setAttribute("aria-label", labels.toggleActions);
         actionsToggle.setAttribute("aria-expanded", "false");
         actionsToggle.title = labels.toggleActions;
-        actionsToggle.addEventListener("click", (/** @type {MouseEvent} */ ev) => {
-            ev.stopPropagation();
-            const cell = /** @type {HTMLElement} */ (actionsToggle.closest("td") ?? actionsToggle.parentElement);
-            if (cell) {
-                this.toggleActionMenu(cell, rowData);
-            }
-        });
         fragment.appendChild(actionsToggle);
 
         let defaultApplied = false;

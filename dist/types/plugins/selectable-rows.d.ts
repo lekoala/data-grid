@@ -8,10 +8,27 @@ declare class SelectableRows extends BasePlugin {
     get visibleOnly(): boolean;
     connected(): void;
     disconnected(): void;
+    onselectionChange(): void;
     /**
+     * Header select-all and body multi-select checkboxes. Delegated to the
+     * grid so rerendered rows keep working without re-attaching.
      * @param {Event} event
      */
-    handleEvent(event: Event): void;
+    onchange(event: Event): void;
+    /**
+     * Body radio buttons and their full-cell labels. The radio flow is kept on
+     * `click` (not `change`) on purpose: a radio already selected must be
+     * deselectable, which native radios do not allow without preventDefault.
+     * @param {MouseEvent} event
+     */
+    onclick(event: MouseEvent): void;
+    /**
+     * The row index of a control living in a data row, or null when the DOM
+     * does not carry one.
+     * @param {Element} element
+     * @returns {Number|null}
+     */
+    _rowIndex(element: Element): number | null;
     /**
      * Inject the selection column at the start.
      * @param {import("../data-grid.js").Column[]} columns

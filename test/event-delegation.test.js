@@ -1,6 +1,9 @@
 import { afterEach, expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
+import DraggableHeaders from "../src/plugins/draggable-headers.js";
+import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change, input } from "./helpers.js";
 
 class CountingSource {
     constructor(rows) {
@@ -45,15 +48,6 @@ const ROWS = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `Person ${
 
 function click(el, bubbles = true) {
     el.dispatchEvent(new MouseEvent("click", { bubbles }));
-}
-
-function change(el) {
-    el.dispatchEvent(new Event("change", { bubbles: true }));
-}
-
-function input(el, value) {
-    el.value = value;
-    el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
 test("pager buttons navigate through delegated clicks", async () => {
@@ -202,4 +196,102 @@ test("an inner grid interaction never triggers the outer grid", async () => {
     expect(innerDs.count).toBeGreaterThan(0);
     expect(outerDs.count).toBe(outerCountBefore);
     expect(outer.query.search).toBe("");
+});
+
+test("rerendering does not duplicate delegated plugin handlers", async () => {
+    DataGrid.registerPlugins({ SelectableRows });
+    const inst = await connectGrid({
+        dataSource: new ArrayDataSource(ROWS),
+        columns: CONTROL_COLUMNS,
+        selectable: true,
+    });
+
+    // A few full renders: the delegated listener is installed once, so a single
+    // interaction must produce a single action.
+    inst.renderTable();
+    inst.refresh();
+    await sleep(20);
+
+    const checkbox = inst.querySelector('tbody tr td[data-column-id="$selection"] input');
+    checkbox.checked = true;
+    change(checkbox);
+    // A duplicated listener would toggle twice and net out to zero.
+    expect(inst.getSelectionState().ids.size).toBe(1);
+});
+
+test("reconnecting does not duplicate delegated plugin handlers", async () => {
+    DataGrid.registerPlugins({ SelectableRows });
+    const inst = await connectGrid({
+        dataSource: new ArrayDataSource(ROWS),
+        columns: CONTROL_COLUMNS,
+        selectable: true,
+    });
+
+    inst.remove();
+    await sleep(30);
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+
+    const checkbox = inst.querySelector('tbody tr td[data-column-id="$selection"] input');
+    checkbox.checked = true;
+    change(checkbox);
+    expect(inst.getSelectionState().ids.size).toBe(1);
+});
+
+test("an inner grid selection never triggers the outer grid selection plugin", async () => {
+    DataGrid.registerPlugins({ SelectableRows });
+    const outer = await connectGrid({
+        dataSource: new ArrayDataSource(ROWS),
+        columns: CONTROL_COLUMNS,
+        selectable: true,
+    });
+    const inner = await connectGrid({
+        dataSource: new ArrayDataSource(ROWS),
+        columns: CONTROL_COLUMNS,
+        selectable: true,
+    });
+    outer.appendChild(inner);
+
+    const innerCheckbox = inner.querySelector('tbody tr td[data-column-id="$selection"] input');
+    innerCheckbox.checked = true;
+    change(innerCheckbox);
+
+    expect(inner.getSelectionState().ids.size).toBe(1);
+    expect(outer.getSelectionState().ids.size).toBe(0);
+});
+
+test("an inner grid header drop never reorders the outer grid columns", async () => {
+    DataGrid.registerPlugins({ SelectableRows, DraggableHeaders });
+    const outer = await connectGrid({
+        dataSource: new ArrayDataSource(ROWS),
+        columns: [
+            { field: "id", title: "Id" },
+            { field: "name", title: "Name" },
+        ],
+        reorder: true,
+    });
+    const inner = await connectGrid({
+        dataSource: new ArrayDataSource(ROWS),
+        columns: [
+            { field: "id", title: "Id" },
+            { field: "name", title: "Name" },
+        ],
+        reorder: true,
+    });
+    outer.appendChild(inner);
+
+    const target = inner.querySelector('thead th[data-column-id="name"]');
+    const event = new window.Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", { value: { getData: () => "id" } });
+    target.dispatchEvent(event);
+
+    const outerIds = () =>
+        Array.from(outer.querySelectorAll("thead tr.dg-head-columns th")).map((th) =>
+            th.getAttribute("data-column-id"),
+        );
+    expect(outerIds()[0]).toBe("id");
+    expect(outerIds()[1]).toBe("name");
 });

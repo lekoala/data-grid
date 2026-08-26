@@ -3,6 +3,7 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change } from "./helpers.js";
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -156,7 +157,7 @@ test("tr[data-selected] and button[data-action] follow the UI contract", async (
 
     const input = inst.querySelector('tbody td[data-column-id="$selection"] input');
     input.checked = true;
-    input.dispatchEvent(new Event("change"));
+    change(input);
     expect(inst.querySelector("tbody tr").hasAttribute("data-selected")).toBe(true);
 
     const actionButton = inst.querySelector('tbody td[data-column-id="$actions"] button[data-action]');
