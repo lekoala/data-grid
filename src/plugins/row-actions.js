@@ -285,29 +285,44 @@ class RowActions extends BasePlugin {
             if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
                 continue;
             }
-            const { el, dispatchAction } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels);
+            const { el } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels);
             fragment.appendChild(el);
 
-            // Default row action: only the first resolved default applies, and
-            // interactive elements inside the row never trigger it.
+            // Default row action: only the first resolved default applies. The
+            // rendered element is marked so the core can activate it on a row
+            // click; the row interaction itself is delegated by the core.
             if (action.default) {
                 if (defaultApplied) {
                     grid.log(`multiple default actions for row ${rowKey}, using the first one`);
-                } else if (tr) {
+                } else {
                     defaultApplied = true;
-                    tr.classList.add("dg-actionable");
-                    on(tr, "click", (/** @type {MouseEvent} */ ev) => {
-                        const target = /** @type {Element} */ (ev.target);
-                        if (target.closest(grid._excludedRowElementSelector)) {
-                            return;
-                        }
-                        dispatchAction(ev);
-                    });
+                    el.dataset.dgDefaultAction = "";
+                    // The cursor must not promise an unavailable interaction: a
+                    // disabled default keeps its marker (activation stays uniform)
+                    // but the row is not presented as clickable.
+                    if (grid.options.rowClick === "action" && tr && el.getAttribute("aria-disabled") !== "true") {
+                        tr.classList.add("dg-clickable-row");
+                    }
                 }
             }
         }
 
         return fragment;
+    }
+
+    /**
+     * Activate the rendered default action of a data row: the element marked
+     * with `data-dg-default-action` at render time is clicked, so href
+     * navigation, confirmation, disabled state and the `action` event all behave
+     * exactly as if the control itself was clicked.
+     * @param {Number} rowIndex
+     */
+    activateDefaultAction(rowIndex) {
+        const tr = this.grid.tbody?.querySelector(`tr.dg-data-row[data-row-index="${rowIndex}"]`);
+        const action = tr?.querySelector("[data-dg-default-action]");
+        if (action instanceof HTMLElement) {
+            action.click();
+        }
     }
 
     /**

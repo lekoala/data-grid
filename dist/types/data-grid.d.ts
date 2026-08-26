@@ -318,6 +318,10 @@ export type Options = {
      */
     singleSelect: boolean;
     /**
+     * What a click on a data row does: "action" runs the row's default action (RowActions), "select" toggles the row selection, "none" disables row clicks
+     */
+    rowClick?: "action" | "select" | "none";
+    /**
      * The field name or a function resolving a stable row key (defaults to "id")
      */
     rowKey?: string | Function;
@@ -776,6 +780,13 @@ declare class DataGrid extends BaseElement {
     rowDetailsStartOpenChanged(): void;
     menuChanged(): void;
     selectableChanged(): void;
+    /**
+     * singleSelect implies selectable: enforce the invariant without clobbering
+     * an explicit selectable option when singleSelect is turned back off.
+     */
+    _syncSelectionOptions(): void;
+    singleSelectChanged(): void;
+    rowClickChanged(): void;
     reorderChanged(): void;
     sortableChanged(): void;
     filterableChanged(): void;
@@ -860,6 +871,24 @@ declare class DataGrid extends BaseElement {
      * @returns {*}
      */
     _handleClick(event: Event, target: Element): any;
+    /**
+     * A click inside a row is excluded when it originates from an interactive
+     * element or a subtree explicitly opting out. The whole composed path is
+     * inspected so a control living in a shadow root still counts.
+     * @param {Event} event
+     * @returns {Boolean}
+     */
+    _isRowClickExcluded(event: Event): boolean;
+    /**
+     * Apply the configured row click policy to a data row click. The cancelable
+     * `rowClick` event always fires first so business logic can veto the
+     * automatic behavior with preventDefault().
+     * @param {Event} event
+     * @param {Record<string, any>} row
+     * @param {Number} rowIndex
+     * @returns {*}
+     */
+    _handleRowClick(event: Event, row: Record<string, any>, rowIndex: number): any;
     /**
      * @param {Event} event
      * @param {Element} target

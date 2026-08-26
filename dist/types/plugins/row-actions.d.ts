@@ -85,6 +85,14 @@ declare class RowActions extends BasePlugin {
      */
     makeActionRow({ row, tr, grid, rowIndex }: import("../data-grid.js").CellContext): DocumentFragment;
     /**
+     * Activate the rendered default action of a data row: the element marked
+     * with `data-dg-default-action` at render time is clicked, so href
+     * navigation, confirmation, disabled state and the `action` event all behave
+     * exactly as if the control itself was clicked.
+     * @param {Number} rowIndex
+     */
+    activateDefaultAction(rowIndex: number): void;
+    /**
      * Create the button (or link) for a single action.
      * @param {import("../data-grid.js").Action} action
      * @param {Record<string, any>} row

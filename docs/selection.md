@@ -74,6 +74,35 @@ data source) invalidates the selection. The selection is also cleared as soon as
 the search input value changes, even before the new search is committed, so a
 bulk action never targets the population of a previous search.
 
+## Row click
+
+`rowClick: "select"` turns every data row into a click target that toggles its
+selection:
+
+```js
+const grid = new DataGrid({
+    selectable: true,
+    rowClick: "select",
+});
+```
+
+The whole row becomes a large mouse/touch target, while the native checkbox (or
+radio with `singleSelect`) remains the keyboard and accessibility interface.
+Rows only get the `dg-clickable-row` class (cursor) when `selectable` is on.
+Interactive elements inside a row (`a, button, input, select, textarea`,
+`[contenteditable]:not([contenteditable="false"])`, `[data-row-click-ignore]`)
+and the selection control itself never trigger the toggle.
+
+A cancelable `rowClick` event fires before the toggle and can veto it:
+
+```js
+grid.addEventListener("rowClick", (ev) => {
+    if (ev.detail.row.protected) {
+        ev.preventDefault();
+    }
+});
+```
+
 ## Bulk actions
 
 `bulkActions` adds a permanent bar with one button per action. A

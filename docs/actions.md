@@ -66,18 +66,18 @@ grid.addEventListener("action", (ev) => {
 
 ## Action properties
 
-| Property   | Type                                                | Description                                      |
-|------------|-----------------------------------------------------|--------------------------------------------------|
-| `name`     | `String`                                            | the action name (`button[data-action]`)          |
-| `label`    | `String`                                            | the button label and accessible name             |
-| `intent`   | `"default"\|"primary"\|"danger"`                    | sets `data-intent` (styled via `dg-intent-*`)    |
-| `href`     | `String \| Function`                                | renders an `<a>` link                            |
-| `class`    | `String`                                            | class on the button                              |
-| `visible`  | `(row, ctx) => Boolean`                             | hide the action for a given row                  |
-| `disabled` | `Boolean \| (row, ctx) => Boolean`                  | block the action (see below)                     |
-| `render`   | `({ action, row, grid }) => content`                | replace the button content                       |
-| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation before dispatching      |
-| `default`  | `Boolean`                                           | clicking anywhere on the row triggers the action |
+| Property   | Type                                                   | Description                                     |
+|------------|--------------------------------------------------------|-------------------------------------------------|
+| `name`     | `String`                                               | the action name (`button[data-action]`)         |
+| `label`    | `String`                                               | the button label and accessible name            |
+| `intent`   | `"default"\|"primary"\|"danger"`                       | sets `data-intent` (styled via `dg-intent-*`)   |
+| `href`     | `String \| Function`                                   | renders an `<a>` link                           |
+| `class`    | `String`                                               | class on the button                             |
+| `visible`  | `(row, ctx) => Boolean`                                | hide the action for a given row                 |
+| `disabled` | `Boolean \| (row, ctx) => Boolean`                     | block the action (see below)                    |
+| `render`   | `({ action, row, grid }) => content`                   | replace the button content                      |
+| `confirm`  | `Boolean \| String \| (row, ctx) => Boolean \| String` | ask for confirmation before dispatching         |
+| `default`  | `Boolean`                                              | the primary action of the row (see "Row click") |
 
 `visible`, `disabled`, `href` and `confirm` receive `(row, ctx)` with
 `ctx = { grid, action, rowKey }` (a single `row` argument still works).
@@ -89,9 +89,64 @@ without dispatching — including on `<a>` and custom renderers.
 `confirm` accepts a boolean (generic `areYouSure` label), a message string, or
 a resolver returning a message string (or `false` to skip confirmation).
 
-A `default` action attaches a click handler to the whole row. Only the first
-resolved `default` per row applies, and interactive elements
-(`a, button, input, select, textarea`) never trigger it.
+## Row click
+
+The `rowClick` option controls what clicking a data row does:
+
+- `"action"` (default) — runs the row's `default` action.
+- `"select"` — toggles the row selection (requires `selectable`).
+- `"none"` — rows have no click behavior at all.
+
+```js
+const grid = new DataGrid({
+    rowClick: "action",
+    actions: [
+        { name: "edit", label: "Edit", default: true },
+        { name: "delete", label: "Delete", intent: "danger" },
+    ],
+});
+```
+
+`default: true` answers a different question than `rowClick`: it marks which
+action is the *primary* action of a row. Only the first resolved `default` per
+row applies, and it is resolved per row, so `row.$actions` can give a different
+default action to each row. When `rowClick: "action"` activates it, the rendered
+action element itself is clicked, so `href` navigation, `confirm`, `disabled`
+and the `action` event all behave exactly as if the button or link was clicked.
+
+A click inside a row never triggers the behavior when it originates from an
+interactive element or an opt-out subtree:
+
+```text
+a, button, input, select, textarea,
+[contenteditable]:not([contenteditable="false"]), [data-row-click-ignore]
+```
+
+A disabled `default` action keeps its `data-dg-default-action` marker (the row
+click stays blocked by the existing disabled guard), but the row is not given
+`dg-clickable-row`: the cursor only promises an interaction that actually works.
+
+`[data-row-click-ignore]` is an escape hatch for custom renderers:
+
+```html
+<span data-row-click-ignore>…</span>
+```
+
+The whole composed path is inspected, so a control inside a shadow root still
+counts as interactive.
+
+Before the automatic behavior, a cancelable `rowClick` event fires on the grid:
+
+```js
+grid.addEventListener("rowClick", (ev) => {
+    // { row, rowKey, rowIndex, originalEvent }
+    if (ev.detail.row.locked) {
+        ev.preventDefault(); // veto the row click behavior
+    }
+});
+```
+
+`rowClick` is a configuration concern; business rules belong in the event.
 
 `grid.actionRenderer` applies a global renderer to every action that has no
 `render`. Renderer content may be a `Node`, a string, or `{ html }`. An `href`

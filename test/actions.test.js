@@ -219,7 +219,7 @@ test("default action makes the row clickable", async () => {
         detail = ev.detail;
     });
     const tr = inst.querySelector("tbody tr");
-    expect(tr.classList.contains("dg-actionable")).toBe(true);
+    expect(tr.classList.contains("dg-clickable-row")).toBe(true);
     tr.click();
     expect(detail.name).toBe("view");
     document.body.removeChild(inst);

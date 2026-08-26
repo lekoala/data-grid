@@ -194,6 +194,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Boolean} selectable Allow multi-selecting rows with a checkboxes (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} singleSelect Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
+ * @property {"action"|"select"|"none"} [rowClick] What a click on a data row does: "action" runs the row's default action (RowActions), "select" toggles the row selection, "none" disables row clicks
  * @property {String | Function} [rowKey] The field name or a function resolving a stable row key (defaults to "id")
  * @property {String | Function | null} [rowLabel] Field name or (row, index) => string resolving the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
  * @property {BulkAction[]} [bulkActions] Bulk actions applied to the current selection (BulkActions module)
@@ -640,7 +641,8 @@ class DataGrid extends BaseElement {
         super(options);
 
         this._filterSelector = "[id^=dg-filter]";
-        this._excludedRowElementSelector = "a,button,input,select,textarea";
+        this._excludedRowElementSelector =
+            "a,button,input,select,textarea,[contenteditable]:not([contenteditable='false']),[data-row-click-ignore]";
 
         /**
          * Instantiated plugins, keyed by their registration name.
@@ -780,7 +782,7 @@ class DataGrid extends BaseElement {
     _ready() {
         this.fireEvents = false;
         setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
-        if (this.options.singleSelect) this.options.selectable = true; // singleSelect implies selectable
+        this._syncSelectionOptions();
     }
 
     /**
@@ -1039,6 +1041,7 @@ class DataGrid extends BaseElement {
             selectable: false,
             selectVisibleOnly: true,
             singleSelect: false,
+            rowClick: "action",
             rowKey: "id",
             rowLabel: null,
             bulkActions: [],
@@ -1235,6 +1238,7 @@ class DataGrid extends BaseElement {
             "selectable",
             "single-select",
             "select-visible-only",
+            "row-click",
             "row-key",
             "row-label",
             "collapse-actions",
@@ -1269,6 +1273,9 @@ class DataGrid extends BaseElement {
                     .split(",")
                     .map((value) => Number.parseInt(value, 10))
                     .filter((value) => Number.isFinite(value)),
+            // A valueless attribute parses to "true" and a removal to null:
+            // normalize both back to the documented default.
+            "row-click": (raw) => (raw === "action" || raw === "select" || raw === "none" ? raw : "action"),
         };
     }
 
@@ -1531,6 +1538,27 @@ class DataGrid extends BaseElement {
         this.renderBody();
     }
 
+    /**
+     * singleSelect implies selectable: enforce the invariant without clobbering
+     * an explicit selectable option when singleSelect is turned back off.
+     */
+    _syncSelectionOptions() {
+        if (this.options.singleSelect) {
+            this.options.selectable = true;
+        }
+    }
+
+    singleSelectChanged() {
+        this._syncSelectionOptions();
+        this.selectableChanged();
+    }
+
+    rowClickChanged() {
+        if (this.table) {
+            this.renderBody();
+        }
+    }
+
     reorderChanged() {
         this.renderTable();
     }
@@ -1780,6 +1808,12 @@ class DataGrid extends BaseElement {
         this.selectPerPage = this.querySelector(".dg-select-per-page");
         this.inputPage = this.querySelector(".dg-input-page");
 
+        // Declarative attributes are reflected into options before this hook
+        // runs, but the upgrade-time attributeChangedCallback never fires the
+        // *Changed handlers (fireEvents is still false). Restore the option
+        // invariants here so the first render sees them.
+        this._syncSelectionOptions();
+
         // Core UI is delegated to the host: the instance is its own event
         // listener and routes bubbled events to the matching control. This
         // keeps rerendered chrome (filters, sort headers) working without
@@ -1958,6 +1992,77 @@ class DataGrid extends BaseElement {
             if (th) {
                 return this.sortData(th);
             }
+        }
+
+        // Data row clicks follow the delegated rowClick policy. Responsive and
+        // detail rows are not dg-data-row and never match.
+        const tr = /** @type {HTMLTableRowElement|null} */ (target.closest("tr.dg-data-row"));
+        if (tr && this._ownsControl(tr) && this.options.rowClick !== "none") {
+            const rowIndex = Number(tr.dataset.rowIndex);
+            const row = this.rows[rowIndex];
+            if (row) {
+                return this._handleRowClick(event, row, rowIndex);
+            }
+        }
+    }
+
+    /**
+     * A click inside a row is excluded when it originates from an interactive
+     * element or a subtree explicitly opting out. The whole composed path is
+     * inspected so a control living in a shadow root still counts.
+     * @param {Event} event
+     * @returns {Boolean}
+     */
+    _isRowClickExcluded(event) {
+        const selector = this._excludedRowElementSelector;
+        const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+        for (const node of path) {
+            if (node instanceof Element && node.matches(selector)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Apply the configured row click policy to a data row click. The cancelable
+     * `rowClick` event always fires first so business logic can veto the
+     * automatic behavior with preventDefault().
+     * @param {Event} event
+     * @param {Record<string, any>} row
+     * @param {Number} rowIndex
+     * @returns {*}
+     */
+    _handleRowClick(event, row, rowIndex) {
+        if (this._isRowClickExcluded(event)) {
+            return;
+        }
+
+        const rowClickEvent = new CustomEvent("rowClick", {
+            detail: {
+                row,
+                rowKey: this.resolveRowKey(row, rowIndex),
+                rowIndex,
+                originalEvent: event,
+            },
+            cancelable: true,
+        });
+        if (!this.dispatchEvent(rowClickEvent)) {
+            return;
+        }
+
+        if (this.options.rowClick === "select") {
+            if (this.options.selectable) {
+                return this.toggleRow(row, rowIndex);
+            }
+            return;
+        }
+
+        if (this.options.rowClick === "action") {
+            const rowActions = /** @type {import("./plugins/row-actions.js").default | undefined} */ (
+                this.getPlugin("RowActions")
+            );
+            return rowActions?.activateDefaultAction(rowIndex);
         }
     }
 
@@ -3398,6 +3503,12 @@ class DataGrid extends BaseElement {
             // sync, fixed-height, responsive) can ignore responsive child rows.
             tr.classList.add("dg-data-row");
             tr.dataset.rowIndex = String(i);
+
+            // rowClick="select" makes every data row a click target; the
+            // interaction itself is delegated in _handleClick().
+            if (this.options.rowClick === "select" && this.options.selectable) {
+                tr.classList.add("dg-clickable-row");
+            }
 
             for (const column of this.getColumns()) {
                 if (!column) {

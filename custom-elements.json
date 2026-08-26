@@ -55,6 +55,9 @@
               "name": "select-visible-only"
             },
             {
+              "name": "row-click"
+            },
+            {
               "name": "row-key"
             },
             {
@@ -333,6 +336,9 @@
             },
             {
               "name": "loadError"
+            },
+            {
+              "name": "rowClick"
             },
             {
               "name": "rowDetailsToggle"

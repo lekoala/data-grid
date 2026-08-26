@@ -826,7 +826,7 @@ class DataGrid extends base_element_default {
   constructor(options = {}) {
     super(options);
     this._filterSelector = "[id^=dg-filter]";
-    this._excludedRowElementSelector = "a,button,input,select,textarea";
+    this._excludedRowElementSelector = "a,button,input,select,textarea,[contenteditable]:not([contenteditable='false']),[data-row-click-ignore]";
     this.plugins = this._initPlugins();
     this._initialQuery = normalizeQuery(this.options.initialQuery);
     this._query = normalizeQuery(this._initialQuery);
@@ -862,8 +862,7 @@ class DataGrid extends base_element_default {
   _ready() {
     this.fireEvents = false;
     setAttribute(this, "id", this.options.id ?? randstr("el-"), true);
-    if (this.options.singleSelect)
-      this.options.selectable = true;
+    this._syncSelectionOptions();
   }
   _initPlugins() {
     const instances = {};
@@ -1055,6 +1054,7 @@ class DataGrid extends base_element_default {
       selectable: false,
       selectVisibleOnly: true,
       singleSelect: false,
+      rowClick: "action",
       rowKey: "id",
       rowLabel: null,
       bulkActions: [],
@@ -1175,6 +1175,7 @@ class DataGrid extends base_element_default {
       "selectable",
       "single-select",
       "select-visible-only",
+      "row-click",
       "row-key",
       "row-label",
       "collapse-actions",
@@ -1199,7 +1200,8 @@ class DataGrid extends base_element_default {
   }
   get transformAttributes() {
     return {
-      "page-sizes": (raw) => raw.split(",").map((value) => Number.parseInt(value, 10)).filter((value) => Number.isFinite(value))
+      "page-sizes": (raw) => raw.split(",").map((value) => Number.parseInt(value, 10)).filter((value) => Number.isFinite(value)),
+      "row-click": (raw) => raw === "action" || raw === "select" || raw === "none" ? raw : "action"
     };
   }
   get thead() {
@@ -1386,6 +1388,20 @@ class DataGrid extends base_element_default {
     this.renderTable();
     this.renderBody();
   }
+  _syncSelectionOptions() {
+    if (this.options.singleSelect) {
+      this.options.selectable = true;
+    }
+  }
+  singleSelectChanged() {
+    this._syncSelectionOptions();
+    this.selectableChanged();
+  }
+  rowClickChanged() {
+    if (this.table) {
+      this.renderBody();
+    }
+  }
   reorderChanged() {
     this.renderTable();
   }
@@ -1559,6 +1575,7 @@ class DataGrid extends base_element_default {
     this.btnLast = this.querySelector(".dg-btn-last");
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
+    this._syncSelectionOptions();
     this.addEventListener("click", this);
     this.addEventListener("change", this);
     this.addEventListener("input", this);
@@ -1688,6 +1705,51 @@ class DataGrid extends base_element_default {
       if (th) {
         return this.sortData(th);
       }
+    }
+    const tr = target.closest("tr.dg-data-row");
+    if (tr && this._ownsControl(tr) && this.options.rowClick !== "none") {
+      const rowIndex = Number(tr.dataset.rowIndex);
+      const row = this.rows[rowIndex];
+      if (row) {
+        return this._handleRowClick(event, row, rowIndex);
+      }
+    }
+  }
+  _isRowClickExcluded(event) {
+    const selector = this._excludedRowElementSelector;
+    const path = typeof event.composedPath === "function" ? event.composedPath() : [event.target];
+    for (const node of path) {
+      if (node instanceof Element && node.matches(selector)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  _handleRowClick(event, row, rowIndex) {
+    if (this._isRowClickExcluded(event)) {
+      return;
+    }
+    const rowClickEvent = new CustomEvent("rowClick", {
+      detail: {
+        row,
+        rowKey: this.resolveRowKey(row, rowIndex),
+        rowIndex,
+        originalEvent: event
+      },
+      cancelable: true
+    });
+    if (!this.dispatchEvent(rowClickEvent)) {
+      return;
+    }
+    if (this.options.rowClick === "select") {
+      if (this.options.selectable) {
+        return this.toggleRow(row, rowIndex);
+      }
+      return;
+    }
+    if (this.options.rowClick === "action") {
+      const rowActions = this.getPlugin("RowActions");
+      return rowActions?.activateDefaultAction(rowIndex);
     }
   }
   _handleChange(event, target) {
@@ -2616,6 +2678,9 @@ class DataGrid extends base_element_default {
       const tr = ce("tr");
       tr.classList.add("dg-data-row");
       tr.dataset.rowIndex = String(i);
+      if (this.options.rowClick === "select" && this.options.selectable) {
+        tr.classList.add("dg-clickable-row");
+      }
       for (const column of this.getColumns()) {
         if (!column) {
           console.error("Empty column found!", this.getColumns());
@@ -4080,25 +4145,28 @@ class RowActions extends base_plugin_default {
       if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
         continue;
       }
-      const { el, dispatchAction } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels2);
+      const { el } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels2);
       fragment.appendChild(el);
       if (action.default) {
         if (defaultApplied) {
           grid.log(`multiple default actions for row ${rowKey}, using the first one`);
-        } else if (tr) {
+        } else {
           defaultApplied = true;
-          tr.classList.add("dg-actionable");
-          on(tr, "click", (ev) => {
-            const target = ev.target;
-            if (target.closest(grid._excludedRowElementSelector)) {
-              return;
-            }
-            dispatchAction(ev);
-          });
+          el.dataset.dgDefaultAction = "";
+          if (grid.options.rowClick === "action" && tr && el.getAttribute("aria-disabled") !== "true") {
+            tr.classList.add("dg-clickable-row");
+          }
         }
       }
     }
     return fragment;
+  }
+  activateDefaultAction(rowIndex) {
+    const tr = this.grid.tbody?.querySelector(`tr.dg-data-row[data-row-index="${rowIndex}"]`);
+    const action = tr?.querySelector("[data-dg-default-action]");
+    if (action instanceof HTMLElement) {
+      action.click();
+    }
   }
   createActionElement(action, row, rowIndex, grid, labels2, menu = false) {
     const rowKey = grid.resolveRowKey(row, rowIndex);

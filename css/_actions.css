@@ -172,10 +172,6 @@ data-grid a[data-intent="primary"] {
   color: var(--dg-accent);
 }
 
-data-grid tr.dg-actionable {
+data-grid tr.dg-clickable-row {
   cursor: pointer;
-}
-
-data-grid tr.dg-actionable:hover td {
-  background-color: var(--dg-row-hover-bg);
 }

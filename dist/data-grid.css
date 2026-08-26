@@ -1199,12 +1199,8 @@ data-grid button[data-intent="primary"], data-grid a[data-intent="primary"] {
   border-color: #0000;
 }
 
-data-grid tr.dg-actionable {
+data-grid tr.dg-clickable-row {
   cursor: pointer;
-}
-
-data-grid tr.dg-actionable:hover td {
-  background-color: var(--dg-row-hover-bg);
 }
 
 /* css/_resizer.css */
