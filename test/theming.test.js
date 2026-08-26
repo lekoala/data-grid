@@ -34,6 +34,23 @@ test("all selects share the component caret", () => {
     expect(coreCss).not.toContain("dg-filter-cell:has(select)");
 });
 
+test("multi-select filters can escape their cell without overflowing their width", () => {
+    expect(coreCss).toMatch(/th\.dg-filter-cell \{[\s\S]*?overflow: visible;/);
+    expect(coreCss).toMatch(/\.dg-filter-control \{[\s\S]*?box-sizing: border-box;/);
+});
+
+test("multi-select keyboard focus is drawn on the filter control", () => {
+    expect(coreCss).toMatch(/\.dg-multiselect-trigger:focus-visible \{\s*outline: 0;/);
+    expect(coreCss).toMatch(
+        /\.dg-multiselect:has\(\s*> \.dg-multiselect-trigger:focus-visible\) \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-focus-ring\);/,
+    );
+});
+
+test("multi-select filters keep the same control height as adjacent filters", () => {
+    expect(coreCss).toMatch(/\.dg-multiselect-trigger \{[\s\S]*?height: auto;/);
+    expect(coreCss).toMatch(/min-height: calc\(var\(--dg-control-height\)\s*-\s*var\(--dg-space-2\)\)/);
+});
+
 test("generated css never downlevels logical properties into :lang() sets", () => {
     expect(coreCss).not.toContain(":lang(");
 });

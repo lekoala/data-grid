@@ -14,17 +14,27 @@ data-grid .dg-multiselect-trigger {
   display: flex;
   font: inherit;
   gap: var(--dg-space-2);
+  height: auto;
   justify-content: space-between;
   margin: 0;
-  min-height: var(--dg-control-height);
+  /* The filter root already contributes 4px above and below. Keep the whole
+     control at --dg-control-height so it cannot make the filter row taller
+     than adjacent text/select filters. */
+  min-height: calc(var(--dg-control-height) - var(--dg-space-2));
   padding: 0;
   text-align: left;
   width: 100%;
 }
 
 data-grid .dg-multiselect-trigger:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+  outline: 0;
+}
+
+/* Keep the keyboard focus visible after Escape, but draw it on the filter
+   control rather than as a rounded ring around its inner button. */
+data-grid thead tr.dg-head-filters .dg-multiselect:has(> .dg-multiselect-trigger:focus-visible) {
+  background-color: var(--dg-bg);
+  box-shadow: inset 0 0 0 2px var(--dg-focus-ring);
 }
 
 data-grid .dg-multiselect-summary {

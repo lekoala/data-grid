@@ -636,10 +636,12 @@ data-grid thead tr.dg-head-filters th > * {
 }
 
 data-grid thead tr.dg-head-filters th.dg-filter-cell {
+  overflow: visible;
   padding: 0;
 }
 
 data-grid thead tr.dg-head-filters .dg-filter-control {
+  box-sizing: border-box;
   box-shadow: none;
   color: inherit;
   display: block;
@@ -1116,19 +1118,24 @@ data-grid .dg-multiselect-trigger {
   font: inherit;
   align-items:  center;
   gap: var(--dg-space-2);
-  min-height: var(--dg-control-height);
+  min-height: calc(var(--dg-control-height)  - var(--dg-space-2));
   text-align: left;
   background: none;
   border: 0;
   justify-content: space-between;
   width: 100%;
+  height: auto;
   margin: 0;
   padding: 0;
 }
 
 data-grid .dg-multiselect-trigger:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+  outline: 0;
+}
+
+data-grid thead tr.dg-head-filters .dg-multiselect:has( > .dg-multiselect-trigger:focus-visible) {
+  background-color: var(--dg-bg);
+  box-shadow: inset 0 0 0 2px var(--dg-focus-ring);
 }
 
 data-grid .dg-multiselect-summary {

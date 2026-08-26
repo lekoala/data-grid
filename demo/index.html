@@ -63,10 +63,14 @@
             field: "country",
             title: "Country",
             filterType: "select",
+            filterMultiple: true,
+            firstFilterOption: { value: "", text: "All countries" },
             filterList: [
-              { value: "", text: "All countries" },
               { value: "BE", text: "Belgium" },
               { value: "FR", text: "France" },
+              { value: "DE", text: "Germany" },
+              { value: "NL", text: "Netherlands" },
+              { value: "US", text: "United States" },
             ],
           },
           { field: "income", title: "Income" },
@@ -204,7 +208,7 @@
     <section class="demo-grid">
       <p class="demo-kicker">Filters</p>
       <h2>Integrated filter row</h2>
-      <p class="demo-lead">Text and select filters should read as part of the table, not as a detached form sitting above it.</p>
+      <p class="demo-lead">Text, select and multi-select filters read as part of the table. Check several countries to combine them with an <code>in</code> filter.</p>
       <div class="demo-frame" id="filters-demo"></div>
     </section>
 

@@ -153,10 +153,40 @@ test.skipIf(IS_WINDOWS)(
         })()`);
         await waitFor(v, "document.querySelector('#local-grid .dg-head-filters .dg-multiselect')");
 
+        const filterHeights = JSON.parse(
+            await read(
+                v,
+                `JSON.stringify({
+                    text: document.querySelector('#local-grid .dg-head-filters input.dg-filter-control')
+                        .getBoundingClientRect().height,
+                    multi: document.querySelector('#local-grid .dg-head-filters .dg-multiselect')
+                        .getBoundingClientRect().height,
+                })`,
+            ),
+        );
+        expect(filterHeights.multi).toBe(filterHeights.text);
+
         await v.evaluate(`(() => {
             document.querySelector('#local-grid .dg-multiselect-trigger').click();
         })()`);
         expect(await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden")).toBe(false);
+        expect(
+            await read(
+                v,
+                `(() => {
+                    const panel = document.querySelector('#local-grid .dg-multiselect-panel');
+                    const rect = panel.getBoundingClientRect();
+                    const hit = document.elementFromPoint(rect.left + 4, rect.top + 4);
+                    return panel.contains(hit);
+                })()`,
+            ),
+        ).toBe(true);
+        expect(
+            await read(
+                v,
+                "getComputedStyle(document.querySelector('#local-grid .dg-multiselect-trigger'), '::after').content",
+            ),
+        ).not.toBe("none");
 
         const check = (value, checked) =>
             `(() => {
@@ -200,6 +230,15 @@ test.skipIf(IS_WINDOWS)(
         await v.press("Escape");
         await waitFor(v, "document.querySelector('#local-grid .dg-multiselect-panel').hidden === true");
         expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
+        expect(
+            await read(v, "getComputedStyle(document.querySelector('#local-grid .dg-multiselect')).boxShadow"),
+        ).not.toBe("none");
+        expect(
+            await read(
+                v,
+                "getComputedStyle(document.querySelector('#local-grid .dg-multiselect-trigger')).outlineStyle",
+            ),
+        ).toBe("none");
     },
     TIMEOUT,
 );
