@@ -8,6 +8,7 @@ import { ArrayDataSource, FetchDataSource } from "./data-source.js";
 import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
 import { parseBooleanAttribute, parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
+import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
 import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
@@ -3431,7 +3432,7 @@ class DataGrid extends BaseElement {
         // remaining space. Never emit an invalid width: no attribute at all.
         const defaults = getFormatDefaults(column.format, column.formatOptions);
         const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
-        const effectiveMin = Math.max(intrinsicWidth, column.minWidth ?? 0, defaults?.minWidth ?? 0);
+        const effectiveMin = Math.max(MIN_COLUMN_WIDTH, intrinsicWidth, column.minWidth ?? 0, defaults?.minWidth ?? 0);
         th.dataset.minWidth = `${effectiveMin}`;
         applyColumnDefinition(th, column);
 

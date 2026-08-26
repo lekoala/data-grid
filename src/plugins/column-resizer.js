@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
+import { getColumnMinWidth } from "../utils/columnWidth.js";
 import { dispatch } from "../utils/dispatch.js";
-import elementOffset from "../utils/elementOffset.js";
 
 /**
  * Allows to resize columns
@@ -103,7 +103,9 @@ class ColumnResizer extends BasePlugin {
             return;
         }
 
-        const currentCols = [...grid.querySelectorAll("thead tr.dg-head-columns th")];
+        const currentCols = /** @type {HTMLTableCellElement[]} */ ([
+            ...grid.querySelectorAll("thead tr.dg-head-columns th"),
+        ]);
         const visibleCols = currentCols.filter((col) => {
             return !col.hasAttribute("hidden");
         });
@@ -125,9 +127,19 @@ class ColumnResizer extends BasePlugin {
         // Register initial data
         const startX = event.clientX;
         const startW = col.offsetWidth;
-
-        const remainingSpace = (visibleCols.length - columnIndex) * 30;
-        const max = elementOffset(resizer).left + grid.offsetWidth - remainingSpace;
+        const minWidth = getColumnMinWidth(col);
+        const resizeDirection = grid.options.dir === "rtl" ? -1 : 1;
+        let reservedWidth = 0;
+        for (let j = 0; j < visibleCols.length; j++) {
+            if (j < columnIndex) {
+                reservedWidth += visibleCols[j].offsetWidth;
+            } else if (j > columnIndex) {
+                reservedWidth += getColumnMinWidth(visibleCols[j]);
+            }
+        }
+        const viewportWidth = grid.scrollEl.clientWidth;
+        const maxWidth =
+            viewportWidth > 0 ? Math.max(minWidth, viewportWidth - reservedWidth) : Number.POSITIVE_INFINITY;
 
         // Remove width from next columns to allow auto layout
         col.setAttribute("width", String(startW));
@@ -143,13 +155,8 @@ class ColumnResizer extends BasePlugin {
         const { signal } = this._resizeController;
 
         const mouseMoveHandler = (/** @type {MouseEvent} */ e) => {
-            if (e.clientX > max) {
-                return;
-            }
-            const newWidth = startW + (e.clientX - startX);
-            if (col.dataset.minWidth && newWidth > Number.parseInt(col.dataset.minWidth)) {
-                col.setAttribute("width", String(newWidth));
-            }
+            const proposedWidth = startW + (e.clientX - startX) * resizeDirection;
+            col.setAttribute("width", String(Math.max(minWidth, Math.min(maxWidth, proposedWidth))));
         };
 
         // When user releases the mouse, remove the existing event listeners
