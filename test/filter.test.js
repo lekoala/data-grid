@@ -344,8 +344,6 @@ test("filterMultiple renders a checkbox panel emitting the in operator", async (
     expect(panel.getAttribute("popover")).toBe("auto");
     expect(trigger.getAttribute("popovertarget")).toBe(panel.id);
     expect(trigger.getAttribute("aria-controls")).toBe(panel.id);
-    expect(trigger.style.getPropertyValue("anchor-name")).toBe(`--${panel.id}`);
-    expect(panel.style.getPropertyValue("position-anchor")).toBe(`--${panel.id}`);
     // The native invoker relationship owns the expanded state.
     expect(trigger.hasAttribute("aria-expanded")).toBe(false);
 

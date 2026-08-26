@@ -731,8 +731,6 @@ function createMultiSelect(column, options, relatedTh) {
   trigger.className = "dg-multiselect-trigger";
   const panelId = randstr("dg-multiselect-");
   trigger.setAttribute("popovertarget", panelId);
-  const anchorName = `--${panelId}`;
-  trigger.style.setProperty("anchor-name", anchorName);
   trigger.setAttribute("aria-controls", panelId);
   const headerId = relatedTh.getAttribute("id");
   if (headerId) {
@@ -745,7 +743,6 @@ function createMultiSelect(column, options, relatedTh) {
   panel.className = "dg-menu dg-multiselect-panel";
   panel.id = panelId;
   panel.popover = "auto";
-  panel.style.setProperty("position-anchor", anchorName);
   for (const option of options) {
     if (`${option.value}` === "") {
       continue;
@@ -790,7 +787,7 @@ function clearMultiSelect(root) {
 
 // src/utils/popover.js
 function supportsPopoverAnchor() {
-  return "popover" in HTMLElement.prototype && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("top", "anchor(bottom)") && CSS.supports("min-width", "anchor-size(width)") && CSS.supports("position-try-fallbacks", "flip-block flip-inline");
+  return "popover" in HTMLElement.prototype && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("position-area", "block-end span-inline-start") && CSS.supports("top", "anchor(bottom)") && CSS.supports("min-width", "anchor-size(width)") && CSS.supports("position-try-fallbacks", "flip-block flip-inline");
 }
 
 // src/utils/spanningRow.js
@@ -4476,8 +4473,6 @@ class RowActions extends base_plugin_default {
     if (!tr || !row) {
       return;
     }
-    const anchorName = toggle.style.getPropertyValue("anchor-name");
-    this.menu?.style.setProperty("position-anchor", anchorName);
     this.renderActionMenu(row);
   }
   hasActions() {
@@ -4583,7 +4578,6 @@ class RowActions extends base_plugin_default {
       actionsToggle.textContent = "⋯";
       actionsToggle.setAttribute("aria-label", labels2.toggleActions);
       actionsToggle.setAttribute("popovertarget", this.menu.id);
-      actionsToggle.style.setProperty("anchor-name", `--${this.menu.id}-${rowIndex ?? 0}`);
       actionsToggle.title = labels2.toggleActions;
       fragment.appendChild(actionsToggle);
     }

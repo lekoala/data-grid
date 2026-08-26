@@ -84,10 +84,6 @@ export function createMultiSelect(column, options, relatedTh) {
 
     const panelId = randstr("dg-multiselect-");
     trigger.setAttribute("popovertarget", panelId);
-    // Do not rely on the browser's implicit popover anchor: explicit unique
-    // names keep anchor() deterministic when several grids share a document.
-    const anchorName = `--${panelId}`;
-    trigger.style.setProperty("anchor-name", anchorName);
     trigger.setAttribute("aria-controls", panelId);
     // Same accessible-name mechanism as the other filters: the column header
     const headerId = relatedTh.getAttribute("id");
@@ -103,7 +99,6 @@ export function createMultiSelect(column, options, relatedTh) {
     panel.className = "dg-menu dg-multiselect-panel";
     panel.id = panelId;
     panel.popover = "auto";
-    panel.style.setProperty("position-anchor", anchorName);
 
     for (const option of options) {
         if (`${option.value}` === "") {

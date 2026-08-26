@@ -63,8 +63,6 @@ class RowActions extends BasePlugin {
         if (!tr || !row) {
             return;
         }
-        const anchorName = /** @type {HTMLElement} */ (toggle).style.getPropertyValue("anchor-name");
-        this.menu?.style.setProperty("position-anchor", anchorName);
         this.renderActionMenu(row);
     }
 
@@ -220,7 +218,6 @@ class RowActions extends BasePlugin {
             actionsToggle.textContent = "⋯";
             actionsToggle.setAttribute("aria-label", labels.toggleActions);
             actionsToggle.setAttribute("popovertarget", this.menu.id);
-            actionsToggle.style.setProperty("anchor-name", `--${this.menu.id}-${rowIndex ?? 0}`);
             actionsToggle.title = labels.toggleActions;
             fragment.appendChild(actionsToggle);
         }

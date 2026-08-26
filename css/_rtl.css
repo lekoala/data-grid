@@ -46,16 +46,6 @@ data-grid[dir="rtl"] .dg-multiselect-trigger {
   text-align: right;
 }
 
-data-grid[dir="rtl"] .dg-multiselect-panel {
-  left: auto;
-  right: anchor(right);
-}
-
-data-grid[dir="rtl"] .dg-actions-menu {
-  right: auto;
-  left: anchor(left);
-}
-
 data-grid[dir="rtl"] input.dg-search {
   padding-left: var(--dg-control-padding-inline);
   padding-right: calc(var(--dg-control-padding-inline) + 20px);

@@ -205,7 +205,6 @@ test("the row actions toggle has an accessible name and native popover target", 
     const menu = inst.querySelector(".dg-actions-menu");
     expect(toggle.getAttribute("aria-label")).toBe("Toggle row actions");
     expect(toggle.getAttribute("popovertarget")).toBe(menu.id);
-    expect(toggle.style.getPropertyValue("anchor-name")).toBe(`--${menu.id}-0`);
     expect(toggle.hasAttribute("aria-expanded")).toBe(false);
     document.body.removeChild(inst);
 });

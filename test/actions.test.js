@@ -247,7 +247,6 @@ test("more than two actions use one shared native popover", async () => {
     const menu = inst.querySelector(".dg-actions-menu");
     expect(menu.getAttribute("popover")).toBe("auto");
     expect(toggle.getAttribute("popovertarget")).toBe(menu.id);
-    expect(menu.style.getPropertyValue("position-anchor")).toBe(toggle.style.getPropertyValue("anchor-name"));
     expect(toggle.hasAttribute("aria-expanded")).toBe(false);
     const items = menu.querySelectorAll("button[data-action]");
     expect(items.length).toBe(3);

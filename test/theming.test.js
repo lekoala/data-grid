@@ -36,15 +36,14 @@ test("all selects share the component caret", () => {
 
 test("multi-select filters use top-layer anchor positioning", () => {
     expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position: fixed;/);
-    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?top: anchor\(bottom\);/);
+    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position-area: block-end span-inline-end;/);
     expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position-try-fallbacks:/);
     expect(coreCss).toMatch(/\.dg-filter-control \{[\s\S]*?box-sizing: border-box;/);
 });
 
 test("row action menus use top-layer anchor positioning", () => {
     expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position: fixed;/);
-    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?top: anchor\(bottom\);/);
-    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?right: anchor\(right\);/);
+    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position-area: block-end span-inline-start;/);
     expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position-try-fallbacks:/);
 });
 

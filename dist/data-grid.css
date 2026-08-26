@@ -1048,16 +1048,6 @@ data-grid[dir="rtl"] .dg-multiselect-trigger {
   text-align: right;
 }
 
-data-grid[dir="rtl"] .dg-multiselect-panel {
-  left: auto;
-  right: anchor(right);
-}
-
-data-grid[dir="rtl"] .dg-actions-menu {
-  right: auto;
-  left: anchor(left);
-}
-
 data-grid[dir="rtl"] input.dg-search {
   padding-left: var(--dg-control-padding-inline);
   padding-right: calc(var(--dg-control-padding-inline)  + 20px);
@@ -1162,9 +1152,7 @@ data-grid .dg-multiselect-summary.dg-multiselect-empty {
 
 data-grid .dg-multiselect-panel {
   position: fixed;
-  inset: auto;
-  top: anchor(bottom);
-  left: anchor(left);
+  position-area: block-end span-inline-end;
   min-width: anchor-size(width);
   overflow-y: auto;
   position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
@@ -1256,9 +1244,7 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 
 data-grid .dg-actions-menu {
   position: fixed;
-  inset: auto;
-  top: anchor(bottom);
-  right: anchor(right);
+  position-area: block-end span-inline-start;
   position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   width: max-content;
   max-width: 240px;

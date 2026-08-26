@@ -90,9 +90,7 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 
 data-grid .dg-actions-menu {
   position: fixed;
-  inset: auto;
-  top: anchor(bottom);
-  right: anchor(right);
+  position-area: block-end span-inline-start;
   margin: 0;
   position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   max-width: 240px;

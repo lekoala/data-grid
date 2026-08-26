@@ -55,10 +55,8 @@ data-grid .dg-multiselect-summary.dg-multiselect-empty {
 
 data-grid .dg-multiselect-panel {
   position: fixed;
-  inset: auto;
+  position-area: block-end span-inline-end;
   margin: 0;
-  top: anchor(bottom);
-  left: anchor(left);
   max-height: 280px;
   max-width: 260px;
   min-width: anchor-size(width);
