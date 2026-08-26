@@ -96,21 +96,7 @@ class ContextMenu extends BasePlugin {
         const y = event.clientY;
         menu.style.left = `${x}px`;
         menu.style.top = `${y}px`;
-
-        // `popover="auto"` is light-dismissed on pointer interactions. Opening it
-        // synchronously in the same `contextmenu` gesture can be immediately
-        // closed again before the browser test observes `:popover-open`.
-        const showMenu = () => {
-            if (!menu.matches(':popover-open')) {
-                menu.showPopover();
-            }
-        };
-        if (typeof requestAnimationFrame === "function") {
-            requestAnimationFrame(showMenu);
-        } else {
-            setTimeout(showMenu, 0);
-        }
-
+        menu.showPopover();
         const rect = menu.getBoundingClientRect();
         const viewport = menu.ownerDocument.documentElement;
         menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
