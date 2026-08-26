@@ -1,5 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
-import { findAll } from "../utils/shortcuts.js";
+import { dispatch } from "../utils/dispatch.js";
 
 /**
  * Make editable inputs in rows.
@@ -17,9 +17,11 @@ class EditableColumn extends BasePlugin {
         const grid = this.grid;
         const columns = new Map();
         for (const column of grid.getColumns()) {
-            columns.set(column.id ?? column.field ?? "", column);
+            columns.set(grid.getColumnId(column), column);
         }
-        const cells = findAll(grid, "tbody td.dg-editable-col");
+        const cells = /** @type {NodeListOf<HTMLTableCellElement>} */ (
+            grid.querySelectorAll("tbody td.dg-editable-col")
+        );
         for (const td of cells) {
             const rowIndex = Number.parseInt(td.dataset.rowIndex ?? "");
             const column = columns.get(td.getAttribute("data-column-id") ?? "");
@@ -95,12 +97,7 @@ class EditableColumn extends BasePlugin {
             }
             const prev = previous();
             item[field] = value;
-            const ev = new CustomEvent("edit", {
-                detail: { data: item, value, field, column },
-                cancelable: true,
-            });
-            grid.dispatchEvent(ev);
-            if (ev.defaultPrevented) {
+            if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
                 item[field] = prev;
             }
             endEditing();

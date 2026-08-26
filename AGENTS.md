@@ -34,6 +34,10 @@ runtime requirement (no Bun/Node APIs in `src/`).
 - Normalize at API boundaries; every new abstraction must remove
   branching/coupling (rule: "what does it let me delete?")
 - Prefer simplification over abstraction
+- Prefer native platform APIs for direct DOM operations. Extract helpers when
+  they encapsulate reusable parsing, normalization, event semantics, or
+  component invariants that would otherwise obscure the code's intent. Do not
+  wrap native APIs merely for brevity.
 
 ## Browser baseline (JS)
 

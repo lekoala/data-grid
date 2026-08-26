@@ -943,6 +943,27 @@ declare class DataGrid extends BaseElement {
      * @param {any} val
      */
     setColProp(field: string, prop: string, val: any): void;
+    /**
+     * Stable structural identity of a column, used for the `data-column-id`
+     * DOM convention shared by the core and the plugins.
+     * @param {Column} column
+     * @returns {String}
+     */
+    getColumnId(column: Column): string;
+    /**
+     * Find a column by its stable structural id (`column.id ?? column.field`).
+     * @param {String} id
+     * @returns {Column|null}
+     */
+    getColumnById(id: string): Column | null;
+    /**
+     * Create a column cell (<th> or <td>) tagged with its stable column id and
+     * styled by the column definition.
+     * @param {"th"|"td"} tag
+     * @param {Column} column
+     * @returns {HTMLTableCellElement}
+     */
+    _createColumnCell(tag: "th" | "td", column: Column): HTMLTableCellElement;
     visibleColumns(): Column[];
     /**
      * Whether a column can be sorted: the grid-wide option must be on and the

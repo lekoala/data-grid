@@ -1,15 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import debounce from "../utils/debounce.js";
-import {
-    addClass,
-    ce,
-    find,
-    findAll,
-    insertAfter,
-    removeAttribute,
-    removeClass,
-    setAttribute,
-} from "../utils/shortcuts.js";
+import { createSpanningRow } from "../utils/spanningRow.js";
 
 const RESPONSIVE_CLASS = "dg-responsive";
 const RESPONSIVE_TOGGLE_WIDTH = 40;
@@ -234,7 +225,7 @@ class ResponsiveGrid extends BasePlugin {
         // layout-dependent offsetWidth back into the math (that oscillates).
         /** @type {Map<HTMLElement, Number>} */
         const widths = new Map();
-        for (const th of findAll(headerRow, "th")) {
+        for (const th of headerRow.querySelectorAll("th")) {
             const el = /** @type {HTMLElement} */ (th);
             widths.set(
                 el,
@@ -250,7 +241,7 @@ class ResponsiveGrid extends BasePlugin {
         // Hideable candidates: data columns only, responsive !== "0", not
         // manually hidden. Ordered most important last (priority order).
         const items = sortByPriority(
-            findAll(headerRow, "th[field]")
+            /** @type {HTMLElement[]} */ ([...headerRow.querySelectorAll("th[field]")])
                 .reverse() // Order takes precedence if no priority is set
                 .filter((th) => {
                     const column = grid.getCol(th.getAttribute("field") ?? "");
@@ -274,7 +265,7 @@ class ResponsiveGrid extends BasePlugin {
         // Virtual/fixed columns (selection, actions, ...) consume width without
         // being hideable. The responsive toggle column is excluded: it is
         // reserved separately below, only when columns are hidden.
-        const fixedWidth = findAll(headerRow, "th:not([field])")
+        const fixedWidth = [...headerRow.querySelectorAll("th:not([field])")]
             .filter((th) => {
                 return !th.classList.contains(`${RESPONSIVE_CLASS}-toggle`);
             })
@@ -294,7 +285,7 @@ class ResponsiveGrid extends BasePlugin {
 
         // All data columns that are currently rendered (including responsive: 0
         // columns, which never hide but still consume width).
-        let visible = findAll(headerRow, "th[field]")
+        let visible = [...headerRow.querySelectorAll("th[field]")]
             .map((th) => {
                 return {
                     th,
@@ -349,16 +340,18 @@ class ResponsiveGrid extends BasePlugin {
         }
 
         // Footer compact state is independent of column changes.
-        const footer = find(table, "tfoot");
+        const footer = table.querySelector("tfoot");
         if (footer) {
-            const realFooterWidth = findAll(footer, ".dg-footer > div").reduce((result, div) => {
+            const realFooterWidth = /** @type {HTMLElement[]} */ ([
+                ...footer.querySelectorAll(".dg-footer > div"),
+            ]).reduce((result, div) => {
                 return result + div.offsetWidth;
             }, 0);
             const availableFooterWidth = footer.offsetWidth - realFooterWidth;
             if (realFooterWidth > size) {
-                addClass(footer, "dg-footer-compact");
+                footer.classList.add("dg-footer-compact");
             } else if (availableFooterWidth > 250) {
-                removeClass(footer, "dg-footer-compact");
+                footer.classList.remove("dg-footer-compact");
             }
         }
         table.style.visibility = "visible";
@@ -366,7 +359,7 @@ class ResponsiveGrid extends BasePlugin {
 
     computeLabelWidth() {
         let idealWidth = 0;
-        const hCols = findAll(this.grid, ".dg-head-columns th");
+        const hCols = /** @type {NodeListOf<HTMLElement>} */ (this.grid.querySelectorAll(".dg-head-columns th"));
         for (const hCol of hCols) {
             if (idealWidth >= 120) {
                 break;
@@ -420,7 +413,7 @@ class ResponsiveGrid extends BasePlugin {
             if (column.attr) {
                 continue;
             }
-            const id = column.id ?? column.field;
+            const id = this.grid.getColumnId(column);
             const td = tr.querySelector(`:scope > td[data-column-id="${id}"]`);
             if (td) {
                 tr.appendChild(td);
@@ -470,34 +463,35 @@ class ResponsiveGrid extends BasePlugin {
             if (hasChildRow) {
                 return; // already open
             }
-            const hiddenCols = findAll(tr, `.${RESPONSIVE_CLASS}-hidden`);
+            const hiddenCols = tr.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`);
             if (!hiddenCols.length) {
                 return;
             }
             this._canonicalizeRow(tr);
-            addClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+            tr.classList.add(`${RESPONSIVE_CLASS}-expanded`);
 
-            const detailRow = ce("tr");
-            insertAfter(detailRow, tr);
-            addClass(detailRow, `${RESPONSIVE_CLASS}-child-row`);
             const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
-            detailRow.id = this._detailId(rowIndex);
+            const { row: detailRow, cell: detailTd } = createSpanningRow(this.grid, {
+                id: this._detailId(rowIndex),
+                className: `${RESPONSIVE_CLASS}-child-row`,
+            });
+            tr.after(detailRow);
 
-            const detailTd = ce("td", detailRow);
-            setAttribute(detailTd, "data-dg-span-columns", "");
-            setAttribute(detailTd, "colspan", this.grid.columnsLength(true));
-
-            const childTable = ce("table", detailTd);
-            addClass(childTable, `${RESPONSIVE_CLASS}-table`);
+            const childTable = document.createElement("table");
+            detailTd.appendChild(childTable);
+            childTable.classList.add(`${RESPONSIVE_CLASS}-table`);
 
             const idealWidth = this.computeLabelWidth();
-            for (const col of findAll(tr, `.${RESPONSIVE_CLASS}-hidden`)) {
-                const childTableRow = ce("tr", childTable);
-                const labelCol = ce("th", childTableRow);
+            for (const col of /** @type {NodeListOf<HTMLElement>} */ (
+                tr.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)
+            )) {
+                const childTableRow = document.createElement("tr");
+                const labelCol = document.createElement("th");
                 labelCol.style.width = `${idealWidth}px`;
                 labelCol.textContent = col.dataset.name ?? "";
-                childTableRow.appendChild(col);
-                removeAttribute(col, "hidden");
+                childTableRow.append(labelCol, col);
+                childTable.appendChild(childTableRow);
+                col.removeAttribute("hidden");
             }
 
             this._setToggleIcon(tr, true);
@@ -507,14 +501,14 @@ class ResponsiveGrid extends BasePlugin {
         // Collapse: move real cells back into the data row (canonical order)
         // and drop the wrapper.
         if (childRow && hasChildRow) {
-            for (const col of findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`)) {
+            for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
                 tr.appendChild(col);
-                setAttribute(col, "hidden");
+                col.setAttribute("hidden", "");
             }
             childRow.remove();
             this._canonicalizeRow(tr);
         }
-        removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+        tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
         this._setToggleIcon(tr, false);
     }
 
@@ -525,15 +519,15 @@ class ResponsiveGrid extends BasePlugin {
      * state attribute is left untouched.
      */
     _restoreDetails() {
-        for (const childRow of findAll(this.grid, `tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
+        for (const childRow of this.grid.querySelectorAll(`tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
             const tr = /** @type {HTMLTableRowElement} */ (childRow.previousElementSibling);
             if (tr) {
-                for (const col of findAll(childRow, `.${RESPONSIVE_CLASS}-hidden`)) {
+                for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
                     tr.appendChild(col);
-                    setAttribute(col, "hidden");
+                    col.setAttribute("hidden", "");
                 }
                 this._canonicalizeRow(tr);
-                removeClass(tr, `${RESPONSIVE_CLASS}-expanded`);
+                tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
             }
             childRow.remove();
         }

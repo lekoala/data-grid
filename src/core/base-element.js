@@ -1,6 +1,6 @@
 import camelize from "../utils/camelize.js";
+import { dispatch } from "../utils/dispatch.js";
 import normalizeData from "../utils/normalizeData.js";
-import { dispatch, getAttribute } from "../utils/shortcuts.js";
 
 /** @typedef {import('../data-grid.js').Options} Options */
 
@@ -69,7 +69,7 @@ class BaseElement extends HTMLElement {
      */
     log(...data) {
         if (this.options.debug) {
-            console.log(`[${getAttribute(this, "id")}] `, ...data);
+            console.log(`[${this.getAttribute("id")}] `, ...data);
         }
     }
 

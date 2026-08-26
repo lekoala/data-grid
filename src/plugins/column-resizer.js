@@ -1,17 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
+import { dispatch } from "../utils/dispatch.js";
 import elementOffset from "../utils/elementOffset.js";
-import {
-    addClass,
-    dispatch,
-    findAll,
-    getAttribute,
-    hasClass,
-    off,
-    on,
-    removeAttribute,
-    removeClass,
-    setAttribute,
-} from "../utils/shortcuts.js";
 
 /**
  * Allows to resize columns
@@ -29,7 +18,7 @@ class ColumnResizer extends BasePlugin {
 
     updateLabels() {
         const resizeLabel = this.grid.labels.resizeColumn;
-        const resizers = findAll(this.grid, ".dg-resizer");
+        const resizers = this.grid.querySelectorAll(".dg-resizer");
         for (const resizer of resizers) {
             resizer.ariaLabel = resizeLabel;
         }
@@ -44,15 +33,17 @@ class ColumnResizer extends BasePlugin {
         if (!table) {
             return;
         }
-        const cols = findAll(grid, "thead tr.dg-head-columns th");
+        const cols = /** @type {NodeListOf<HTMLTableCellElement>} */ (
+            grid.querySelectorAll("thead tr.dg-head-columns th")
+        );
 
         for (const col of cols) {
-            if (hasClass(col, "dg-not-resizable")) {
+            if (col.classList.contains("dg-not-resizable")) {
                 continue;
             }
             // Create a resizer element
             const resizer = document.createElement("div");
-            addClass(resizer, "dg-resizer");
+            resizer.classList.add("dg-resizer");
             resizer.ariaLabel = resizeLabel;
 
             // Add a resizer element to the column
@@ -70,7 +61,7 @@ class ColumnResizer extends BasePlugin {
                 }
                 const newWidth = startW + (e.clientX - startX);
                 if (col.dataset.minWidth && newWidth > Number.parseInt(col.dataset.minWidth)) {
-                    setAttribute(col, "width", newWidth);
+                    col.setAttribute("width", String(newWidth));
                 }
             };
 
@@ -78,44 +69,44 @@ class ColumnResizer extends BasePlugin {
             const mouseUpHandler = () => {
                 grid.log("resized column");
 
-                removeClass(resizer, "dg-resizer-active");
+                resizer.classList.remove("dg-resizer-active");
                 if (grid.options.reorder) {
                     col.draggable = true;
                 }
                 col.style.overflow = "hidden";
 
                 // Remove handlers
-                off(document, "mousemove", mouseMoveHandler);
-                off(document, "mouseup", mouseUpHandler);
+                document.removeEventListener("mousemove", mouseMoveHandler);
+                document.removeEventListener("mouseup", mouseUpHandler);
 
                 dispatch(grid, "columnResized", {
-                    col: getAttribute(col, "field"),
-                    width: getAttribute(col, "width"),
+                    col: col.getAttribute("field"),
+                    width: col.getAttribute("width"),
                 });
             };
 
             // Otherwise it could sort the col
-            on(resizer, "click", (/** @type {MouseEvent} */ e) => {
+            resizer.addEventListener("click", (/** @type {MouseEvent} */ e) => {
                 e.stopPropagation();
             });
 
-            on(resizer, "mousedown", (/** @type {MouseEvent} */ e) => {
+            resizer.addEventListener("mousedown", (/** @type {MouseEvent} */ e) => {
                 e.preventDefault();
                 e.stopPropagation();
 
                 const target = /** @type {HTMLElement} */ (e.target);
-                const currentCols = findAll(grid, "thead tr.dg-head-columns th");
+                const currentCols = [...grid.querySelectorAll("thead tr.dg-head-columns th")];
                 const visibleCols = currentCols.filter((col) => {
                     return !col.hasAttribute("hidden");
                 });
-                // biome-ignore lint/complexity/useIndexOf: indexOf requires a FlexibleHTMLElement arg; target.parentNode is a broader ParentNode
+                // biome-ignore lint/complexity/useIndexOf: indexOf requires an Element arg; target.parentNode is a broader Node
                 const columnIndex = visibleCols.findIndex((col) => col === target.parentNode);
                 grid.log("resize column");
 
-                addClass(resizer, "dg-resizer-active");
+                resizer.classList.add("dg-resizer-active");
 
                 // Make sure we don't drag it
-                removeAttribute(col, "draggable");
+                col.removeAttribute("draggable");
 
                 // Allow overflow when resizing
                 col.style.overflow = "visible";
@@ -131,16 +122,16 @@ class ColumnResizer extends BasePlugin {
                 max = elementOffset(target).left + grid.offsetWidth - remainingSpace;
 
                 // Remove width from next columns to allow auto layout
-                setAttribute(col, "width", startW);
+                col.setAttribute("width", String(startW));
                 for (let j = 0; j < visibleCols.length; j++) {
                     if (j > columnIndex) {
-                        removeAttribute(visibleCols[j], "width");
+                        visibleCols[j].removeAttribute("width");
                     }
                 }
 
                 // Attach handlers
-                on(document, "mousemove", mouseMoveHandler);
-                on(document, "mouseup", mouseUpHandler);
+                document.addEventListener("mousemove", mouseMoveHandler);
+                document.addEventListener("mouseup", mouseUpHandler);
             });
         }
     }

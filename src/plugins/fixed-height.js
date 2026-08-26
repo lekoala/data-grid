@@ -1,5 +1,4 @@
 import BasePlugin from "../core/base-plugin.js";
-import { setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Support for fixed table height
@@ -24,7 +23,7 @@ class FixedHeight extends BasePlugin {
         const grid = this.grid;
         const tbody = grid.querySelector("tbody");
         const tr = document.createElement("tr");
-        setAttribute(tr, "hidden", "");
+        tr.setAttribute("hidden", "");
         tr.classList.add("dg-fake-row");
         tbody?.appendChild(tr);
     }
@@ -62,7 +61,7 @@ class FixedHeight extends BasePlugin {
         const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
         const fakeHeight = visibleRows > 1 ? max - visibleRows * rowHeight : max;
         if (fakeHeight > 0) {
-            setAttribute(fakeRow, "height", fakeHeight);
+            fakeRow.setAttribute("height", String(fakeHeight));
             fakeRow.removeAttribute("hidden");
         } else {
             fakeRow.removeAttribute("height");

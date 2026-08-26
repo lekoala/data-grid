@@ -1,5 +1,4 @@
 import BasePlugin from "../core/base-plugin.js";
-import { off, on, removeAttribute, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Create a right click menu on the headers
@@ -24,10 +23,10 @@ class ContextMenu extends BasePlugin {
     disconnected() {
         const grid = this.grid;
         if (grid.headerRow) {
-            off(grid.headerRow, "contextmenu", this);
+            grid.headerRow.removeEventListener("contextmenu", this);
         }
         if (this._docClickHandler) {
-            off(document, "click", this._docClickHandler);
+            document.removeEventListener("click", this._docClickHandler);
             this._docClickHandler = null;
         }
     }
@@ -46,7 +45,7 @@ class ContextMenu extends BasePlugin {
     attachContextMenu() {
         const grid = this.grid;
         if (grid.headerRow) {
-            on(grid.headerRow, "contextmenu", this);
+            grid.headerRow.addEventListener("contextmenu", this);
         }
     }
 
@@ -85,7 +84,7 @@ class ContextMenu extends BasePlugin {
         menu.style.top = `${y}px`;
         menu.style.left = `${x}px`;
 
-        removeAttribute(menu, "hidden");
+        menu.removeAttribute("hidden");
         if (x + 150 > rect.width) {
             x -= menu.offsetWidth;
             menu.style.left = `${x}px`;
@@ -93,13 +92,13 @@ class ContextMenu extends BasePlugin {
 
         const documentClickHandler = (/** @type {MouseEvent} */ ev) => {
             if (!menu.contains(/** @type {Node} */ (ev.target))) {
-                setAttribute(menu, "hidden", "");
-                off(document, "click", documentClickHandler);
+                menu.setAttribute("hidden", "");
+                document.removeEventListener("click", documentClickHandler);
                 this._docClickHandler = null;
             }
         };
         this._docClickHandler = documentClickHandler;
-        on(document, "click", documentClickHandler);
+        document.addEventListener("click", documentClickHandler);
     }
     createMenu() {
         const grid = this.grid;
@@ -107,9 +106,7 @@ class ContextMenu extends BasePlugin {
         if (!menu) {
             return;
         }
-        while (menu.lastChild) {
-            menu.removeChild(menu.lastChild);
-        }
+        menu.replaceChildren();
         menu.addEventListener("change", this);
 
         for (const col of grid.options.columns) {
@@ -119,8 +116,8 @@ class ContextMenu extends BasePlugin {
             const li = document.createElement("li");
             const label = document.createElement("label");
             const checkbox = document.createElement("input");
-            setAttribute(checkbox, "type", "checkbox");
-            setAttribute(checkbox, "data-name", col.field);
+            checkbox.setAttribute("type", "checkbox");
+            checkbox.setAttribute("data-name", col.field ?? "");
             if (!col.hidden) {
                 checkbox.checked = true;
             }

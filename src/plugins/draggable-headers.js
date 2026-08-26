@@ -1,5 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch, findAll, on } from "../utils/shortcuts.js";
+import { dispatch } from "../utils/dispatch.js";
 
 /**
  * Allows to move headers
@@ -12,7 +12,9 @@ class DraggableHeaders extends BasePlugin {
         if (context !== "table") {
             return;
         }
-        const headers = findAll(this.grid, 'thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
+        const headers = /** @type {NodeListOf<HTMLTableCellElement>} */ (
+            this.grid.querySelectorAll('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])')
+        );
         for (const th of headers) {
             this.makeHeaderDraggable(th);
         }
@@ -24,7 +26,7 @@ class DraggableHeaders extends BasePlugin {
     makeHeaderDraggable(th) {
         const grid = this.grid;
         th.draggable = true;
-        on(th, "dragstart", (/** @type {DragEvent} */ e) => {
+        th.addEventListener("dragstart", (/** @type {DragEvent} */ e) => {
             grid.log("reorder col");
             const dt = e.dataTransfer;
             if (!dt) {
@@ -33,13 +35,13 @@ class DraggableHeaders extends BasePlugin {
             dt.effectAllowed = "move";
             dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
         });
-        on(th, "dragover", (/** @type {DragEvent} */ e) => {
+        th.addEventListener("dragover", (/** @type {DragEvent} */ e) => {
             e.preventDefault();
             if (e.dataTransfer) {
                 e.dataTransfer.dropEffect = "move";
             }
         });
-        on(th, "drop", (/** @type {DragEvent} */ e) => {
+        th.addEventListener("drop", (/** @type {DragEvent} */ e) => {
             e.stopPropagation();
             const target = /** @type {HTMLElement} */ (e.target).closest("th");
             const dt = e.dataTransfer;
@@ -59,8 +61,8 @@ class DraggableHeaders extends BasePlugin {
             grid.log(`reordered col from ${draggedId} to ${targetId}`);
 
             const cols = grid.options.columns;
-            const from = cols.findIndex((c) => (c.id ?? c.field) === draggedId);
-            const to = cols.findIndex((c) => (c.id ?? c.field) === targetId);
+            const from = cols.findIndex((c) => grid.getColumnId(c) === draggedId);
+            const to = cols.findIndex((c) => grid.getColumnId(c) === targetId);
             if (from === -1 || to === -1) {
                 return;
             }

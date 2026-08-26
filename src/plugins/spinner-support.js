@@ -1,5 +1,4 @@
 import BasePlugin from "../core/base-plugin.js";
-import { $ } from "../utils/shortcuts.js";
 
 /**
  * Adds an element for showing a spinning icon on grid loading.
@@ -34,14 +33,14 @@ class SpinnerSupport extends BasePlugin {
   data-grid:not(.dg-initialized).dg-loading ${cls} { top: 0; }
 </style>
 `;
-        if (!$("#dg-styles")) {
-            const styleParent = $("head") ?? $("body");
+        if (!document.querySelector("#dg-styles")) {
+            const styleParent = document.querySelector("head") ?? document.querySelector("body");
             if (styleParent) {
                 const position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
                 styleParent.insertAdjacentHTML(position, template);
             }
         }
-        if (!$(`i${cls}`, grid)) {
+        if (!grid.querySelector(`i${cls}`)) {
             grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
         }
     }

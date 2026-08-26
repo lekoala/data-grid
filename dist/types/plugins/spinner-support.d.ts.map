@@ -1,1 +1,1 @@
-{"version":3,"file":"spinner-support.d.ts","sourceRoot":"","sources":["../../../src/plugins/spinner-support.js"],"names":[],"mappings":"AAAA,OAAO,UAAU,MAAM,wBAAwB,CAAC;AAGhD;;GAEG;AACH,cAAM,cAAe,SAAQ,UAAU;IACnC,SAAS,SAKR;IAED;;OAEG;IACH,GAAG,SA6BF;CACJ;eAEc,cAAc"}
+{"version":3,"file":"spinner-support.d.ts","sourceRoot":"","sources":["../../../src/plugins/spinner-support.js"],"names":[],"mappings":"AAAA,OAAO,UAAU,MAAM,wBAAwB,CAAC;AAEhD;;GAEG;AACH,cAAM,cAAe,SAAQ,UAAU;IACnC,SAAS,SAKR;IAED;;OAEG;IACH,GAAG,SA6BF;CACJ;eAEc,cAAc"}

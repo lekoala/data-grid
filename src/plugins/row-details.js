@@ -1,6 +1,7 @@
 import BasePlugin from "../core/base-plugin.js";
 import applyContent from "../utils/applyContent.js";
-import { dispatch } from "../utils/shortcuts.js";
+import { dispatch } from "../utils/dispatch.js";
+import { createSpanningRow } from "../utils/spanningRow.js";
 
 const DETAILS_CLASS = "dg-row-details";
 
@@ -140,14 +141,11 @@ class RowDetails extends BasePlugin {
             if (typeof renderer !== "function") {
                 return;
             }
-            const detailRow = document.createElement("tr");
-            detailRow.id = id;
-            detailRow.className = `${DETAILS_CLASS}-row`;
-            const td = document.createElement("td");
-            td.setAttribute("data-dg-span-columns", "");
-            td.colSpan = Math.max(1, this.grid.columnsLength(true));
+            const { row: detailRow, cell: td } = createSpanningRow(this.grid, {
+                id,
+                className: `${DETAILS_CLASS}-row`,
+            });
             applyContent(td, renderer({ row, rowKey: key, grid: this.grid }));
-            detailRow.appendChild(td);
 
             const responsiveRow = tr.nextElementSibling?.classList.contains("dg-responsive-child-row")
                 ? tr.nextElementSibling

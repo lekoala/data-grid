@@ -1,6 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
 import getTextWidth from "../utils/getTextWidth.js";
-import { findAll, getAttribute, hasAttribute, setAttribute } from "../utils/shortcuts.js";
 
 /**
  * Allows to resize columns
@@ -21,9 +20,11 @@ class AutosizeColumn extends BasePlugin {
         const colMaxWidth = Math.round((availableWidth / grid.columnsLength(true)) * 2);
         const columns = new Map();
         for (const column of grid.getColumns()) {
-            columns.set(column.id ?? column.field ?? "", column);
+            columns.set(grid.getColumnId(column), column);
         }
-        const ths = findAll(grid, "thead tr.dg-head-columns th[data-column-id]:not([hidden])");
+        const ths = /** @type {NodeListOf<HTMLTableCellElement>} */ (
+            grid.querySelectorAll("thead tr.dg-head-columns th[data-column-id]:not([hidden])")
+        );
         let totalWidth = 0;
         for (const th of ths) {
             const column = columns.get(th.getAttribute("data-column-id") ?? "");
@@ -51,8 +52,11 @@ class AutosizeColumn extends BasePlugin {
      */
     computeSize(th, column, min, max) {
         const grid = this.grid;
-        if (hasAttribute(th, "width")) {
-            return getAttribute(th, "width");
+        if (th.hasAttribute("width")) {
+            const width = th.getAttribute("width");
+            if (width !== null) {
+                return Number(width);
+            }
         }
         const field = column.field;
         if (!field || !grid.rows.length) {
@@ -80,7 +84,7 @@ class AutosizeColumn extends BasePlugin {
         if (width < min) {
             width = min;
         }
-        setAttribute(th, "width", width);
+        th.setAttribute("width", String(width));
         return width;
     }
 }

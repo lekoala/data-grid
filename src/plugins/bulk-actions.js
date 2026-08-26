@@ -1,5 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
-import { dispatch } from "../utils/shortcuts.js";
+import { resolveActionConfirmation } from "../utils/actionConfirm.js";
+import { dispatch } from "../utils/dispatch.js";
 
 /**
  * Add bulk actions on the current selection.
@@ -65,19 +66,11 @@ class BulkActions extends BasePlugin {
                     return;
                 }
                 const selection = grid.getSelectionState();
-                let mustConfirm = Boolean(action.confirm);
-                let message = grid.labels.areYouSure;
-                if (typeof action.confirm === "string") {
-                    message = action.confirm;
-                } else if (typeof action.confirm === "function") {
-                    const result = action.confirm(selection, { grid, action });
-                    if (typeof result === "string") {
-                        message = result;
-                    } else if (result === false) {
-                        mustConfirm = false;
-                    }
-                }
-                if (mustConfirm && !window.confirm(message)) {
+                const message = resolveActionConfirmation(action.confirm, grid.labels.areYouSure, selection, {
+                    grid,
+                    action,
+                });
+                if (message !== null && !window.confirm(message)) {
                     return;
                 }
                 dispatch(grid, "bulkAction", {

@@ -1,7 +1,8 @@
 import BasePlugin from "../core/base-plugin.js";
+import { resolveActionConfirmation } from "../utils/actionConfirm.js";
 import applyContent from "../utils/applyContent.js";
+import { dispatch } from "../utils/dispatch.js";
 import interpolate from "../utils/interpolate.js";
-import { dispatch, findAll, off, on } from "../utils/shortcuts.js";
 
 /**
  * Add actions on rows
@@ -68,7 +69,7 @@ class RowActions extends BasePlugin {
 
     updateLabels() {
         const toggleLabel = this.grid.labels.toggleActions;
-        const toggles = findAll(this.grid, ".dg-actions-toggle");
+        const toggles = this.grid.querySelectorAll(".dg-actions-toggle");
         for (const toggle of toggles) {
             toggle.setAttribute("aria-label", toggleLabel);
             toggle.setAttribute("title", toggleLabel);
@@ -125,7 +126,7 @@ class RowActions extends BasePlugin {
         if (maxCount > 0 && !collapse && maxCount <= 2) {
             mode = `dg-actions-${maxCount}`;
         }
-        const cells = findAll(grid, '[data-column-id="$actions"]');
+        const cells = grid.querySelectorAll('[data-column-id="$actions"]');
         for (const cell of cells) {
             cell.classList.remove("dg-actions-0", "dg-actions-1", "dg-actions-2", "dg-actions-more");
             cell.classList.add(mode);
@@ -162,9 +163,7 @@ class RowActions extends BasePlugin {
             this.menu.addEventListener("click", () => this.closeActionMenu(), true);
         }
         const menu = this.menu;
-        while (menu.lastChild) {
-            menu.removeChild(menu.lastChild);
-        }
+        menu.replaceChildren();
         const rowKey = grid.resolveRowKey(row, rowIndex);
         for (const action of grid.getActionsForRow(row)) {
             if (action.visible && !action.visible(row, { grid, action, rowKey })) {
@@ -187,13 +186,13 @@ class RowActions extends BasePlugin {
                 this.closeActionMenu();
             }
         };
-        on(document, "click", this._boundDocumentClick);
+        document.addEventListener("click", this._boundDocumentClick);
         this._boundKeydown = (/** @type {KeyboardEvent} */ ev) => {
             if (ev.key === "Escape") {
                 this.closeActionMenu();
             }
         };
-        on(document, "keydown", this._boundKeydown);
+        document.addEventListener("keydown", this._boundKeydown);
     }
 
     /**
@@ -233,11 +232,11 @@ class RowActions extends BasePlugin {
      */
     closeActionMenu() {
         if (this._boundDocumentClick) {
-            off(document, "click", this._boundDocumentClick);
+            document.removeEventListener("click", this._boundDocumentClick);
             this._boundDocumentClick = null;
         }
         if (this._boundKeydown) {
-            off(document, "keydown", this._boundKeydown);
+            document.removeEventListener("keydown", this._boundKeydown);
             this._boundKeydown = null;
         }
         if (this.openCell) {
@@ -270,7 +269,7 @@ class RowActions extends BasePlugin {
         actionsToggle.setAttribute("aria-label", labels.toggleActions);
         actionsToggle.setAttribute("aria-expanded", "false");
         actionsToggle.title = labels.toggleActions;
-        on(actionsToggle, "click", (/** @type {MouseEvent} */ ev) => {
+        actionsToggle.addEventListener("click", (/** @type {MouseEvent} */ ev) => {
             ev.stopPropagation();
             const cell = /** @type {HTMLElement} */ (actionsToggle.closest("td") ?? actionsToggle.parentElement);
             if (cell) {
@@ -402,18 +401,7 @@ class RowActions extends BasePlugin {
         }
 
         // Confirmation: boolean, message string or a resolver.
-        let mustConfirm = Boolean(action.confirm);
-        let message = labels.areYouSure;
-        if (typeof action.confirm === "string") {
-            message = action.confirm;
-        } else if (typeof action.confirm === "function") {
-            const result = action.confirm(row, ctx);
-            if (typeof result === "string") {
-                message = result;
-            } else if (result === false) {
-                mustConfirm = false;
-            }
-        }
+        const message = resolveActionConfirmation(action.confirm, labels.areYouSure, row, ctx);
 
         const dispatchAction = (/** @type {Event} */ ev) => {
             ev.stopPropagation();
@@ -421,7 +409,7 @@ class RowActions extends BasePlugin {
                 ev.preventDefault();
                 return;
             }
-            if (mustConfirm && !window.confirm(message)) {
+            if (message !== null && !window.confirm(message)) {
                 ev.preventDefault();
                 return;
             }
