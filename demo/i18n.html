@@ -7,6 +7,7 @@
 
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.3.2/css/flag-icons.min.css" />
   <link rel="stylesheet" href="../dist/data-grid.css" />
   <link rel="stylesheet" href="demo.css" />
 
@@ -38,8 +39,28 @@
     select.addEventListener("change", () => setLocale(select.value));
 
     const data = await (await fetch("demo-simple.json")).json();
+    // Render the ISO country code as a flag (flag-icons) with the code beside it.
+    const columns = data.options.columns.map((column) =>
+      column.field === "country"
+        ? {
+            ...column,
+            renderCell: ({ value }) => {
+              const code = String(value ?? "").toUpperCase();
+              const wrap = document.createElement("span");
+              const flag = document.createElement("span");
+              flag.className = `fi fi-${code.toLowerCase()}`;
+              flag.setAttribute("aria-hidden", "true");
+              const text = document.createElement("span");
+              text.textContent = code;
+              text.style.marginInlineStart = "0.4rem";
+              wrap.append(flag, text);
+              return wrap;
+            },
+          }
+        : column,
+    );
     grid = new DataGrid({
-      columns: data.options.columns,
+      columns,
       dataSource: new ArrayDataSource(data.data),
       selectable: true,
       bulkActions: [{ name: "export", label: "Export" }],
@@ -74,27 +95,29 @@
       Arabic switches the grid to RTL.
     </p>
 
-    <label for="locale">Language</label>
-    <select id="locale" class="demo-select">
-      <option value="en" selected>English</option>
-      <option value="fr">Français</option>
-      <option value="nl">Nederlands</option>
-      <option value="de">Deutsch</option>
-      <option value="es">Español</option>
-      <option value="it">Italiano</option>
-      <option value="pt-BR">Português (Brasil)</option>
-      <option value="pt-PT">Português (Portugal)</option>
-      <option value="zh-CN">中文</option>
-      <option value="ja">日本語</option>
-      <option value="ko">한국어</option>
-      <option value="ar">العربية</option>
-      <option value="hi">हिन्दी</option>
-      <option value="ru">Русский</option>
-      <option value="tr">Türkçe</option>
-      <option value="id">Bahasa Indonesia</option>
-      <option value="pl">Polski</option>
-    </select>
-    <output id="current-locale" class="demo-meta">en</output>
+    <div class="demo-i18n-picker">
+      <label for="locale">Language</label>
+      <select id="locale" class="demo-select">
+        <option value="en" selected>English</option>
+        <option value="fr">Français</option>
+        <option value="nl">Nederlands</option>
+        <option value="de">Deutsch</option>
+        <option value="es">Español</option>
+        <option value="it">Italiano</option>
+        <option value="pt-BR">Português (Brasil)</option>
+        <option value="pt-PT">Português (Portugal)</option>
+        <option value="zh-CN">中文</option>
+        <option value="ja">日本語</option>
+        <option value="ko">한국어</option>
+        <option value="ar">العربية</option>
+        <option value="hi">हिन्दी</option>
+        <option value="ru">Русский</option>
+        <option value="tr">Türkçe</option>
+        <option value="id">Bahasa Indonesia</option>
+        <option value="pl">Polski</option>
+      </select>
+      <output id="current-locale" class="demo-meta">en</output>
+    </div>
 
     <div class="demo-grid">
       <div id="i18n-demo"></div>

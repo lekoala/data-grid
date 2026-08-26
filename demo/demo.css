@@ -215,6 +215,10 @@ footer hr {
   padding: 16px;
 }
 
+.demo-i18n-picker {
+  margin-bottom: 1rem;
+}
+
 .demo-grid h2,
 .demo-grid h3 {
   margin-top: 0;

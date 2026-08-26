@@ -2,7 +2,9 @@
   "options": {
     "columns": [
       {
-        "field": "id"
+        "field": "id",
+        "title": "#",
+        "width": 64
       },
       {
         "field": "first_name"
@@ -15,7 +17,13 @@
         "transform": "lowercase"
       },
       {
-        "field": "income"
+        "field": "income",
+        "format": "number",
+        "formatOptions": {
+          "style": "currency",
+          "currency": "EUR",
+          "maximumFractionDigits": 0
+        }
       }
     ]
   },
