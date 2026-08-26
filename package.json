@@ -1,6 +1,6 @@
 {
   "name": "data-grid-component",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "Standalone data grid web component",
   "type": "module",
   "main": "data-grid",
@@ -20,6 +20,9 @@
       "types": "./dist/types/core/base-plugin.d.ts",
       "import": "./src/core/base-plugin.js"
     },
+    "./styles": "./dist/data-grid.css",
+    "./styles.min": "./dist/data-grid.min.css",
+    "./themes/bootstrap": "./themes/bootstrap.css",
     "./locales/*": "./locales/*.js"
   },
   "files": [
@@ -49,9 +52,10 @@
     "check:drift": "bun scripts/check-drift.js",
     "typecheck": "tsc -p jsconfig.json",
     "types": "tsc -p tsconfig.types.json",
+    "check:types": "tsc -p test/types/tsconfig.json",
     "manifest": "bun scripts/custom-elements.js",
     "check:package": "bun scripts/check-package.js",
-    "ci": "bun run check && bun run check:baseline && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run manifest && bun run build && bun run check:drift"
+    "ci": "bun run check && bun run check:baseline && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run check:types && bun run manifest && bun run build && bun run check:drift"
   },
   "repository": {
     "type": "git",

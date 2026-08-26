@@ -10,7 +10,7 @@ export type SortState = {
     field: string;
     direction: "asc" | "desc";
 };
-export type FilterOperator = "eq" | "neq" | "contains" | "notContains" | "startsWith" | "notStartsWith" | "endsWith" | "notEndsWith" | * "lt" | "lte" | "gt" | "gte" | "between" | "in" | "empty" | "notEmpty";
+export type FilterOperator = "eq" | "neq" | "contains" | "notContains" | "startsWith" | "notStartsWith" | "endsWith" | "notEndsWith" | "lt" | "lte" | "gt" | "gte" | "between" | "in" | "empty" | "notEmpty";
 export type FilterState = {
     operator: FilterOperator;
     value?: any;
@@ -54,8 +54,7 @@ export type DataSource = {
  */
 /**
  * Supported filter operators
- * @typedef {"eq"|"neq"|"contains"|"notContains"|"startsWith"|"notStartsWith"|"endsWith"|"notEndsWith"|
- * "lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
+ * @typedef {"eq"|"neq"|"contains"|"notContains"|"startsWith"|"notStartsWith"|"endsWith"|"notEndsWith"|"lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
  */
 /**
  * Filter state

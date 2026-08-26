@@ -521,11 +521,12 @@ All UI labels are plain strings, overridable at runtime through `setLabels()`,
 ## Browser Support
 
 The core runtime targets modern evergreen browsers with native ES modules and
-commonly available Web Platform APIs (~2020). `filterMultiple` additionally
-requires native Popover API and CSS Anchor Positioning support. Browsers that
-miss those capabilities keep a working single-select filter emitting `eq`. The
-optional `menu` plugin only requires Popover support; older browsers keep the
-ordinary browser context menu.
+commonly available Web Platform APIs (~2020). Newer platform features such as
+native Popover and CSS Anchor Positioning are used as progressive enhancements:
+`filterMultiple` falls back to a working single-select filter emitting `eq`,
+and the optional context menu plugin only requires Popover support. See
+`docs/development.md#browser-baseline` for the exact baseline and feature
+gating.
 
 ## License
 

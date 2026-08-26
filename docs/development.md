@@ -19,10 +19,11 @@ bun run test:browser:wsl # run the browser suite inside WSL (Linux/Chrome)
 bun run check      # Biome lint + format check
 bun run typecheck  # tsc -p jsconfig.json (JSDoc typecheck, strict)
 bun run types      # tsc -p tsconfig.types.json -> dist/types/*.d.ts
+bun run check:types # tsc consumer smoke test against the published type exports
 bun run manifest   # generate custom-elements.json (scripts/custom-elements.js)
 bun run build      # Bun.build JS + CSS into dist/ (scripts/build.js)
 bun run check:package # verify the npm tarball content (scripts/check-package.js)
-bun run ci         # check + typecheck + test + types + manifest + build + drift check
+bun run ci         # check + baseline + typecheck + test + locales + types + consumer typecheck + manifest + build + drift check
 bun run dev        # build + serve demo (Bun.serve, demo/server.js)
 ```
 
@@ -105,12 +106,12 @@ publishable (`bun run ci` + `npm pack --dry-run` + `bun run check:package`).
 5. Tag the exact published commit:
 
    ```bash
-   git tag 3.0.0
-   git push origin 3.0.0
+   git tag <version>
+   git push origin <version>
    ```
 
 6. Post-publish check:
 
    ```bash
-   npm view data-grid-component@3.0.0
+   npm view data-grid-component@<version>
    ```

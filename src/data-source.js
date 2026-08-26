@@ -18,8 +18,7 @@ import { normalizeBoolean } from "./utils/formatValue.js";
 
 /**
  * Supported filter operators
- * @typedef {"eq"|"neq"|"contains"|"notContains"|"startsWith"|"notStartsWith"|"endsWith"|"notEndsWith"|
- * "lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
+ * @typedef {"eq"|"neq"|"contains"|"notContains"|"startsWith"|"notStartsWith"|"endsWith"|"notEndsWith"|"lt"|"lte"|"gt"|"gte"|"between"|"in"|"empty"|"notEmpty"} FilterOperator
  */
 
 /**
