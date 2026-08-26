@@ -71,6 +71,11 @@ broken popover markup. This newer requirement is intentional because native
 Popover owns top-layer rendering, light dismissal, Escape handling and focus
 restoration, while Anchor Positioning keeps the panel aligned during scrolling.
 
+The `ContextMenu` plugin uses Popover without Anchor Positioning: it preserves
+the pointer coordinates and clamps the menu once to the viewport. A browser
+with Popover but without Anchor Positioning can therefore still use the custom
+column menu; browsers without Popover keep the ordinary browser context menu.
+
 ## Release
 
 The publish decision stays human; the CI only validates that the package is

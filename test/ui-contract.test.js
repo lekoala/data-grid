@@ -50,11 +50,10 @@ test("structural th/td/tr are not tabbable", async () => {
     document.body.removeChild(inst);
 });
 
-test("the .dg-menu lives outside the table", async () => {
+test("the core does not render an optional context-menu shell", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }] }, []);
 
-    expect(inst.querySelector(".dg-menu")).toBeTruthy();
-    expect(inst.querySelector("table .dg-menu")).toBeFalsy();
+    expect(inst.querySelector(".dg-menu")).toBeNull();
     document.body.removeChild(inst);
 });
 

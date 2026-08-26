@@ -11,31 +11,31 @@ class ContextMenu extends BasePlugin {
         super(grid);
         /** @type {HTMLUListElement|null} */
         this.menu = null;
-        /** @type {((e: MouseEvent) => void) | null} */
-        this._docClickHandler = null;
     }
     connected() {
-        /**
-         * @type {HTMLUListElement|null}
-         */
-        this.menu = this.grid.querySelector(".dg-menu");
+        const menu = this.grid.ownerDocument.createElement("ul");
+        if (typeof menu.showPopover !== "function") {
+            return;
+        }
+        menu.className = "dg-menu dg-context-menu";
+        menu.popover = "auto";
+        this.grid.appendChild(menu);
+        this.menu = menu;
         this.grid.addEventListener("contextmenu", this);
         this.grid.addEventListener("change", this);
     }
     disconnected() {
         this.grid.removeEventListener("contextmenu", this);
         this.grid.removeEventListener("change", this);
-        if (this._docClickHandler) {
-            document.removeEventListener("click", this._docClickHandler);
-            this._docClickHandler = null;
-        }
+        this.menu?.remove();
+        this.menu = null;
     }
 
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
-        if (context !== "table") {
+        if (context !== "table" || !this.menu) {
             return;
         }
         this.createMenu();
@@ -79,41 +79,28 @@ class ContextMenu extends BasePlugin {
      * @param {MouseEvent} event
      */
     oncontextmenu(event) {
+        const menu = this.menu;
+        if (!this.grid.options.menu || !menu) {
+            return;
+        }
         const target = event.target;
         if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
             return;
         }
-        const header = target.closest("thead");
+        const header = target.closest("thead th");
         if (!header) {
             return;
         }
         event.preventDefault();
-        const menu = this.menu;
-        if (!menu) {
-            return;
-        }
-        const rect = header.getBoundingClientRect();
-        let x = event.clientX - rect.left;
-        const y = event.clientY - rect.top;
-
-        menu.style.top = `${y}px`;
+        const x = event.clientX;
+        const y = event.clientY;
         menu.style.left = `${x}px`;
-
-        menu.removeAttribute("hidden");
-        if (x + 150 > rect.width) {
-            x -= menu.offsetWidth;
-            menu.style.left = `${x}px`;
-        }
-
-        const documentClickHandler = (/** @type {MouseEvent} */ ev) => {
-            if (!menu.contains(/** @type {Node} */ (ev.target))) {
-                menu.setAttribute("hidden", "");
-                document.removeEventListener("click", documentClickHandler);
-                this._docClickHandler = null;
-            }
-        };
-        this._docClickHandler = documentClickHandler;
-        document.addEventListener("click", documentClickHandler);
+        menu.style.top = `${y}px`;
+        menu.showPopover();
+        const rect = menu.getBoundingClientRect();
+        const viewport = menu.ownerDocument.documentElement;
+        menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
+        menu.style.top = `${Math.min(y, viewport.clientHeight - rect.height)}px`;
     }
     createMenu() {
         const grid = this.grid;

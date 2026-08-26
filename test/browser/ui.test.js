@@ -281,6 +281,66 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "context menu is a native popover positioned at the pointer",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+
+        await v.evaluate(`(() => {
+            window.contextMenuEvent = null;
+            document.addEventListener('contextmenu', (event) => {
+                window.contextMenuEvent = {
+                    trusted: event.isTrusted,
+                    defaultPrevented: event.defaultPrevented,
+                    clientX: event.clientX,
+                    clientY: event.clientY,
+                };
+            }, { once: true });
+        })()`);
+        const point = await read(
+            v,
+            `(() => {
+                const rect = document.querySelector('#local-grid thead tr.dg-head-columns th[data-column-id="company"]').getBoundingClientRect();
+                return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+            })()`,
+        );
+        await v.cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
+        await v.cdp("Input.dispatchMouseEvent", {
+            type: "mousePressed",
+            x: point.x,
+            y: point.y,
+            button: "right",
+            buttons: 2,
+            clickCount: 1,
+        });
+        await v.cdp("Input.dispatchMouseEvent", {
+            type: "mouseReleased",
+            x: point.x,
+            y: point.y,
+            button: "right",
+            buttons: 0,
+            clickCount: 1,
+        });
+        await waitFor(v, "document.querySelector('#local-grid .dg-context-menu').matches(':popover-open')");
+
+        const state = await read(
+            v,
+            `({
+                event: window.contextMenuEvent,
+                menu: document.querySelector('#local-grid .dg-context-menu').getBoundingClientRect(),
+                viewport: { width: innerWidth, height: innerHeight },
+            })`,
+        );
+        expect(state.event.trusted).toBe(true);
+        expect(state.event.defaultPrevented).toBe(true);
+        expect(state.menu.left).toBe(Math.min(state.event.clientX, state.viewport.width - state.menu.width));
+        expect(state.menu.top).toBe(Math.min(state.event.clientY, state.viewport.height - state.menu.height));
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "a host button color rule does not recolor sort headers",
     async () => {
         await using v = view();

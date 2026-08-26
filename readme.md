@@ -179,7 +179,7 @@ Some options only work if the proper plugin is loaded.
 | `bulkActions`         | `BulkAction[]`       | `[]`                 | Bulk actions on the current selection                        |
 | `resizable`           | `Boolean`            | `false`              | Resizable columns                                            |
 | `reorder`             | `Boolean`            | `false`              | Draggable column headers                                     |
-| `menu`                | `Boolean`            | `false`              | Right-click column menu                                      |
+| `menu`                | `Boolean`            | `false`              | Pointer-positioned column menu; native fallback              |
 | `responsive`          | `Boolean`            | `false`              | Responsive columns                                           |
 | `responsiveToggle`    | `Boolean`            | `true`               | Show toggle column on small screens                          |
 | `responsiveStartOpen` | `Boolean`            | `false`              | Open responsive detail rows by default                       |
@@ -358,32 +358,32 @@ response protection).
 
 ## Column
 
-| Name                                    | Type                 | Description                                                           |
-|-----------------------------------------|----------------------|-----------------------------------------------------------------------|
-| `field`                                 | `String`             | the key in the data                                                   |
-| `title`                                 | `String`             | header title (defaults to `field`)                                    |
-| `id`                                    | `String`             | stable identifier (defaults to `field`)                               |
-| `width`                                 | `Number`             | preferred width (the column stays flexible without one)               |
-| `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                         |
-| `attr`                                  | `String`             | set a row attribute instead of rendering                              |
-| `hidden`                                | `Boolean`            | hide the column                                                       |
-| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                    |
-| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                  |
-| `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value` |
-| `minWidth`                              | `Number`             | never compress below this width                                       |
-| `align`                                 | `String`             | header and cell alignment: `start` / `center` / `end`                 |
-| `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`         |
-| `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`               |
-| `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                |
-| `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                             |
-| `responsive`                            | `Number`             | responsive priority (`0` disables)                                    |
-| `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`        |
-| `filterList`                            | `FilterOption[]`     | explicit select filter options                                        |
-| `firstFilterOption`                     | `FilterOption`       | first select option                                                   |
-| `filterMultiple`                        | `Boolean`            | checkbox popover (`in`) when supported; otherwise single select (`eq`)   |
-| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                            |
-| `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                  |
-| `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                  |
+| Name                                    | Type                 | Description                                                            |
+|-----------------------------------------|----------------------|------------------------------------------------------------------------|
+| `field`                                 | `String`             | the key in the data                                                    |
+| `title`                                 | `String`             | header title (defaults to `field`)                                     |
+| `id`                                    | `String`             | stable identifier (defaults to `field`)                                |
+| `width`                                 | `Number`             | preferred width (the column stays flexible without one)                |
+| `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                          |
+| `attr`                                  | `String`             | set a row attribute instead of rendering                               |
+| `hidden`                                | `Boolean`            | hide the column                                                        |
+| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                     |
+| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                   |
+| `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value`  |
+| `minWidth`                              | `Number`             | never compress below this width                                        |
+| `align`                                 | `String`             | header and cell alignment: `start` / `center` / `end`                  |
+| `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`          |
+| `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`                |
+| `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                 |
+| `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                              |
+| `responsive`                            | `Number`             | responsive priority (`0` disables)                                     |
+| `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`         |
+| `filterList`                            | `FilterOption[]`     | explicit select filter options                                         |
+| `firstFilterOption`                     | `FilterOption`       | first select option                                                    |
+| `filterMultiple`                        | `Boolean`            | checkbox popover (`in`) when supported; otherwise single select (`eq`) |
+| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                             |
+| `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                   |
+| `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                   |
 
 Column sizing follows three notions: `minWidth` is a floor the column is never
 compressed below, `width` is a preferred width, and a column without a preferred
@@ -405,12 +405,12 @@ Formatters also suggest a preferred filter mode (`boolean` → tri-state select,
 `number` → typed numeric equality, `date` → partial ISO prefix match); an
 explicit `filterType` always wins. See `docs/filtering.md`.
 
-| Format     | Output                      | Intl options                 |
-|------------|-----------------------------|------------------------------|
+| Format     | Output                              | Intl options                 |
+|------------|-------------------------------------|------------------------------|
 | `boolean`  | accessible `<span>` mark, CSS-drawn | none                         |
-| `date`     | `<time datetime>`           | `Intl.DateTimeFormatOptions` |
-| `datetime` | `<time datetime>`           | `Intl.DateTimeFormatOptions` |
-| `number`   | formatted text              | `Intl.NumberFormatOptions`   |
+| `date`     | `<time datetime>`                   | `Intl.DateTimeFormatOptions` |
+| `datetime` | `<time datetime>`                   | `Intl.DateTimeFormatOptions` |
+| `number`   | formatted text                      | `Intl.NumberFormatOptions`   |
 
 ```js
 {
@@ -523,7 +523,9 @@ All UI labels are plain strings, overridable at runtime through `setLabels()`,
 The core runtime targets modern evergreen browsers with native ES modules and
 commonly available Web Platform APIs (~2020). `filterMultiple` additionally
 requires native Popover API and CSS Anchor Positioning support. Browsers that
-miss those capabilities keep a working single-select filter emitting `eq`.
+miss those capabilities keep a working single-select filter emitting `eq`. The
+optional `menu` plugin only requires Popover support; older browsers keep the
+ordinary browser context menu.
 
 ## License
 

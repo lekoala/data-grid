@@ -20,6 +20,7 @@ import {
     updateMultiSelectSummary,
 } from "./utils/multiSelectFilter.js";
 import normalizeData from "./utils/normalizeData.js";
+import { supportsPopoverAnchor } from "./utils/popover.js";
 import randstr from "./utils/randstr.js";
 import { createSpanningRow } from "./utils/spanningRow.js";
 import transformValue from "./utils/transformValue.js";
@@ -230,7 +231,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} autohidePager auto-hides the pager when number of records falls below the selected page size
- * @property {Boolean} menu Right click menu on column headers (ContextMenu module)
+ * @property {Boolean} menu Native Popover menu positioned at header context-menu coordinates when supported (ContextMenu module)
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
@@ -665,23 +666,6 @@ function getColumnFilterType(column) {
 }
 
 /**
- * Multi-select filters use native Popover for lifecycle and CSS Anchor
- * Positioning for placement. Unsupported browsers use the ordinary select
- * path instead of receiving a polyfill or incomplete floating UI.
- * @returns {Boolean}
- */
-function supportsMultiSelectPopover() {
-    return (
-        "popover" in HTMLElement.prototype &&
-        typeof CSS !== "undefined" &&
-        typeof CSS.supports === "function" &&
-        CSS.supports("top", "anchor(bottom)") &&
-        CSS.supports("min-width", "anchor-size(width)") &&
-        CSS.supports("position-try-fallbacks", "flip-block flip-inline")
-    );
-}
-
-/**
  * A percent column is the only numeric case whose displayed scale differs from
  * the raw value: `Intl.NumberFormat` multiplies by 100, so a filter typed as
  * the visible "20" must query the raw `0.2`. Kept as a small exception of the
@@ -930,10 +914,9 @@ class DataGrid extends BaseElement {
             </div>
             </td>
         </tr>
-    </tfoot>
+</tfoot>
 </table>
 <div class="dg-status" role="status" aria-atomic="true"></div>
-<ul class="dg-menu" hidden></ul>
 `;
     }
 
@@ -3625,7 +3608,7 @@ class DataGrid extends BaseElement {
         // A capable browser gets a checkbox panel instead of a native control:
         // Ctrl-click listboxes are unusable in a narrow column. Older browsers
         // keep the ordinary select as the intentional degradation.
-        if (type === "select" && column.filterMultiple && supportsMultiSelectPopover()) {
+        if (type === "select" && column.filterMultiple && supportsPopoverAnchor()) {
             return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
         }
         const isSelect = type === "select" || type === "boolean";

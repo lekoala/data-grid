@@ -58,25 +58,30 @@ The core creates the `<th>`/`<td>` and their structural attributes
 
 ## Built-in plugins
 
-| Plugin             | Option                        | What it does                                                 |
-|--------------------|-------------------------------|--------------------------------------------------------------|
-| `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column                              |
-| `BulkActions`      | `bulkActions`                 | bulk action bar for the selection                            |
-| `RowActions`       | `actions`                     | row actions column                                           |
-| `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room |
-| `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row          |
-| `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers                               |
-| `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering                              |
-| `ContextMenu`      | `menu`                        | right-click menu to toggle columns                           |
-| `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                       |
-| `FixedHeight`      | `autoheight`                  | fills the table height on the last page                      |
-| `AutosizeColumn`   | `autosize`                    | measures widthless columns when enabled (off by default)     |
-| `SpinnerSupport`   | `spinnerClass`                | shows a spinner while loading                                |
-| `SaveState`        | `saveState`                   | persists query + column state                                |
-| `TouchSupport`     | -                             | swipe to change page                                         |
+| Plugin             | Option                        | What it does                                                    |
+|--------------------|-------------------------------|-----------------------------------------------------------------|
+| `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column                                 |
+| `BulkActions`      | `bulkActions`                 | bulk action bar for the selection                               |
+| `RowActions`       | `actions`                     | row actions column                                              |
+| `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room    |
+| `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row             |
+| `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers                                  |
+| `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering                                 |
+| `ContextMenu`      | `menu`                        | pointer Popover to toggle columns; native context-menu fallback |
+| `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                          |
+| `FixedHeight`      | `autoheight`                  | fills the table height on the last page                         |
+| `AutosizeColumn`   | `autosize`                    | measures widthless columns when enabled (off by default)        |
+| `SpinnerSupport`   | `spinnerClass`                | shows a spinner while loading                                   |
+| `SaveState`        | `saveState`                   | persists query + column state                                   |
+| `TouchSupport`     | -                             | swipe to change page                                            |
 
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.
+
+`ContextMenu` uses Popover for top-layer rendering, light dismissal and Escape
+handling, while keeping the native context-menu coordinates. It only requires
+Popover support; browsers without it do not receive `preventDefault()` and keep
+their ordinary browser context menu.
 
 ## Row details
 

@@ -788,6 +788,11 @@ function clearMultiSelect(root) {
   updateMultiSelectSummary(root);
 }
 
+// src/utils/popover.js
+function supportsPopoverAnchor() {
+  return "popover" in HTMLElement.prototype && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("top", "anchor(bottom)") && CSS.supports("min-width", "anchor-size(width)") && CSS.supports("position-try-fallbacks", "flip-block flip-inline");
+}
+
 // src/utils/spanningRow.js
 function createSpanningRow(grid, { id, className } = {}) {
   const row = document.createElement("tr");
@@ -1092,9 +1097,6 @@ function getColumnAlign(column) {
 function getColumnFilterType(column) {
   return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
 }
-function supportsMultiSelectPopover() {
-  return "popover" in HTMLElement.prototype && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("top", "anchor(bottom)") && CSS.supports("min-width", "anchor-size(width)") && CSS.supports("position-try-fallbacks", "flip-block flip-inline");
-}
 function isPercentColumn(column) {
   return column.format === "number" && column.formatOptions?.style === "percent";
 }
@@ -1211,10 +1213,9 @@ class DataGrid extends base_element_default {
             </div>
             </td>
         </tr>
-    </tfoot>
+</tfoot>
 </table>
 <div class="dg-status" role="status" aria-atomic="true"></div>
-<ul class="dg-menu" hidden></ul>
 `;
   }
   get labels() {
@@ -2967,7 +2968,7 @@ class DataGrid extends base_element_default {
   }
   createFilterElement(column, relatedTh) {
     const type = getColumnFilterType(column);
-    if (type === "select" && column.filterMultiple && supportsMultiSelectPopover()) {
+    if (type === "select" && column.filterMultiple && supportsPopoverAnchor()) {
       return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
     }
     const isSelect = type === "select" || type === "boolean";
@@ -3354,23 +3355,27 @@ class ContextMenu extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.menu = null;
-    this._docClickHandler = null;
   }
   connected() {
-    this.menu = this.grid.querySelector(".dg-menu");
+    const menu = this.grid.ownerDocument.createElement("ul");
+    if (typeof menu.showPopover !== "function") {
+      return;
+    }
+    menu.className = "dg-menu dg-context-menu";
+    menu.popover = "auto";
+    this.grid.appendChild(menu);
+    this.menu = menu;
     this.grid.addEventListener("contextmenu", this);
     this.grid.addEventListener("change", this);
   }
   disconnected() {
     this.grid.removeEventListener("contextmenu", this);
     this.grid.removeEventListener("change", this);
-    if (this._docClickHandler) {
-      document.removeEventListener("click", this._docClickHandler);
-      this._docClickHandler = null;
-    }
+    this.menu?.remove();
+    this.menu = null;
   }
   afterRender(context) {
-    if (context !== "table") {
+    if (context !== "table" || !this.menu) {
       return;
     }
     this.createMenu();
@@ -3401,38 +3406,28 @@ class ContextMenu extends base_plugin_default {
     grid.fixPage();
   }
   oncontextmenu(event) {
+    const menu = this.menu;
+    if (!this.grid.options.menu || !menu) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
       return;
     }
-    const header = target.closest("thead");
+    const header = target.closest("thead th");
     if (!header) {
       return;
     }
     event.preventDefault();
-    const menu = this.menu;
-    if (!menu) {
-      return;
-    }
-    const rect = header.getBoundingClientRect();
-    let x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    menu.style.top = `${y}px`;
+    const x = event.clientX;
+    const y = event.clientY;
     menu.style.left = `${x}px`;
-    menu.removeAttribute("hidden");
-    if (x + 150 > rect.width) {
-      x -= menu.offsetWidth;
-      menu.style.left = `${x}px`;
-    }
-    const documentClickHandler = (ev) => {
-      if (!menu.contains(ev.target)) {
-        menu.setAttribute("hidden", "");
-        document.removeEventListener("click", documentClickHandler);
-        this._docClickHandler = null;
-      }
-    };
-    this._docClickHandler = documentClickHandler;
-    document.addEventListener("click", documentClickHandler);
+    menu.style.top = `${y}px`;
+    menu.showPopover();
+    const rect = menu.getBoundingClientRect();
+    const viewport = menu.ownerDocument.documentElement;
+    menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
+    menu.style.top = `${Math.min(y, viewport.clientHeight - rect.height)}px`;
   }
   createMenu() {
     const grid = this.grid;

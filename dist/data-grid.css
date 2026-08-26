@@ -1106,6 +1106,12 @@ data-grid .dg-menu input {
   margin: 0;
 }
 
+data-grid .dg-context-menu {
+  position: fixed;
+  margin: 0;
+  inset: auto;
+}
+
 /* css/_multiselect.css */
 data-grid .dg-multiselect-trigger {
   cursor: pointer;

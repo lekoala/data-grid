@@ -5,8 +5,6 @@ import BasePlugin from "../core/base-plugin.js";
 declare class ContextMenu extends BasePlugin {
     /** @type {HTMLUListElement|null} */
     menu: HTMLUListElement | null;
-    /** @type {((e: MouseEvent) => void) | null} */
-    _docClickHandler: ((e: MouseEvent) => void) | null;
     /**
      * @param {import("../data-grid.js").default} grid
      */

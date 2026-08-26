@@ -372,7 +372,7 @@ export type Options = {
      */
     autohidePager: boolean;
     /**
-     * Right click menu on column headers (ContextMenu module)
+     * Native Popover menu positioned at header context-menu coordinates when supported (ContextMenu module)
      */
     menu: boolean;
     /**

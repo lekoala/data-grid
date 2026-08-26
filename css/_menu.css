@@ -34,3 +34,11 @@ data-grid .dg-menu label:hover {
 data-grid .dg-menu input {
   margin: 0;
 }
+
+/* The context menu is a top-layer popover positioned once at the pointer.
+   Older browsers keep the native browser context menu. */
+data-grid .dg-context-menu {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+}
