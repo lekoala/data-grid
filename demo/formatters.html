@@ -186,6 +186,12 @@
       { id: 6, product: "Monitor Arm", ordered: "2026-08-10", shipped: "2026-08-11T11:00:00+02:00", price: 74.9, discount: 0.1, weight: 3.1, active: true, change: 0.022 },
     ];
 
+    // Derived "tier" lives on the row so the sort comparator and renderCell
+    // agree; it is harmless for grid1, which has no tier column.
+    for (const o of orders) {
+      o.tier = o.price > 100 ? "Premium" : "Standard";
+    }
+
     const grid1 = new DataGrid({
       dataSource: new ArrayDataSource(orders),
       sortable: true,
@@ -209,7 +215,7 @@
       columns: [
         { field: "id", title: "#", width: 64 },
         { field: "product", title: "Product" },
-        { field: "tier", title: "Tier", width: 140, renderCell: ({ row }) => (row.price > 100 ? "Premium" : "Standard") },
+        { field: "tier", title: "Tier", width: 140, renderCell: ({ value }) => value },
         { field: "ordered", title: "Ordered", format: "date", minWidth: 140 },
         { field: "price", title: "Price", format: "number", formatOptions: { currency: "EUR" }, align: "center" },
         { field: "discount", title: "Discount", format: "number", formatOptions: { style: "percent" } },
