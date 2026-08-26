@@ -3758,7 +3758,16 @@ class ContextMenu extends base_plugin_default {
     const y = event.clientY;
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
-    menu.showPopover();
+    const showMenu = () => {
+      if (!menu.matches(":popover-open")) {
+        menu.showPopover();
+      }
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(showMenu);
+    } else {
+      setTimeout(showMenu, 0);
+    }
     const rect = menu.getBoundingClientRect();
     const viewport = menu.ownerDocument.documentElement;
     menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
