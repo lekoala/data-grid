@@ -19,7 +19,7 @@ column.filterType explicit
 | `text`    | text input                         | `contains`                                                        |
 | `select`  | select (see options below)         | `eq`                                                              |
 | `boolean` | tri-state select: empty / Yes / No | `eq` on normalized booleans (`true` matches `1`, `"1"`, `"true"`) |
-| `number`  | numeric text input                 | `eq(Number(value))` for numeric input, else `contains`.           |
+| `number`  | numeric text input                 | `contains` on the stringified value (typing `12` matches `129.9`); percent divides by 100 (`20`→`0.2`) |
 | `date`    | text input accepting partial dates | `startsWith` on the canonical ISO value                           |
 
 Notes:
@@ -35,8 +35,8 @@ Notes:
   yet.
 - A `format: "number"` column with `formatOptions.style: "percent"` is the only
   numeric case whose displayed scale differs from the raw value. The filter still
-  runs in number mode (`eq(Number(value))`), but the typed value is divided by
-  100 before the query: typing `20` matches the raw `0.2`. The control shows the
+  runs in number mode as a substring match, but the typed value is divided by 100
+  before the query: typing `20` matches the raw `0.2`. The control shows the
   visible scale (placeholder `%`), and a restored query multiplies back by 100
   (`0.2` displays as `20`).
 - An explicit `filterType` always wins; custom `renderFilterCell` implementations

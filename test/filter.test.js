@@ -355,7 +355,7 @@ test("number filters use typed equality for numeric input and stay permissive ot
     el.value = "12.5";
     input(el, "12.5");
     await sleep(80);
-    expect(inst.query.filters.price).toEqual({ operator: "eq", value: 12.5 });
+    expect(inst.query.filters.price).toEqual({ operator: "contains", value: 12.5 });
     expect(inst.rows).toHaveLength(1);
 
     // A reload rebuilds the controls: re-read the live one
@@ -388,7 +388,7 @@ test("percent columns divide the typed value by 100 (visible scale -> raw)", asy
     input(el, "20");
     await sleep(80);
     // "20" (the displayed percent) queries the raw 0.2
-    expect(inst.query.filters.discount).toEqual({ operator: "eq", value: 0.2 });
+    expect(inst.query.filters.discount).toEqual({ operator: "contains", value: 0.2 });
     expect(inst.rows).toHaveLength(1);
 
     // Restore shows the visible scale again

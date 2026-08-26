@@ -3148,13 +3148,15 @@ class DataGrid extends BaseElement {
                     filters[name] = { operator: "eq", value: value === "true" };
                 } else if (mode === "number") {
                     const num = Number(value);
-                    // Canonical numeric input gets typed equality; anything
-                    // else falls back to the permissive text behavior. A percent
-                    // column divides by 100: the user types the visible scale
-                    // (20) and queries the raw fraction (0.2).
-                    filters[name] = Number.isFinite(num)
-                        ? { operator: "eq", value: input.dataset.percent === "true" ? num / 100 : num }
-                        : { operator: "contains", value };
+                    const isPercent = input.dataset.percent === "true";
+                    // Substring match on the raw value so partial digits match
+                    // (12 -> 129.9). A percent column divides by 100: the user
+                    // types the visible scale (20) and queries the raw fraction
+                    // (0.2).
+                    filters[name] = {
+                        operator: "contains",
+                        value: Number.isFinite(num) ? (isPercent ? num / 100 : num) : value,
+                    };
                 } else if (mode === "date") {
                     // Partial canonical date: 2026 / 2026-08 / 2026-08-26 all
                     // prefix-match the ISO value.

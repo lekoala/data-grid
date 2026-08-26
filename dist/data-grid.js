@@ -2555,7 +2555,11 @@ class DataGrid extends base_element_default {
           filters[name] = { operator: "eq", value: value === "true" };
         } else if (mode === "number") {
           const num = Number(value);
-          filters[name] = Number.isFinite(num) ? { operator: "eq", value: input.dataset.percent === "true" ? num / 100 : num } : { operator: "contains", value };
+          const isPercent = input.dataset.percent === "true";
+          filters[name] = {
+            operator: "contains",
+            value: Number.isFinite(num) ? isPercent ? num / 100 : num : value
+          };
         } else if (mode === "date") {
           filters[name] = { operator: "startsWith", value };
         } else {
