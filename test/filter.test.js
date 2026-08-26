@@ -371,6 +371,46 @@ test("number filters use typed equality for numeric input and stay permissive ot
     document.body.removeChild(inst);
 });
 
+test("percent columns divide the typed value by 100 (visible scale -> raw)", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "discount", format: "number", formatOptions: { style: "percent" } }],
+            filterable: true,
+            filterDelay: 20,
+        },
+        [{ discount: 0.2 }, { discount: 0.05 }, { discount: 0 }],
+    );
+    const el = inst.querySelector('.dg-head-filters input[data-name="discount"]');
+    expect(el.dataset.percent).toBe("true");
+    expect(el.getAttribute("placeholder")).toBe("%");
+
+    el.value = "20";
+    input(el, "20");
+    await sleep(80);
+    // "20" (the displayed percent) queries the raw 0.2
+    expect(inst.query.filters.discount).toEqual({ operator: "eq", value: 0.2 });
+    expect(inst.rows).toHaveLength(1);
+
+    // Restore shows the visible scale again
+    const el2 = inst.querySelector('.dg-head-filters input[data-name="discount"]');
+    expect(el2.value).toBe("20");
+    document.body.removeChild(inst);
+});
+
+test("a percent filter can be restored from an initial query", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "discount", format: "number", formatOptions: { style: "percent" } }],
+            filterable: true,
+            initialQuery: { filters: { discount: { operator: "eq", value: 0.2 } } },
+        },
+        [{ discount: 0.2 }, { discount: 0.05 }],
+    );
+    const el = inst.querySelector('.dg-head-filters input[data-name="discount"]');
+    expect(el.value).toBe("20"); // raw 0.2 shown as the visible 20
+    document.body.removeChild(inst);
+});
+
 test("date filters prefix-match the canonical ISO value", async () => {
     const inst = await makeReadyGrid(
         {

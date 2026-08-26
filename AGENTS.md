@@ -104,3 +104,7 @@ Avoid (post-baseline APIs and syntax):
 ## Documentation
 
 - Markdown table rows must fit on one line and be properly formatted
+- Keep a reasonable line length (roughly ≤ 120 characters). When a table cell
+  needs a long explanation, keep the row concise and move the detail into a
+  bullet note below the table instead of stuffing one very long cell — a single
+  line that wraps across most of the editor is not "properly formatted"

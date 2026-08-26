@@ -14,13 +14,13 @@ column.filterType explicit
     > "text"
 ```
 
-| Mode      | Control                            | Applied operator                                                      |
-|-----------|------------------------------------|-----------------------------------------------------------------------|
-| `text`    | text input                         | `contains`                                                            |
-| `select`  | select (see options below)         | `eq`                                                                  |
-| `boolean` | tri-state select: empty / Yes / No | `eq` on normalized booleans (`true` matches `1`, `"1"`, `"true"`)     |
-| `number`  | numeric text input                 | `eq(Number(value))` for canonical numeric input, otherwise `contains` |
-| `date`    | text input accepting partial dates | `startsWith` on the canonical ISO value                               |
+| Mode      | Control                            | Applied operator                                                  |
+|-----------|------------------------------------|-------------------------------------------------------------------|
+| `text`    | text input                         | `contains`                                                        |
+| `select`  | select (see options below)         | `eq`                                                              |
+| `boolean` | tri-state select: empty / Yes / No | `eq` on normalized booleans (`true` matches `1`, `"1"`, `"true"`) |
+| `number`  | numeric text input                 | `eq(Number(value))` for numeric input, else `contains`.           |
+| `date`    | text input accepting partial dates | `startsWith` on the canonical ISO value                           |
 
 Notes:
 
@@ -33,6 +33,12 @@ Notes:
 - `datetime` deliberately keeps a plain text filter: prefixing the raw instant
   can disagree with the displayed local date, and that semantics is not defined
   yet.
+- A `format: "number"` column with `formatOptions.style: "percent"` is the only
+  numeric case whose displayed scale differs from the raw value. The filter still
+  runs in number mode (`eq(Number(value))`), but the typed value is divided by
+  100 before the query: typing `20` matches the raw `0.2`. The control shows the
+  visible scale (placeholder `%`), and a restored query multiplies back by 100
+  (`0.2` displays as `20`).
 - An explicit `filterType` always wins; custom `renderFilterCell` implementations
   remain the top escape hatch.
 

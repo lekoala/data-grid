@@ -655,6 +655,18 @@ function getColumnFilterType(column) {
 }
 
 /**
+ * A percent column is the only numeric case whose displayed scale differs from
+ * the raw value: `Intl.NumberFormat` multiplies by 100, so a filter typed as
+ * the visible "20" must query the raw `0.2`. Kept as a small exception of the
+ * number mode, not a general normalization engine.
+ * @param {Column} column
+ * @returns {Boolean}
+ */
+function isPercentColumn(column) {
+    return column.format === "number" && /** @type {Record<string, any>} */ (column.formatOptions)?.style === "percent";
+}
+
+/**
  * Column definition will update some props on the html element
  * @param {HTMLElement} el
  * @param {Column} column
@@ -3137,9 +3149,11 @@ class DataGrid extends BaseElement {
                 } else if (mode === "number") {
                     const num = Number(value);
                     // Canonical numeric input gets typed equality; anything
-                    // else falls back to the permissive text behavior.
+                    // else falls back to the permissive text behavior. A percent
+                    // column divides by 100: the user types the visible scale
+                    // (20) and queries the raw fraction (0.2).
                     filters[name] = Number.isFinite(num)
-                        ? { operator: "eq", value: num }
+                        ? { operator: "eq", value: input.dataset.percent === "true" ? num / 100 : num }
                         : { operator: "contains", value };
                 } else if (mode === "date") {
                     // Partial canonical date: 2026 / 2026-08 / 2026-08-26 all
@@ -3524,7 +3538,12 @@ class DataGrid extends BaseElement {
         if (field) {
             const filterState = /** @type {FilterState|undefined} */ (this._query.filters?.[field]);
             if (filterState) {
-                filter.value = filterState.value ?? "";
+                // A percent query stores the raw fraction; show the visible
+                // scale (0.2 -> 20) so the control matches what was typed.
+                filter.value =
+                    filter.dataset.percent === "true"
+                        ? String(Number(filterState.value) * 100)
+                        : String(filterState.value ?? "");
             }
         }
 
@@ -3552,6 +3571,11 @@ class DataGrid extends BaseElement {
         // The resolved mode travels on the control: filterData() reads it to
         // map the input value onto the matching query operator.
         filter.dataset.filterMode = type;
+        if (isPercentColumn(column)) {
+            // The typed value is the visible percent; the query expects the raw
+            // fraction, so filterData() divides by 100.
+            filter.dataset.percent = "true";
+        }
         if (type === "boolean") {
             // Tri-state select sharing the boolean formatter semantics: the
             // empty option filters nothing, "true"/"false" compare through
@@ -3585,12 +3609,16 @@ class DataGrid extends BaseElement {
             // values need the "-" separator, which numeric pads often hide.
             input.inputMode = type === "number" ? "decimal" : "search";
             input.autocomplete = "off";
-            if (
-                type === "date" &&
-                (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder)
-            ) {
-                // The placeholder communicates the canonical date contract.
-                input.placeholder = "YYYY-MM-DD";
+            if (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder) {
+                // No explicit placeholder: use the column contract (partial ISO
+                // date, visible percent scale) or the generic ellipsis default.
+                if (type === "date") {
+                    input.placeholder = "YYYY-MM-DD";
+                } else if (isPercentColumn(column)) {
+                    input.placeholder = "%";
+                } else {
+                    input.placeholder = this.defaultColumn.filterPlaceholder ?? "";
+                }
             } else {
                 input.placeholder = column.filterPlaceholder ?? "";
             }

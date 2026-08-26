@@ -997,6 +997,9 @@ function getColumnAlign(column) {
 function getColumnFilterType(column) {
   return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
 }
+function isPercentColumn(column) {
+  return column.format === "number" && column.formatOptions?.style === "percent";
+}
 function applyColumnDefinition(el, column) {
   if (column.width) {
     const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
@@ -2552,7 +2555,7 @@ class DataGrid extends base_element_default {
           filters[name] = { operator: "eq", value: value === "true" };
         } else if (mode === "number") {
           const num = Number(value);
-          filters[name] = Number.isFinite(num) ? { operator: "eq", value: num } : { operator: "contains", value };
+          filters[name] = Number.isFinite(num) ? { operator: "eq", value: input.dataset.percent === "true" ? num / 100 : num } : { operator: "contains", value };
         } else if (mode === "date") {
           filters[name] = { operator: "startsWith", value };
         } else {
@@ -2826,7 +2829,7 @@ class DataGrid extends base_element_default {
     if (field) {
       const filterState = this._query.filters?.[field];
       if (filterState) {
-        filter.value = filterState.value ?? "";
+        filter.value = filter.dataset.percent === "true" ? String(Number(filterState.value) * 100) : String(filterState.value ?? "");
       }
     }
     if (filter instanceof HTMLSelectElement) {
@@ -2845,6 +2848,9 @@ class DataGrid extends base_element_default {
     filter.classList.add("dg-filter");
     filter.classList.add("dg-filter-control");
     filter.dataset.filterMode = type;
+    if (isPercentColumn(column)) {
+      filter.dataset.percent = "true";
+    }
     if (type === "boolean") {
       const first = column.firstFilterOption || this.defaultColumn.firstFilterOption || { value: "", text: "" };
       const options = [
@@ -2872,8 +2878,14 @@ class DataGrid extends base_element_default {
       input.type = "text";
       input.inputMode = type === "number" ? "decimal" : "search";
       input.autocomplete = "off";
-      if (type === "date" && (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder)) {
-        input.placeholder = "YYYY-MM-DD";
+      if (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder) {
+        if (type === "date") {
+          input.placeholder = "YYYY-MM-DD";
+        } else if (isPercentColumn(column)) {
+          input.placeholder = "%";
+        } else {
+          input.placeholder = this.defaultColumn.filterPlaceholder ?? "";
+        }
       } else {
         input.placeholder = column.filterPlaceholder ?? "";
       }
