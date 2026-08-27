@@ -4379,7 +4379,7 @@ function createDisclosureButton(controlClass) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = `dg-disclosure ${controlClass}`;
-  button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   return button;
 }
 
