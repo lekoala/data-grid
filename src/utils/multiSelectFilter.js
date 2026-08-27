@@ -37,8 +37,8 @@ function summarize(labels) {
 
 /**
  * Refresh the trigger summary from the checked boxes. With no selection the
- * empty-state text is shown instead: the firstFilterOption label when it has
- * one ("All"), otherwise the filter placeholder ("…").
+ * empty-state text is shown instead. It may intentionally be blank; a custom
+ * firstFilterOption can provide a business label such as "All".
  * @param {HTMLElement} root
  */
 export function updateMultiSelectSummary(root) {
@@ -76,7 +76,7 @@ export function createMultiSelect(column, options, relatedTh) {
     root.id = randstr("dg-filter-");
     root.dataset.name = column.field ?? "";
     root.dataset.filterMode = "multi";
-    root.dataset.emptyText = column.firstFilterOption?.text || column.filterPlaceholder || "";
+    root.dataset.emptyText = column.firstFilterOption?.text ?? column.filterPlaceholder ?? "";
 
     const trigger = doc.createElement("button");
     trigger.type = "button";

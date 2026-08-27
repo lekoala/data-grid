@@ -37,6 +37,103 @@ test.skipIf(IS_WINDOWS)(
     TIMEOUT,
 );
 
+test.skipIf(!IS_CHROME_BACKEND)(
+    "primary and danger intents keep distinct hover states for row and bulk actions",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+        await v.click('#local-grid tbody td[data-column-id="$selection"] input');
+
+        const hoverStyles = async (selector) => {
+            const expression = JSON.stringify(selector);
+            const normal = await read(
+                v,
+                `(() => {
+                    const style = getComputedStyle(document.querySelector(${expression}));
+                    return { background: style.backgroundColor, border: style.borderColor, color: style.color };
+                })()`,
+            );
+            const point = await read(
+                v,
+                `(() => {
+                    const rect = document.querySelector(${expression}).getBoundingClientRect();
+                    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+                })()`,
+            );
+            await v.cdp("Input.dispatchMouseEvent", { type: "mouseMoved", x: point.x, y: point.y });
+            await waitFor(v, `document.querySelector(${expression}).matches(':hover')`);
+            await v.evaluate("new Promise((resolve) => setTimeout(resolve, 180))");
+            const hover = await read(
+                v,
+                `(() => {
+                    const style = getComputedStyle(document.querySelector(${expression}));
+                    return { background: style.backgroundColor, border: style.borderColor, color: style.color };
+                })()`,
+            );
+            return { normal, hover };
+        };
+
+        for (const selector of [
+            '#local-grid tbody [data-action="edit"]',
+            '#local-grid .dg-bulk-actions [data-action="publish"]',
+        ]) {
+            const styles = await hoverStyles(selector);
+            expect(styles.hover.background).not.toBe(styles.normal.background);
+            expect(styles.hover.border).toBe(styles.hover.color);
+        }
+
+        const neutral = await hoverStyles('#local-grid .dg-bulk-actions [data-action="archive"]');
+        expect(neutral.hover.background).not.toBe(neutral.normal.background);
+
+        for (const selector of [
+            '#local-grid tbody [data-action="delete"]',
+            '#local-grid .dg-bulk-actions [data-action="remove"]',
+        ]) {
+            const styles = await hoverStyles(selector);
+            expect(styles.hover.background).not.toBe(styles.normal.background);
+            expect(styles.hover.border).toBe(styles.hover.color);
+        }
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "the demo exposes clearable Plan and Verified filters plus all bulk intents",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/demo/index.html`);
+        await waitFor(v, "document.querySelector('#filters-demo select[data-name=plan]')");
+
+        const controls = JSON.parse(
+            await read(
+                v,
+                `JSON.stringify({
+                    plan: [...document.querySelector('#filters-demo select[data-name=plan]').options]
+                        .map((option) => [option.value, option.text]),
+                    verified: [...document.querySelector('#filters-demo select[data-name=verified]').options]
+                        .map((option) => [option.value, option.text]),
+                    intents: [...document.querySelectorAll('#selection-actions-demo .dg-bulk-actions button')]
+                        .map((button) => button.dataset.intent ?? 'default'),
+                })`,
+            ),
+        );
+        expect(controls.plan).toEqual([
+            ["", ""],
+            ["Starter", "Starter"],
+            ["Pro", "Pro"],
+            ["Business", "Business"],
+        ]);
+        expect(controls.verified).toEqual([
+            ["", ""],
+            ["true", "Yes"],
+            ["false", "No"],
+        ]);
+        expect(controls.intents).toEqual(["primary", "default", "danger"]);
+    },
+    TIMEOUT,
+);
+
 test.skipIf(IS_WINDOWS)(
     "declarative inline actions do not create horizontal overflow",
     async () => {

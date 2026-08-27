@@ -73,6 +73,17 @@
               { value: "US", text: "United States" },
             ],
           },
+          {
+            field: "plan",
+            title: "Plan",
+            filterType: "select",
+            filterList: [
+              { value: "Starter", text: "Starter" },
+              { value: "Pro", text: "Pro" },
+              { value: "Business", text: "Business" },
+            ],
+          },
+          { field: "verified", title: "Verified", format: "boolean" },
           { field: "income", title: "Income" },
         ],
         initialQuery: { pageSize: 8 },
@@ -105,7 +116,11 @@
             render: () => ({ html: "<l-i name='trash'></l-i>" }),
           },
         ],
-        bulkActions: [{ name: "export", label: "Export selection" }],
+        bulkActions: [
+          { name: "publish", label: "Publish", intent: "primary" },
+          { name: "export", label: "Export" },
+          { name: "delete", label: "Delete", intent: "danger", confirm: true },
+        ],
         initialQuery: { pageSize: 8 },
       },
     );
@@ -208,7 +223,7 @@
     <section class="demo-grid">
       <p class="demo-kicker">Filters</p>
       <h2>Integrated filter row</h2>
-      <p class="demo-lead">Text, select and multi-select filters read as part of the table. Check several countries to combine them with an <code>in</code> filter.</p>
+      <p class="demo-lead">Text, Plan select, Verified boolean and multi-select filters read as part of the table. Check several countries to combine them with an <code>in</code> filter.</p>
       <div class="demo-frame" id="filters-demo"></div>
     </section>
 

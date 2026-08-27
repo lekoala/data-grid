@@ -36,8 +36,13 @@
       menu: true,
       selectable: true,
       actions: [
-        { name: "edit", label: "Edit" },
+        { name: "edit", label: "Edit", intent: "primary" },
         { name: "delete", label: "Delete", intent: "danger" },
+      ],
+      bulkActions: [
+        { name: "publish", label: "Publish", intent: "primary" },
+        { name: "archive", label: "Archive" },
+        { name: "remove", label: "Remove", intent: "danger" },
       ],
       pageSizes: [10, 25],
     });

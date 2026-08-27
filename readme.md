@@ -382,12 +382,16 @@ response protection).
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                              |
 | `responsive`                            | `Number`             | responsive priority (`0` disables)                                     |
 | `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`         |
-| `filterList`                            | `FilterOption[]`     | explicit select filter options                                         |
-| `firstFilterOption`                     | `FilterOption`       | first select option                                                    |
+| `filterList`                            | `FilterOption[]`     | business options for a select filter                                   |
+| `firstFilterOption`                     | `FilterOption`       | empty select-filter option (blank by default)                           |
 | `filterMultiple`                        | `Boolean`            | checkbox popover (`in`) when supported; otherwise single select (`eq`) |
 | `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                             |
 | `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                   |
 | `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                   |
+
+Select filters always include an option with `value: ""`, so `filterList` can contain only business values. Use
+`firstFilterOption` to customize its label (for example, `All plans`); an explicit `text: ""` remains empty. This
+automatic option applies only to filters, not to editing controls.
 
 Column sizing follows three notions: `minWidth` is a floor the column is never
 compressed below, `width` is a preferred width, and a column without a preferred

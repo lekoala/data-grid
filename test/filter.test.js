@@ -276,7 +276,26 @@ test("meta.filters provides select options with the placeholder prepended", asyn
     document.body.removeChild(inst);
 });
 
-test("explicit filterList is used as-is and not mutated", async () => {
+test("filterList receives an empty option without being mutated", async () => {
+    const list = [
+        { value: "Starter", text: "Starter" },
+        { value: "Pro", text: "Pro" },
+        { value: "Business", text: "Business" },
+    ];
+    const inst = await makeReadyGrid(
+        { columns: [{ field: "plan", filterType: "select", filterList: list }], filterable: true },
+        [{ plan: "Starter" }],
+    );
+    expect(inst.getFilterOptions(inst.options.columns[0])).toEqual([{ value: "", text: "" }, ...list]);
+    expect(inst.options.columns[0].filterList).toBe(list);
+    expect(list).toHaveLength(3);
+
+    const select = inst.querySelector(".dg-head-filters select");
+    expect([...select.options].map(({ value, text }) => ({ value, text }))).toEqual([{ value: "", text: "" }, ...list]);
+    document.body.removeChild(inst);
+});
+
+test("filterList does not duplicate an existing empty option", async () => {
     const list = [
         { value: "", text: "All" },
         { value: "a", text: "A" },
@@ -290,6 +309,44 @@ test("explicit filterList is used as-is and not mutated", async () => {
 
     const select = inst.querySelector(".dg-head-filters select");
     expect(select.querySelectorAll("option")).toHaveLength(2);
+    document.body.removeChild(inst);
+});
+
+test("firstFilterOption custom and explicitly empty labels are respected", async () => {
+    for (const text of ["All plans", ""]) {
+        const inst = await makeReadyGrid(
+            {
+                columns: [
+                    {
+                        field: "plan",
+                        filterType: "select",
+                        filterList: [{ value: "Pro", text: "Pro" }],
+                        firstFilterOption: { value: "", text },
+                    },
+                ],
+                filterable: true,
+            },
+            [{ plan: "Pro" }],
+        );
+        const select = inst.querySelector(".dg-head-filters select");
+        expect(select.options[0].value).toBe("");
+        expect(select.options[0].text).toBe(text);
+        document.body.removeChild(inst);
+    }
+});
+
+test("boolean filters render the tri-state blank, Yes, and No options", async () => {
+    const inst = await makeReadyGrid(
+        { columns: [{ field: "verified", filterType: "boolean", align: "center" }], filterable: true },
+        [{ verified: true }],
+    );
+    const select = inst.querySelector('.dg-head-filters select[data-name="verified"]');
+    expect([...select.options].map(({ value, text }) => ({ value, text }))).toEqual([
+        { value: "", text: "" },
+        { value: "true", text: "Yes" },
+        { value: "false", text: "No" },
+    ]);
+    expect(select.closest("th").dataset.align).toBe("center");
     document.body.removeChild(inst);
 });
 
@@ -633,8 +690,8 @@ test("the closed-state summary joins labels up to two then counts the rest", asy
     check(0, false);
     check(1, false);
     check(2, false);
-    // Back to the empty state: the filter placeholder, muted through CSS
-    expect(summary.textContent).toBe("…");
+    // Back to the intentionally neutral empty state, muted through CSS
+    expect(summary.textContent).toBe("");
     expect(summary.classList.contains("dg-multiselect-empty")).toBe(true);
     document.body.removeChild(inst);
 });

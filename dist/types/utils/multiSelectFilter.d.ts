@@ -1,7 +1,7 @@
 /**
  * Refresh the trigger summary from the checked boxes. With no selection the
- * empty-state text is shown instead: the firstFilterOption label when it has
- * one ("All"), otherwise the filter placeholder ("…").
+ * empty-state text is shown instead. It may intentionally be blank; a custom
+ * firstFilterOption can provide a business label such as "All".
  * @param {HTMLElement} root
  */
 export declare function updateMultiSelectSummary(root: HTMLElement): void;

@@ -133,11 +133,11 @@ export type Column = {
      */
     filterPlaceholder?: string;
     /**
-     * - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
+     * - defines the business options of a select filter. An empty option is prepended automatically unless the list already contains one. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
      */
     filterList?: Array<any>;
     /**
-     * - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
+     * - defines the empty first option of a select filter. defaults to {value: "", text: ""}
      */
     firstFilterOption?: FilterOption;
     /**

@@ -1277,10 +1277,6 @@ data-grid .dg-actions-menu button[data-intent="danger"], data-grid .dg-actions-m
   border-color: #0000;
 }
 
-data-grid .dg-actions-menu button[data-intent="danger"]:hover, data-grid .dg-actions-menu a[data-intent="danger"]:hover {
-  background-color: var(--dg-danger-bg);
-}
-
 data-grid button[data-intent="danger"], data-grid a[data-intent="danger"] {
   background-color: var(--dg-danger-bg);
   border-color: var(--dg-danger-border-color);
@@ -1291,6 +1287,26 @@ data-grid button[data-intent="primary"], data-grid a[data-intent="primary"] {
   background-color: var(--dg-accent-soft);
   color: var(--dg-accent);
   border-color: #0000;
+}
+
+data-grid button[data-intent="primary"]:hover, data-grid a[data-intent="primary"]:hover, data-grid .dg-actions-menu button[data-intent="primary"]:hover, data-grid .dg-actions-menu a[data-intent="primary"]:hover {
+  background-color: var(--dg-accent-soft);
+  border-color: var(--dg-accent);
+}
+
+data-grid button[data-intent="danger"]:hover, data-grid a[data-intent="danger"]:hover, data-grid .dg-actions-menu button[data-intent="danger"]:hover, data-grid .dg-actions-menu a[data-intent="danger"]:hover {
+  background-color: var(--dg-danger-bg);
+  border-color: var(--dg-danger-color);
+}
+
+@supports (color: color-mix(in srgb, black, white)) {
+  data-grid button[data-intent="primary"]:hover, data-grid a[data-intent="primary"]:hover, data-grid .dg-actions-menu button[data-intent="primary"]:hover, data-grid .dg-actions-menu a[data-intent="primary"]:hover {
+    background-color: color-mix(in srgb, var(--dg-accent-soft), var(--dg-accent) 12%);
+  }
+
+  data-grid button[data-intent="danger"]:hover, data-grid a[data-intent="danger"]:hover, data-grid .dg-actions-menu button[data-intent="danger"]:hover, data-grid .dg-actions-menu a[data-intent="danger"]:hover {
+    background-color: color-mix(in srgb, var(--dg-danger-bg), var(--dg-danger-color) 10%);
+  }
 }
 
 data-grid tr.dg-clickable-row {

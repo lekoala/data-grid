@@ -1050,7 +1050,7 @@ function createMultiSelect(column, options, relatedTh) {
   root.id = randstr("dg-filter-");
   root.dataset.name = column.field ?? "";
   root.dataset.filterMode = "multi";
-  root.dataset.emptyText = column.firstFilterOption?.text || column.filterPlaceholder || "";
+  root.dataset.emptyText = column.firstFilterOption?.text ?? column.filterPlaceholder ?? "";
   const trigger = doc.createElement("button");
   trigger.type = "button";
   trigger.className = "dg-multiselect-trigger";
@@ -1415,6 +1415,10 @@ function isColumnHidden(column) {
 }
 function getColumnAlign(column) {
   return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
+}
+function getFirstFilterOption(column, defaultColumn) {
+  const option = column.firstFilterOption || defaultColumn.firstFilterOption || { value: "", text: "" };
+  return { value: "", text: option.text ?? "" };
 }
 function getColumnFilterType(column) {
   return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
@@ -3316,7 +3320,7 @@ class DataGrid extends base_element_default {
       filter.dataset.percent = "true";
     }
     if (type === "boolean") {
-      const first = column.firstFilterOption || this.defaultColumn.firstFilterOption || { value: "", text: "" };
+      const first = getFirstFilterOption(column, this.defaultColumn);
       const options = [
         first,
         { value: "true", text: this.labels?.booleanTrue ?? "Yes" },
@@ -3362,9 +3366,10 @@ class DataGrid extends base_element_default {
   }
   getFilterOptions(column) {
     const field = column.field;
-    const firstFilterOption = column.firstFilterOption || this.defaultColumn.firstFilterOption || { value: "", text: "" };
+    const firstFilterOption = getFirstFilterOption(column, this.defaultColumn);
     if (Array.isArray(column.filterList)) {
-      return column.filterList;
+      const hasEmptyOption = column.filterList.some((option) => `${option.value}` === "");
+      return hasEmptyOption ? column.filterList : [firstFilterOption, ...column.filterList];
     }
     const metaOptions = field ? this.meta?.filters?.[field] : undefined;
     if (Array.isArray(metaOptions)) {

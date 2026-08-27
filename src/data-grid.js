@@ -128,8 +128,8 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
  * @property {"text"|"select"|"boolean"|"number"|"date"|null} [filterType] - filter control mode, defaults to the formatter hint when `format` is set (boolean: tri-state select, number: numeric input with typed equality, date: partial YYYY-MM-DD prefix match), otherwise "text"
  * @property {String} [filterPlaceholder] - a visible hint for the filter control (defaults to "…")
- * @property {Array<any>} [filterList] - defines a custom array to populate a filter select field in the format of [{value: "", text: ""},...]. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
- * @property {FilterOption} [firstFilterOption] - defines an object for the first option element of the filter select field. defaults to {value: "", text: ""}
+ * @property {Array<any>} [filterList] - defines the business options of a select filter. An empty option is prepended automatically unless the list already contains one. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
+ * @property {FilterOption} [firstFilterOption] - defines the empty first option of a select filter. defaults to {value: "", text: ""}
  * @property {Boolean} [filterMultiple] - supported select filters use a checkbox popover and emit `in`; older
  * browsers fall back to a single select emitting `eq`
  * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
@@ -662,6 +662,18 @@ function getColumnAlign(column) {
 }
 
 /**
+ * The leading select-filter option always clears the filter. Normalize its
+ * value while preserving an explicitly empty label.
+ * @param {Column} column
+ * @param {Column} defaultColumn
+ * @returns {FilterOption}
+ */
+function getFirstFilterOption(column, defaultColumn) {
+    const option = column.firstFilterOption || defaultColumn.firstFilterOption || { value: "", text: "" };
+    return { value: "", text: option.text ?? "" };
+}
+
+/**
  * Effective filter mode of a column: the explicit option wins over the
  * formatter hint, then falls back to the generic text filter. Drives both the
  * rendered control and how `filterData()` maps its value onto a query filter.
@@ -1100,7 +1112,7 @@ class DataGrid extends BaseElement {
             // Null means "no explicit choice": the effective mode resolves as
             // explicit filterType > formatter hint > "text".
             filterType: null,
-            filterPlaceholder: "…",
+            filterPlaceholder: "_",
             firstFilterOption: { value: "", text: "" },
             filterMultiple: false,
         };
@@ -3649,7 +3661,7 @@ class DataGrid extends BaseElement {
             // Tri-state select sharing the boolean formatter semantics: the
             // empty option filters nothing, "true"/"false" compare through
             // normalizeBoolean (raw 1 / "1" cells match like the ✓ display).
-            const first = column.firstFilterOption || this.defaultColumn.firstFilterOption || { value: "", text: "" };
+            const first = getFirstFilterOption(column, this.defaultColumn);
             const options = [
                 first,
                 { value: "true", text: this.labels?.booleanTrue ?? "Yes" },
@@ -3711,11 +3723,12 @@ class DataGrid extends BaseElement {
      */
     getFilterOptions(column) {
         const field = column.field;
-        const firstFilterOption = column.firstFilterOption ||
-            this.defaultColumn.firstFilterOption || { value: "", text: "" };
-        // An explicit filter list is authoritative and returned as-is
+        const firstFilterOption = getFirstFilterOption(column, this.defaultColumn);
+        // An explicit list owns the business options, while the grid always
+        // keeps a way to clear the filter. Do not mutate the caller's list.
         if (Array.isArray(column.filterList)) {
-            return column.filterList;
+            const hasEmptyOption = column.filterList.some((option) => `${option.value}` === "");
+            return hasEmptyOption ? column.filterList : [firstFilterOption, ...column.filterList];
         }
         // Server-provided options for server-first grids
         const metaOptions = field ? this.meta?.filters?.[field] : undefined;
