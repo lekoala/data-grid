@@ -103,7 +103,12 @@ test.skipIf(IS_WINDOWS)(
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/demo/index.html`);
-        await waitFor(v, "document.querySelector('#filters-demo select[data-name=plan]')");
+        await waitFor(
+            v,
+            "document.querySelector('#filters-demo select[data-name=plan]') && " +
+                "document.querySelector('#filters-demo select[data-name=verified]') && " +
+                "document.querySelectorAll('#selection-actions-demo .dg-bulk-actions button').length === 3",
+        );
 
         const controls = JSON.parse(
             await read(
@@ -414,14 +419,15 @@ test.skipIf(IS_WINDOWS)(
         await v.press("Escape");
         await waitFor(v, "!document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
         // Bun's WKWebView backend closes the native popover on Escape but does
-        // not expose WebKit's invoker focus restoration through activeElement.
-        // Keep testing the native focus contract on the Chrome backend.
+        // not expose WebKit's invoker focus restoration through activeElement
+        // or the derived :focus-visible styling. Keep testing that native
+        // focus contract on the Chrome backend.
         if (IS_CHROME_BACKEND) {
             expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
+            expect(
+                await read(v, "getComputedStyle(document.querySelector('#local-grid .dg-multiselect')).boxShadow"),
+            ).not.toBe("none");
         }
-        expect(
-            await read(v, "getComputedStyle(document.querySelector('#local-grid .dg-multiselect')).boxShadow"),
-        ).not.toBe("none");
         expect(
             await read(
                 v,

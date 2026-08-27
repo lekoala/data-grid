@@ -129,7 +129,7 @@ export type Column = {
      */
     filterType?: "text" | "select" | "boolean" | "number" | "date" | null;
     /**
-     * - a visible hint for the filter control (defaults to "…")
+     * - a visible hint for the filter control (defaults to the grid's text-filter placeholder)
      */
     filterPlaceholder?: string;
     /**

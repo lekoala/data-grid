@@ -127,7 +127,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
  * @property {"text"|"select"|"boolean"|"number"|"date"|null} [filterType] - filter control mode, defaults to the formatter hint when `format` is set (boolean: tri-state select, number: numeric input with typed equality, date: partial YYYY-MM-DD prefix match), otherwise "text"
- * @property {String} [filterPlaceholder] - a visible hint for the filter control (defaults to "…")
+ * @property {String} [filterPlaceholder] - a visible hint for the filter control (defaults to the grid's text-filter placeholder)
  * @property {Array<any>} [filterList] - defines the business options of a select filter. An empty option is prepended automatically unless the list already contains one. When defined, it overrides the default behaviour where the filter select elements are populated by the unique values from the corresponding column records.
  * @property {FilterOption} [firstFilterOption] - defines the empty first option of a select filter. defaults to {value: "", text: ""}
  * @property {Boolean} [filterMultiple] - supported select filters use a checkbox popover and emit `in`; older

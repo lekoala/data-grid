@@ -1067,7 +1067,7 @@ test("datetime keeps a plain text filter until its semantics are defined", async
     const input = inst.querySelector('.dg-head-filters input[data-name="lastLogin"]');
     expect(input.tagName).toBe("INPUT");
     expect(input.dataset.filterMode ?? "text").toBe("text");
-    expect(input.getAttribute("placeholder")).toBe("…");
+    expect(input.getAttribute("placeholder")).toBe(inst.defaultColumn.filterPlaceholder);
     document.body.removeChild(inst);
 });
 
@@ -1152,7 +1152,7 @@ test("a column with filterable: false keeps its th but renders no control", asyn
     document.body.removeChild(inst);
 });
 
-test("text filter placeholders use an ellipsis by default and can be overridden by the column", async () => {
+test("text filter placeholders use the grid default and can be overridden by the column", async () => {
     const inst = await makeReadyGrid({
         columns: [
             { field: "name", title: "Name" },
@@ -1163,7 +1163,7 @@ test("text filter placeholders use an ellipsis by default and can be overridden 
     });
 
     const plain = inst.querySelector('.dg-head-filters input[data-name="name"]');
-    expect(plain.getAttribute("placeholder")).toBe("…");
+    expect(plain.getAttribute("placeholder")).toBe(inst.defaultColumn.filterPlaceholder);
 
     const hinted = inst.querySelector('.dg-head-filters input[data-name="ref"]');
     expect(hinted.getAttribute("placeholder")).toBe("ABC-123");
