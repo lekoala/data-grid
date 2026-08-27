@@ -183,10 +183,17 @@ test.skipIf(IS_WINDOWS)(
                     .filter((th) => !th.hasAttribute("hidden"))
                     .map((th) => th.dataset.columnId))`,
             );
-            await v.evaluate(`(() => document.querySelector(${selector}).focus())()`);
+            // Give Chrome's page (not only the DOM element) keyboard focus.
+            // A programmatic element.focus() can leave a newly spawned
+            // headless WebView without an active keyboard target, making the
+            // following press a CI-only no-op.
+            await v.click(controlOf(grid, 0));
+            await waitFor(v, `document.querySelector(${selector}).getAttribute("aria-expanded") === "true"`);
+            expect(await read(v, `document.activeElement === document.querySelector(${selector})`)).toBe(true);
 
-            // Expand, then collapse: both rebuild row content around the button
-            for (const expected of ["true", "false"]) {
+            // Collapse, then expand: both keyboard toggles rebuild row content
+            // around the button.
+            for (const expected of ["false", "true"]) {
                 await v.press("Enter");
                 await waitFor(v, `document.querySelector(${selector}).getAttribute("aria-expanded") === "${expected}"`);
 
