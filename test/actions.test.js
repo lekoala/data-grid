@@ -564,6 +564,21 @@ test("a row without actions renders an empty cell without the toggle", async () 
     document.body.removeChild(inst);
 });
 
+test("a row without visible actions renders an empty cell without the toggle", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "hidden", visible: () => false }],
+        },
+        [{ id: 1, name: "a" }],
+        { RowActions },
+    );
+    const cell = inst.querySelector('tbody td[data-column-id="$actions"]');
+    expect(cell.querySelector(".dg-actions-toggle")).toBeNull();
+    expect(cell.querySelectorAll("[data-action]")).toHaveLength(0);
+    document.body.removeChild(inst);
+});
+
 test("the actions column aligns header, filter placeholder, and body to the inline end", async () => {
     const inst = await makeReadyGrid(
         {

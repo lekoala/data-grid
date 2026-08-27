@@ -38,10 +38,10 @@ class RowActions extends BasePlugin {
     }
 
     connected() {
-        const menu = this.grid.ownerDocument.createElement("ul");
         if (!supportsPopoverAnchor()) {
             return;
         }
+        const menu = this.grid.ownerDocument.createElement("ul");
         menu.id = randstr("dg-actions-menu-");
         menu.className = "dg-menu dg-actions-menu";
         menu.popover = "auto";
@@ -78,7 +78,7 @@ class RowActions extends BasePlugin {
         }
         const rowIndex = Number(tr.dataset.rowIndex);
         const row = this.grid.rows[rowIndex];
-        if (!tr || !row) {
+        if (!row) {
             return;
         }
         this.renderActionMenu(row);
@@ -112,20 +112,25 @@ class RowActions extends BasePlugin {
             width: COLLAPSED_ACTIONS_WIDTH,
             minWidth: COLLAPSED_ACTIONS_WIDTH,
             class: "dg-actions",
-            renderHeaderCell: (th) => this.createHeaderCell(th),
-            renderFilterCell: () => this.createFilterCell(),
+            renderHeaderCell: (th) => th.classList.add("dg-not-sortable", "dg-not-resizable"),
+            renderFilterCell: () => {},
             renderCell: (ctx) => this.makeActionRow(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
         });
     }
 
     /**
-     * @param {HTMLTableCellElement} th
+     * Resolve the actions visible for one row with one consistent context.
+     * @param {Record<string, any>} row
+     * @param {Number} rowIndex
+     * @returns {import("../data-grid.js").Action[]}
      */
-    createHeaderCell(th) {
-        th.classList.add("dg-not-sortable", "dg-not-resizable");
+    _visibleActions(row, rowIndex) {
+        const grid = this.grid;
+        const rowKey = grid.resolveRowKey(row, rowIndex);
+        return grid
+            .getActionsForRow(row)
+            .filter((action) => !action.visible || action.visible(row, { grid, action, rowKey }));
     }
-
-    createFilterCell() {}
 
     updateLabels() {
         const toggleLabel = this.grid.labels.toggleActions;
@@ -164,16 +169,9 @@ class RowActions extends BasePlugin {
         const grid = this.grid;
         const collapse = grid.options.collapseActions;
         let maxCount = 0;
-        for (const row of grid.rows ?? []) {
-            let count = 0;
-            const actions = grid.getActionsForRow(row);
-            const rowKey = grid.resolveRowKey(row);
-            for (const action of actions) {
-                if (action.visible && !action.visible(row, { grid, action, rowKey })) {
-                    continue;
-                }
-                count++;
-            }
+        const rows = grid.rows ?? [];
+        for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+            const count = this._visibleActions(rows[rowIndex], rowIndex).length;
             if (count > maxCount) {
                 maxCount = count;
             }
@@ -216,16 +214,11 @@ class RowActions extends BasePlugin {
         if (!menu) {
             return;
         }
-        const labels = grid.labels;
         const rowIndex = grid.rows.indexOf(row);
         menu.replaceChildren();
-        const rowKey = grid.resolveRowKey(row, rowIndex);
-        for (const action of grid.getActionsForRow(row)) {
-            if (action.visible && !action.visible(row, { grid, action, rowKey })) {
-                continue;
-            }
+        for (const action of this._visibleActions(row, rowIndex)) {
             const li = grid.ownerDocument.createElement("li");
-            const { el } = this.createActionElement(action, row, rowIndex, grid, labels, true);
+            const el = this.createActionElement(action, row, rowIndex, true);
             li.appendChild(el);
             menu.appendChild(li);
         }
@@ -240,7 +233,8 @@ class RowActions extends BasePlugin {
     makeActionRow({ row, tr, grid, rowIndex }) {
         const labels = grid.labels;
         const rowData = row ?? {};
-        const actions = grid.getActionsForRow(rowData);
+        const index = rowIndex ?? 0;
+        const actions = this._visibleActions(rowData, index);
         const fragment = document.createDocumentFragment();
         if (!actions.length) {
             return fragment;
@@ -257,12 +251,9 @@ class RowActions extends BasePlugin {
         }
 
         let defaultApplied = false;
-        const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
+        const rowKey = grid.resolveRowKey(rowData, index);
         for (const action of actions) {
-            if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
-                continue;
-            }
-            const { el } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels);
+            const el = this.createActionElement(action, rowData, index);
             fragment.appendChild(el);
 
             // Default row action: only the first resolved default applies. The
@@ -303,26 +294,16 @@ class RowActions extends BasePlugin {
     }
 
     /**
-     * Create the button (or link) for a single action.
+     * Create or adopt the visual control before action state and behavior are
+     * applied.
      * @param {import("../data-grid.js").Action} action
      * @param {Record<string, any>} row
-     * @param {Number} rowIndex
-     * @param {import("../data-grid.js").default} grid
-     * @param {import("../data-grid.js").Labels} labels
-     * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
-     * add a visible label next to it.
-     * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
+     * @param {String|null} href
+     * @param {Boolean} menu
+     * @returns {HTMLElement}
      */
-    createActionElement(action, row, rowIndex, grid, labels, menu = false) {
-        const rowKey = grid.resolveRowKey(row, rowIndex);
-        const ctx = { grid, action, rowKey };
-        const href = action.href
-            ? typeof action.href === "function"
-                ? action.href(row, ctx)
-                : interpolate(action.href, row)
-            : null;
-
-        // Custom renderer (per-action first, then global)
+    _createActionControl(action, row, href, menu) {
+        const grid = this.grid;
         const render = action.render ?? grid.options.actionRenderer;
         const content = render ? render({ action, row, grid }) : null;
 
@@ -358,6 +339,28 @@ class RowActions extends BasePlugin {
         if (href !== null && !el.hasAttribute("href")) {
             /** @type {HTMLAnchorElement} */ (el).href = href;
         }
+        return el;
+    }
+
+    /**
+     * Create the button (or link) for a single action.
+     * @param {import("../data-grid.js").Action} action
+     * @param {Record<string, any>} row
+     * @param {Number} rowIndex
+     * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
+     * add a visible label next to it.
+     * @returns {HTMLElement}
+     */
+    createActionElement(action, row, rowIndex, menu = false) {
+        const grid = this.grid;
+        const rowKey = grid.resolveRowKey(row, rowIndex);
+        const ctx = { grid, action, rowKey };
+        const href = action.href
+            ? typeof action.href === "function"
+                ? action.href(row, ctx)
+                : interpolate(action.href, row)
+            : null;
+        const el = this._createActionControl(action, row, href, menu);
         el.dataset.action = action.name;
         if (action.intent) {
             el.dataset.intent = action.intent;
@@ -379,7 +382,7 @@ class RowActions extends BasePlugin {
         }
 
         // Confirmation: boolean, message string or a resolver.
-        const message = resolveActionConfirmation(action.confirm, labels.areYouSure, row, ctx);
+        const message = resolveActionConfirmation(action.confirm, grid.labels.areYouSure, row, ctx);
 
         const dispatchAction = (/** @type {Event} */ ev) => {
             ev.stopPropagation();
@@ -402,7 +405,7 @@ class RowActions extends BasePlugin {
         };
         el.addEventListener("click", dispatchAction);
 
-        return { el, dispatchAction };
+        return el;
     }
 }
 
