@@ -11,6 +11,17 @@ const TEXT_FILTER_OPERATORS = [
     ["=", "eq"],
 ];
 
+/** @type {Partial<Record<FilterOperator, string>>} */
+const FILTER_OPERATOR_TOKENS = Object.fromEntries(TEXT_FILTER_OPERATORS.map(([token, operator]) => [operator, token]));
+
+/** @type {Partial<Record<FilterOperator, { bound: "start"|"end", upper: boolean }>>} */
+const DATE_COMPARISON_RULES = {
+    gt: { bound: "end", upper: true },
+    gte: { bound: "start", upper: false },
+    lt: { bound: "start", upper: false },
+    lte: { bound: "end", upper: true },
+};
+
 const LEADING_QUERY_CHARS = "!=<>%";
 
 /**
@@ -89,9 +100,7 @@ function parsePatternFilter(value, containsOperator, startsWithOperator, endsWit
     return { operator: containsOperator, value: unescapeFilterQueryText(value) };
 }
 
-const DATE_YEAR_PATTERN = /^(\d{4})$/;
-const DATE_MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
-const DATE_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+const DATE_PATTERN = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;
 
 /**
  * @param {number} year
@@ -115,48 +124,47 @@ function pad2(value) {
  * @returns {{ precision: "year"|"month"|"day", raw: string, start: string, end: string }|null}
  */
 function parseCanonicalDateFragment(value) {
-    const yearMatch = DATE_YEAR_PATTERN.exec(value);
-    if (yearMatch) {
+    const match = DATE_PATTERN.exec(value);
+    if (!match) {
+        return null;
+    }
+
+    const yearText = match[1];
+    const monthText = match[2];
+    const dayText = match[3];
+    const year = Number(yearText);
+
+    if (!monthText) {
         return {
             precision: "year",
-            raw: yearMatch[1],
-            start: `${yearMatch[1]}-01-01`,
-            end: `${yearMatch[1]}-12-31`,
+            raw: yearText,
+            start: `${yearText}-01-01`,
+            end: `${yearText}-12-31`,
         };
     }
 
-    const monthMatch = DATE_MONTH_PATTERN.exec(value);
-    if (monthMatch) {
-        const year = Number(monthMatch[1]);
-        const month = Number(monthMatch[2]);
-        if (month < 1 || month > 12) {
-            return null;
-        }
+    const month = Number(monthText);
+    if (month < 1 || month > 12) {
+        return null;
+    }
+    const prefix = `${yearText}-${monthText}`;
+    const lastDay = daysInMonth(year, month);
+
+    if (!dayText) {
         return {
             precision: "month",
-            raw: `${monthMatch[1]}-${monthMatch[2]}`,
-            start: `${monthMatch[1]}-${monthMatch[2]}-01`,
-            end: `${monthMatch[1]}-${monthMatch[2]}-${pad2(daysInMonth(year, month))}`,
+            raw: prefix,
+            start: `${prefix}-01`,
+            end: `${prefix}-${pad2(lastDay)}`,
         };
     }
 
-    const dayMatch = DATE_DAY_PATTERN.exec(value);
-    if (dayMatch) {
-        const year = Number(dayMatch[1]);
-        const month = Number(dayMatch[2]);
-        const day = Number(dayMatch[3]);
-        if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
-            return null;
-        }
-        return {
-            precision: "day",
-            raw: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
-            start: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
-            end: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
-        };
+    const day = Number(dayText);
+    if (day < 1 || day > lastDay) {
+        return null;
     }
 
-    return null;
+    return { precision: "day", raw: value, start: value, end: value };
 }
 
 /**
@@ -192,58 +200,40 @@ function readLeadingOperator(value) {
  * @returns {string|null}
  */
 function compressDateRange(start, end) {
-    if (start === end && parseCanonicalDateFragment(start)?.precision === "day") {
-        return start;
+    if (start === end) {
+        return parseCanonicalDateFragment(start)?.precision === "day" ? start : null;
     }
 
-    const yearMatch = /^(\d{4})-01-01$/.exec(start);
-    if (yearMatch && end === `${yearMatch[1]}-12-31`) {
-        return yearMatch[1];
+    const lower = compressDateBound(start, false);
+    const upper = compressDateBound(end, true);
+    return lower && lower === upper ? lower : null;
+}
+
+/**
+ * @param {string} value
+ * @param {boolean} upper
+ * @returns {string|null}
+ */
+function compressDateBound(value, upper) {
+    const fragment = parseCanonicalDateFragment(value);
+    if (fragment?.precision !== "day") {
+        return null;
     }
 
-    const monthMatch = /^(\d{4})-(\d{2})-01$/.exec(start);
-    if (monthMatch) {
-        const year = Number(monthMatch[1]);
-        const month = Number(monthMatch[2]);
-        if (end === `${monthMatch[1]}-${monthMatch[2]}-${pad2(daysInMonth(year, month))}`) {
-            return `${monthMatch[1]}-${monthMatch[2]}`;
+    const [year, month, day] = value.split("-");
+    if (upper) {
+        if (month === "12" && day === "31") {
+            return year;
         }
-    }
-
-    return null;
-}
-
-/**
- * @param {string} value
- * @returns {string|null}
- */
-function compressDateLowerBound(value) {
-    const yearMatch = /^(\d{4})-01-01$/.exec(value);
-    if (yearMatch) {
-        return yearMatch[1];
-    }
-    const monthMatch = /^(\d{4})-(\d{2})-01$/.exec(value);
-    if (monthMatch) {
-        return `${monthMatch[1]}-${monthMatch[2]}`;
-    }
-    return null;
-}
-
-/**
- * @param {string} value
- * @returns {string|null}
- */
-function compressDateUpperBound(value) {
-    const yearMatch = /^(\d{4})-12-31$/.exec(value);
-    if (yearMatch) {
-        return yearMatch[1];
-    }
-    const monthMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (monthMatch) {
-        const year = Number(monthMatch[1]);
-        const month = Number(monthMatch[2]);
-        if (Number(monthMatch[3]) === daysInMonth(year, month)) {
-            return `${monthMatch[1]}-${monthMatch[2]}`;
+        if (Number(day) === daysInMonth(Number(year), Number(month))) {
+            return `${year}-${month}`;
+        }
+    } else {
+        if (month === "01" && day === "01") {
+            return year;
+        }
+        if (day === "01") {
+            return `${year}-${month}`;
         }
     }
     return null;
@@ -304,20 +294,8 @@ export function parseDateFilterQuery(value) {
         }
         return { operator: "notStartsWith", value: fragment.raw };
     }
-    if (operator === "gt") {
-        return { operator: "gt", value: fragment.end };
-    }
-    if (operator === "gte") {
-        return { operator: "gte", value: fragment.start };
-    }
-    if (operator === "lt") {
-        return { operator: "lt", value: fragment.start };
-    }
-    if (operator === "lte") {
-        return { operator: "lte", value: fragment.end };
-    }
-
-    return { operator, value: rawValue };
+    const rule = DATE_COMPARISON_RULES[operator];
+    return { operator, value: rule ? fragment[rule.bound] : rawValue };
 }
 
 /**
@@ -335,19 +313,12 @@ export function formatTextFilterQuery(filter) {
         return "";
     }
     const text = String(value);
+    const token = FILTER_OPERATOR_TOKENS[filter.operator];
+    if (token) {
+        return `${token}${text}`;
+    }
+
     switch (filter.operator) {
-        case "eq":
-            return `=${text}`;
-        case "neq":
-            return `!=${text}`;
-        case "gt":
-            return `>${text}`;
-        case "gte":
-            return `>=${text}`;
-        case "lt":
-            return `<${text}`;
-        case "lte":
-            return `<=${text}`;
         case "notContains":
             return `!${escapePatternText(text)}`;
         case "notStartsWith":
@@ -383,23 +354,16 @@ export function formatDateFilterQuery(filter) {
     }
     const text = String(value);
 
+    const rule = DATE_COMPARISON_RULES[filter.operator];
+    if (rule) {
+        return `${FILTER_OPERATOR_TOKENS[filter.operator]}${compressDateBound(text, rule.upper) ?? text}`;
+    }
+
     switch (filter.operator) {
         case "eq":
             return parseCanonicalDateFragment(text)?.precision === "day" ? text : `=${text}`;
         case "neq":
             return `!=${text}`;
-        case "gt": {
-            return `>${compressDateUpperBound(text) ?? text}`;
-        }
-        case "gte": {
-            return `>=${compressDateLowerBound(text) ?? text}`;
-        }
-        case "lt": {
-            return `<${compressDateLowerBound(text) ?? text}`;
-        }
-        case "lte": {
-            return `<=${compressDateUpperBound(text) ?? text}`;
-        }
         case "notStartsWith":
             return `!=${text}`;
         case "startsWith":
