@@ -91,7 +91,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {import("../data-grid.js").Column[]} columns
      */
     extendColumns(columns) {
-        if (!this.grid.options.responsive || !this.grid.options.responsiveToggle) {
+        if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this._sharesDisclosure()) {
             return;
         }
         columns.unshift({
@@ -271,7 +271,11 @@ class ResponsiveGrid extends BasePlugin {
             }, 0);
         const requiredWidth = (/** @type {Array<any>} */ visibleItems) => {
             let total = fixedWidth;
-            if (grid.options.responsiveToggle && items.some(({ column }) => column?.responsiveHidden)) {
+            if (
+                grid.options.responsiveToggle &&
+                !this._sharesDisclosure() &&
+                items.some(({ column }) => column?.responsiveHidden)
+            ) {
                 total += RESPONSIVE_TOGGLE_WIDTH;
             }
             for (const { th } of visibleItems) {
@@ -427,6 +431,44 @@ class ResponsiveGrid extends BasePlugin {
             }
             previous = td;
         }
+    }
+
+    /**
+     * True when the row details column already provides a disclosure control
+     * for every row: responsive then yields, rather than rendering a second
+     * identical chevron next to it, and follows that control instead.
+     *
+     * Both facts are required: the option carries the intent, the plugin does
+     * the rendering. If either is missing (ex: a non standard registration
+     * name), responsive keeps its own toggle — the safe fallback is a visible
+     * control, never hidden values with no way to reach them.
+     * @returns {Boolean}
+     */
+    _sharesDisclosure() {
+        return (
+            Boolean(this.grid.options.responsiveToggle) &&
+            typeof this.grid.options.rowDetails === "function" &&
+            Boolean(this.grid.getPlugin("RowDetails"))
+        );
+    }
+
+    /**
+     * Follow the shared disclosure control: the row details toggle governs the
+     * whole expansion surface of its row, responsive values included. No-op
+     * unless responsive has yielded its own toggle, so an explicit
+     * `responsiveToggle: false` keeps its section governed by
+     * `responsiveStartOpen` alone.
+     * @public
+     * @param {HTMLTableRowElement} tr
+     * @param {Boolean} expanded
+     */
+    followDisclosure(tr, expanded) {
+        if (!this._sharesDisclosure()) {
+            return;
+        }
+        this.blockObserver();
+        this._setRowExpanded(tr, expanded);
+        this.unblockObserver();
     }
 
     /**

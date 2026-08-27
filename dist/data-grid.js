@@ -4440,7 +4440,7 @@ class ResponsiveGrid extends base_plugin_default {
     }
   }
   extendColumns(columns) {
-    if (!this.grid.options.responsive || !this.grid.options.responsiveToggle) {
+    if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this._sharesDisclosure()) {
       return;
     }
     columns.unshift({
@@ -4549,7 +4549,7 @@ class ResponsiveGrid extends base_plugin_default {
     }, 0);
     const requiredWidth = (visibleItems) => {
       let total = fixedWidth;
-      if (grid.options.responsiveToggle && items.some(({ column }) => column?.responsiveHidden)) {
+      if (grid.options.responsiveToggle && !this._sharesDisclosure() && items.some(({ column }) => column?.responsiveHidden)) {
         total += RESPONSIVE_TOGGLE_WIDTH;
       }
       for (const { th } of visibleItems) {
@@ -4662,6 +4662,17 @@ class ResponsiveGrid extends base_plugin_default {
       }
       previous = td;
     }
+  }
+  _sharesDisclosure() {
+    return Boolean(this.grid.options.responsiveToggle) && typeof this.grid.options.rowDetails === "function" && Boolean(this.grid.getPlugin("RowDetails"));
+  }
+  followDisclosure(tr, expanded) {
+    if (!this._sharesDisclosure()) {
+      return;
+    }
+    this.blockObserver();
+    this._setRowExpanded(tr, expanded);
+    this.unblockObserver();
   }
   _setToggleIcon(tr, expanded) {
     const control = tr.querySelector(`.${RESPONSIVE_CLASS}-toggle-control`);
@@ -5403,6 +5414,10 @@ class RowDetails extends base_plugin_default {
     const button = tr.querySelector(`.${DETAILS_CLASS}-toggle-control`);
     if (button) {
       this._syncToggle(button, row, rowIndex, expanded);
+    }
+    const responsive = this.grid.getPlugin("ResponsiveGrid");
+    if (typeof responsive?.followDisclosure === "function") {
+      responsive.followDisclosure(tr, expanded);
     }
     const id = this._detailId(rowIndex);
     const current = document.getElementById(id);

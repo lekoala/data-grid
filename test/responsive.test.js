@@ -383,3 +383,31 @@ test("stacked responsive columns compose with RowDetails across resize and body 
     expectStructure(true);
     document.body.removeChild(inst);
 });
+
+test("an explicit responsiveToggle: false keeps the responsive section out of the shared control", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                { field: "a", title: "A" },
+                { field: "b", title: "B", responsiveHidden: true },
+            ],
+            responsiveToggle: false,
+            responsiveStartOpen: true,
+            rowDetails: ({ row }) => `Profile for ${row.a}`,
+        },
+        { ResponsiveGrid, RowDetails },
+    );
+    // Start-open exposes the hidden values inline, with no responsive control
+    expect(inst.querySelector(".dg-responsive-toggle-control")).toBeNull();
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).not.toBeNull();
+
+    const toggle = inst.querySelector("tbody .dg-row-details-toggle-control");
+    toggle.click();
+    toggle.click();
+
+    // The author opted this section out of any toggle: it is not swept away by
+    // the row details control the way an implicitly yielded one would be.
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).not.toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).toBeNull();
+    document.body.removeChild(inst);
+});

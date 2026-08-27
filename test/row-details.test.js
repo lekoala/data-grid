@@ -62,8 +62,13 @@ test("RowDetails coexists with responsive child rows without becoming a data row
         selectable: true,
         rowDetails: ({ row }) => `Profile for ${row.name}`,
     });
-    inst.querySelector("tbody .dg-responsive-toggle-control").click();
-    inst.querySelector("tbody .dg-row-details-toggle-control").click();
+    // One row, one disclosure control: responsive yields its toggle and follows
+    // the row details one, which governs the whole expansion surface.
+    expect(inst.querySelectorAll("tbody tr.dg-data-row .dg-disclosure").length).toBe(1);
+    expect(inst.querySelector("tbody .dg-responsive-toggle-control")).toBeNull();
+
+    const toggle = inst.querySelector("tbody .dg-row-details-toggle-control");
+    toggle.click();
 
     const rows = inst.querySelectorAll("tbody > tr");
     expect(rows[0].classList.contains("dg-data-row")).toBe(true);
@@ -74,5 +79,11 @@ test("RowDetails coexists with responsive child rows without becoming a data row
     expect(
         Array.from(inst.querySelectorAll('thead th[data-column-id^="$"]')).every((th) => th.dataset.frozen === "start"),
     ).toBe(true);
+
+    // Collapsing takes both sections down with it
+    toggle.click();
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).toBeNull();
+    expect(inst.querySelectorAll("tbody tr.dg-data-row td.dg-responsive-hidden[hidden]").length).toBe(1);
     document.body.removeChild(inst);
 });

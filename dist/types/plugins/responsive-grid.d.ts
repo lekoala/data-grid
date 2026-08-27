@@ -82,6 +82,29 @@ declare class ResponsiveGrid extends BasePlugin {
      */
     _canonicalizeRow(tr: HTMLTableRowElement): void;
     /**
+     * True when the row details column already provides a disclosure control
+     * for every row: responsive then yields, rather than rendering a second
+     * identical chevron next to it, and follows that control instead.
+     *
+     * Both facts are required: the option carries the intent, the plugin does
+     * the rendering. If either is missing (ex: a non standard registration
+     * name), responsive keeps its own toggle — the safe fallback is a visible
+     * control, never hidden values with no way to reach them.
+     * @returns {Boolean}
+     */
+    _sharesDisclosure(): boolean;
+    /**
+     * Follow the shared disclosure control: the row details toggle governs the
+     * whole expansion surface of its row, responsive values included. No-op
+     * unless responsive has yielded its own toggle, so an explicit
+     * `responsiveToggle: false` keeps its section governed by
+     * `responsiveStartOpen` alone.
+     * @public
+     * @param {HTMLTableRowElement} tr
+     * @param {Boolean} expanded
+     */
+    followDisclosure(tr: HTMLTableRowElement, expanded: boolean): void;
+    /**
      * Reflect the expanded state on the toggle column icon (no-op when there is
      * no toggle column, i.e. `responsiveToggle: false`).
      * @param {HTMLTableRowElement} tr

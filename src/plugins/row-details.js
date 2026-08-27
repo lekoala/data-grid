@@ -164,6 +164,18 @@ class RowDetails extends BasePlugin {
         if (button) {
             this._syncToggle(button, row, rowIndex, expanded);
         }
+
+        // The toggle governs the whole expansion surface of the row, so a
+        // responsive section that has no control of its own follows it. Told
+        // before the detail row is inserted: the responsive child row then
+        // already sits right after the data row, which is where it belongs.
+        // The dependency is one way on purpose — revealing responsive values
+        // is cheap, rendering application details is not.
+        const responsive = /** @type {any} */ (this.grid.getPlugin("ResponsiveGrid"));
+        if (typeof responsive?.followDisclosure === "function") {
+            responsive.followDisclosure(tr, expanded);
+        }
+
         const id = this._detailId(rowIndex);
         const current = document.getElementById(id);
         if (!expanded) {

@@ -4,15 +4,19 @@ import { ensureServer, IS_CHROME_BACKEND, IS_WINDOWS, read, stopServer, view, wa
 const FIXTURE = "test/browser/fixtures/disclosure.html";
 const TIMEOUT = 15000;
 
-const ROW = '#disclosure-grid tbody tr[data-row-index="$INDEX"]';
-const TOGGLES = {
-    responsive: `${ROW} .dg-responsive-toggle-control`,
-    details: `${ROW} .dg-row-details-toggle-control`,
+const GRIDS = {
+    responsive: { id: "disclosure-grid", control: ".dg-responsive-toggle-control" },
+    details: { id: "details-grid", control: ".dg-row-details-toggle-control" },
 };
 
-/** @param {String} template @param {Number} rowIndex @returns {String} */
-function at(template, rowIndex) {
-    return template.replace("$INDEX", String(rowIndex));
+/** @param {{id: String}} grid @param {Number} rowIndex @returns {String} */
+function rowOf(grid, rowIndex) {
+    return `#${grid.id} tbody tr[data-row-index="${rowIndex}"]`;
+}
+
+/** @param {{id: String, control: String}} grid @param {Number} rowIndex @returns {String} */
+function controlOf(grid, rowIndex) {
+    return `${rowOf(grid, rowIndex)} ${grid.control}`;
 }
 
 /**
@@ -34,18 +38,17 @@ beforeAll(ensureServer);
 afterAll(stopServer);
 
 /**
- * Both disclosure columns must be rendered before anything is measured: the
- * responsive toggle column stays hidden until the plugin has actually hidden
- * a data column.
+ * Both grids must have hidden a column before anything is measured: that is
+ * what puts a disclosure control on screen.
  * @param {Bun.WebView} v
  */
 async function open(v) {
     await v.navigate(`${ensureServer()}/${FIXTURE}`);
-    await waitFor(v, "window.grid && window.grid.rows.length > 0");
+    await waitFor(v, "window.grid && window.detailsGrid && window.grid.rows.length > 0");
     await waitFor(
         v,
         `document.querySelector('#disclosure-grid tbody td[data-column-id="$responsive"]:not([hidden])') && ` +
-            `document.querySelector('#disclosure-grid tbody .dg-row-details-toggle-control')`,
+            `document.querySelector('#details-grid tbody td.dg-responsive-hidden')`,
     );
     await v.evaluate("new Promise((resolve) => requestAnimationFrame(() => resolve()))");
 }
@@ -56,8 +59,8 @@ test.skipIf(IS_WINDOWS)(
         await using v = view();
         await open(v);
 
-        for (const template of Object.values(TOGGLES)) {
-            const selector = JSON.stringify(at(template, 0));
+        for (const grid of Object.values(GRIDS)) {
+            const selector = JSON.stringify(controlOf(grid, 0));
             const box = JSON.parse(
                 await read(
                     v,
@@ -106,10 +109,6 @@ test.skipIf(!IS_CHROME_BACKEND)(
         await using v = view();
         await open(v);
 
-        // Row 0 selected, row 1 left plain: the same control in both contexts.
-        await v.click(`${at(ROW, 0)} td[data-column-id="$selection"] input`);
-        await waitFor(v, `document.querySelector('${at(ROW, 0)}[data-selected]')`);
-
         const styles = async (selector) => {
             const expression = JSON.stringify(selector);
             const snapshot = `(() => {
@@ -133,12 +132,16 @@ test.skipIf(!IS_CHROME_BACKEND)(
 
         /** @type {Record<String, {normal: any, hover: any}>} */
         const seen = {};
-        for (const [name, template] of Object.entries(TOGGLES)) {
+        for (const [name, grid] of Object.entries(GRIDS)) {
+            // Row 0 selected, row 1 left plain: the same control in both contexts.
+            await v.click(`${rowOf(grid, 0)} td[data-column-id="$selection"] input`);
+            await waitFor(v, `document.querySelector('${rowOf(grid, 0)}[data-selected]')`);
+
             for (const [state, rowIndex] of [
                 ["plain", 1],
                 ["selected", 0],
             ]) {
-                const result = await styles(at(template, rowIndex));
+                const result = await styles(controlOf(grid, rowIndex));
 
                 // Transparent at rest: the row background shows through
                 expect(result.normal.background).toBe("rgba(0, 0, 0, 0)");
@@ -155,7 +158,7 @@ test.skipIf(!IS_CHROME_BACKEND)(
         }
 
         // One interaction model: selection must not change how the control reacts
-        for (const name of Object.keys(TOGGLES)) {
+        for (const name of Object.keys(GRIDS)) {
             expect(seen[`${name}:selected`].hover).toEqual(seen[`${name}:plain`].hover);
         }
 
@@ -172,15 +175,14 @@ test.skipIf(IS_WINDOWS)(
         await using v = view();
         await open(v);
 
-        const headerOrder = await read(
-            v,
-            `JSON.stringify([...document.querySelectorAll('#disclosure-grid thead .dg-head-columns th[data-column-id]')]
-                .filter((th) => !th.hasAttribute("hidden"))
-                .map((th) => th.dataset.columnId))`,
-        );
-
-        for (const template of Object.values(TOGGLES)) {
-            const selector = JSON.stringify(at(template, 0));
+        for (const grid of Object.values(GRIDS)) {
+            const selector = JSON.stringify(controlOf(grid, 0));
+            const headerOrder = await read(
+                v,
+                `JSON.stringify([...document.querySelectorAll('#${grid.id} thead .dg-head-columns th[data-column-id]')]
+                    .filter((th) => !th.hasAttribute("hidden"))
+                    .map((th) => th.dataset.columnId))`,
+            );
             await v.evaluate(`(() => document.querySelector(${selector}).focus())()`);
 
             // Expand, then collapse: both rebuild row content around the button
@@ -196,12 +198,53 @@ test.skipIf(IS_WINDOWS)(
             expect(
                 await read(
                     v,
-                    `JSON.stringify([...document.querySelector(${JSON.stringify(at(ROW, 0))}).children]
+                    `JSON.stringify([...document.querySelector(${JSON.stringify(rowOf(grid, 0))}).children]
                         .filter((td) => !td.hasAttribute("hidden"))
                         .map((td) => td.dataset.columnId))`,
                 ),
             ).toBe(headerOrder);
         }
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "one control governs both sections when responsive and row details are combined",
+    async () => {
+        await using v = view();
+        await open(v);
+
+        const detailsRows = "#details-grid tbody";
+
+        // Responsive yielded its own toggle: a single chevron per row
+        expect(await read(v, `document.querySelectorAll('${detailsRows} tr.dg-data-row .dg-disclosure').length`)).toBe(
+            5,
+        );
+        expect(await read(v, `!!document.querySelector('#details-grid .dg-responsive-toggle-control')`)).toBe(false);
+
+        // Collapsed by default: the hidden values are not stacked in every row
+        expect(await read(v, `!!document.querySelector('${detailsRows} tr.dg-responsive-child-row')`)).toBe(false);
+
+        const control = controlOf(GRIDS.details, 0);
+        const selector = JSON.stringify(control);
+        await v.click(control);
+        await waitFor(v, `document.querySelector(${selector}).getAttribute("aria-expanded") === "true"`);
+
+        // Both sections open: responsive values first, then application content
+        expect(
+            await read(
+                v,
+                `JSON.stringify([...document.querySelector(${JSON.stringify(rowOf(GRIDS.details, 0))}).parentNode.children]
+                    .slice(0, 3)
+                    .map((tr) => tr.className))`,
+            ),
+        ).toBe(JSON.stringify(["dg-data-row dg-responsive-expanded", "dg-responsive-child-row", "dg-row-details-row"]));
+
+        // And both come down together
+        await v.click(control);
+        await waitFor(v, `document.querySelector(${selector}).getAttribute("aria-expanded") === "false"`);
+        expect(await read(v, `!!document.querySelector('${detailsRows} tr.dg-responsive-child-row')`)).toBe(false);
+        expect(await read(v, `!!document.querySelector('${detailsRows} tr.dg-row-details-row')`)).toBe(false);
     },
     TIMEOUT,
 );
