@@ -1659,7 +1659,7 @@ class DataGrid extends base_element_default {
       format: null,
       align: null,
       filterType: null,
-      filterPlaceholder: "…",
+      filterPlaceholder: "_",
       firstFilterOption: { value: "", text: "" },
       filterMultiple: false
     };
@@ -3320,6 +3320,7 @@ class DataGrid extends base_element_default {
       filter.dataset.percent = "true";
     }
     if (type === "boolean") {
+      filter.dataset.align = "start";
       const first = getFirstFilterOption(column, this.defaultColumn);
       const options = [
         first,

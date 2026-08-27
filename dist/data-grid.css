@@ -656,6 +656,10 @@ data-grid thead tr.dg-head-filters .dg-filter-control {
   margin: 0;
 }
 
+data-grid thead tr.dg-head-filters .dg-filter-control[data-align="start"] {
+  text-align: start;
+}
+
 data-grid thead tr.dg-head-filters .dg-filter-control::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;

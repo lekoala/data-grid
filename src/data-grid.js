@@ -3661,6 +3661,9 @@ class DataGrid extends BaseElement {
             // Tri-state select sharing the boolean formatter semantics: the
             // empty option filters nothing, "true"/"false" compare through
             // normalizeBoolean (raw 1 / "1" cells match like the ✓ display).
+            // Keep option labels start-aligned even when the boolean column
+            // itself is centered.
+            filter.dataset.align = "start";
             const first = getFirstFilterOption(column, this.defaultColumn);
             const options = [
                 first,

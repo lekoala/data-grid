@@ -229,7 +229,9 @@ Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`,
 `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`.
 Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
-formatter default); the filter control inherits the same `text-align`.
+formatter default); the filter control inherits the same `text-align`, except
+the built-in boolean tri-state select keeps its option labels at `start` via
+`select.dg-filter-control[data-filter-mode="boolean"][data-align="start"]`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
 
 ## Right-to-left

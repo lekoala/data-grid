@@ -873,7 +873,10 @@ test("boolean columns render a tri-state select sharing the formatter semantics"
     );
 
     const select = /** @type {HTMLSelectElement} */ (inst.querySelector('.dg-head-filters select[data-name="active"]'));
+    const th = /** @type {HTMLTableCellElement} */ (select.closest("th"));
     expect(select.dataset.filterMode).toBe("boolean");
+    expect(th.dataset.align).toBe("center");
+    expect(select.dataset.align).toBe("start");
     expect([...select.options].map((o) => o.value)).toEqual(["", "true", "false"]);
 
     select.value = "true";
