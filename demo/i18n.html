@@ -23,14 +23,16 @@
     let grid = null;
 
     /**
-     * Apply a locale. Works before or after the grid exists: setLabels()
-     * refreshes connected grids, and a grid created later renders translated.
+     * Apply a locale. setLabels() only updates the shared dictionary; the
+     * live grid must be refreshed explicitly. A grid created later renders
+     * translated on its own.
      * @param {String} locale
      */
     async function setLocale(locale) {
       try {
         const { default: labels } = await import(`../locales/${locale}.js`);
         DataGrid.setLabels(labels);
+        grid?.updateLabels();
         document.documentElement.lang = locale;
         grid?.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
         current.textContent = locale;
@@ -93,8 +95,9 @@
 
     <h2>i18n</h2>
     <p>
-      Locales are self-applying modules: importing one calls
-      <code>DataGrid.setLabels()</code>, which refreshes every connected grid.
+      Locales are modules that update the shared label dictionary.
+      <code>DataGrid.setLabels()</code> changes global defaults; the demo
+      refreshes the live grid with <code>updateLabels()</code>.
       Arabic switches the grid to RTL.
     </p>
 
