@@ -41,10 +41,10 @@ DataGrid.setLabels({
 
 ## Placeholders are not labels
 
-`search-placeholder` and `filter-placeholder` default to the language-neutral
-ellipsis `…`. Applications can replace it with a business hint that explains a
-format or a domain ("Name, email or user ID", "≥ 100"), while the accessible
-name always comes from the labels / the column header.
+`search-placeholder` is empty by default, while `filter-placeholder` can provide
+a language-neutral hint. Applications can replace either with a business hint
+that explains a format or a domain ("Name, email or user ID", "≥ 100"), while
+the accessible name always comes from the labels / the column header.
 
 ## Application labels (JSON)
 

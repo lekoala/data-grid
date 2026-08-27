@@ -412,7 +412,7 @@ export type Options = {
      */
     searchable: boolean;
     /**
-     * Visible hint for the search input (defaults to "…")
+     * Visible hint for the search input (defaults to "")
      */
     searchPlaceholder: string;
     /**

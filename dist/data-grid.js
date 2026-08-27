@@ -1703,7 +1703,7 @@ class DataGrid extends base_element_default {
       rowDetailsStartOpen: false,
       filterDelay: 300,
       searchable: false,
-      searchPlaceholder: "…",
+      searchPlaceholder: "",
       searchDelay: 300,
       minSearchLength: 0,
       spinnerClass: "",

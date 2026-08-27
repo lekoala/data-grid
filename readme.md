@@ -198,7 +198,7 @@ Some options only work if the proper plugin is loaded.
 | `showPageSize`        | `Boolean`            | `true`               | Show the page size select                                    |
 | `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
 | `searchable`          | `Boolean`            | `false`              | Show the global search input                                 |
-| `searchPlaceholder`   | `String`             | `"…"`                | Visible hint for the search input                            |
+| `searchPlaceholder`   | `String`             | `""`                 | Visible hint for the search input                            |
 | `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
 | `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied                |
 | `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |

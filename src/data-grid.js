@@ -247,7 +247,7 @@ function setDeclarativeCell(row, field, meta) {
  * @property {Boolean} rowDetailsStartOpen Open row details by default (RowDetails module)
  * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
  * @property {Boolean} searchable Show the global search input (core, not a plugin)
- * @property {String} searchPlaceholder Visible hint for the search input (defaults to "…")
+ * @property {String} searchPlaceholder Visible hint for the search input (defaults to "")
  * @property {Number} searchDelay Debounce delay in milliseconds before the global search is applied (0 = immediate)
  * @property {Number} minSearchLength Minimum number of characters before a search is applied (0 = always)
  * @property {String} spinnerClass Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
@@ -1163,7 +1163,7 @@ class DataGrid extends BaseElement {
             rowDetailsStartOpen: false,
             filterDelay: 300,
             searchable: false,
-            searchPlaceholder: "…",
+            searchPlaceholder: "",
             searchDelay: 300,
             minSearchLength: 0,
             spinnerClass: "",
