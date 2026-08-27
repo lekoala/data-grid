@@ -193,9 +193,13 @@ test.skipIf(IS_WINDOWS)(
             expect(await read(v, `document.activeElement === document.querySelector(${selector})`)).toBe(true);
 
             // Collapse, then expand: both keyboard toggles rebuild row content
-            // around the button.
+            // around the button. Space, not Enter: Blink activates a button on
+            // Enter from the `keypress` event, which the synthesized key pair
+            // sent by `press` does not produce, so Enter never reaches the
+            // control on the Chrome backend. Space activates on keyup and is
+            // delivered by both backends.
             for (const expected of ["false", "true"]) {
-                await v.press("Enter");
+                await v.press("Space");
                 await waitFor(v, `document.querySelector(${selector}).getAttribute("aria-expanded") === "${expected}"`);
 
                 // The control the user is operating must survive the DOM churn

@@ -149,6 +149,16 @@ Avoid (post-baseline APIs and syntax):
   hover, precise drag/right-click, and pixel-level geometry are Chrome-only.
   Before changing production code for a browser-test failure, establish whether
   the product state is wrong or only the harness interaction/observation differs.
+- `skipIf(IS_WINDOWS)` means a browser test never runs on a Windows dev machine:
+  a green local `bun test` proves nothing about it, and CI is its first real
+  execution. `bun run test:browser:wsl` covers it when a working WSL2 distro is
+  available; when it is not, the test is unverified until CI runs it, so keep it
+  built out of interactions the suite already exercises rather than new ones.
+- Synthesized input is not real input. `view.press()` sends a key down/up pair
+  with no `keypress`, so it cannot activate a `<button>` with Enter on Chrome:
+  use `Space`, which activates on keyup. Reuse a key/gesture already proven in
+  the suite; a new interaction primitive must be shown to reach the element
+  before the assertion around it is trusted.
 
 ## Documentation
 
