@@ -75,7 +75,9 @@ declare class ResponsiveGrid extends BasePlugin {
     /**
      * Reorder a data row's direct cells to the canonical column order of
      * `grid.getColumns()`, so cells restored from a detail row never end up in
-     * the wrong position.
+     * the wrong position. Only cells that are actually out of order move:
+     * re-inserting an already well placed cell would blur a control the user
+     * is operating from the keyboard (the toggle itself, typically).
      * @param {HTMLTableRowElement} tr
      */
     _canonicalizeRow(tr: HTMLTableRowElement): void;

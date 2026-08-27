@@ -1,0 +1,46 @@
+/* Disclosure controls: the responsive and the row details toggle columns are
+   the same primitive (a compact chevron button in a narrow virtual column), so
+   geometry, colors and states live here once. Plugin classes stay on the
+   elements for behavior selectors only. */
+data-grid .dg-disclosure-cell {
+  padding: 0;
+  text-align: center;
+}
+
+data-grid .dg-disclosure {
+  appearance: none;
+  background-color: transparent;
+  border: 0;
+  border-radius: var(--dg-radius);
+  color: var(--dg-muted-color);
+  block-size: 2rem;
+  inline-size: 2rem;
+  min-inline-size: 2rem;
+  padding: 0;
+  user-select: none;
+  vertical-align: middle;
+}
+
+/* A translucent tint rather than a surface color: the control must stay
+   readable over the plain, striped, hovered and selected row backgrounds
+   alike. Internal to the control, so it stays a literal, not a token. */
+data-grid .dg-disclosure:hover {
+  background-color: rgb(31 41 55 / 8%);
+  color: var(--dg-color);
+}
+
+/* Where color-mix is supported the tint follows a themed --dg-color instead of
+   the hardcoded fallback. */
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  data-grid .dg-disclosure:hover {
+    background-color: color-mix(in srgb, var(--dg-color) 8%, transparent);
+  }
+}
+
+data-grid .dg-disclosure svg {
+  transition: transform 160ms ease;
+}
+
+data-grid .dg-disclosure[aria-expanded="true"] svg {
+  transform: rotate(90deg);
+}

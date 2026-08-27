@@ -4374,6 +4374,15 @@ class AutosizeColumn extends base_plugin_default {
 }
 var autosize_column_default = AutosizeColumn;
 
+// src/utils/disclosureButton.js
+function createDisclosureButton(controlClass) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = `dg-disclosure ${controlClass}`;
+  button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return button;
+}
+
 // src/plugins/responsive-grid.js
 var RESPONSIVE_CLASS = "dg-responsive";
 var RESPONSIVE_TOGGLE_WIDTH = 40;
@@ -4442,7 +4451,7 @@ class ResponsiveGrid extends base_plugin_default {
       width: 40,
       sortable: false,
       title: "",
-      class: `${RESPONSIVE_CLASS}-toggle`,
+      class: `dg-disclosure-cell ${RESPONSIVE_CLASS}-toggle`,
       hidden: !this.hasHiddenColumns(),
       renderHeaderCell: (th) => this.createHeaderCell(th),
       renderFilterCell: () => this.createFilterCell(),
@@ -4484,15 +4493,12 @@ class ResponsiveGrid extends base_plugin_default {
   }
   createFilterCell() {}
   createDataCell({ row, rowIndex = 0 }) {
-    const cell = document.createElement("button");
-    cell.type = "button";
-    cell.classList.add("dg-clickable-cell", `${RESPONSIVE_CLASS}-toggle-control`);
+    const cell = createDisclosureButton(`${RESPONSIVE_CLASS}-toggle-control`);
     cell.setAttribute("aria-expanded", "false");
     cell.setAttribute("aria-controls", this._detailId(rowIndex));
     cell.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showHiddenColumns, {
       row: this.grid.getRowLabel(row ?? {}, rowIndex)
     }));
-    cell.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     cell.addEventListener("click", this);
     return cell;
   }
@@ -4640,15 +4646,21 @@ class ResponsiveGrid extends base_plugin_default {
     return false;
   }
   _canonicalizeRow(tr) {
+    let previous = null;
     for (const column of this.grid.getColumns()) {
       if (column.attr) {
         continue;
       }
       const id = this.grid.getColumnId(column);
       const td = tr.querySelector(`:scope > td[data-column-id="${id}"]`);
-      if (td) {
-        tr.appendChild(td);
+      if (!td) {
+        continue;
       }
+      const expected = previous ? previous.nextElementSibling : tr.firstElementChild;
+      if (td !== expected) {
+        tr.insertBefore(td, expected);
+      }
+      previous = td;
     }
   }
   _setToggleIcon(tr, expanded) {
@@ -5325,7 +5337,7 @@ class RowDetails extends base_plugin_default {
       width: 40,
       sortable: false,
       title: "",
-      class: `${DETAILS_CLASS}-toggle`,
+      class: `dg-disclosure-cell ${DETAILS_CLASS}-toggle`,
       renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
       renderFilterCell: () => {},
       renderCell: (ctx) => this.createToggle(ctx)
@@ -5374,12 +5386,9 @@ class RowDetails extends base_plugin_default {
   createToggle({ row = {}, rowIndex = 0 }) {
     const key = this.grid.resolveRowKey(row, rowIndex);
     const expanded = this.isExpanded(key);
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `dg-clickable-cell ${DETAILS_CLASS}-toggle-control`;
+    const button = createDisclosureButton(`${DETAILS_CLASS}-toggle-control`);
     button.setAttribute("aria-controls", this._detailId(rowIndex));
     this._syncToggle(button, row, rowIndex, expanded);
-    button.innerHTML += `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
     return button;
   }
   _syncToggle(button, row, rowIndex, expanded) {

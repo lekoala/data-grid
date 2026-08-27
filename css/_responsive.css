@@ -1,25 +1,3 @@
-data-grid .dg-responsive-toggle {
-  padding: 0;
-  text-align: center;
-}
-
-data-grid .dg-responsive-toggle-control {
-  appearance: none;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  user-select: none;
-}
-
-data-grid .dg-responsive-toggle-control svg {
-  transition: transform 160ms ease;
-}
-
-data-grid .dg-responsive-toggle-control-open svg {
-  transform: rotate(90deg);
-}
-
 data-grid .dg-responsive-child-row > td {
   padding: 0;
 }

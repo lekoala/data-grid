@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>data-grid disclosure fixture</title>
+  <!-- Absolute paths: this fixture is served by demo/server.js from the repo root. -->
+  <link rel="stylesheet" href="/dist/data-grid.css" />
+  <script type="module">
+    import DataGrid, { ArrayDataSource } from "/dist/data-grid.js";
+
+    // Narrow on purpose: the responsive plugin hides the low priority columns
+    // and reveals its toggle column, so both disclosure controls are on screen
+    // at the same time.
+    const grid = new DataGrid({
+      id: "disclosure-grid",
+      columns: [
+        { field: "name", title: "Name", width: 160, responsive: 0 },
+        { field: "company", title: "Company", width: 160, responsive: 1 },
+        { field: "email", title: "Email", width: 160, responsive: 2 },
+        { field: "city", title: "City", width: 160, responsive: 3 },
+      ],
+      dataSource: new ArrayDataSource(
+        Array.from({ length: 5 }, (_, i) => ({
+          id: i + 1,
+          name: `Name ${i + 1}`,
+          company: "Acme",
+          email: `user${i + 1}@example.com`,
+          city: `City ${i + 1}`,
+        })),
+      ),
+      responsive: true,
+      selectable: true,
+      rowDetails: ({ row }) => `Profile for ${row.name}`,
+    });
+    grid.style.width = "380px";
+    document.body.appendChild(grid);
+    window.grid = grid;
+  </script>
+</head>
+<body></body>
+</html>

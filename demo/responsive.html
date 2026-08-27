@@ -98,6 +98,32 @@
         },
       );
 
+      const dualGrid = await createStaticGrid(
+        document.getElementById("dual-demo"),
+        "demo.json",
+        {
+          selectable: true,
+          sortable: true,
+          responsive: true,
+          rowLabel: (row) => `${row.first_name} ${row.last_name}`,
+          rowDetails: ({ row }) => {
+            const details = document.createElement("div");
+            details.textContent = `Application details for customer ${row.id}: activity, actions or custom UI belong here.`;
+            return details;
+          },
+          initialQuery: { pageSize: 8 },
+          columns: [
+            { field: "id", title: "ID", width: 72, responsive: 0 },
+            { field: "first_name", title: "First Name", responsive: 1 },
+            { field: "last_name", title: "Last Name", responsive: 1 },
+            { field: "email", title: "Email", responsive: 2 },
+            { field: "company", title: "Company", responsive: 3 },
+            { field: "job_title", title: "Job Title", responsive: 4 },
+            { field: "city", title: "City", responsive: 5 },
+          ],
+        },
+      );
+
       const frame = document.getElementById("responsive-frame");
       const width = document.getElementById("width");
       new ResizeObserver(() => {
@@ -108,6 +134,11 @@
       new ResizeObserver(() => {
         stackedWidth.textContent = `${Math.round(stackedFrame.getBoundingClientRect().width)}px`;
       }).observe(stackedFrame);
+      const dualFrame = document.getElementById("dual-frame");
+      const dualWidth = document.getElementById("dual-width");
+      new ResizeObserver(() => {
+        dualWidth.textContent = `${Math.round(dualFrame.getBoundingClientRect().width)}px`;
+      }).observe(dualFrame);
     </script>
   </head>
 
@@ -166,7 +197,7 @@
           </div>
           <span class="demo-meta">width: <code id="stacked-width">—</code></span>
         </div>
-        <div class="resize-me" id="stacked-frame">
+        <div class="resize-me is-narrow" id="stacked-frame">
           <div id="stacked-demo"></div>
         </div>
         <p class="demo-note">
@@ -174,6 +205,31 @@
           them immediately and <code>responsive-toggle="false"</code> removes the second disclosure control.
           The remaining chevron opens application-rendered row details. Search, sort and filters still work, and
           an actively sorted or filtered column is never hidden.
+        </p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-toolbar">
+          <div>
+            <p class="demo-kicker">Two controls</p>
+            <h2>Responsive toggle + row details toggle</h2>
+          </div>
+          <span class="demo-meta">width: <code id="dual-width">—</code></span>
+        </div>
+        <div class="resize-me is-narrow" id="dual-frame">
+          <div id="dual-demo"></div>
+        </div>
+        <p class="demo-note">
+          The same two plugins, but left at their defaults: <code>responsive-toggle</code> is <code>true</code>,
+          so as soon as a column is hidden the grid renders <em>two</em> disclosure controls side by side. The
+          first one reveals the hidden column values, the second one opens the row details, and each keeps its
+          own state — expand one, the other stays as it is.
+        </p>
+        <p class="demo-note">
+          Both are the same <code>.dg-disclosure</code> primitive, so only their accessible names tell them
+          apart (<em>Show additional columns for…</em> vs <em>Show details for…</em>). Tab moves from one to the
+          other and <kbd>Enter</kbd> keeps the focus on the control it toggled. This configuration is supported,
+          but the stacked one above is the recommended way to combine the two features.
         </p>
       </div>
     </main>

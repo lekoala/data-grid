@@ -1,5 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import applyContent from "../utils/applyContent.js";
+import { createDisclosureButton } from "../utils/disclosureButton.js";
 import { dispatch } from "../utils/dispatch.js";
 import { createSpanningRow } from "../utils/spanningRow.js";
 
@@ -67,7 +68,7 @@ class RowDetails extends BasePlugin {
             width: 40,
             sortable: false,
             title: "",
-            class: `${DETAILS_CLASS}-toggle`,
+            class: `dg-disclosure-cell ${DETAILS_CLASS}-toggle`,
             renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
             renderFilterCell: () => {},
             renderCell: (ctx) => this.createToggle(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
@@ -132,12 +133,9 @@ class RowDetails extends BasePlugin {
     createToggle({ row = {}, rowIndex = 0 }) {
         const key = this.grid.resolveRowKey(row, rowIndex);
         const expanded = this.isExpanded(key);
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = `dg-clickable-cell ${DETAILS_CLASS}-toggle-control`;
+        const button = createDisclosureButton(`${DETAILS_CLASS}-toggle-control`);
         button.setAttribute("aria-controls", this._detailId(rowIndex));
         this._syncToggle(button, row, rowIndex, expanded);
-        button.innerHTML += `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
         return button;
     }
 

@@ -29,6 +29,15 @@ test("RowDetails renders application content, exposes state methods and emits on
     const plugin = inst.getPlugin("RowDetails");
     const button = inst.querySelector("tbody .dg-row-details-toggle-control");
     expect(button.getAttribute("aria-label")).toBe("Show details for Alice");
+    // Shared disclosure primitive: same compact control as the responsive
+    // toggle, and never the full-cell click target of the selection column.
+    expect(button.classList.contains("dg-disclosure")).toBe(true);
+    expect(button.classList.contains("dg-clickable-cell")).toBe(false);
+    expect(button.querySelectorAll("svg").length).toBe(1);
+    expect(button.closest("td").classList.contains("dg-disclosure-cell")).toBe(true);
+    expect(inst.querySelector('thead th[data-column-id="$details"]').classList.contains("dg-disclosure-cell")).toBe(
+        true,
+    );
     let detail;
     inst.addEventListener("rowDetailsToggle", (event) => {
         detail = event.detail;

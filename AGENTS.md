@@ -66,6 +66,21 @@ properties would then be optional, not automatic.
   component invariants that would otherwise obscure the code's intent. Do not
   wrap native APIs merely for brevity.
 
+## Public surface
+
+A small, flexible, powerful grid — not a monster to configure. Every public knob
+(option, attribute, event, `--dg-*` token, documented class) is API: it lands in
+`custom-elements.json`, in the docs, and in the compatibility contract for good.
+Add one only when it buys a consumer something they could not already do:
+
+- a value read by a single internal rule stays a literal in that rule. Tokens
+  are for what a theme legitimately recolors: surfaces, rows, controls, states —
+  not the internal tint of one control
+- prefer one shared class over a new option, and an existing hook over a new one
+- rule (the styling twin of "what does it let me delete?"): "what does it let a
+  consumer do that they cannot do today?" If the answer is "nothing, it saves
+  them one CSS rule", leave it out
+
 ## Browser baseline (JS)
 
 `src/` is itself exported by the package (see `exports`), so the source must be

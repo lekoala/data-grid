@@ -325,6 +325,11 @@ tr.pending td {
   resize: horizontal;
 }
 
+/* Start narrow: the responsive behavior is visible without dragging first. */
+.resize-me.is-narrow {
+  width: min(640px, 100%);
+}
+
 .resize-me:after {
   color: #526174;
   font-size: 0.75rem;

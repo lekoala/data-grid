@@ -312,6 +312,14 @@ test("responsive disclosure uses a named native button and controls its detail r
     await inst.refresh();
     const button = inst.querySelector("tbody .dg-responsive-toggle-control");
     expect(button.tagName).toBe("BUTTON");
+    // Shared disclosure primitive: same compact control as the row details
+    // toggle, and never the full-cell click target of the selection column.
+    expect(button.classList.contains("dg-disclosure")).toBe(true);
+    expect(button.classList.contains("dg-clickable-cell")).toBe(false);
+    expect(button.closest("td").classList.contains("dg-disclosure-cell")).toBe(true);
+    expect(inst.querySelector('thead th[data-column-id="$responsive"]').classList.contains("dg-disclosure-cell")).toBe(
+        true,
+    );
     expect(button.querySelectorAll("svg").length).toBe(1);
     expect(button.querySelector("svg path")).not.toBeNull();
     expect(button.getAttribute("aria-expanded")).toBe("false");

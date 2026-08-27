@@ -1,5 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import debounce from "../utils/debounce.js";
+import { createDisclosureButton } from "../utils/disclosureButton.js";
 import { createSpanningRow } from "../utils/spanningRow.js";
 
 const RESPONSIVE_CLASS = "dg-responsive";
@@ -101,7 +102,7 @@ class ResponsiveGrid extends BasePlugin {
             width: 40,
             sortable: false,
             title: "",
-            class: `${RESPONSIVE_CLASS}-toggle`,
+            class: `dg-disclosure-cell ${RESPONSIVE_CLASS}-toggle`,
             hidden: !this.hasHiddenColumns(),
             renderHeaderCell: (th) => this.createHeaderCell(th),
             renderFilterCell: () => this.createFilterCell(),
@@ -167,10 +168,7 @@ class ResponsiveGrid extends BasePlugin {
      * @returns {HTMLButtonElement}
      */
     createDataCell({ row, rowIndex = 0 }) {
-        // Create icon
-        const cell = document.createElement("button");
-        cell.type = "button";
-        cell.classList.add("dg-clickable-cell", `${RESPONSIVE_CLASS}-toggle-control`);
+        const cell = createDisclosureButton(`${RESPONSIVE_CLASS}-toggle-control`);
         cell.setAttribute("aria-expanded", "false");
         cell.setAttribute("aria-controls", this._detailId(rowIndex));
         cell.setAttribute(
@@ -179,7 +177,6 @@ class ResponsiveGrid extends BasePlugin {
                 row: this.grid.getRowLabel(row ?? {}, rowIndex),
             }),
         );
-        cell.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
         cell.addEventListener("click", this);
 
@@ -405,19 +402,30 @@ class ResponsiveGrid extends BasePlugin {
     /**
      * Reorder a data row's direct cells to the canonical column order of
      * `grid.getColumns()`, so cells restored from a detail row never end up in
-     * the wrong position.
+     * the wrong position. Only cells that are actually out of order move:
+     * re-inserting an already well placed cell would blur a control the user
+     * is operating from the keyboard (the toggle itself, typically).
      * @param {HTMLTableRowElement} tr
      */
     _canonicalizeRow(tr) {
+        /** @type {Element|null} */
+        let previous = null;
         for (const column of this.grid.getColumns()) {
             if (column.attr) {
                 continue;
             }
             const id = this.grid.getColumnId(column);
             const td = tr.querySelector(`:scope > td[data-column-id="${id}"]`);
-            if (td) {
-                tr.appendChild(td);
+            if (!td) {
+                continue;
             }
+            const expected = /** @type {Element|null} */ (
+                previous ? previous.nextElementSibling : tr.firstElementChild
+            );
+            if (td !== expected) {
+                tr.insertBefore(td, expected);
+            }
+            previous = td;
         }
     }
 

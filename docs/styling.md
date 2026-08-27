@@ -8,36 +8,36 @@ the application's design system.
 
 Override them on `data-grid` (or globally with `data-grid { ... }`):
 
-| Token                     | Default            | Used for                                |
-|---------------------------|--------------------|------------------------------------------|
-| `--dg-bg`                 | `#fff`             | table + menu surfaces                    |
-| `--dg-color`              | `#1f2937`          | primary text                             |
-| `--dg-muted-color`        | `#6b7280`          | footer/meta/placeholder text             |
-| `--dg-border-color`       | `#d8e1eb`          | outer structure + separators             |
-| `--dg-accent`             | `#0d6efd`          | interactive accent                       |
-| `--dg-accent-soft`        | `#e8f1ff`          | subtle accent surface                    |
-| `--dg-focus-ring`         | `rgb(13 110 253 / 18%)` | focus ring                         |
-| `--dg-header-bg`          | `#f6f8fb`          | header + footer background               |
-| `--dg-header-color`       | `#111827`          | header text                              |
-| `--dg-filter-bg`          | `#fbfcfe`          | filter controls                          |
-| `--dg-row-stripe-bg`      | `transparent`      | striped rows                             |
-| `--dg-row-hover-bg`       | `#f8fafc`          | row hover                                |
-| `--dg-row-selected-bg`    | `#eef4ff`          | selected rows                            |
-| `--dg-row-selected-hover-bg` | `#e7f0ff`      | selected row hover                       |
-| `--dg-row-border-color`   | `#edf2f7`          | row separators                           |
-| `--dg-control-bg`         | `#fff`             | buttons / inputs / selects               |
-| `--dg-control-color`      | `var(--dg-color)`  | control text                             |
-| `--dg-control-border-color` | `#d4dde7`       | control borders                          |
-| `--dg-danger-bg`          | `#fef3f2`          | error state                              |
-| `--dg-danger-color`       | `#b42318`          | error text                               |
-| `--dg-danger-border-color`| `#fecdca`          | error borders                            |
-| `--dg-cell-padding-inline`| `12px`             | horizontal cell padding                  |
-| `--dg-cell-padding-block` | `8px`              | vertical cell padding                    |
-| `--dg-header-padding-y`   | `8px`              | header vertical padding                  |
-| `--dg-control-height`     | `32px`             | filter/footer control height             |
-| `--dg-selection-column-width` | `40px`        | selection column width                   |
-| `--dg-actions-column-width`   | `48px`        | collapsed actions column width           |
-| `--dg-radius`             | `8px`              | table / control / menu radius            |
+| Token                         | Default                 | Used for                       |
+|-------------------------------|-------------------------|--------------------------------|
+| `--dg-bg`                     | `#fff`                  | table + menu surfaces          |
+| `--dg-color`                  | `#1f2937`               | primary text                   |
+| `--dg-muted-color`            | `#6b7280`               | footer/meta/placeholder text   |
+| `--dg-border-color`           | `#d8e1eb`               | outer structure + separators   |
+| `--dg-accent`                 | `#0d6efd`               | interactive accent             |
+| `--dg-accent-soft`            | `#e8f1ff`               | subtle accent surface          |
+| `--dg-focus-ring`             | `rgb(13 110 253 / 18%)` | focus ring                     |
+| `--dg-header-bg`              | `#f6f8fb`               | header + footer background     |
+| `--dg-header-color`           | `#111827`               | header text                    |
+| `--dg-filter-bg`              | `#fbfcfe`               | filter controls                |
+| `--dg-row-stripe-bg`          | `transparent`           | striped rows                   |
+| `--dg-row-hover-bg`           | `#f8fafc`               | row hover                      |
+| `--dg-row-selected-bg`        | `#eef4ff`               | selected rows                  |
+| `--dg-row-selected-hover-bg`  | `#e7f0ff`               | selected row hover             |
+| `--dg-row-border-color`       | `#edf2f7`               | row separators                 |
+| `--dg-control-bg`             | `#fff`                  | buttons / inputs / selects     |
+| `--dg-control-color`          | `var(--dg-color)`       | control text                   |
+| `--dg-control-border-color`   | `#d4dde7`               | control borders                |
+| `--dg-danger-bg`              | `#fef3f2`               | error state                    |
+| `--dg-danger-color`           | `#b42318`               | error text                     |
+| `--dg-danger-border-color`    | `#fecdca`               | error borders                  |
+| `--dg-cell-padding-inline`    | `12px`                  | horizontal cell padding        |
+| `--dg-cell-padding-block`     | `8px`                   | vertical cell padding          |
+| `--dg-header-padding-y`       | `8px`                   | header vertical padding        |
+| `--dg-control-height`         | `32px`                  | filter/footer control height   |
+| `--dg-selection-column-width` | `40px`                  | selection column width         |
+| `--dg-actions-column-width`   | `48px`                  | collapsed actions column width |
+| `--dg-radius`                 | `8px`                   | table / control / menu radius  |
 
 ## Density
 
@@ -221,12 +221,39 @@ Notes do not need a grid API. Return a button and a popover from
 added under `@supports (position-anchor: --note)` as progressive enhancement;
 the grid itself does not depend on it.
 
+## Disclosure controls
+
+The responsive toggle column (`$responsive`) and the row details toggle column
+(`$details`) render the same primitive: a `.dg-disclosure` chevron button inside
+a `.dg-disclosure-cell`. Geometry, colors and the open rotation are styled once
+on the shared classes, so restyling the pair takes a single rule:
+
+```css
+data-grid .dg-disclosure {
+  border-radius: 0;
+  color: var(--dg-accent);
+}
+```
+
+Notes:
+
+- the feature classes (`.dg-responsive-toggle-control`,
+  `.dg-row-details-toggle-control` and their `-open` variants) stay on the
+  elements for per-feature overrides and behavior selectors;
+- the open state is styled from `[aria-expanded="true"]`, which both plugins
+  keep in sync with the accessible state;
+- the hover tint is translucent, not a surface color, so the control stays
+  readable over plain, striped, hovered and selected rows alike. It is internal
+  to the control (no token): restyle `.dg-disclosure:hover` if you need another
+  feedback, and keep some transparency to preserve that guarantee.
+
 ## Selectors
 
 Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`,
 `.dg-actions`, `.dg-footer`, `.dg-topbar`, `.dg-topbar-start`,
 `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
-`.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`.
+`.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`, `.dg-disclosure`,
+`.dg-disclosure-cell`.
 Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
 formatter default); the filter control inherits the same `text-align`, except
