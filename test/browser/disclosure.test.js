@@ -183,12 +183,13 @@ test.skipIf(IS_WINDOWS)(
                     .filter((th) => !th.hasAttribute("hidden"))
                     .map((th) => th.dataset.columnId))`,
             );
-            // Give Chrome's page (not only the DOM element) keyboard focus.
-            // A programmatic element.focus() can leave a newly spawned
-            // headless WebView without an active keyboard target, making the
-            // following press a CI-only no-op.
+            // Give the WebView a keyboard target before focusing the control.
+            // A programmatic focus alone can leave headless Chrome inactive,
+            // while WebKit on macOS does not focus buttons when they are
+            // clicked. The two operations are therefore both intentional.
             await v.click(controlOf(grid, 0));
             await waitFor(v, `document.querySelector(${selector}).getAttribute("aria-expanded") === "true"`);
+            await v.evaluate(`(() => document.querySelector(${selector}).focus())()`);
             expect(await read(v, `document.activeElement === document.querySelector(${selector})`)).toBe(true);
 
             // Collapse, then expand: both keyboard toggles rebuild row content

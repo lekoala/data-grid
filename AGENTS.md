@@ -133,6 +133,15 @@ Avoid (post-baseline APIs and syntax):
   rare or specific cases explicit locally.
 - Simulated events must bubble like real interactions: the grid and its
   plugins rely on delegated listeners.
+- Shared Chrome/WebKit browser tests assert portable, user-visible invariants,
+  not engine output such as exact sub-pixel geometry, computed-style
+  serialization, or browser-specific synthetic focus behavior. Wait for the
+  functional state under test and re-query the DOM after rerenders; do not
+  observe layout, transitions, or top-layer changes synchronously.
+- Gate backend-specific tests explicitly. CDP, physical pointer injection,
+  hover, precise drag/right-click, and pixel-level geometry are Chrome-only.
+  Before changing production code for a browser-test failure, establish whether
+  the product state is wrong or only the harness interaction/observation differs.
 
 ## Documentation
 
