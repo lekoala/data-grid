@@ -344,43 +344,81 @@ test.skipIf(IS_WINDOWS)(
                 box.checked = ${checked};
                 box.dispatchEvent(new Event('change', { bubbles: true }));
             })()`;
+        await v.evaluate(
+            "window.initialMultiSelectPanel = document.querySelector('#local-grid .dg-multiselect-panel')",
+        );
+        const expectPanelUsable = async () => {
+            await v.evaluate("new Promise((resolve) => requestAnimationFrame(resolve))");
+            const state = JSON.parse(
+                await read(
+                    v,
+                    `JSON.stringify((() => {
+                        const panel = document.querySelector('#local-grid .dg-multiselect-panel');
+                        return {
+                            connected: panel?.isConnected ?? false,
+                            open: panel?.matches(':popover-open') ?? false,
+                            same: panel === window.initialMultiSelectPanel,
+                        };
+                    })())`,
+                ),
+            );
+            expect(state).toEqual({ connected: true, open: true, same: true });
+        };
 
         // Each change applies immediately; the panel must stay open and keep
         // the same usable nodes instead of being rebuilt by the reload
         await v.evaluate(check("Acme", true));
-        await waitFor(v, "window.grid.query.filters.company.value.length === 1");
+        await waitFor(
+            v,
+            "!window.grid.hasAttribute('data-loading') && window.grid.query.filters.company.value.length === 1",
+        );
         expect(await read(v, "JSON.stringify(window.grid.query.filters.company)")).toBe(
             JSON.stringify({ operator: "in", value: ["Acme"] }),
         );
-        expect(
-            await read(v, "document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')"),
-        ).toBe(true);
+        await expectPanelUsable();
         expect(await read(v, "document.querySelectorAll('#local-grid tbody tr.dg-data-row').length")).toBe(10);
 
         await v.evaluate(check("Google", true));
-        await waitFor(v, "window.grid.query.filters.company.value.length === 2");
+        await waitFor(
+            v,
+            "!window.grid.hasAttribute('data-loading') && window.grid.query.filters.company.value.length === 2",
+        );
         expect(await read(v, "JSON.stringify(window.grid.query.filters.company.value)")).toBe(
             JSON.stringify(["Acme", "Google"]),
         );
+        await expectPanelUsable();
 
         await v.evaluate(check("Acme", false));
-        await waitFor(v, "window.grid.query.filters.company.value.length === 1");
+        await waitFor(
+            v,
+            "!window.grid.hasAttribute('data-loading') && window.grid.query.filters.company.value.length === 1",
+        );
         expect(await read(v, "JSON.stringify(window.grid.query.filters.company.value)")).toBe(
             JSON.stringify(["Google"]),
         );
+        await expectPanelUsable();
 
         // Unchecking everything drops the filter entirely
         await v.evaluate(check("Google", false));
-        await waitFor(v, "window.grid.query.filters.company === undefined");
+        await waitFor(
+            v,
+            "!window.grid.hasAttribute('data-loading') && window.grid.query.filters.company === undefined",
+        );
+        await expectPanelUsable();
         expect(await read(v, "document.querySelectorAll('#local-grid tbody tr.dg-data-row').length")).toBe(10);
 
-        // Escape dismisses and restores focus to the trigger
+        // Escape dismisses the panel; Chrome also exposes native focus restoration.
         await v.evaluate(`(() => {
             document.querySelector('#local-grid .dg-multiselect-panel input').focus();
         })()`);
         await v.press("Escape");
         await waitFor(v, "!document.querySelector('#local-grid .dg-multiselect-panel').matches(':popover-open')");
-        expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
+        // Bun's WKWebView backend closes the native popover on Escape but does
+        // not expose WebKit's invoker focus restoration through activeElement.
+        // Keep testing the native focus contract on the Chrome backend.
+        if (IS_CHROME_BACKEND) {
+            expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
+        }
         expect(
             await read(v, "getComputedStyle(document.querySelector('#local-grid .dg-multiselect')).boxShadow"),
         ).not.toBe("none");
