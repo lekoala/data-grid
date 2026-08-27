@@ -172,6 +172,14 @@ test("the responsive toggle column always exists and toggles visibility", async 
     document.body.removeChild(inst);
 });
 
+test("the responsive toggle keeps an empty filter cell", async () => {
+    const inst = await makeReadyGrid({ columns: COLS, filterable: true });
+    const th = inst.querySelector('thead tr.dg-head-filters th[data-column-id="$responsive"]');
+    expect(th).toBeTruthy();
+    expect(th.querySelector("input, select, button")).toBeNull();
+    document.body.removeChild(inst);
+});
+
 test("responsiveStartOpen defaults to false", () => {
     expect(new DataGrid({}).options.responsiveStartOpen).toBe(false);
 });

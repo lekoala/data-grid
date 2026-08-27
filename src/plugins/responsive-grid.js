@@ -3,6 +3,16 @@ import debounce from "../utils/debounce.js";
 import { createDisclosureButton } from "../utils/disclosureButton.js";
 import { createSpanningRow } from "../utils/spanningRow.js";
 
+/** @typedef {{ th: HTMLElement, column: import("../data-grid.js").Column|null }} ResponsiveItem */
+/**
+ * @typedef ResponsiveLayout
+ * @property {ResponsiveItem[]} items
+ * @property {ResponsiveItem[]} visible
+ * @property {(th: HTMLElement) => Number} preferredWidth
+ * @property {(visibleItems: ResponsiveItem[]) => Number} requiredWidth
+ * @property {(column: import("../data-grid.js").Column|null) => Boolean} isColumnHidden
+ */
+
 const RESPONSIVE_CLASS = "dg-responsive";
 const RESPONSIVE_TOGGLE_WIDTH = 40;
 // Restore only when there is real headroom: avoids hide/show flapping when the
@@ -104,8 +114,8 @@ class ResponsiveGrid extends BasePlugin {
             title: "",
             class: `dg-disclosure-cell ${RESPONSIVE_CLASS}-toggle`,
             hidden: !this.hasHiddenColumns(),
-            renderHeaderCell: (th) => this.createHeaderCell(th),
-            renderFilterCell: () => this.createFilterCell(),
+            renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
+            renderFilterCell: () => {},
             renderCell: (ctx) => this.createDataCell(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
         });
     }
@@ -146,22 +156,8 @@ class ResponsiveGrid extends BasePlugin {
      * @returns {Boolean}
      */
     hasHiddenColumns() {
-        for (const col of this.grid.options.columns) {
-            if (col.responsiveHidden) {
-                return true;
-            }
-        }
-        return false;
+        return this.grid.options.columns.some((column) => column.responsiveHidden);
     }
-
-    /**
-     * @param {HTMLTableCellElement} th
-     */
-    createHeaderCell(th) {
-        th.classList.add("dg-not-resizable", "dg-not-sortable");
-    }
-
-    createFilterCell() {}
 
     /**
      * @param {import("../data-grid.js").CellContext} ctx
@@ -192,27 +188,62 @@ class ResponsiveGrid extends BasePlugin {
      * Apply responsive hide/show based on the last observed size.
      */
     resize() {
-        const grid = this.grid;
-        const table = grid.table;
-        const headerRow = grid.headerRow;
-        if (this.observerBlocked) {
+        const size = this._resizeWidth();
+        if (size === null) {
             return;
         }
-        if (!table || !headerRow) {
+        const table = this.grid.table;
+        if (!table) {
             return;
+        }
+        const layout = this._measureLayout();
+        if (!layout) {
+            return;
+        }
+        const changed = this._fitColumns(layout, size);
+        if (changed) {
+            this._rebuildDetailsSafely();
+        }
+        this._syncFooter(size);
+        table.style.visibility = "visible";
+    }
+
+    /**
+     * Resolve a new observed width worth processing.
+     * @returns {Number|null}
+     */
+    _resizeWidth() {
+        if (this.observerBlocked) {
+            return null;
+        }
+        if (!this.grid.table || !this.grid.headerRow) {
+            return null;
         }
         const entry = this._lastEntry;
         if (!entry) {
-            return;
+            return null;
         }
         // check inlineSize (width) and not blockSize (height)
         const size = this._entryWidth(entry);
         // The state is idempotent for a given width: skip duplicate evaluations
         // (ex: a resize that merely re-renders after a visibility change).
         if (size === this._lastProcessedWidth) {
-            return;
+            return null;
         }
         this._lastProcessedWidth = size;
+        return size;
+    }
+
+    /**
+     * Read the current column geometry once for a responsive fitting cycle.
+     * @returns {ResponsiveLayout|null}
+     */
+    _measureLayout() {
+        const grid = this.grid;
+        const headerRow = grid.headerRow;
+        if (!headerRow) {
+            return null;
+        }
 
         // Preferred (ideal) width of each rendered header column, computed once
         // per cycle and cached in a map to avoid repeated getComputedStyle/layout
@@ -237,23 +268,25 @@ class ResponsiveGrid extends BasePlugin {
 
         // Hideable candidates: data columns only, responsive !== "0", not
         // manually hidden. Ordered most important last (priority order).
-        const items = sortByPriority(
-            /** @type {HTMLElement[]} */ ([...headerRow.querySelectorAll("th[field]")])
-                .reverse() // Order takes precedence if no priority is set
-                .filter((th) => {
-                    const column = grid.getCol(th.getAttribute("field") ?? "");
-                    // Essential columns (never hidden) are excluded from the
-                    // hideable candidates.
-                    return column && this._isEssential(column) === false;
-                }),
-        ).map((th) => {
-            return {
-                th,
-                column: /** @type {import("../data-grid.js").Column|null} */ (
-                    grid.getCol(th.getAttribute("field") ?? "")
-                ),
-            };
-        });
+        const items = /** @type {ResponsiveItem[]} */ (
+            sortByPriority(
+                /** @type {HTMLElement[]} */ ([...headerRow.querySelectorAll("th[field]")])
+                    .reverse() // Order takes precedence if no priority is set
+                    .filter((th) => {
+                        const column = grid.getCol(th.getAttribute("field") ?? "");
+                        // Essential columns (never hidden) are excluded from the
+                        // hideable candidates.
+                        return column && this._isEssential(column) === false;
+                    }),
+            ).map((th) => {
+                return {
+                    th,
+                    column: /** @type {import("../data-grid.js").Column|null} */ (
+                        grid.getCol(th.getAttribute("field") ?? "")
+                    ),
+                };
+            })
+        );
 
         const isColumnHidden = (/** @type {import("../data-grid.js").Column|null} */ column) => {
             return Boolean(column && (column.hidden || column.responsiveHidden));
@@ -269,7 +302,7 @@ class ResponsiveGrid extends BasePlugin {
             .reduce((result, th) => {
                 return result + preferredWidth(/** @type {HTMLElement} */ (th));
             }, 0);
-        const requiredWidth = (/** @type {Array<any>} */ visibleItems) => {
+        const requiredWidth = (/** @type {ResponsiveItem[]} */ visibleItems) => {
             let total = fixedWidth;
             if (
                 grid.options.responsiveToggle &&
@@ -286,16 +319,31 @@ class ResponsiveGrid extends BasePlugin {
 
         // All data columns that are currently rendered (including responsive: 0
         // columns, which never hide but still consume width).
-        let visible = [...headerRow.querySelectorAll("th[field]")]
-            .map((th) => {
-                return {
-                    th,
-                    column: /** @type {import("../data-grid.js").Column|null} */ (
-                        grid.getCol(th.getAttribute("field") ?? "")
-                    ),
-                };
-            })
-            .filter(({ column }) => !isColumnHidden(column));
+        const visible = /** @type {ResponsiveItem[]} */ (
+            [...headerRow.querySelectorAll("th[field]")]
+                .map((th) => {
+                    return {
+                        th,
+                        column: /** @type {import("../data-grid.js").Column|null} */ (
+                            grid.getCol(th.getAttribute("field") ?? "")
+                        ),
+                    };
+                })
+                .filter(({ column }) => !isColumnHidden(column))
+        );
+
+        return { items, visible, preferredWidth, requiredWidth, isColumnHidden };
+    }
+
+    /**
+     * Hide or restore responsive columns until the measured layout fits.
+     * @param {ResponsiveLayout} layout
+     * @param {Number} size
+     * @returns {Boolean}
+     */
+    _fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden }, size) {
+        const grid = this.grid;
+        let visible = initialVisible;
         let changed = false;
 
         // The table is too wide: hide the next priority column until it fits.
@@ -334,13 +382,16 @@ class ResponsiveGrid extends BasePlugin {
             }
         }
 
-        if (changed) {
-            this.blockObserver();
-            this._rebuildDetails();
-            this.unblockObserver();
-        }
+        return changed;
+    }
 
+    /** @param {Number} size */
+    _syncFooter(size) {
         // Footer compact state is independent of column changes.
+        const table = this.grid.table;
+        if (!table) {
+            return;
+        }
         const footer = table.querySelector("tfoot");
         if (footer) {
             const realFooterWidth = /** @type {HTMLElement[]} */ ([
@@ -355,7 +406,12 @@ class ResponsiveGrid extends BasePlugin {
                 footer.classList.remove("dg-footer-compact");
             }
         }
-        table.style.visibility = "visible";
+    }
+
+    _rebuildDetailsSafely() {
+        this.blockObserver();
+        this._rebuildDetails();
+        this.unblockObserver();
     }
 
     computeLabelWidth() {
@@ -550,15 +606,24 @@ class ResponsiveGrid extends BasePlugin {
         // Collapse: move real cells back into the data row (canonical order)
         // and drop the wrapper.
         if (childRow && hasChildRow) {
-            for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
-                tr.appendChild(col);
-                col.setAttribute("hidden", "");
-            }
-            childRow.remove();
-            this._canonicalizeRow(tr);
+            this._restoreChildRow(tr, /** @type {HTMLTableRowElement} */ (childRow));
         }
         tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
         this._setToggleIcon(tr, false);
+    }
+
+    /**
+     * Return cells from a responsive detail row to their owning data row.
+     * @param {HTMLTableRowElement} tr
+     * @param {HTMLTableRowElement} childRow
+     */
+    _restoreChildRow(tr, childRow) {
+        for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
+            tr.appendChild(col);
+            col.setAttribute("hidden", "");
+        }
+        childRow.remove();
+        this._canonicalizeRow(tr);
     }
 
     /**
@@ -571,14 +636,11 @@ class ResponsiveGrid extends BasePlugin {
         for (const childRow of this.grid.querySelectorAll(`tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
             const tr = /** @type {HTMLTableRowElement} */ (childRow.previousElementSibling);
             if (tr) {
-                for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
-                    tr.appendChild(col);
-                    col.setAttribute("hidden", "");
-                }
-                this._canonicalizeRow(tr);
+                this._restoreChildRow(tr, /** @type {HTMLTableRowElement} */ (childRow));
                 tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
+            } else {
+                childRow.remove();
             }
-            childRow.remove();
         }
     }
 
