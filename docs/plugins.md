@@ -116,8 +116,11 @@ Use `rowDetailsStartOpen: true` to seed rows open. A toggle dispatches
 
 Responsive columns and row details have different roles: responsive columns
 adapt the table representation to the available width, while row details reveal
-additional application content. Keep the plugins independent and use the
-start-open responsive presentation when both are enabled:
+additional application content. By default, they share the row-details
+disclosure: one control opens or closes both sections.
+
+To keep responsive values visible while application details remain independently
+collapsible, use the start-open presentation without a responsive toggle:
 
 ```js
 const grid = new DataGrid({
@@ -129,6 +132,6 @@ const grid = new DataGrid({
 ```
 
 On narrow grids, hidden column values remain visible in a stacked child row and
-the row-details chevron is the only disclosure control. Setting
-`responsiveToggle: true` remains supported when two independent controls are
-intentionally required.
+the row-details chevron controls only the application details. This is useful
+when responsive values are part of the baseline record presentation rather than
+optional content.

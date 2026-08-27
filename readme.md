@@ -313,7 +313,11 @@ never overrides an explicit collapse, and the choice resets on the next data
 load.
 
 When responsive columns are combined with application-rendered `rowDetails`,
-prefer the start-open presentation without a responsive toggle:
+the default responsive toggle is replaced by the row-details disclosure. One
+control opens and closes both the hidden column values and application details.
+
+To keep responsive values visible while application details remain independently
+collapsible, use the start-open presentation without a responsive toggle:
 
 ```js
 new DataGrid({
@@ -325,8 +329,8 @@ new DataGrid({
 ```
 
 Responsive content is then the narrow-screen representation of normal table
-columns, while the remaining row-details chevron reveals genuinely additional
-content. The two plugins and their expansion states remain independent.
+columns, while the remaining row-details chevron reveals only the application
+content.
 
 ## API
 

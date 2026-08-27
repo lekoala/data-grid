@@ -87,3 +87,47 @@ test("RowDetails coexists with responsive child rows without becoming a data row
     expect(inst.querySelectorAll("tbody tr.dg-data-row td.dg-responsive-hidden[hidden]").length).toBe(1);
     document.body.removeChild(inst);
 });
+
+test("responsiveStartOpen seeds only responsive content before the shared disclosure is used", async () => {
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }, { field: "email", responsiveHidden: true }],
+        responsive: true,
+        responsiveStartOpen: true,
+        rowDetails: ({ row }) => `Profile for ${row.name}`,
+    });
+    const toggle = inst.querySelector("tbody .dg-row-details-toggle-control");
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).not.toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).toBeNull();
+
+    toggle.click();
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).not.toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).not.toBeNull();
+
+    toggle.click();
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).toBeNull();
+    document.body.removeChild(inst);
+});
+
+test("rowDetailsStartOpen opens every section governed by the shared disclosure", async () => {
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }, { field: "email", responsiveHidden: true }],
+        responsive: true,
+        rowDetailsStartOpen: true,
+        rowDetails: ({ row }) => `Profile for ${row.name}`,
+    });
+    const toggle = inst.querySelector("tbody .dg-row-details-toggle-control");
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).not.toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).not.toBeNull();
+
+    toggle.click();
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).toBeNull();
+    expect(inst.querySelector("tbody tr.dg-row-details-row")).toBeNull();
+    document.body.removeChild(inst);
+});
