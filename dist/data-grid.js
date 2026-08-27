@@ -3874,8 +3874,10 @@ class DraggableHeaders extends base_plugin_default {
     if (from === -1 || to === -1) {
       return;
     }
-    [cols[from], cols[to]] = [cols[to], cols[from]];
+    const moved = cols.splice(from, 1)[0];
+    cols.splice(to, 0, moved);
     this.grid.renderTable();
+    this.grid.renderBody();
     dispatch(this.grid, "columnReordered", {
       col: draggedId,
       from,
