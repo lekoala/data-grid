@@ -1306,9 +1306,29 @@ declare class DataGrid extends BaseElement {
      */
     renderDefaultHeaderCell(th: HTMLTableCellElement, ctx: CellContext): void;
     /**
+     * Apply the intrinsic minimum and optional preferred width of a header.
+     * @param {HTMLTableCellElement} th
+     * @param {Column} column
+     * @param {HTMLTableCellElement|undefined} sampleTh
+     */
+    _applyHeaderSizing(th: HTMLTableCellElement, column: Column, sampleTh: HTMLTableCellElement | undefined): void;
+    /**
+     * Render a plain title or the sortable header control.
+     * @param {HTMLTableCellElement} th
+     * @param {Column} column
+     * @param {Boolean} sortable
+     */
+    _renderHeaderContent(th: HTMLTableCellElement, column: Column, sortable: boolean): void;
+    /**
      * @param {HTMLTableSectionElement} thead
      */
     createColumnFilters(thead: HTMLTableSectionElement): void;
+    /**
+     * Register the transient IME/debounce state of text filter inputs. Event
+     * handling itself remains delegated to the host.
+     * @param {HTMLTableRowElement} tr
+     */
+    _registerFilterInputs(tr: HTMLTableRowElement): void;
     /**
      * Default filter cell renderer for base columns.
      * @param {HTMLTableCellElement} th
@@ -1328,6 +1348,19 @@ declare class DataGrid extends BaseElement {
      * @returns {HTMLInputElement|HTMLSelectElement|HTMLDivElement}
      */
     createFilterElement(column: Column, relatedTh: HTMLTableCellElement): HTMLInputElement | HTMLSelectElement | HTMLDivElement;
+    /**
+     * @param {Column} column
+     * @param {"select"|"boolean"} type
+     * @returns {HTMLSelectElement}
+     */
+    _createSelectFilter(column: Column, type: "select" | "boolean"): HTMLSelectElement;
+    /**
+     * @param {HTMLInputElement} input
+     * @param {Column} column
+     * @param {"text"|"number"|"date"} type
+     * @returns {HTMLInputElement}
+     */
+    _configureTextFilter(input: HTMLInputElement, column: Column, type: "text" | "number" | "date"): HTMLInputElement;
     /**
      * Resolve the options of a select filter, directly consumable by the
      * <select>. Never derives from the currently loaded page: for a server

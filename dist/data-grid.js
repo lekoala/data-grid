@@ -410,6 +410,77 @@ function isNumericValue(value) {
 function normalizeText(value) {
   return String(value ?? "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
+function compareValues(left, right, numeric = isNumericValue(left) && isNumericValue(right)) {
+  if (numeric) {
+    return Number(left) - Number(right);
+  }
+  return `${left ?? ""}`.localeCompare(String(right), undefined, { sensitivity: "base" });
+}
+function matchesComparison(comparison, operator) {
+  if (operator === "lt")
+    return comparison < 0;
+  if (operator === "lte")
+    return comparison <= 0;
+  if (operator === "gt")
+    return comparison > 0;
+  return comparison >= 0;
+}
+function matchesFilter(cell, state) {
+  const operator = state.operator ?? "contains";
+  const value = state.value;
+  if (operator === "empty")
+    return cell === "" || cell === null || cell === undefined;
+  if (operator === "notEmpty")
+    return cell !== "" && cell !== null && cell !== undefined;
+  if (value === null || value === undefined || value === "")
+    return true;
+  const cellText = normalizeText(cell);
+  const valueText = normalizeText(value);
+  switch (operator) {
+    case "eq":
+    case "neq": {
+      const cellBool = typeof value === "boolean" ? normalizeBoolean(cell) : null;
+      const equal = typeof value === "boolean" ? cellBool === null ? `${cell}` === String(value) : cellBool === value : cellText === valueText;
+      return operator === "eq" ? equal : !equal;
+    }
+    case "startsWith":
+      return cellText.startsWith(valueText);
+    case "notStartsWith":
+      return !cellText.startsWith(valueText);
+    case "endsWith":
+      return cellText.endsWith(valueText);
+    case "notEndsWith":
+      return !cellText.endsWith(valueText);
+    case "notContains":
+      return !cellText.includes(valueText);
+    case "lt":
+    case "lte":
+    case "gt":
+    case "gte":
+      return matchesComparison(compareValues(cell, value), operator);
+    case "between": {
+      if (!Array.isArray(value) || value.length !== 2)
+        return true;
+      const [min, max] = value;
+      const numeric = isNumericValue(cell) && isNumericValue(min) && isNumericValue(max);
+      return compareValues(cell, min, numeric) >= 0 && compareValues(cell, max, numeric) <= 0;
+    }
+    case "in":
+      if (!Array.isArray(value) || !value.length)
+        return true;
+      return value.some((option) => {
+        const cellBool = normalizeBoolean(cell);
+        if (cellBool !== null) {
+          const optionBool = normalizeBoolean(option);
+          if (optionBool !== null)
+            return optionBool === cellBool;
+        }
+        return normalizeText(option) === cellText;
+      });
+    default:
+      return cellText.includes(valueText);
+  }
+}
 function applyFilters(rows, filters) {
   if (!filters) {
     return rows.slice();
@@ -417,125 +488,8 @@ function applyFilters(rows, filters) {
   return rows.filter((item) => {
     for (const [field, filter] of Object.entries(filters)) {
       const state = typeof filter === "object" ? filter : { operator: "contains", value: filter };
-      const operator = state.operator ?? "contains";
-      const value = state.value;
-      const cell = item[field];
-      if (operator === "empty") {
-        if (cell !== "" && cell !== null && cell !== undefined) {
-          return false;
-        }
-        continue;
-      }
-      if (operator === "notEmpty") {
-        if (cell === "" || cell === null || cell === undefined) {
-          return false;
-        }
-        continue;
-      }
-      if (value === null || value === undefined || value === "") {
-        continue;
-      }
-      const cellText = normalizeText(cell);
-      const valueText = normalizeText(value);
-      switch (operator) {
-        case "eq":
-        case "neq": {
-          let equal;
-          if (typeof value === "boolean") {
-            const cellBool = normalizeBoolean(cell);
-            equal = cellBool === null ? `${cell}` === String(value) : cellBool === value;
-          } else {
-            equal = cellText === valueText;
-          }
-          if (operator === "eq" ? !equal : equal)
-            return false;
-          break;
-        }
-        case "startsWith":
-          if (!cellText.startsWith(valueText))
-            return false;
-          break;
-        case "notStartsWith":
-          if (cellText.startsWith(valueText))
-            return false;
-          break;
-        case "endsWith":
-          if (!cellText.endsWith(valueText))
-            return false;
-          break;
-        case "notEndsWith":
-          if (cellText.endsWith(valueText))
-            return false;
-          break;
-        case "notContains":
-          if (cellText.includes(valueText))
-            return false;
-          break;
-        case "lt":
-        case "lte":
-        case "gt":
-        case "gte":
-          if (isNumericValue(cell) && isNumericValue(value)) {
-            const a = Number(cell);
-            const b = Number(value);
-            if (operator === "lt" && a >= b)
-              return false;
-            if (operator === "lte" && a > b)
-              return false;
-            if (operator === "gt" && a <= b)
-              return false;
-            if (operator === "gte" && a < b)
-              return false;
-          } else {
-            const cmp = `${cell ?? ""}`.localeCompare(String(value), undefined, { sensitivity: "base" });
-            if (operator === "lt" && cmp >= 0)
-              return false;
-            if (operator === "lte" && cmp > 0)
-              return false;
-            if (operator === "gt" && cmp <= 0)
-              return false;
-            if (operator === "gte" && cmp < 0)
-              return false;
-          }
-          break;
-        case "between": {
-          if (!Array.isArray(value) || value.length !== 2) {
-            continue;
-          }
-          const [min, max] = value;
-          if (isNumericValue(cell) && isNumericValue(min) && isNumericValue(max)) {
-            const v = Number(cell);
-            if (v < Number(min) || v > Number(max))
-              return false;
-          } else {
-            const cmpMin = `${cell ?? ""}`.localeCompare(String(min), undefined, { sensitivity: "base" });
-            const cmpMax = `${cell ?? ""}`.localeCompare(String(max), undefined, { sensitivity: "base" });
-            if (cmpMin < 0 || cmpMax > 0)
-              return false;
-          }
-          break;
-        }
-        case "in":
-          if (!Array.isArray(value) || !value.length) {
-            continue;
-          }
-          if (!value.some((v) => {
-            const cellBool = normalizeBoolean(cell);
-            if (cellBool !== null) {
-              const optionBool = normalizeBoolean(v);
-              if (optionBool !== null) {
-                return optionBool === cellBool;
-              }
-            }
-            return normalizeText(v) === cellText;
-          })) {
-            return false;
-          }
-          break;
-        default:
-          if (!cellText.includes(valueText))
-            return false;
-      }
+      if (!matchesFilter(item[field], state))
+        return false;
     }
     return true;
   });
@@ -1151,11 +1105,13 @@ function normalizeQuery(query) {
 // src/utils/addSelectOption.js
 function addSelectOption(el, value, label, checked = false) {
   const opt = document.createElement("option");
+  const text = String(label);
   opt.value = `${value}`;
   if (checked) {
     opt.selected = true;
   }
-  opt.label = label;
+  opt.label = text;
+  opt.text = text;
   el.appendChild(opt);
 }
 
@@ -3135,17 +3091,17 @@ class DataGrid extends base_element_default {
   renderDefaultHeaderCell(th, ctx) {
     const { column, sampleTh } = ctx;
     const sortable = this.isColumnSortable(column);
-    if (sortable) {
-      th.classList.add("dg-sortable");
-    }
     if (this.options.responsive) {
       th.setAttribute("data-responsive", String(column.responsive || ""));
     }
+    this._applyHeaderSizing(th, column, sampleTh);
+    this._renderHeaderContent(th, column, sortable);
+  }
+  _applyHeaderSizing(th, column, sampleTh) {
     const defaults = getFormatDefaults(column.format, column.formatOptions);
     const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
     const effectiveMin = Math.max(MIN_COLUMN_WIDTH, intrinsicWidth, column.minWidth ?? 0, defaults?.minWidth ?? 0);
     th.dataset.minWidth = `${effectiveMin}`;
-    applyColumnDefinition(th, column);
     const preferredWidth = column.width || defaults?.width;
     if (preferredWidth !== undefined && Number.isFinite(preferredWidth)) {
       const width = Math.max(effectiveMin, preferredWidth);
@@ -3155,10 +3111,10 @@ class DataGrid extends base_element_default {
       th.removeAttribute("width");
       delete th.dataset.preferredWidth;
     }
-    if (isColumnHidden(column)) {
-      th.setAttribute("hidden", "");
-    }
+  }
+  _renderHeaderContent(th, column, sortable) {
     if (sortable) {
+      th.classList.add("dg-sortable");
       const direction = this.getColumnSortDirection(column.field ?? "");
       if (direction) {
         th.setAttribute("aria-sort", direction === "asc" ? "ascending" : "descending");
@@ -3222,8 +3178,10 @@ class DataGrid extends base_element_default {
     } else if (thead && !tr.parentNode) {
       thead.appendChild(tr);
     }
-    const filteredRows = tr.querySelectorAll(this._filterSelector);
-    for (const el of filteredRows) {
+    this._registerFilterInputs(tr);
+  }
+  _registerFilterInputs(tr) {
+    for (const el of tr.querySelectorAll(this._filterSelector)) {
       if (/select/i.test(el.tagName) || el.classList.contains("dg-multiselect")) {
         continue;
       }
@@ -3283,13 +3241,20 @@ class DataGrid extends base_element_default {
       return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
     }
     const isSelect = type === "select" || type === "boolean";
-    const filter = isSelect ? document.createElement("select") : document.createElement("input");
+    const filter = isSelect ? this._createSelectFilter(column, type) : this._configureTextFilter(document.createElement("input"), column, type);
     filter.classList.add("dg-filter");
     filter.classList.add("dg-filter-control");
     filter.dataset.filterMode = type;
     if (isPercentColumn(column)) {
       filter.dataset.percent = "true";
     }
+    filter.dataset.name = column.field ?? "";
+    filter.id = randstr("dg-filter-");
+    filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id") ?? "");
+    return filter;
+  }
+  _createSelectFilter(column, type) {
+    const filter = document.createElement("select");
     if (type === "boolean") {
       filter.dataset.align = "start";
       const first = getFirstFilterOption(column, this.defaultColumn);
@@ -3298,43 +3263,33 @@ class DataGrid extends base_element_default {
         { value: "true", text: this.labels?.booleanTrue ?? "Yes" },
         { value: "false", text: this.labels?.booleanFalse ?? "No" }
       ];
-      for (const e of options) {
-        const opt = document.createElement("option");
-        opt.value = `${e.value}`;
-        opt.text = e.text;
-        filter.add(opt);
-      }
-    } else if (type === "select") {
-      for (const e of this.getFilterOptions(column)) {
-        const opt = document.createElement("option");
-        opt.value = `${e.value}`;
-        opt.text = e.text;
-        if (filter instanceof HTMLSelectElement) {
-          filter.add(opt);
-        }
+      for (const option of options) {
+        addSelectOption(filter, String(option.value), option.text);
       }
     } else {
-      const input = filter;
-      input.type = "text";
-      input.inputMode = type === "number" ? "decimal" : "search";
-      input.autocomplete = "off";
-      if (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder) {
-        if (type === "date") {
-          input.placeholder = "YYYY-MM-DD";
-        } else if (isPercentColumn(column)) {
-          input.placeholder = "%";
-        } else {
-          input.placeholder = this.defaultColumn.filterPlaceholder ?? "";
-        }
-      } else {
-        input.placeholder = column.filterPlaceholder ?? "";
+      for (const option of this.getFilterOptions(column)) {
+        addSelectOption(filter, String(option.value), option.text);
       }
-      input.spellcheck = false;
     }
-    filter.dataset.name = column.field ?? "";
-    filter.id = randstr("dg-filter-");
-    filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id") ?? "");
     return filter;
+  }
+  _configureTextFilter(input, column, type) {
+    input.type = "text";
+    input.inputMode = type === "number" ? "decimal" : "search";
+    input.autocomplete = "off";
+    if (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder) {
+      if (type === "date") {
+        input.placeholder = "YYYY-MM-DD";
+      } else if (isPercentColumn(column)) {
+        input.placeholder = "%";
+      } else {
+        input.placeholder = this.defaultColumn.filterPlaceholder ?? "";
+      }
+    } else {
+      input.placeholder = column.filterPlaceholder ?? "";
+    }
+    input.spellcheck = false;
+    return input;
   }
   getFilterOptions(column) {
     const field = column.field;

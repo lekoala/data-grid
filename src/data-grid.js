@@ -3041,12 +3041,20 @@ class DataGrid extends BaseElement {
     renderDefaultHeaderCell(th, ctx) {
         const { column, sampleTh } = ctx;
         const sortable = this.isColumnSortable(column);
-        if (sortable) {
-            th.classList.add("dg-sortable");
-        }
         if (this.options.responsive) {
             th.setAttribute("data-responsive", String(column.responsive || ""));
         }
+        this._applyHeaderSizing(th, column, sampleTh);
+        this._renderHeaderContent(th, column, sortable);
+    }
+
+    /**
+     * Apply the intrinsic minimum and optional preferred width of a header.
+     * @param {HTMLTableCellElement} th
+     * @param {Column} column
+     * @param {HTMLTableCellElement|undefined} sampleTh
+     */
+    _applyHeaderSizing(th, column, sampleTh) {
         // Column sizing contract: the minimum is the largest of the intrinsic
         // header width, an explicit minWidth and the formatter floor; the
         // preferred width is the explicit `width` or the formatter suggestion;
@@ -3056,7 +3064,6 @@ class DataGrid extends BaseElement {
         const intrinsicWidth = getTextWidth(column.title ?? "", sampleTh ?? document.body, true) + 20;
         const effectiveMin = Math.max(MIN_COLUMN_WIDTH, intrinsicWidth, column.minWidth ?? 0, defaults?.minWidth ?? 0);
         th.dataset.minWidth = `${effectiveMin}`;
-        applyColumnDefinition(th, column);
 
         // `column.width` is 0 when unset (defaultColumn), so the falsy check is
         // intentional: 0 means "no preferred width".
@@ -3071,11 +3078,17 @@ class DataGrid extends BaseElement {
             th.removeAttribute("width");
             delete th.dataset.preferredWidth;
         }
-        if (isColumnHidden(column)) {
-            th.setAttribute("hidden", "");
-        }
+    }
 
+    /**
+     * Render a plain title or the sortable header control.
+     * @param {HTMLTableCellElement} th
+     * @param {Column} column
+     * @param {Boolean} sortable
+     */
+    _renderHeaderContent(th, column, sortable) {
         if (sortable) {
+            th.classList.add("dg-sortable");
             const direction = this.getColumnSortDirection(column.field ?? "");
             if (direction) {
                 th.setAttribute("aria-sort", direction === "asc" ? "ascending" : "descending");
@@ -3164,12 +3177,16 @@ class DataGrid extends BaseElement {
             thead.appendChild(tr);
         }
 
-        // Filter event handling is delegated to the host: select filters apply
-        // on change, text filters via live input. Only the per-input IME /
-        // debounce state is registered here so a rerender needs no listener
-        // re-attachment.
-        const filteredRows = tr.querySelectorAll(this._filterSelector);
-        for (const el of filteredRows) {
+        this._registerFilterInputs(tr);
+    }
+
+    /**
+     * Register the transient IME/debounce state of text filter inputs. Event
+     * handling itself remains delegated to the host.
+     * @param {HTMLTableRowElement} tr
+     */
+    _registerFilterInputs(tr) {
+        for (const el of tr.querySelectorAll(this._filterSelector)) {
             // Native selects apply on change; the multi select is not a text
             // input either, only plain inputs need a debounced state here.
             if (/select/i.test(el.tagName) || el.classList.contains("dg-multiselect")) {
@@ -3262,7 +3279,9 @@ class DataGrid extends BaseElement {
             return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
         }
         const isSelect = type === "select" || type === "boolean";
-        const filter = isSelect ? document.createElement("select") : document.createElement("input");
+        const filter = isSelect
+            ? this._createSelectFilter(column, type)
+            : this._configureTextFilter(document.createElement("input"), column, type);
         filter.classList.add("dg-filter");
         filter.classList.add("dg-filter-control");
         // The resolved mode travels on the control: filterData() reads it to
@@ -3273,6 +3292,21 @@ class DataGrid extends BaseElement {
             // fraction, so filterData() divides by 100.
             filter.dataset.percent = "true";
         }
+        // Allows binding filter to this column
+        filter.dataset.name = column.field ?? "";
+        filter.id = randstr("dg-filter-");
+        // Don't use aria-label as it triggers autocomplete
+        filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id") ?? "");
+        return filter;
+    }
+
+    /**
+     * @param {Column} column
+     * @param {"select"|"boolean"} type
+     * @returns {HTMLSelectElement}
+     */
+    _createSelectFilter(column, type) {
+        const filter = document.createElement("select");
         if (type === "boolean") {
             // Tri-state select sharing the boolean formatter semantics: the
             // empty option filters nothing, "true"/"false" compare through
@@ -3286,50 +3320,44 @@ class DataGrid extends BaseElement {
                 { value: "true", text: this.labels?.booleanTrue ?? "Yes" },
                 { value: "false", text: this.labels?.booleanFalse ?? "No" },
             ];
-            for (const e of options) {
-                const opt = document.createElement("option");
-                opt.value = `${e.value}`;
-                opt.text = e.text;
-                /** @type {HTMLSelectElement} */ (filter).add(opt);
-            }
-        } else if (type === "select") {
-            for (const e of this.getFilterOptions(column)) {
-                const opt = document.createElement("option");
-                opt.value = `${e.value}`;
-                opt.text = e.text;
-
-                if (filter instanceof HTMLSelectElement) {
-                    filter.add(opt);
-                }
+            for (const option of options) {
+                addSelectOption(filter, String(option.value), option.text);
             }
         } else {
-            const input = /** @type {HTMLInputElement} */ (filter);
-            input.type = "text";
-            // Numeric keyboard for number, standard keyboard for date: partial
-            // values need the "-" separator, which numeric pads often hide.
-            input.inputMode = type === "number" ? "decimal" : "search";
-            input.autocomplete = "off";
-            if (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder) {
-                // No explicit placeholder: use the column contract (partial ISO
-                // date, visible percent scale) or the generic ellipsis default.
-                if (type === "date") {
-                    input.placeholder = "YYYY-MM-DD";
-                } else if (isPercentColumn(column)) {
-                    input.placeholder = "%";
-                } else {
-                    input.placeholder = this.defaultColumn.filterPlaceholder ?? "";
-                }
-            } else {
-                input.placeholder = column.filterPlaceholder ?? "";
+            for (const option of this.getFilterOptions(column)) {
+                addSelectOption(filter, String(option.value), option.text);
             }
-            input.spellcheck = false;
         }
-        // Allows binding filter to this column
-        filter.dataset.name = column.field ?? "";
-        filter.id = randstr("dg-filter-");
-        // Don't use aria-label as it triggers autocomplete
-        filter.setAttribute("aria-labelledby", relatedTh.getAttribute("id") ?? "");
         return filter;
+    }
+
+    /**
+     * @param {HTMLInputElement} input
+     * @param {Column} column
+     * @param {"text"|"number"|"date"} type
+     * @returns {HTMLInputElement}
+     */
+    _configureTextFilter(input, column, type) {
+        input.type = "text";
+        // Numeric keyboard for number, standard keyboard for date: partial
+        // values need the "-" separator, which numeric pads often hide.
+        input.inputMode = type === "number" ? "decimal" : "search";
+        input.autocomplete = "off";
+        if (!column.filterPlaceholder || column.filterPlaceholder === this.defaultColumn.filterPlaceholder) {
+            // No explicit placeholder: use the column contract (partial ISO
+            // date, visible percent scale) or the generic ellipsis default.
+            if (type === "date") {
+                input.placeholder = "YYYY-MM-DD";
+            } else if (isPercentColumn(column)) {
+                input.placeholder = "%";
+            } else {
+                input.placeholder = this.defaultColumn.filterPlaceholder ?? "";
+            }
+        } else {
+            input.placeholder = column.filterPlaceholder ?? "";
+        }
+        input.spellcheck = false;
+        return input;
     }
 
     /**

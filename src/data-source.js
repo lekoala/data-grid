@@ -131,6 +131,99 @@ function normalizeText(value) {
 }
 
 /**
+ * Compare two values numerically when possible, otherwise as text.
+ * @param {any} left
+ * @param {any} right
+ * @param {Boolean} [numeric]
+ * @returns {Number}
+ */
+function compareValues(left, right, numeric = isNumericValue(left) && isNumericValue(right)) {
+    if (numeric) {
+        return Number(left) - Number(right);
+    }
+    return `${left ?? ""}`.localeCompare(String(right), undefined, { sensitivity: "base" });
+}
+
+/**
+ * Match a comparison result against a relational filter operator.
+ * @param {Number} comparison
+ * @param {"lt"|"lte"|"gt"|"gte"} operator
+ * @returns {Boolean}
+ */
+function matchesComparison(comparison, operator) {
+    if (operator === "lt") return comparison < 0;
+    if (operator === "lte") return comparison <= 0;
+    if (operator === "gt") return comparison > 0;
+    return comparison >= 0;
+}
+
+/**
+ * Whether one cell matches a normalized filter state.
+ * @param {any} cell
+ * @param {FilterState} state
+ * @returns {Boolean}
+ */
+function matchesFilter(cell, state) {
+    const operator = state.operator ?? "contains";
+    const value = state.value;
+
+    if (operator === "empty") return cell === "" || cell === null || cell === undefined;
+    if (operator === "notEmpty") return cell !== "" && cell !== null && cell !== undefined;
+    if (value === null || value === undefined || value === "") return true;
+
+    const cellText = normalizeText(cell);
+    const valueText = normalizeText(value);
+    switch (operator) {
+        case "eq":
+        case "neq": {
+            // Boolean filters follow the same normalization as the formatter.
+            const cellBool = typeof value === "boolean" ? normalizeBoolean(cell) : null;
+            const equal =
+                typeof value === "boolean"
+                    ? cellBool === null
+                        ? `${cell}` === String(value)
+                        : cellBool === value
+                    : cellText === valueText;
+            return operator === "eq" ? equal : !equal;
+        }
+        case "startsWith":
+            return cellText.startsWith(valueText);
+        case "notStartsWith":
+            return !cellText.startsWith(valueText);
+        case "endsWith":
+            return cellText.endsWith(valueText);
+        case "notEndsWith":
+            return !cellText.endsWith(valueText);
+        case "notContains":
+            return !cellText.includes(valueText);
+        case "lt":
+        case "lte":
+        case "gt":
+        case "gte":
+            return matchesComparison(compareValues(cell, value), operator);
+        case "between": {
+            if (!Array.isArray(value) || value.length !== 2) return true;
+            const [min, max] = value;
+            const numeric = isNumericValue(cell) && isNumericValue(min) && isNumericValue(max);
+            return compareValues(cell, min, numeric) >= 0 && compareValues(cell, max, numeric) <= 0;
+        }
+        case "in":
+            // An empty selection means "no filter", never "match nothing".
+            if (!Array.isArray(value) || !value.length) return true;
+            return value.some((option) => {
+                const cellBool = normalizeBoolean(cell);
+                if (cellBool !== null) {
+                    const optionBool = normalizeBoolean(option);
+                    if (optionBool !== null) return optionBool === cellBool;
+                }
+                return normalizeText(option) === cellText;
+            });
+        default:
+            return cellText.includes(valueText);
+    }
+}
+
+/**
  * Apply structured filters to an array.
  * Semantics:
  * - empty := null | undefined | "" (0 and false are NOT empty)
@@ -156,116 +249,9 @@ export function applyFilters(rows, filters) {
     }
     return rows.filter((item) => {
         for (const [field, filter] of Object.entries(filters)) {
+            /** @type {FilterState} */
             const state = typeof filter === "object" ? filter : { operator: "contains", value: filter };
-            const operator = state.operator ?? "contains";
-            const value = state.value;
-            const cell = item[field];
-            if (operator === "empty") {
-                if (cell !== "" && cell !== null && cell !== undefined) {
-                    return false;
-                }
-                continue;
-            }
-            if (operator === "notEmpty") {
-                if (cell === "" || cell === null || cell === undefined) {
-                    return false;
-                }
-                continue;
-            }
-            // All remaining operators require a value
-            if (value === null || value === undefined || value === "") {
-                continue;
-            }
-            const cellText = normalizeText(cell);
-            const valueText = normalizeText(value);
-            switch (operator) {
-                case "eq":
-                case "neq": {
-                    // A boolean filter value compares normalized booleans on
-                    // both sides, so raw 1 / "1" / "true" cells match the same
-                    // way the boolean formatter displays them.
-                    let equal;
-                    if (typeof value === "boolean") {
-                        const cellBool = normalizeBoolean(cell);
-                        equal = cellBool === null ? `${cell}` === String(value) : cellBool === value;
-                    } else {
-                        equal = cellText === valueText;
-                    }
-                    if (operator === "eq" ? !equal : equal) return false;
-                    break;
-                }
-                case "startsWith":
-                    if (!cellText.startsWith(valueText)) return false;
-                    break;
-                case "notStartsWith":
-                    if (cellText.startsWith(valueText)) return false;
-                    break;
-                case "endsWith":
-                    if (!cellText.endsWith(valueText)) return false;
-                    break;
-                case "notEndsWith":
-                    if (cellText.endsWith(valueText)) return false;
-                    break;
-                case "notContains":
-                    if (cellText.includes(valueText)) return false;
-                    break;
-                case "lt":
-                case "lte":
-                case "gt":
-                case "gte":
-                    if (isNumericValue(cell) && isNumericValue(value)) {
-                        const a = Number(cell);
-                        const b = Number(value);
-                        if (operator === "lt" && a >= b) return false;
-                        if (operator === "lte" && a > b) return false;
-                        if (operator === "gt" && a <= b) return false;
-                        if (operator === "gte" && a < b) return false;
-                    } else {
-                        const cmp = `${cell ?? ""}`.localeCompare(String(value), undefined, { sensitivity: "base" });
-                        if (operator === "lt" && cmp >= 0) return false;
-                        if (operator === "lte" && cmp > 0) return false;
-                        if (operator === "gt" && cmp <= 0) return false;
-                        if (operator === "gte" && cmp < 0) return false;
-                    }
-                    break;
-                case "between": {
-                    if (!Array.isArray(value) || value.length !== 2) {
-                        continue;
-                    }
-                    const [min, max] = value;
-                    if (isNumericValue(cell) && isNumericValue(min) && isNumericValue(max)) {
-                        const v = Number(cell);
-                        if (v < Number(min) || v > Number(max)) return false;
-                    } else {
-                        const cmpMin = `${cell ?? ""}`.localeCompare(String(min), undefined, { sensitivity: "base" });
-                        const cmpMax = `${cell ?? ""}`.localeCompare(String(max), undefined, { sensitivity: "base" });
-                        if (cmpMin < 0 || cmpMax > 0) return false;
-                    }
-                    break;
-                }
-                case "in":
-                    // An empty selection means "no filter", never "match nothing"
-                    if (!Array.isArray(value) || !value.length) {
-                        continue;
-                    }
-                    if (
-                        !value.some((v) => {
-                            const cellBool = normalizeBoolean(cell);
-                            if (cellBool !== null) {
-                                const optionBool = normalizeBoolean(v);
-                                if (optionBool !== null) {
-                                    return optionBool === cellBool;
-                                }
-                            }
-                            return normalizeText(v) === cellText;
-                        })
-                    ) {
-                        return false;
-                    }
-                    break;
-                default:
-                    if (!cellText.includes(valueText)) return false;
-            }
+            if (!matchesFilter(item[field], state)) return false;
         }
         return true;
     });
