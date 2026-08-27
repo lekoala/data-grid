@@ -1,20 +1,19 @@
 import BasePlugin from "../core/base-plugin.js";
 import { dispatch } from "../utils/dispatch.js";
+import { off, on } from "../utils/events.js";
+
+const DRAG_EVENTS = ["dragstart", "dragover", "drop"];
 
 /**
  * Allows to move headers
  */
 class DraggableHeaders extends BasePlugin {
     connected() {
-        this.grid.addEventListener("dragstart", this);
-        this.grid.addEventListener("dragover", this);
-        this.grid.addEventListener("drop", this);
+        on(this.grid, DRAG_EVENTS, this);
     }
 
     disconnected() {
-        this.grid.removeEventListener("dragstart", this);
-        this.grid.removeEventListener("dragover", this);
-        this.grid.removeEventListener("drop", this);
+        off(this.grid, DRAG_EVENTS, this);
     }
 
     /**

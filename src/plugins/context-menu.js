@@ -1,4 +1,7 @@
 import BasePlugin from "../core/base-plugin.js";
+import { off, on } from "../utils/events.js";
+
+const MENU_EVENTS = ["contextmenu", "change"];
 
 /**
  * Create a right click menu on the headers
@@ -21,12 +24,10 @@ class ContextMenu extends BasePlugin {
         menu.popover = "auto";
         this.grid.appendChild(menu);
         this.menu = menu;
-        this.grid.addEventListener("contextmenu", this);
-        this.grid.addEventListener("change", this);
+        on(this.grid, MENU_EVENTS, this);
     }
     disconnected() {
-        this.grid.removeEventListener("contextmenu", this);
-        this.grid.removeEventListener("change", this);
+        off(this.grid, MENU_EVENTS, this);
         this.menu?.remove();
         this.menu = null;
     }

@@ -1,4 +1,7 @@
 import BasePlugin from "../core/base-plugin.js";
+import { off, on } from "../utils/events.js";
+
+const TOUCH_EVENTS = ["touchstart", "touchmove"];
 
 /**
  * Allows to paginate with horizontal swipe motions
@@ -12,15 +15,11 @@ class TouchSupport extends BasePlugin {
         this.touch = null;
     }
     connected() {
-        const grid = this.grid;
-        grid.addEventListener("touchstart", this, { passive: true });
-        grid.addEventListener("touchmove", this, { passive: true });
+        on(this.grid, TOUCH_EVENTS, this, { passive: true });
     }
 
     disconnected() {
-        const grid = this.grid;
-        grid.removeEventListener("touchstart", this);
-        grid.removeEventListener("touchmove", this);
+        off(this.grid, TOUCH_EVENTS, this);
     }
 
     ontouchstart(/** @type {TouchEvent} */ e) {

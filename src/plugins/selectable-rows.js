@@ -1,7 +1,9 @@
 import BasePlugin from "../core/base-plugin.js";
+import { off, on } from "../utils/events.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
 const SELECT_ALL_CLASS = "dg-select-all";
+const SELECTION_EVENTS = ["selectionChange", "change", "click"];
 
 /**
  * Allows to select rows
@@ -16,15 +18,11 @@ class SelectableRows extends BasePlugin {
     }
 
     connected() {
-        this.grid.addEventListener("selectionChange", this);
-        this.grid.addEventListener("change", this);
-        this.grid.addEventListener("click", this);
+        on(this.grid, SELECTION_EVENTS, this);
     }
 
     disconnected() {
-        this.grid.removeEventListener("selectionChange", this);
-        this.grid.removeEventListener("change", this);
-        this.grid.removeEventListener("click", this);
+        off(this.grid, SELECTION_EVENTS, this);
     }
 
     onselectionChange() {

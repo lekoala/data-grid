@@ -67,7 +67,7 @@ test("it can set labels", async () => {
     resetLabels();
 });
 
-test("setLabels updates connected instances at runtime", async () => {
+test("connected instances update labels only when explicitly requested", async () => {
     const inst = makeInst();
     document.body.appendChild(inst);
 
@@ -76,6 +76,8 @@ test("setLabels updates connected instances at runtime", async () => {
             try {
                 DataGrid.setLabels({ noData: "Nothing here" });
                 expect(inst.labels.noData).toBe("Nothing here");
+                expect(inst.querySelector(".dg-status").textContent).toBe("No data");
+                inst.updateLabels();
                 expect(inst.querySelector(".dg-status").textContent).toBe("Nothing here");
             } finally {
                 resolve();

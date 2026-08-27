@@ -318,19 +318,20 @@ export function formatTextFilterQuery(filter) {
         return `${token}${text}`;
     }
 
+    const pattern = escapePatternText(text);
     switch (filter.operator) {
         case "notContains":
-            return `!${escapePatternText(text)}`;
+            return `!${pattern}`;
         case "notStartsWith":
-            return `!${escapePatternText(text)}%`;
+            return `!${pattern}%`;
         case "notEndsWith":
-            return `!%${escapePatternText(text)}`;
+            return `!%${pattern}`;
         case "startsWith":
-            return `${escapePatternText(text)}%`;
+            return `${pattern}%`;
         case "endsWith":
-            return `%${escapePatternText(text)}`;
+            return `%${pattern}`;
         default:
-            return escapePatternText(text);
+            return pattern;
     }
 }
 

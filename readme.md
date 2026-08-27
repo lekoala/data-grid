@@ -363,6 +363,7 @@ response protection).
 | `DataGrid.registerPlugins(map)`                          | register plugin constructors                    |
 | `DataGrid.getLabels()` / `setLabels(labels)`             | read / translate the UI labels                  |
 | `DataGrid.loadLabels(url)`                               | fetch a JSON label file and apply it            |
+| `grid.updateLabels()`                                    | refresh labels on one connected grid            |
 
 ## Column
 
@@ -526,7 +527,7 @@ filter/sort helpers as the client.
 
 ## Translations
 
-All UI labels are plain strings, overridable at runtime through `setLabels()`,
+All UI labels are plain strings, configurable through `setLabels()`,
 `loadLabels()` or the shipped `locales/*` modules. See
 [docs/translations.md](docs/translations.md).
 

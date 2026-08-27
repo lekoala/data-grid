@@ -1,6 +1,7 @@
 # Translations
 
-All UI labels are plain strings and can be overridden at any time. Labels are
+All UI labels are plain strings and should normally be configured before grids
+are created. Labels are
 expressed as full phrases: `pageRange` uses `{from}`, `{to}` and `{total}`
 placeholders, `pageStatus` uses `{page}` and `{pages}`, `resultCount` and
 `selectedCount` use `{count}`.
@@ -26,9 +27,8 @@ region:
 - `selectedCount` — the selected count announced by the live badge
 - `search`, `gotoPage`, `gotoFirstPage`, ... — accessible names
 
-`setLabels()` updates every connected grid immediately. It should normally be
-called before creating grids (the internal template is built from the current
-labels on first render).
+`setLabels()` changes the shared labels used by new grids. It does not track or
+refresh connected instances.
 
 An explicit override can still bring the wording back on screen:
 
@@ -65,7 +65,7 @@ await DataGrid.loadLabels("/i18n/data-grid.fr.json");
 ## Official locales (modules)
 
 Ready-made, self-applying locales ship in the package. Importing one calls
-`setLabels()` for you, so a language switch just works:
+`setLabels()` for you; import it before creating grids:
 
 ```html
 <script type="module" src="https://cdn.jsdelivr.net/npm/data-grid-component@3/locales/fr.js"></script>
@@ -75,11 +75,14 @@ Ready-made, self-applying locales ship in the package. Importing one calls
 import "data-grid-component/locales/fr";
 ```
 
-For a dynamic switch, import the module and let it refresh the grids:
+For a dynamic switch, the application chooses which connected grids to refresh:
 
 ```js
 const { default: labels } = await import("data-grid-component/locales/fr");
 DataGrid.setLabels(labels);
+for (const grid of document.querySelectorAll("data-grid")) {
+    grid.updateLabels();
+}
 ```
 
 Available locales: `en`, `fr`, `nl`, `de`, `es`, `it`, `pt-BR`, `pt-PT`,

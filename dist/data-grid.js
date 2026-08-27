@@ -1020,19 +1020,20 @@ function formatTextFilterQuery(filter) {
   if (token) {
     return `${token}${text}`;
   }
+  const pattern = escapePatternText(text);
   switch (filter.operator) {
     case "notContains":
-      return `!${escapePatternText(text)}`;
+      return `!${pattern}`;
     case "notStartsWith":
-      return `!${escapePatternText(text)}%`;
+      return `!${pattern}%`;
     case "notEndsWith":
-      return `!%${escapePatternText(text)}`;
+      return `!%${pattern}`;
     case "startsWith":
-      return `${escapePatternText(text)}%`;
+      return `${pattern}%`;
     case "endsWith":
-      return `%${escapePatternText(text)}`;
+      return `%${pattern}`;
     default:
-      return escapePatternText(text);
+      return pattern;
   }
 }
 function formatDateFilterQuery(filter) {
@@ -1171,6 +1172,18 @@ function debounce(handler, timeout = 300) {
     handler(...args);
   };
   return fn;
+}
+
+// src/utils/events.js
+function on(target, types, listener, options) {
+  for (const type of types) {
+    target.addEventListener(type, listener, options);
+  }
+}
+function off(target, types, listener, options) {
+  for (const type of types) {
+    target.removeEventListener(type, listener, options);
+  }
 }
 
 // src/utils/getTextWidth.js
@@ -1331,7 +1344,6 @@ function transformValue(value, transform, ctx) {
 
 // src/data-grid.js
 var plugins = {};
-var connectedInstances = new Set;
 var textInputState = new WeakMap;
 var labels = {
   itemsPerPage: "Items per page",
@@ -1479,9 +1491,6 @@ class DataGrid extends base_element_default {
   }
   static setLabels(v) {
     labels = { ...labels, ...v };
-    for (const instance of connectedInstances) {
-      instance.updateLabels();
-    }
   }
   static async loadLabels(url) {
     const response = await fetch(url);
@@ -1916,9 +1925,6 @@ class DataGrid extends base_element_default {
     this._clearSelectionIfNeeded();
     return this.refresh();
   }
-  dirChanged() {
-    this.setAttribute("dir", this.options.dir);
-  }
   showPageSizeChanged() {
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
     this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
@@ -2124,7 +2130,6 @@ class DataGrid extends base_element_default {
     this.scrollEl = scroll;
   }
   async _connected() {
-    connectedInstances.add(this);
     this._adoptDeclarativeTable();
     this.table = this.querySelector("table");
     this._wrapScroll();
@@ -2135,9 +2140,7 @@ class DataGrid extends base_element_default {
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
     this._syncSelectionOptions();
-    for (const type of CORE_EVENTS) {
-      this.addEventListener(type, this);
-    }
+    on(this, CORE_EVENTS, this);
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
     this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
     this.setupDataSource();
@@ -2145,7 +2148,7 @@ class DataGrid extends base_element_default {
     for (const plugin of Object.values(this.plugins)) {
       await plugin.connected?.();
     }
-    this.dirChanged();
+    this.setAttribute("dir", this.options.dir);
     this.snapColumnsChanged();
     this.populatePageSizes();
     this.updateLabels();
@@ -2153,7 +2156,6 @@ class DataGrid extends base_element_default {
     await this.init();
   }
   _disconnected() {
-    connectedInstances.delete(this);
     this._loadObserver?.disconnect();
     this._loadObserver = null;
     this._controller?.abort();
@@ -2161,9 +2163,7 @@ class DataGrid extends base_element_default {
       textInputState.get(input)?.apply.cancel();
       textInputState.delete(input);
     }
-    for (const type of CORE_EVENTS) {
-      this.removeEventListener(type, this);
-    }
+    off(this, CORE_EVENTS, this);
     if (this._frozenFrame !== null) {
       cancelAnimationFrame(this._frozenFrame);
       this._frozenFrame = null;
@@ -3500,18 +3500,18 @@ class BasePlugin {
 var base_plugin_default = BasePlugin;
 
 // src/plugins/column-resizer.js
+var RESIZE_EVENTS = ["mousedown", "click"];
+
 class ColumnResizer extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this._resizeController = null;
   }
   connected() {
-    this.grid.addEventListener("mousedown", this);
-    this.grid.addEventListener("click", this);
+    on(this.grid, RESIZE_EVENTS, this);
   }
   disconnected() {
-    this.grid.removeEventListener("mousedown", this);
-    this.grid.removeEventListener("click", this);
+    off(this.grid, RESIZE_EVENTS, this);
     this._resizeController?.abort();
     this._resizeController = null;
   }
@@ -3626,6 +3626,8 @@ class ColumnResizer extends base_plugin_default {
 var column_resizer_default = ColumnResizer;
 
 // src/plugins/context-menu.js
+var MENU_EVENTS = ["contextmenu", "change"];
+
 class ContextMenu extends base_plugin_default {
   constructor(grid) {
     super(grid);
@@ -3640,12 +3642,10 @@ class ContextMenu extends base_plugin_default {
     menu.popover = "auto";
     this.grid.appendChild(menu);
     this.menu = menu;
-    this.grid.addEventListener("contextmenu", this);
-    this.grid.addEventListener("change", this);
+    on(this.grid, MENU_EVENTS, this);
   }
   disconnected() {
-    this.grid.removeEventListener("contextmenu", this);
-    this.grid.removeEventListener("change", this);
+    off(this.grid, MENU_EVENTS, this);
     this.menu?.remove();
     this.menu = null;
   }
@@ -3734,16 +3734,14 @@ class ContextMenu extends base_plugin_default {
 var context_menu_default = ContextMenu;
 
 // src/plugins/draggable-headers.js
+var DRAG_EVENTS = ["dragstart", "dragover", "drop"];
+
 class DraggableHeaders extends base_plugin_default {
   connected() {
-    this.grid.addEventListener("dragstart", this);
-    this.grid.addEventListener("dragover", this);
-    this.grid.addEventListener("drop", this);
+    on(this.grid, DRAG_EVENTS, this);
   }
   disconnected() {
-    this.grid.removeEventListener("dragstart", this);
-    this.grid.removeEventListener("dragover", this);
-    this.grid.removeEventListener("drop", this);
+    off(this.grid, DRAG_EVENTS, this);
   }
   afterRender(context) {
     if (context !== "table") {
@@ -3823,20 +3821,18 @@ class DraggableHeaders extends base_plugin_default {
 var draggable_headers_default = DraggableHeaders;
 
 // src/plugins/touch-support.js
+var TOUCH_EVENTS = ["touchstart", "touchmove"];
+
 class TouchSupport extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.touch = null;
   }
   connected() {
-    const grid = this.grid;
-    grid.addEventListener("touchstart", this, { passive: true });
-    grid.addEventListener("touchmove", this, { passive: true });
+    on(this.grid, TOUCH_EVENTS, this, { passive: true });
   }
   disconnected() {
-    const grid = this.grid;
-    grid.removeEventListener("touchstart", this);
-    grid.removeEventListener("touchmove", this);
+    off(this.grid, TOUCH_EVENTS, this);
   }
   ontouchstart(e) {
     this.touch = e.touches[0] ?? null;
@@ -3867,6 +3863,7 @@ var touch_support_default = TouchSupport;
 // src/plugins/selectable-rows.js
 var SELECTABLE_CLASS = "dg-selectable";
 var SELECT_ALL_CLASS = "dg-select-all";
+var SELECTION_EVENTS = ["selectionChange", "change", "click"];
 
 class SelectableRows extends base_plugin_default {
   get isSingleSelect() {
@@ -3876,14 +3873,10 @@ class SelectableRows extends base_plugin_default {
     return this.grid.options.selectVisibleOnly;
   }
   connected() {
-    this.grid.addEventListener("selectionChange", this);
-    this.grid.addEventListener("change", this);
-    this.grid.addEventListener("click", this);
+    on(this.grid, SELECTION_EVENTS, this);
   }
   disconnected() {
-    this.grid.removeEventListener("selectionChange", this);
-    this.grid.removeEventListener("change", this);
-    this.grid.removeEventListener("click", this);
+    off(this.grid, SELECTION_EVENTS, this);
   }
   onselectionChange() {
     this.syncSelection();

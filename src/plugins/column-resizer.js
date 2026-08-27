@@ -1,6 +1,9 @@
 import BasePlugin from "../core/base-plugin.js";
 import { getColumnMinWidth } from "../utils/columnWidth.js";
 import { dispatch } from "../utils/dispatch.js";
+import { off, on } from "../utils/events.js";
+
+const RESIZE_EVENTS = ["mousedown", "click"];
 
 /**
  * Allows to resize columns
@@ -16,13 +19,11 @@ class ColumnResizer extends BasePlugin {
     }
 
     connected() {
-        this.grid.addEventListener("mousedown", this);
-        this.grid.addEventListener("click", this);
+        on(this.grid, RESIZE_EVENTS, this);
     }
 
     disconnected() {
-        this.grid.removeEventListener("mousedown", this);
-        this.grid.removeEventListener("click", this);
+        off(this.grid, RESIZE_EVENTS, this);
         this._resizeController?.abort();
         this._resizeController = null;
     }

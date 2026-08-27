@@ -139,6 +139,10 @@
               "description": "Gets the text to be displayed when no data is loaded."
             },
             {
+              "kind": "method",
+              "name": "updateLabels"
+            },
+            {
               "kind": "getter",
               "name": "query",
               "description": "Snapshot of the current query state."

@@ -28,6 +28,7 @@ import { parseEnumAttribute, parseIntegerListAttribute } from "./utils/attribute
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
+import { off, on } from "./utils/events.js";
 import formatValue, { getFormatDefaults } from "./utils/formatValue.js";
 import getTextWidth from "./utils/getTextWidth.js";
 import {
@@ -260,12 +261,6 @@ import transformValue from "./utils/transformValue.js";
  * @type {PluginRegistry}
  */
 let plugins = {};
-
-/**
- * Connected grid instances that can refresh labels at runtime.
- * @type {Set<DataGrid>}
- */
-const connectedInstances = new Set();
 
 /**
  * Transient per-input state (IME composition flag + debounce instance) for the
@@ -569,9 +564,6 @@ class DataGrid extends BaseElement {
      */
     static setLabels(v) {
         labels = { ...labels, ...v };
-        for (const instance of connectedInstances) {
-            instance.updateLabels();
-        }
     }
 
     /**
@@ -624,6 +616,7 @@ class DataGrid extends BaseElement {
         }
     }
 
+    /** @public */
     updateLabels() {
         if (this.selectPerPage) {
             this.selectPerPage.setAttribute("aria-label", this.labels.itemsPerPage);
@@ -1208,10 +1201,6 @@ class DataGrid extends BaseElement {
         return this.refresh();
     }
 
-    dirChanged() {
-        this.setAttribute("dir", this.options.dir);
-    }
-
     showPageSizeChanged() {
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
         this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
@@ -1512,7 +1501,6 @@ class DataGrid extends BaseElement {
     }
 
     async _connected() {
-        connectedInstances.add(this);
         this._adoptDeclarativeTable();
         this.table = this.querySelector("table");
         this._wrapScroll();
@@ -1533,9 +1521,7 @@ class DataGrid extends BaseElement {
         // listener and routes bubbled events to the matching control. This
         // keeps rerendered chrome (filters, sort headers) working without
         // reinstalling per-element listeners.
-        for (const type of CORE_EVENTS) {
-            this.addEventListener(type, this);
-        }
+        on(this, CORE_EVENTS, this);
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
         this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
 
@@ -1547,7 +1533,7 @@ class DataGrid extends BaseElement {
         }
 
         // Display even if we don't have data
-        this.dirChanged();
+        this.setAttribute("dir", this.options.dir);
         this.snapColumnsChanged();
         this.populatePageSizes();
         this.updateLabels();
@@ -1557,7 +1543,6 @@ class DataGrid extends BaseElement {
     }
 
     _disconnected() {
-        connectedInstances.delete(this);
         this._loadObserver?.disconnect();
         this._loadObserver = null;
         this._controller?.abort();
@@ -1568,9 +1553,7 @@ class DataGrid extends BaseElement {
             textInputState.delete(input);
         }
 
-        for (const type of CORE_EVENTS) {
-            this.removeEventListener(type, this);
-        }
+        off(this, CORE_EVENTS, this);
         if (this._frozenFrame !== null) {
             cancelAnimationFrame(this._frozenFrame);
             this._frozenFrame = null;

@@ -209,6 +209,15 @@ test("scalar options are reflected as curated HTML attributes", async () => {
     removeGrid(inst);
 });
 
+test("the initial direction is reflected and later follows the native attribute", async () => {
+    const inst = await makeReadyGrid({ dir: "rtl", columns: [{ field: "name" }] }, [{ name: "Alice" }]);
+
+    expect(inst.getAttribute("dir")).toBe("rtl");
+    inst.setAttribute("dir", "ltr");
+    expect(inst.options.dir).toBe("ltr");
+    removeGrid(inst);
+});
+
 test("column wrap overrides the grid-wide wrapping policy without adding row interaction", async () => {
     const inst = await makeReadyGrid(
         {

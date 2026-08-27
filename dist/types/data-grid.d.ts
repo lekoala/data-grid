@@ -642,6 +642,7 @@ declare class DataGrid extends BaseElement {
      * @param {String} text
      */
     _updateStatus(text: string): void;
+    /** @public */
     updateLabels(): void;
     updateMetaLabel(): void;
     /**
@@ -791,7 +792,6 @@ declare class DataGrid extends BaseElement {
      * Pick the data source based on configuration.
      */
     srcChanged(): Promise<void>;
-    dirChanged(): void;
     showPageSizeChanged(): void;
     responsiveChanged(): void;
     snapColumnsChanged(): void;
