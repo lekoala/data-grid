@@ -2102,9 +2102,6 @@ class DataGrid extends base_element_default {
     const icon = document.createElement("span");
     icon.className = "dg-search-icon";
     icon.setAttribute("aria-hidden", "true");
-    icon.innerHTML = `<svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" focusable="false">
-            <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" />
-        </svg>`;
     field.append(icon, input);
     textInputState.set(input, {
       composing: false,
@@ -4379,7 +4376,6 @@ function createDisclosureButton(controlClass) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = `dg-disclosure ${controlClass}`;
-  button.innerHTML = `<svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
   return button;
 }
 
@@ -4970,7 +4966,6 @@ class RowActions extends base_plugin_default {
       const actionsToggle = document.createElement("button");
       actionsToggle.type = "button";
       actionsToggle.classList.add("dg-actions-toggle");
-      actionsToggle.textContent = "⋯";
       actionsToggle.setAttribute("aria-label", labels2.toggleActions);
       actionsToggle.setAttribute("popovertarget", this.menu.id);
       actionsToggle.title = labels2.toggleActions;

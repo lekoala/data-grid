@@ -56,6 +56,22 @@ data-grid .dg-actions .dg-actions-toggle {
   width: 28px;
 }
 
+data-grid .dg-actions-toggle::before {
+  background-color: currentColor;
+  content: "";
+  display: block;
+  inline-size: 1.125em;
+  block-size: 1.125em;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
 data-grid .dg-actions.dg-actions-2 button,
 data-grid .dg-actions.dg-actions-2 a {
   min-width: 32px;
@@ -67,7 +83,7 @@ data-grid .dg-actions.dg-actions-more a {
 }
 
 data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
-  display: inline-block;
+  display: inline-flex;
 }
 
 data-grid .dg-actions-menu {

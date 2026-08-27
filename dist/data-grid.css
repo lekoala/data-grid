@@ -304,16 +304,22 @@ data-grid .dg-search-icon {
   color: var(--dg-muted-color);
   display: block;
   left: var(--dg-control-padding-inline);
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
   pointer-events: none;
   position: absolute;
   z-index: 1;
+  background-color: currentColor;
+  block-size: 16px;
   inline-size: 16px;
   top: 50%;
   transform: translateY(-50%);
-}
-
-data-grid .dg-search-icon svg {
-  display: block;
 }
 
 data-grid .dg-bulk-actions {
@@ -1211,6 +1217,22 @@ data-grid .dg-actions .dg-actions-toggle {
   line-height: 1;
 }
 
+data-grid .dg-actions-toggle:before {
+  content: "";
+  display: block;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  background-color: currentColor;
+  block-size: 1.125em;
+  inline-size: 1.125em;
+}
+
 data-grid .dg-actions.dg-actions-2 button, data-grid .dg-actions.dg-actions-2 a {
   min-width: 32px;
 }
@@ -1220,7 +1242,7 @@ data-grid .dg-actions.dg-actions-more button, data-grid .dg-actions.dg-actions-m
 }
 
 data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
-  display: inline-block;
+  display: inline-flex;
 }
 
 data-grid .dg-actions-menu {
@@ -1379,6 +1401,23 @@ data-grid .dg-disclosure {
   padding: 0;
 }
 
+data-grid .dg-disclosure:before {
+  content: "";
+  display: block;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 6 6 6-6 6' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 6 6 6-6 6' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  background-color: currentColor;
+  block-size: 1.5rem;
+  inline-size: 1.5rem;
+  transition: transform .16s;
+}
+
 data-grid .dg-disclosure:hover {
   color: var(--dg-color);
   background-color: #1f293714;
@@ -1390,11 +1429,7 @@ data-grid .dg-disclosure:hover {
   }
 }
 
-data-grid .dg-disclosure svg {
-  transition: transform .16s;
-}
-
-data-grid .dg-disclosure[aria-expanded="true"] svg {
+data-grid .dg-disclosure[aria-expanded="true"]:before {
   transform: rotate(90deg);
 }
 

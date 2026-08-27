@@ -44,7 +44,9 @@ test("searchable renders a named, labelled search input with a decorative icon",
     expect(input.getAttribute("aria-label")).toBe("Search");
     const field = input.closest(".dg-search-field");
     expect(field).toBeTruthy();
-    expect(field.querySelector('.dg-search-icon[aria-hidden="true"] svg')).toBeTruthy();
+    const icon = field.querySelector('.dg-search-icon[aria-hidden="true"]');
+    expect(icon).toBeTruthy();
+    expect(icon.childElementCount).toBe(0);
     expect(field.closest(".dg-topbar-end")).toBeTruthy();
     expect(input.closest(".dg-topbar")).toBeTruthy();
     removeGrid(inst);

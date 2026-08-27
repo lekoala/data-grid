@@ -99,7 +99,6 @@ declare class ResponsiveGrid extends BasePlugin {
      * unless responsive has yielded its own toggle, so an explicit
      * `responsiveToggle: false` keeps its section governed by
      * `responsiveStartOpen` alone.
-     * @public
      * @param {HTMLTableRowElement} tr
      * @param {Boolean} expanded
      */

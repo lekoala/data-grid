@@ -34,6 +34,15 @@ test("all selects share the component caret", () => {
     expect(coreCss).not.toContain("dg-filter-cell:has(select)");
 });
 
+test("decorative SVG masks keep standard and legacy WebKit declarations", () => {
+    for (const selector of [".dg-search-icon", ".dg-actions-toggle:before", ".dg-disclosure:before"]) {
+        const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        expect(coreCss).toMatch(
+            new RegExp(`${escaped} \\{[\\s\\S]*?-webkit-mask-image: url\\([\\s\\S]*?mask-image: url\\(`),
+        );
+    }
+});
+
 test("multi-select filters use top-layer anchor positioning", () => {
     expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position: fixed;/);
     expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position-area: block-end span-inline-end;/);

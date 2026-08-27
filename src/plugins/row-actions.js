@@ -250,7 +250,6 @@ class RowActions extends BasePlugin {
             const actionsToggle = document.createElement("button");
             actionsToggle.type = "button";
             actionsToggle.classList.add("dg-actions-toggle");
-            actionsToggle.textContent = "⋯";
             actionsToggle.setAttribute("aria-label", labels.toggleActions);
             actionsToggle.setAttribute("popovertarget", this.menu.id);
             actionsToggle.title = labels.toggleActions;

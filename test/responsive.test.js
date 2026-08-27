@@ -320,8 +320,7 @@ test("responsive disclosure uses a named native button and controls its detail r
     expect(inst.querySelector('thead th[data-column-id="$responsive"]').classList.contains("dg-disclosure-cell")).toBe(
         true,
     );
-    expect(button.querySelectorAll("svg").length).toBe(1);
-    expect(button.querySelector("svg path")).not.toBeNull();
+    expect(button.childElementCount).toBe(0);
     expect(button.getAttribute("aria-expanded")).toBe("false");
     expect(button.classList.contains("dg-responsive-toggle-control-open")).toBe(false);
     expect(button.getAttribute("aria-label")).toBe("Show additional columns for Alice");

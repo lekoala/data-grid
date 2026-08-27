@@ -204,6 +204,7 @@ test("the row actions toggle has an accessible name and native popover target", 
     const toggle = inst.tbody.querySelector("td[data-column-id='$actions'] button.dg-actions-toggle");
     const menu = inst.querySelector(".dg-actions-menu");
     expect(toggle.getAttribute("aria-label")).toBe("Toggle row actions");
+    expect(toggle.childElementCount).toBe(0);
     expect(toggle.getAttribute("popovertarget")).toBe(menu.id);
     expect(toggle.hasAttribute("aria-expanded")).toBe(false);
     document.body.removeChild(inst);

@@ -235,6 +235,11 @@ data-grid .dg-disclosure {
 }
 ```
 
+Built-in decorative icons have empty DOM hooks and CSS masks colored with
+`currentColor`. A theme can resize or replace a shape on `.dg-search-icon`,
+`.dg-disclosure::before`, or `.dg-actions-toggle::before`; set both
+`-webkit-mask-image` and `mask-image` when replacing a mask.
+
 Notes:
 
 - the feature classes (`.dg-responsive-toggle-control`,
