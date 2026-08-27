@@ -6,6 +6,10 @@
 Autonomous open source grid component with RTL support. Designed for server side
 paginated content but also works for basic tables.
 
+Demo:
+
+- [CodePen demo](https://codepen.io/editor/lekoalabe/pen/01a041dd-0648-7a0c-b776-d8a94c83d5dc)
+
 Key features:
 
 - Server side support (`FetchDataSource`)
