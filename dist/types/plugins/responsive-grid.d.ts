@@ -1,4 +1,15 @@
 import BasePlugin from "../core/base-plugin.js";
+export type ResponsiveItem = {
+    th: HTMLElement;
+    column: import("../data-grid.js").Column | null;
+};
+export type ResponsiveLayout = {
+    items: ResponsiveItem[];
+    visible: ResponsiveItem[];
+    preferredWidth: (th: HTMLElement) => number;
+    requiredWidth: (visibleItems: ResponsiveItem[]) => number;
+    isColumnHidden: (column: import("../data-grid.js").Column | null) => boolean;
+};
 /**
  * Responsive data grid
  */
@@ -41,11 +52,6 @@ declare class ResponsiveGrid extends BasePlugin {
      */
     hasHiddenColumns(): boolean;
     /**
-     * @param {HTMLTableCellElement} th
-     */
-    createHeaderCell(th: HTMLTableCellElement): void;
-    createFilterCell(): void;
-    /**
      * @param {import("../data-grid.js").CellContext} ctx
      * @returns {HTMLButtonElement}
      */
@@ -56,6 +62,26 @@ declare class ResponsiveGrid extends BasePlugin {
      * Apply responsive hide/show based on the last observed size.
      */
     resize(): void;
+    /**
+     * Resolve a new observed width worth processing.
+     * @returns {Number|null}
+     */
+    _resizeWidth(): number | null;
+    /**
+     * Read the current column geometry once for a responsive fitting cycle.
+     * @returns {ResponsiveLayout|null}
+     */
+    _measureLayout(): ResponsiveLayout | null;
+    /**
+     * Hide or restore responsive columns until the measured layout fits.
+     * @param {ResponsiveLayout} layout
+     * @param {Number} size
+     * @returns {Boolean}
+     */
+    _fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden }: ResponsiveLayout, size: number): boolean;
+    /** @param {Number} size */
+    _syncFooter(size: number): void;
+    _rebuildDetailsSafely(): void;
     computeLabelWidth(): number;
     /**
      * The real rendered record rows (excludes responsive child rows and fake
@@ -118,6 +144,12 @@ declare class ResponsiveGrid extends BasePlugin {
      * @param {Boolean} expanded
      */
     _setRowExpanded(tr: HTMLTableRowElement, expanded: boolean): void;
+    /**
+     * Return cells from a responsive detail row to their owning data row.
+     * @param {HTMLTableRowElement} tr
+     * @param {HTMLTableRowElement} childRow
+     */
+    _restoreChildRow(tr: HTMLTableRowElement, childRow: HTMLTableRowElement): void;
     /**
      * Normalize the table back to its canonical tabular representation: every
      * cell moved into a detail row is returned to its owning data row, in

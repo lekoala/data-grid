@@ -30,10 +30,12 @@ declare class RowActions extends BasePlugin {
      */
     extendColumns(columns: import("../data-grid.js").Column[]): void;
     /**
-     * @param {HTMLTableCellElement} th
+     * Resolve the actions visible for one row with one consistent context.
+     * @param {Record<string, any>} row
+     * @param {Number} rowIndex
+     * @returns {import("../data-grid.js").Action[]}
      */
-    createHeaderCell(th: HTMLTableCellElement): void;
-    createFilterCell(): void;
+    _visibleActions(row: Record<string, any>, rowIndex: number): import("../data-grid.js").Action[];
     updateLabels(): void;
     beforeRender(): void;
     afterRender(): void;
@@ -72,20 +74,25 @@ declare class RowActions extends BasePlugin {
      */
     activateDefaultAction(rowIndex: number): void;
     /**
+     * Create or adopt the visual control before action state and behavior are
+     * applied.
+     * @param {import("../data-grid.js").Action} action
+     * @param {Record<string, any>} row
+     * @param {String|null} href
+     * @param {Boolean} menu
+     * @returns {HTMLElement}
+     */
+    _createActionControl(action: import("../data-grid.js").Action, row: Record<string, any>, href: string | null, menu: boolean): HTMLElement;
+    /**
      * Create the button (or link) for a single action.
      * @param {import("../data-grid.js").Action} action
      * @param {Record<string, any>} row
      * @param {Number} rowIndex
-     * @param {import("../data-grid.js").default} grid
-     * @param {import("../data-grid.js").Labels} labels
      * @param {Boolean} [menu] Render for the collapsed menu: keep the icon but
      * add a visible label next to it.
-     * @returns {{ el: HTMLElement, dispatchAction: (ev: Event) => void }}
+     * @returns {HTMLElement}
      */
-    createActionElement(action: import("../data-grid.js").Action, row: Record<string, any>, rowIndex: number, grid: import("../data-grid.js").default, labels: import("../data-grid.js").Labels, menu?: boolean): {
-        el: HTMLElement;
-        dispatchAction: (ev: Event) => void;
-    };
+    createActionElement(action: import("../data-grid.js").Action, row: Record<string, any>, rowIndex: number, menu?: boolean): HTMLElement;
 }
 export default RowActions;
 //# sourceMappingURL=row-actions.d.ts.map

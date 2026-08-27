@@ -1,129 +1,4 @@
 /*** Data Grid Web Component * https://github.com/lekoala/data-grid ***/
-// src/utils/camelize.js
-function camelize(str) {
-  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
-}
-
-// src/utils/dispatch.js
-function dispatch(target, type, detail = {}, options = {}) {
-  return target.dispatchEvent(new CustomEvent(type, { ...options, detail }));
-}
-
-// src/utils/normalizeData.js
-function normalizeData(v) {
-  if (v === "true") {
-    return true;
-  }
-  if (v === "false") {
-    return false;
-  }
-  if (v === "" || v === "null") {
-    return null;
-  }
-  if (v === Number(v).toString()) {
-    return Number(v);
-  }
-  if (v && typeof v.substring === "function" && ["[", "{"].includes(v.substring(0, 1))) {
-    try {
-      let val = v;
-      if (val.indexOf('"') === -1) {
-        val = val.replace(/'/g, '"');
-      }
-      return JSON.parse(decodeURIComponent(val));
-    } catch {
-      console.error(`Failed to parse ${v}`);
-      return {};
-    }
-  }
-  return v;
-}
-
-// src/core/base-element.js
-class BaseElement extends HTMLElement {
-  constructor(options = {}) {
-    super();
-    this.options = Object.assign({}, this.defaultOptions, options);
-    this.log("constructor");
-    this.setup = false;
-    this.rendered = false;
-    this.fireEvents = true;
-    this._ready();
-    this.log("ready");
-  }
-  get defaultOptions() {
-    return {};
-  }
-  static get observedAttributes() {
-    return [];
-  }
-  static template() {
-    return "";
-  }
-  _ready() {}
-  _connected() {}
-  _disconnected() {}
-  log(...data) {
-    if (this.options.debug) {
-      console.log(`[${this.getAttribute("id")}] `, ...data);
-    }
-  }
-  handleEvent(event) {
-    const handler = this[`on${event.type}`];
-    if (typeof handler === "function") {
-      handler.call(this, event);
-    }
-  }
-  connectedCallback() {
-    if (this.setup) {
-      return;
-    }
-    this.setup = true;
-    setTimeout(async () => {
-      this.log("connectedCallback");
-      if (!this.rendered) {
-        const template = document.createElement("template");
-        const ctor = this.constructor;
-        template.innerHTML = ctor.template();
-        this.appendChild(template.content.cloneNode(true));
-        this.rendered = true;
-      }
-      await this._connected();
-      dispatch(this, "connected");
-    }, 0);
-  }
-  disconnectedCallback() {
-    setTimeout(() => {
-      if (!this.isConnected && this.setup) {
-        this.log("disconnectedCallback");
-        this._disconnected();
-        dispatch(this, "disconnected");
-        this.setup = false;
-      }
-    }, 0);
-  }
-  get transformAttributes() {
-    return {};
-  }
-  attributeChangedCallback(attributeName, oldValue, newValue) {
-    if (oldValue === newValue) {
-      return;
-    }
-    this.log(`attributeChangedCallback: ${attributeName}`);
-    const options = this.options;
-    const transformer = this.transformAttributes[attributeName] ?? normalizeData;
-    const attr = camelize(attributeName);
-    const raw = newValue === "" ? "true" : newValue;
-    options[attr] = transformer(raw);
-    if (this.fireEvents) {
-      const handler = this[`${attr}Changed`];
-      if (typeof handler === "function") {
-        handler.call(this);
-      }
-    }
-  }
-}
-var base_element_default = BaseElement;
-
 // src/utils/formatValue.js
 var formatDefaults = {
   boolean: {
@@ -320,6 +195,187 @@ function formatValue(value, format, formatOptions, ctx = {}) {
       return value;
   }
 }
+
+// src/columns.js
+function orderColumns(columns) {
+  const start = [];
+  const middle = [];
+  const end = [];
+  for (const column of columns) {
+    if (column.position === "start") {
+      start.push(column);
+    } else if (column.position === "end") {
+      end.push(column);
+    } else {
+      middle.push(column);
+    }
+  }
+  return [...start.reverse(), ...middle, ...end];
+}
+function isColumnHidden(column) {
+  return Boolean(column.hidden || column.responsiveHidden);
+}
+function getColumnAlign(column) {
+  return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
+}
+function getFirstFilterOption(column, defaultColumn) {
+  const option = column.firstFilterOption || defaultColumn.firstFilterOption || { value: "", text: "" };
+  return { value: "", text: option.text ?? "" };
+}
+function getColumnFilterType(column) {
+  return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
+}
+function isPercentColumn(column) {
+  return column.format === "number" && column.formatOptions?.style === "percent";
+}
+function applyColumnDefinition(el, column) {
+  if (column.width) {
+    const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
+    el.setAttribute("width", String(Math.max(column.width, minWidth)));
+  }
+  if (column.class) {
+    el.classList.add(...column.class.trim().split(/\s+/));
+  }
+  if (column.frozen === "start") {
+    el.dataset.frozen = "start";
+  } else {
+    delete el.dataset.frozen;
+  }
+  if (isColumnHidden(column)) {
+    el.setAttribute("hidden", "");
+    if (column.responsiveHidden) {
+      el.classList.add("dg-responsive-hidden");
+    }
+  }
+  if (column.sortable === false && el.tagName === "TH") {
+    el.classList.add("dg-not-sortable");
+  }
+}
+
+// src/utils/camelize.js
+function camelize(str) {
+  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
+}
+
+// src/utils/dispatch.js
+function dispatch(target, type, detail = {}, options = {}) {
+  return target.dispatchEvent(new CustomEvent(type, { ...options, detail }));
+}
+
+// src/utils/normalizeData.js
+function normalizeData(v) {
+  if (v === "true") {
+    return true;
+  }
+  if (v === "false") {
+    return false;
+  }
+  if (v === "" || v === "null") {
+    return null;
+  }
+  if (v === Number(v).toString()) {
+    return Number(v);
+  }
+  if (v && typeof v.substring === "function" && ["[", "{"].includes(v.substring(0, 1))) {
+    try {
+      let val = v;
+      if (val.indexOf('"') === -1) {
+        val = val.replace(/'/g, '"');
+      }
+      return JSON.parse(decodeURIComponent(val));
+    } catch {
+      console.error(`Failed to parse ${v}`);
+      return {};
+    }
+  }
+  return v;
+}
+
+// src/core/base-element.js
+class BaseElement extends HTMLElement {
+  constructor(options = {}) {
+    super();
+    this.options = Object.assign({}, this.defaultOptions, options);
+    this.log("constructor");
+    this.setup = false;
+    this.rendered = false;
+    this.fireEvents = true;
+    this._ready();
+    this.log("ready");
+  }
+  get defaultOptions() {
+    return {};
+  }
+  static get observedAttributes() {
+    return [];
+  }
+  static template() {
+    return "";
+  }
+  _ready() {}
+  _connected() {}
+  _disconnected() {}
+  log(...data) {
+    if (this.options.debug) {
+      console.log(`[${this.getAttribute("id")}] `, ...data);
+    }
+  }
+  handleEvent(event) {
+    const handler = this[`on${event.type}`];
+    if (typeof handler === "function") {
+      handler.call(this, event);
+    }
+  }
+  connectedCallback() {
+    if (this.setup) {
+      return;
+    }
+    this.setup = true;
+    setTimeout(async () => {
+      this.log("connectedCallback");
+      if (!this.rendered) {
+        const template = document.createElement("template");
+        const ctor = this.constructor;
+        template.innerHTML = ctor.template();
+        this.appendChild(template.content.cloneNode(true));
+        this.rendered = true;
+      }
+      await this._connected();
+      dispatch(this, "connected");
+    }, 0);
+  }
+  disconnectedCallback() {
+    setTimeout(() => {
+      if (!this.isConnected && this.setup) {
+        this.log("disconnectedCallback");
+        this._disconnected();
+        dispatch(this, "disconnected");
+        this.setup = false;
+      }
+    }, 0);
+  }
+  get transformAttributes() {
+    return {};
+  }
+  attributeChangedCallback(attributeName, oldValue, newValue) {
+    if (oldValue === newValue) {
+      return;
+    }
+    this.log(`attributeChangedCallback: ${attributeName}`);
+    const options = this.options;
+    const transformer = this.transformAttributes[attributeName] ?? normalizeData;
+    const attr = camelize(attributeName);
+    const raw = newValue === "" ? "true" : newValue;
+    options[attr] = transformer(raw);
+    if (this.fireEvents) {
+      const handler = this[`${attr}Changed`];
+      if (typeof handler === "function") {
+        handler.call(this);
+      }
+    }
+  }
+}
+var base_element_default = BaseElement;
 
 // src/data-source.js
 function encodeSearchParams(value, prefix = "", out = new URLSearchParams) {
@@ -618,6 +674,189 @@ class ArrayDataSource {
   }
 }
 
+// src/utils/attributes.js
+function parseBooleanAttribute(value) {
+  return value === "" || value === "true" || value === "1";
+}
+function parseIntegerListAttribute(value) {
+  return value.split(",").map((item) => Number.parseInt(item, 10)).filter((item) => Number.isFinite(item));
+}
+function parseEnumAttribute(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback;
+}
+
+// src/declarative-table.js
+var DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
+function declarativeCells(row) {
+  return row[DECLARATIVE_CELLS];
+}
+function setDeclarativeCell(row, field, meta) {
+  let cells = declarativeCells(row);
+  if (!cells) {
+    cells = {};
+    Object.defineProperty(row, DECLARATIVE_CELLS, {
+      value: cells,
+      enumerable: false,
+      configurable: true
+    });
+  }
+  cells[field] = meta;
+}
+function parseDeclarativeTable(table) {
+  const columns = [];
+  const sort = [];
+  const headerRow = table.querySelector("thead > tr:first-child");
+  if (!headerRow) {
+    return { columns, sort };
+  }
+  const ths = headerRow.querySelectorAll(":scope > th[data-field]");
+  for (const th of ths) {
+    const field = th.dataset.field;
+    if (!field) {
+      continue;
+    }
+    const column = { field, title: th.textContent.trim() };
+    if (th.dataset.sortable !== undefined) {
+      column.sortable = parseBooleanAttribute(th.dataset.sortable);
+    }
+    if (th.dataset.filterable !== undefined) {
+      column.filterable = parseBooleanAttribute(th.dataset.filterable);
+    }
+    if (th.dataset.wrap !== undefined) {
+      column.wrap = parseBooleanAttribute(th.dataset.wrap);
+    }
+    if (th.dataset.filter && ["text", "select", "boolean", "number", "date"].includes(th.dataset.filter)) {
+      column.filterType = th.dataset.filter;
+    }
+    if (th.dataset.filterPlaceholder !== undefined) {
+      column.filterPlaceholder = th.dataset.filterPlaceholder;
+    }
+    if (th.dataset.responsive !== undefined) {
+      const responsive = Number(th.dataset.responsive);
+      if (Number.isFinite(responsive)) {
+        column.responsive = responsive;
+      }
+    }
+    if (th.dataset.frozen === "start") {
+      column.frozen = "start";
+    }
+    if (th.dataset.hidden !== undefined) {
+      column.hidden = parseBooleanAttribute(th.dataset.hidden);
+    }
+    if (th.dataset.editable !== undefined) {
+      column.editable = parseBooleanAttribute(th.dataset.editable);
+    }
+    if (th.dataset.editableType) {
+      column.editableType = th.dataset.editableType;
+    }
+    if (th.dataset.transform) {
+      column.transform = th.dataset.transform;
+    }
+    if (th.dataset.format) {
+      column.format = th.dataset.format;
+    }
+    if (th.dataset.align && ["start", "center", "end"].includes(th.dataset.align)) {
+      column.align = th.dataset.align;
+    }
+    if (th.dataset.width !== undefined) {
+      const width = Number(th.dataset.width);
+      if (Number.isFinite(width)) {
+        column.width = width;
+      }
+    }
+    if (th.dataset.minWidth !== undefined) {
+      const minWidth = Number(th.dataset.minWidth);
+      if (Number.isFinite(minWidth)) {
+        column.minWidth = minWidth;
+      }
+    }
+    const direction = th.dataset.sort;
+    if (direction === "asc" || direction === "desc") {
+      sort.push({ field, direction });
+    }
+    columns.push(column);
+  }
+  return { columns, sort };
+}
+function parseActionsCell(td) {
+  const actions = [];
+  const elements = td.querySelectorAll("[data-action]");
+  for (const el of elements) {
+    const name = el.dataset.action;
+    if (!name) {
+      continue;
+    }
+    const action = { name };
+    const label = el.textContent.trim();
+    if (label) {
+      action.label = label;
+    }
+    const href = el.getAttribute("href");
+    if (href) {
+      action.href = href;
+    }
+    if (el.dataset.intent) {
+      action.intent = el.dataset.intent;
+    }
+    if (el.dataset.confirm !== undefined) {
+      action.confirm = el.dataset.confirm;
+    }
+    if (el.dataset.default !== undefined) {
+      action.default = parseBooleanAttribute(el.dataset.default);
+    }
+    if (el.hasAttribute("disabled")) {
+      action.disabled = true;
+    }
+    actions.push(action);
+  }
+  return actions;
+}
+function rowsFromTable(table, columns, rowKey = "id") {
+  const tbody = table.querySelector("tbody");
+  if (!tbody) {
+    return [];
+  }
+  const rows = [];
+  const trs = tbody.querySelectorAll(":scope > tr");
+  for (const tr of trs) {
+    const row = {};
+    const tds = Array.from(tr.querySelectorAll(":scope > td")).filter((td) => !td.hasAttribute("data-actions"));
+    for (let index = 0;index < columns.length; index++) {
+      const column = columns[index];
+      if (!column.field) {
+        continue;
+      }
+      const td = tds[index];
+      if (!td) {
+        continue;
+      }
+      const raw = td.dataset.value;
+      if (raw !== undefined) {
+        row[column.field] = normalizeData(raw);
+        setDeclarativeCell(row, column.field, {
+          value: row[column.field],
+          label: td.textContent.trim(),
+          content: Array.from(td.childNodes)
+        });
+      } else {
+        row[column.field] = td.textContent.trim();
+      }
+    }
+    const actionsCell = tr.querySelector(":scope > td[data-actions]");
+    if (actionsCell) {
+      const actions = parseActionsCell(actionsCell);
+      if (actions.length) {
+        row.$actions = actions;
+      }
+    }
+    if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
+      row[rowKey] = tr.dataset.rowKey;
+    }
+    rows.push(row);
+  }
+  return rows;
+}
+
 // src/filter-query.js
 var TEXT_FILTER_OPERATORS = [
   [">=", "gte"],
@@ -627,6 +866,13 @@ var TEXT_FILTER_OPERATORS = [
   ["<", "lt"],
   ["=", "eq"]
 ];
+var FILTER_OPERATOR_TOKENS = Object.fromEntries(TEXT_FILTER_OPERATORS.map(([token, operator]) => [operator, token]));
+var DATE_COMPARISON_RULES = {
+  gt: { bound: "end", upper: true },
+  gte: { bound: "start", upper: false },
+  lt: { bound: "start", upper: false },
+  lte: { bound: "end", upper: true }
+};
 var LEADING_QUERY_CHARS = "!=<>%";
 function isEscapedAt(value, index) {
   let slashes = 0;
@@ -677,9 +923,7 @@ function parsePatternFilter(value, containsOperator, startsWithOperator, endsWit
   }
   return { operator: containsOperator, value: unescapeFilterQueryText(value) };
 }
-var DATE_YEAR_PATTERN = /^(\d{4})$/;
-var DATE_MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
-var DATE_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
+var DATE_PATTERN = /^(\d{4})(?:-(\d{2})(?:-(\d{2}))?)?$/;
 function daysInMonth(year, month) {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
@@ -687,45 +931,41 @@ function pad2(value) {
   return String(value).padStart(2, "0");
 }
 function parseCanonicalDateFragment(value) {
-  const yearMatch = DATE_YEAR_PATTERN.exec(value);
-  if (yearMatch) {
+  const match = DATE_PATTERN.exec(value);
+  if (!match) {
+    return null;
+  }
+  const yearText = match[1];
+  const monthText = match[2];
+  const dayText = match[3];
+  const year = Number(yearText);
+  if (!monthText) {
     return {
       precision: "year",
-      raw: yearMatch[1],
-      start: `${yearMatch[1]}-01-01`,
-      end: `${yearMatch[1]}-12-31`
+      raw: yearText,
+      start: `${yearText}-01-01`,
+      end: `${yearText}-12-31`
     };
   }
-  const monthMatch = DATE_MONTH_PATTERN.exec(value);
-  if (monthMatch) {
-    const year = Number(monthMatch[1]);
-    const month = Number(monthMatch[2]);
-    if (month < 1 || month > 12) {
-      return null;
-    }
+  const month = Number(monthText);
+  if (month < 1 || month > 12) {
+    return null;
+  }
+  const prefix = `${yearText}-${monthText}`;
+  const lastDay = daysInMonth(year, month);
+  if (!dayText) {
     return {
       precision: "month",
-      raw: `${monthMatch[1]}-${monthMatch[2]}`,
-      start: `${monthMatch[1]}-${monthMatch[2]}-01`,
-      end: `${monthMatch[1]}-${monthMatch[2]}-${pad2(daysInMonth(year, month))}`
+      raw: prefix,
+      start: `${prefix}-01`,
+      end: `${prefix}-${pad2(lastDay)}`
     };
   }
-  const dayMatch = DATE_DAY_PATTERN.exec(value);
-  if (dayMatch) {
-    const year = Number(dayMatch[1]);
-    const month = Number(dayMatch[2]);
-    const day = Number(dayMatch[3]);
-    if (month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
-      return null;
-    }
-    return {
-      precision: "day",
-      raw: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
-      start: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`,
-      end: `${dayMatch[1]}-${dayMatch[2]}-${dayMatch[3]}`
-    };
+  const day = Number(dayText);
+  if (day < 1 || day > lastDay) {
+    return null;
   }
-  return null;
+  return { precision: "day", raw: value, start: value, end: value };
 }
 function fallbackDateFilter(operator, value) {
   if (operator === "eq") {
@@ -744,45 +984,32 @@ function readLeadingOperator(value) {
   return null;
 }
 function compressDateRange(start, end) {
-  if (start === end && parseCanonicalDateFragment(start)?.precision === "day") {
-    return start;
+  if (start === end) {
+    return parseCanonicalDateFragment(start)?.precision === "day" ? start : null;
   }
-  const yearMatch = /^(\d{4})-01-01$/.exec(start);
-  if (yearMatch && end === `${yearMatch[1]}-12-31`) {
-    return yearMatch[1];
+  const lower = compressDateBound(start, false);
+  const upper = compressDateBound(end, true);
+  return lower && lower === upper ? lower : null;
+}
+function compressDateBound(value, upper) {
+  const fragment = parseCanonicalDateFragment(value);
+  if (fragment?.precision !== "day") {
+    return null;
   }
-  const monthMatch = /^(\d{4})-(\d{2})-01$/.exec(start);
-  if (monthMatch) {
-    const year = Number(monthMatch[1]);
-    const month = Number(monthMatch[2]);
-    if (end === `${monthMatch[1]}-${monthMatch[2]}-${pad2(daysInMonth(year, month))}`) {
-      return `${monthMatch[1]}-${monthMatch[2]}`;
+  const [year, month, day] = value.split("-");
+  if (upper) {
+    if (month === "12" && day === "31") {
+      return year;
     }
-  }
-  return null;
-}
-function compressDateLowerBound(value) {
-  const yearMatch = /^(\d{4})-01-01$/.exec(value);
-  if (yearMatch) {
-    return yearMatch[1];
-  }
-  const monthMatch = /^(\d{4})-(\d{2})-01$/.exec(value);
-  if (monthMatch) {
-    return `${monthMatch[1]}-${monthMatch[2]}`;
-  }
-  return null;
-}
-function compressDateUpperBound(value) {
-  const yearMatch = /^(\d{4})-12-31$/.exec(value);
-  if (yearMatch) {
-    return yearMatch[1];
-  }
-  const monthMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (monthMatch) {
-    const year = Number(monthMatch[1]);
-    const month = Number(monthMatch[2]);
-    if (Number(monthMatch[3]) === daysInMonth(year, month)) {
-      return `${monthMatch[1]}-${monthMatch[2]}`;
+    if (Number(day) === daysInMonth(Number(year), Number(month))) {
+      return `${year}-${month}`;
+    }
+  } else {
+    if (month === "01" && day === "01") {
+      return year;
+    }
+    if (day === "01") {
+      return `${year}-${month}`;
     }
   }
   return null;
@@ -823,19 +1050,8 @@ function parseDateFilterQuery(value) {
     }
     return { operator: "notStartsWith", value: fragment.raw };
   }
-  if (operator === "gt") {
-    return { operator: "gt", value: fragment.end };
-  }
-  if (operator === "gte") {
-    return { operator: "gte", value: fragment.start };
-  }
-  if (operator === "lt") {
-    return { operator: "lt", value: fragment.start };
-  }
-  if (operator === "lte") {
-    return { operator: "lte", value: fragment.end };
-  }
-  return { operator, value: rawValue };
+  const rule = DATE_COMPARISON_RULES[operator];
+  return { operator, value: rule ? fragment[rule.bound] : rawValue };
 }
 function formatTextFilterQuery(filter) {
   if (!filter) {
@@ -846,19 +1062,11 @@ function formatTextFilterQuery(filter) {
     return "";
   }
   const text = String(value);
+  const token = FILTER_OPERATOR_TOKENS[filter.operator];
+  if (token) {
+    return `${token}${text}`;
+  }
   switch (filter.operator) {
-    case "eq":
-      return `=${text}`;
-    case "neq":
-      return `!=${text}`;
-    case "gt":
-      return `>${text}`;
-    case "gte":
-      return `>=${text}`;
-    case "lt":
-      return `<${text}`;
-    case "lte":
-      return `<=${text}`;
     case "notContains":
       return `!${escapePatternText(text)}`;
     case "notStartsWith":
@@ -885,23 +1093,15 @@ function formatDateFilterQuery(filter) {
     return "";
   }
   const text = String(value);
+  const rule = DATE_COMPARISON_RULES[filter.operator];
+  if (rule) {
+    return `${FILTER_OPERATOR_TOKENS[filter.operator]}${compressDateBound(text, rule.upper) ?? text}`;
+  }
   switch (filter.operator) {
     case "eq":
       return parseCanonicalDateFragment(text)?.precision === "day" ? text : `=${text}`;
     case "neq":
       return `!=${text}`;
-    case "gt": {
-      return `>${compressDateUpperBound(text) ?? text}`;
-    }
-    case "gte": {
-      return `>=${compressDateLowerBound(text) ?? text}`;
-    }
-    case "lt": {
-      return `<${compressDateLowerBound(text) ?? text}`;
-    }
-    case "lte": {
-      return `<=${compressDateUpperBound(text) ?? text}`;
-    }
     case "notStartsWith":
       return `!=${text}`;
     case "startsWith":
@@ -909,6 +1109,43 @@ function formatDateFilterQuery(filter) {
     default:
       return text;
   }
+}
+
+// src/query-state.js
+function normalizeQuery(query) {
+  const q = query || {};
+  const page = Math.floor(Number(q.page)) || 1;
+  const pageSize = Math.floor(Number(q.pageSize)) || 10;
+  const search = typeof q.search === "string" ? q.search : "";
+  const sort = Array.isArray(q.sort) ? q.sort.filter((item) => item?.field).map((item) => ({
+    field: String(item.field),
+    direction: item.direction === "desc" ? "desc" : "asc"
+  })) : [];
+  const filters = {};
+  if (q.filters && typeof q.filters === "object") {
+    for (const [key, filter] of Object.entries(q.filters)) {
+      if (filter === null || filter === undefined) {
+        continue;
+      }
+      let operator;
+      let value;
+      if (typeof filter === "object") {
+        operator = filter.operator;
+        if (!operator) {
+          continue;
+        }
+        value = filter.value;
+      } else {
+        operator = "contains";
+        value = filter;
+      }
+      const hasValue = value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
+      if (hasValue || operator === "empty" || operator === "notEmpty") {
+        filters[key] = hasValue ? { operator, value } : { operator };
+      }
+    }
+  }
+  return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), search, sort, filters };
 }
 
 // src/utils/addSelectOption.js
@@ -936,17 +1173,6 @@ function applyContent(el, content) {
     return;
   }
   el.textContent = content;
-}
-
-// src/utils/attributes.js
-function parseBooleanAttribute(value) {
-  return value === "" || value === "true" || value === "1";
-}
-function parseIntegerListAttribute(value) {
-  return value.split(",").map((item) => Number.parseInt(item, 10)).filter((item) => Number.isFinite(item));
-}
-function parseEnumAttribute(value, allowed, fallback) {
-  return allowed.includes(value) ? value : fallback;
 }
 
 // src/utils/columnWidth.js
@@ -1148,22 +1374,6 @@ function transformValue(value, transform, ctx) {
 }
 
 // src/data-grid.js
-var DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
-function declarativeCells(row) {
-  return row[DECLARATIVE_CELLS];
-}
-function setDeclarativeCell(row, field, meta) {
-  let cells = declarativeCells(row);
-  if (!cells) {
-    cells = {};
-    Object.defineProperty(row, DECLARATIVE_CELLS, {
-      value: cells,
-      enumerable: false,
-      configurable: true
-    });
-  }
-  cells[field] = meta;
-}
 var plugins = {};
 var connectedInstances = new Set;
 var textInputState = new WeakMap;
@@ -1195,259 +1405,20 @@ var labels = {
   booleanFalse: "No"
 };
 var LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
+var CORE_EVENTS = [
+  "click",
+  "change",
+  "input",
+  "keydown",
+  "mouseover",
+  "compositionstart",
+  "compositionend",
+  "columnResized",
+  "columnReordered",
+  "columnVisibility"
+];
 function formatLabel(template, values) {
   return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
-}
-function normalizeQuery(query) {
-  const q = query || {};
-  const page = Math.floor(Number(q.page)) || 1;
-  const pageSize = Math.floor(Number(q.pageSize)) || 10;
-  const search = typeof q.search === "string" ? q.search : "";
-  const sort = Array.isArray(q.sort) ? q.sort.filter((s) => s?.field).map((s) => ({
-    field: String(s.field),
-    direction: s.direction === "desc" ? "desc" : "asc"
-  })) : [];
-  const filters = {};
-  if (q.filters && typeof q.filters === "object") {
-    for (const [key, filter] of Object.entries(q.filters)) {
-      if (filter === null || filter === undefined) {
-        continue;
-      }
-      let operator;
-      let value;
-      if (typeof filter === "object") {
-        operator = filter.operator;
-        if (!operator) {
-          continue;
-        }
-        value = filter.value;
-      } else {
-        operator = "contains";
-        value = filter;
-      }
-      const hasValue = value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
-      if (hasValue || operator === "empty" || operator === "notEmpty") {
-        filters[key] = hasValue ? { operator, value } : { operator };
-      }
-    }
-  }
-  return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), search, sort, filters };
-}
-function parseDeclarativeTable(table) {
-  const columns = [];
-  const sort = [];
-  const headerRow = table.querySelector("thead > tr:first-child");
-  if (!headerRow) {
-    return { columns, sort };
-  }
-  const ths = headerRow.querySelectorAll(":scope > th[data-field]");
-  for (const th of ths) {
-    const field = th.dataset.field;
-    if (!field) {
-      continue;
-    }
-    const column = {
-      field,
-      title: th.textContent.trim()
-    };
-    if (th.dataset.sortable !== undefined) {
-      column.sortable = parseBooleanAttribute(th.dataset.sortable);
-    }
-    if (th.dataset.filterable !== undefined) {
-      column.filterable = parseBooleanAttribute(th.dataset.filterable);
-    }
-    if (th.dataset.wrap !== undefined) {
-      column.wrap = parseBooleanAttribute(th.dataset.wrap);
-    }
-    if (th.dataset.filter) {
-      const mode = th.dataset.filter;
-      if (["text", "select", "boolean", "number", "date"].includes(mode)) {
-        column.filterType = mode;
-      }
-    }
-    if (th.dataset.filterPlaceholder !== undefined) {
-      column.filterPlaceholder = th.dataset.filterPlaceholder;
-    }
-    if (th.dataset.responsive !== undefined) {
-      const responsive = Number(th.dataset.responsive);
-      if (Number.isFinite(responsive)) {
-        column.responsive = responsive;
-      }
-    }
-    if (th.dataset.frozen === "start") {
-      column.frozen = "start";
-    }
-    if (th.dataset.hidden !== undefined) {
-      column.hidden = parseBooleanAttribute(th.dataset.hidden);
-    }
-    if (th.dataset.editable !== undefined) {
-      column.editable = parseBooleanAttribute(th.dataset.editable);
-    }
-    if (th.dataset.editableType) {
-      column.editableType = th.dataset.editableType;
-    }
-    if (th.dataset.transform) {
-      column.transform = th.dataset.transform;
-    }
-    if (th.dataset.format) {
-      column.format = th.dataset.format;
-    }
-    if (th.dataset.align) {
-      if (["start", "center", "end"].includes(th.dataset.align)) {
-        column.align = th.dataset.align;
-      }
-    }
-    if (th.dataset.width !== undefined) {
-      const width = Number(th.dataset.width);
-      if (Number.isFinite(width)) {
-        column.width = width;
-      }
-    }
-    if (th.dataset.minWidth !== undefined) {
-      const minWidth = Number(th.dataset.minWidth);
-      if (Number.isFinite(minWidth)) {
-        column.minWidth = minWidth;
-      }
-    }
-    const direction = th.dataset.sort;
-    if (direction === "asc" || direction === "desc") {
-      sort.push({ field, direction });
-    }
-    columns.push(column);
-  }
-  return { columns, sort };
-}
-function parseActionsCell(td) {
-  const actions = [];
-  const elements = td.querySelectorAll("[data-action]");
-  for (const el of elements) {
-    const name = el.dataset.action;
-    if (!name) {
-      continue;
-    }
-    const action = { name };
-    const label = el.textContent.trim();
-    if (label) {
-      action.label = label;
-    }
-    const href = el.getAttribute("href");
-    if (href) {
-      action.href = href;
-    }
-    if (el.dataset.intent) {
-      action.intent = el.dataset.intent;
-    }
-    if (el.dataset.confirm !== undefined) {
-      action.confirm = el.dataset.confirm;
-    }
-    if (el.dataset.default !== undefined) {
-      action.default = parseBooleanAttribute(el.dataset.default);
-    }
-    if (el.hasAttribute("disabled")) {
-      action.disabled = true;
-    }
-    actions.push(action);
-  }
-  return actions;
-}
-function rowsFromTable(table, columns, rowKey = "id") {
-  const tbody = table.querySelector("tbody");
-  if (!tbody) {
-    return [];
-  }
-  const rows = [];
-  const trs = tbody.querySelectorAll(":scope > tr");
-  for (const tr of trs) {
-    const row = {};
-    const tds = Array.from(tr.querySelectorAll(":scope > td")).filter((td) => !td.hasAttribute("data-actions"));
-    for (let index = 0;index < columns.length; index++) {
-      const column = columns[index];
-      if (!column.field) {
-        continue;
-      }
-      const td = tds[index];
-      if (!td) {
-        continue;
-      }
-      const raw = td.dataset.value;
-      if (raw !== undefined) {
-        row[column.field] = normalizeData(raw);
-        setDeclarativeCell(row, column.field, {
-          value: row[column.field],
-          label: td.textContent.trim(),
-          content: Array.from(td.childNodes)
-        });
-      } else {
-        row[column.field] = td.textContent.trim();
-      }
-    }
-    const actionsCell = tr.querySelector(":scope > td[data-actions]");
-    if (actionsCell) {
-      const actions = parseActionsCell(actionsCell);
-      if (actions.length) {
-        row.$actions = actions;
-      }
-    }
-    if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
-      row[rowKey] = tr.dataset.rowKey;
-    }
-    rows.push(row);
-  }
-  return rows;
-}
-function orderColumns(columns) {
-  const start = [];
-  const middle = [];
-  const end = [];
-  for (const col of columns) {
-    if (col.position === "start") {
-      start.push(col);
-    } else if (col.position === "end") {
-      end.push(col);
-    } else {
-      middle.push(col);
-    }
-  }
-  return [...start.reverse(), ...middle, ...end];
-}
-function isColumnHidden(column) {
-  return Boolean(column.hidden || column.responsiveHidden);
-}
-function getColumnAlign(column) {
-  return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
-}
-function getFirstFilterOption(column, defaultColumn) {
-  const option = column.firstFilterOption || defaultColumn.firstFilterOption || { value: "", text: "" };
-  return { value: "", text: option.text ?? "" };
-}
-function getColumnFilterType(column) {
-  return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
-}
-function isPercentColumn(column) {
-  return column.format === "number" && column.formatOptions?.style === "percent";
-}
-function applyColumnDefinition(el, column) {
-  if (column.width) {
-    const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
-    el.setAttribute("width", String(Math.max(column.width, minWidth)));
-  }
-  if (column.class) {
-    el.classList.add(...column.class.trim().split(/\s+/));
-  }
-  if (column.frozen === "start") {
-    el.dataset.frozen = "start";
-  } else {
-    delete el.dataset.frozen;
-  }
-  if (isColumnHidden(column)) {
-    el.setAttribute("hidden", "");
-    if (column.responsiveHidden) {
-      el.classList.add("dg-responsive-hidden");
-    }
-  }
-  if (column.sortable === false && el.tagName === "TH") {
-    el.classList.add("dg-not-sortable");
-  }
 }
 
 class DataGrid extends base_element_default {
@@ -2208,16 +2179,9 @@ class DataGrid extends base_element_default {
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
     this._syncSelectionOptions();
-    this.addEventListener("click", this);
-    this.addEventListener("change", this);
-    this.addEventListener("input", this);
-    this.addEventListener("keydown", this);
-    this.addEventListener("mouseover", this);
-    this.addEventListener("compositionstart", this);
-    this.addEventListener("compositionend", this);
-    this.addEventListener("columnResized", this);
-    this.addEventListener("columnReordered", this);
-    this.addEventListener("columnVisibility", this);
+    for (const type of CORE_EVENTS) {
+      this.addEventListener(type, this);
+    }
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
     this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
     this.setupDataSource();
@@ -2241,16 +2205,9 @@ class DataGrid extends base_element_default {
       textInputState.get(input)?.apply.cancel();
       textInputState.delete(input);
     }
-    this.removeEventListener("click", this);
-    this.removeEventListener("change", this);
-    this.removeEventListener("input", this);
-    this.removeEventListener("keydown", this);
-    this.removeEventListener("mouseover", this);
-    this.removeEventListener("compositionstart", this);
-    this.removeEventListener("compositionend", this);
-    this.removeEventListener("columnResized", this);
-    this.removeEventListener("columnReordered", this);
-    this.removeEventListener("columnVisibility", this);
+    for (const type of CORE_EVENTS) {
+      this.removeEventListener(type, this);
+    }
     if (this._frozenFrame !== null) {
       cancelAnimationFrame(this._frozenFrame);
       this._frozenFrame = null;
@@ -2981,40 +2938,42 @@ class DataGrid extends base_element_default {
       if (!name) {
         continue;
       }
-      if (input.dataset.filterMode === "multi") {
-        const values = readMultiSelect(input);
-        if (values.length) {
-          filters[name] = { operator: "in", value: values };
-        }
-        continue;
-      }
-      const value = input.value;
-      if (value) {
-        const mode = input.dataset.filterMode;
-        if (mode === "text") {
-          filters[name] = parseTextFilterQuery(value);
-        } else if (mode === "boolean") {
-          filters[name] = { operator: "eq", value: value === "true" };
-        } else if (mode === "number") {
-          const parsed = parseTextFilterQuery(value);
-          const num = Number(parsed.value);
-          const isPercent = input.dataset.percent === "true";
-          filters[name] = {
-            operator: parsed.operator,
-            value: Number.isFinite(num) ? isPercent ? num / 100 : num : parsed.value
-          };
-        } else if (mode === "date") {
-          filters[name] = parseDateFilterQuery(value);
-        } else {
-          const isSelect = /select/i.test(input.tagName);
-          filters[name] = {
-            operator: isSelect ? "eq" : "contains",
-            value
-          };
-        }
+      const filter = this._readFilterControl(input);
+      if (filter) {
+        filters[name] = filter;
       }
     }
     return this.setQuery({ filters });
+  }
+  _readFilterControl(input) {
+    if (input.dataset.filterMode === "multi") {
+      const values = readMultiSelect(input);
+      return values.length ? { operator: "in", value: values } : undefined;
+    }
+    const value = input.value;
+    if (!value) {
+      return;
+    }
+    const mode = input.dataset.filterMode;
+    if (mode === "text") {
+      return parseTextFilterQuery(value);
+    }
+    if (mode === "boolean") {
+      return { operator: "eq", value: value === "true" };
+    }
+    if (mode === "number") {
+      const parsed = parseTextFilterQuery(value);
+      const number = Number(parsed.value);
+      const isPercent = input.dataset.percent === "true";
+      return {
+        operator: parsed.operator,
+        value: Number.isFinite(number) ? isPercent ? number / 100 : number : parsed.value
+      };
+    }
+    if (mode === "date") {
+      return parseDateFilterQuery(value);
+    }
+    return { operator: /select/i.test(input.tagName) ? "eq" : "contains", value };
   }
   renderTable() {
     this.log("render table");
@@ -3114,25 +3073,11 @@ class DataGrid extends base_element_default {
       if (column.attr) {
         continue;
       }
-      const th = document.createElement("th");
-      th.setAttribute("scope", "col");
-      th.setAttribute("data-column-id", this.getColumnId(column));
-      if (!column.virtual) {
-        th.setAttribute("id", randstr("dg-col-"));
-        th.setAttribute("field", column.field ?? "");
-      }
-      const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
-      if (column.renderHeaderCell) {
-        column.renderHeaderCell(th, ctx);
-      } else {
-        this.renderDefaultHeaderCell(th, ctx);
-      }
-      applyColumnDefinition(th, column);
-      const align = getColumnAlign(column);
-      if (align) {
-        th.dataset.align = align;
-      }
-      tr.appendChild(th);
+      tr.appendChild(this._createHeaderColumn(column, {
+        sampleTh,
+        availableWidth,
+        colMaxWidth
+      }));
     }
     if (seededSample) {
       sampleTh.remove();
@@ -3140,31 +3085,50 @@ class DataGrid extends base_element_default {
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
     }
-    if (thead && thead.offsetWidth > availableWidth) {
-      this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
-      const scrollbarWidth = this.scrollEl.offsetWidth - this.scrollEl.clientWidth;
-      let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-      if (this.options.responsive) {
-        diff += scrollbarWidth;
+    this._fitHeaderWidths(thead, tr, availableWidth);
+  }
+  _createHeaderColumn(column, { sampleTh, availableWidth, colMaxWidth }) {
+    const th = document.createElement("th");
+    th.setAttribute("scope", "col");
+    th.setAttribute("data-column-id", this.getColumnId(column));
+    if (!column.virtual) {
+      th.setAttribute("id", randstr("dg-col-"));
+      th.setAttribute("field", column.field ?? "");
+    }
+    const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
+    if (column.renderHeaderCell) {
+      column.renderHeaderCell(th, ctx);
+    } else {
+      this.renderDefaultHeaderCell(th, ctx);
+    }
+    applyColumnDefinition(th, column);
+    const align = getColumnAlign(column);
+    if (align) {
+      th.dataset.align = align;
+    }
+    return th;
+  }
+  _fitHeaderWidths(thead, tr, availableWidth) {
+    if (!thead || thead.offsetWidth <= availableWidth) {
+      return;
+    }
+    this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
+    const scrollbarWidth = this.scrollEl.offsetWidth - this.scrollEl.clientWidth;
+    let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
+    if (this.options.responsive) {
+      diff += scrollbarWidth;
+    }
+    const thWithWidth = tr.querySelectorAll("th[width]");
+    for (const th of thWithWidth) {
+      if (th.classList.contains("dg-not-resizable") || diff <= 0) {
+        continue;
       }
-      const thWithWidth = tr.querySelectorAll("th[width]");
-      for (const th of thWithWidth) {
-        if (th.classList.contains("dg-not-resizable")) {
-          continue;
-        }
-        if (diff <= 0) {
-          continue;
-        }
-        const actualWidth = Number.parseInt(th.getAttribute("width") ?? "");
-        const minWidth = Number.parseInt(th.dataset.minWidth ?? "") || 0;
-        if (actualWidth > minWidth) {
-          let newWidth = actualWidth - diff;
-          if (newWidth < minWidth) {
-            newWidth = minWidth;
-          }
-          diff -= actualWidth - newWidth;
-          th.setAttribute("width", String(newWidth));
-        }
+      const actualWidth = Number.parseInt(th.getAttribute("width") ?? "");
+      const minWidth = Number.parseInt(th.dataset.minWidth ?? "") || 0;
+      if (actualWidth > minWidth) {
+        const newWidth = Math.max(minWidth, actualWidth - diff);
+        diff -= actualWidth - newWidth;
+        th.setAttribute("width", String(newWidth));
       }
     }
   }
@@ -3276,22 +3240,7 @@ class DataGrid extends base_element_default {
     if (field) {
       const filterState = this._query.filters?.[field];
       if (filterState) {
-        if (filter.dataset.filterMode === "multi") {
-          setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
-        } else if (filter.dataset.filterMode === "text") {
-          filter.value = formatTextFilterQuery(filterState);
-        } else if (filter.dataset.filterMode === "number") {
-          const numericValue = Number(filterState.value);
-          const value = filter.dataset.percent === "true" && Number.isFinite(numericValue) ? numericValue * 100 : filterState.value;
-          filter.value = formatTextFilterQuery({
-            operator: filterState.operator,
-            value
-          });
-        } else if (filter.dataset.filterMode === "date") {
-          filter.value = formatDateFilterQuery(filterState);
-        } else {
-          filter.value = filter.dataset.percent === "true" ? String(Number(filterState.value) * 100) : String(filterState.value ?? "");
-        }
+        this._writeFilterControl(filter, filterState);
       }
     }
     if (filter instanceof HTMLSelectElement) {
@@ -3302,6 +3251,31 @@ class DataGrid extends base_element_default {
     } else {
       th.appendChild(filter);
     }
+  }
+  _writeFilterControl(filter, filterState) {
+    const mode = filter.dataset.filterMode;
+    if (mode === "multi") {
+      setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
+      return;
+    }
+    if (mode === "text") {
+      filter.value = formatTextFilterQuery(filterState);
+      return;
+    }
+    if (mode === "number") {
+      const numericValue = Number(filterState.value);
+      const value = filter.dataset.percent === "true" && Number.isFinite(numericValue) ? numericValue * 100 : filterState.value;
+      filter.value = formatTextFilterQuery({
+        operator: filterState.operator,
+        value
+      });
+      return;
+    }
+    if (mode === "date") {
+      filter.value = formatDateFilterQuery(filterState);
+      return;
+    }
+    filter.value = filter.dataset.percent === "true" ? String(Number(filterState.value) * 100) : String(filterState.value ?? "");
   }
   createFilterElement(column, relatedTh) {
     const type = getColumnFilterType(column);
@@ -3402,51 +3376,8 @@ class DataGrid extends base_element_default {
     const tbody = document.createElement("tbody");
     const prev = this.tbody;
     const message = prev?.getAttribute("data-empty-message") ?? "";
-    let i = 0;
-    for (const item of this.rows) {
-      const tr = document.createElement("tr");
-      tr.classList.add("dg-data-row");
-      tr.dataset.rowIndex = String(i);
-      if (this.options.rowClick === "select" && this.options.selectable) {
-        tr.classList.add("dg-clickable-row");
-      }
-      for (const column of this.getColumns()) {
-        if (!column) {
-          console.error("Empty column found!", this.getColumns());
-          continue;
-        }
-        const field = column.field;
-        if (column.attr) {
-          if (field && item[field] != null) {
-            if (column.attr === "class") {
-              tr.classList.add(...item[field].trim().split(/\s+/));
-            } else {
-              tr.setAttribute(column.attr, item[field]);
-            }
-          }
-          continue;
-        }
-        const td = this._createColumnCell("td", column);
-        if (column.wrap ?? this.options.wrap) {
-          td.classList.add("dg-wrap");
-        }
-        td.setAttribute("data-name", column.title ?? "");
-        const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
-        const cellClass = typeof column.cellClass === "function" ? column.cellClass(ctx) : column.cellClass;
-        const classes = String(cellClass ?? "").trim();
-        if (classes) {
-          td.classList.add(...classes.split(/\s+/));
-        }
-        if (column.renderCell) {
-          applyContent(td, column.renderCell(ctx));
-        } else {
-          this.renderDefaultCell(td, ctx);
-        }
-        tr.appendChild(td);
-      }
-      tbody.appendChild(tr);
-      dispatch(this, "rowRendered", { rowData: item, tr });
-      i++;
+    for (let rowIndex = 0;rowIndex < this.rows.length; rowIndex++) {
+      tbody.appendChild(this._renderDataRow(this.rows[rowIndex], rowIndex));
     }
     if (this.hasDataError) {
       const { row, cell } = createSpanningRow(this, { className: "dg-error-row" });
@@ -3472,6 +3403,57 @@ class DataGrid extends base_element_default {
       this.setAttribute("data-empty", "");
     }
     dispatch(this, "bodyRendered");
+  }
+  _renderDataRow(item, rowIndex) {
+    const tr = document.createElement("tr");
+    tr.classList.add("dg-data-row");
+    tr.dataset.rowIndex = String(rowIndex);
+    if (this.options.rowClick === "select" && this.options.selectable) {
+      tr.classList.add("dg-clickable-row");
+    }
+    for (const column of this.getColumns()) {
+      if (!column) {
+        console.error("Empty column found!", this.getColumns());
+        continue;
+      }
+      const field = column.field;
+      if (column.attr) {
+        if (field && item[field] != null) {
+          if (column.attr === "class") {
+            tr.classList.add(...item[field].trim().split(/\s+/));
+          } else {
+            tr.setAttribute(column.attr, item[field]);
+          }
+        }
+        continue;
+      }
+      const td = this._createColumnCell("td", column);
+      if (column.wrap ?? this.options.wrap) {
+        td.classList.add("dg-wrap");
+      }
+      td.setAttribute("data-name", column.title ?? "");
+      const ctx = {
+        grid: this,
+        column,
+        row: item,
+        rowIndex,
+        value: field ? item[field] : undefined,
+        tr
+      };
+      const cellClass = typeof column.cellClass === "function" ? column.cellClass(ctx) : column.cellClass;
+      const classes = String(cellClass ?? "").trim();
+      if (classes) {
+        td.classList.add(...classes.split(/\s+/));
+      }
+      if (column.renderCell) {
+        applyContent(td, column.renderCell(ctx));
+      } else {
+        this.renderDefaultCell(td, ctx);
+      }
+      tr.appendChild(td);
+    }
+    dispatch(this, "rowRendered", { rowData: item, tr });
+    return tr;
   }
   renderDefaultCell(td, ctx) {
     const { column, row: item, rowIndex: i } = ctx;
@@ -4449,8 +4431,8 @@ class ResponsiveGrid extends base_plugin_default {
       title: "",
       class: `dg-disclosure-cell ${RESPONSIVE_CLASS}-toggle`,
       hidden: !this.hasHiddenColumns(),
-      renderHeaderCell: (th) => this.createHeaderCell(th),
-      renderFilterCell: () => this.createFilterCell(),
+      renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
+      renderFilterCell: () => {},
       renderCell: (ctx) => this.createDataCell(ctx)
     });
   }
@@ -4477,17 +4459,8 @@ class ResponsiveGrid extends base_plugin_default {
     return Math.round(contentBoxSize?.inlineSize ?? entry.contentRect?.width ?? 0);
   }
   hasHiddenColumns() {
-    for (const col of this.grid.options.columns) {
-      if (col.responsiveHidden) {
-        return true;
-      }
-    }
-    return false;
+    return this.grid.options.columns.some((column) => column.responsiveHidden);
   }
-  createHeaderCell(th) {
-    th.classList.add("dg-not-resizable", "dg-not-sortable");
-  }
-  createFilterCell() {}
   createDataCell({ row, rowIndex = 0 }) {
     const cell = createDisclosureButton(`${RESPONSIVE_CLASS}-toggle-control`);
     cell.setAttribute("aria-expanded", "false");
@@ -4502,24 +4475,49 @@ class ResponsiveGrid extends base_plugin_default {
     return `dg-responsive-detail-${this.grid.id}-${rowIndex}`;
   }
   resize() {
-    const grid = this.grid;
-    const table = grid.table;
-    const headerRow = grid.headerRow;
-    if (this.observerBlocked) {
+    const size = this._resizeWidth();
+    if (size === null) {
       return;
     }
-    if (!table || !headerRow) {
+    const table = this.grid.table;
+    if (!table) {
       return;
+    }
+    const layout = this._measureLayout();
+    if (!layout) {
+      return;
+    }
+    const changed = this._fitColumns(layout, size);
+    if (changed) {
+      this._rebuildDetailsSafely();
+    }
+    this._syncFooter(size);
+    table.style.visibility = "visible";
+  }
+  _resizeWidth() {
+    if (this.observerBlocked) {
+      return null;
+    }
+    if (!this.grid.table || !this.grid.headerRow) {
+      return null;
     }
     const entry = this._lastEntry;
     if (!entry) {
-      return;
+      return null;
     }
     const size = this._entryWidth(entry);
     if (size === this._lastProcessedWidth) {
-      return;
+      return null;
     }
     this._lastProcessedWidth = size;
+    return size;
+  }
+  _measureLayout() {
+    const grid = this.grid;
+    const headerRow = grid.headerRow;
+    if (!headerRow) {
+      return null;
+    }
     const widths = new Map;
     for (const th of headerRow.querySelectorAll("th")) {
       const el = th;
@@ -4553,12 +4551,17 @@ class ResponsiveGrid extends base_plugin_default {
       }
       return total;
     };
-    let visible = [...headerRow.querySelectorAll("th[field]")].map((th) => {
+    const visible = [...headerRow.querySelectorAll("th[field]")].map((th) => {
       return {
         th,
         column: grid.getCol(th.getAttribute("field") ?? "")
       };
     }).filter(({ column }) => !isColumnHidden2(column));
+    return { items, visible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 };
+  }
+  _fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 }, size) {
+    const grid = this.grid;
+    let visible = initialVisible;
     let changed = false;
     if (requiredWidth(visible) > size) {
       for (const item of items) {
@@ -4591,10 +4594,12 @@ class ResponsiveGrid extends base_plugin_default {
         changed = true;
       }
     }
-    if (changed) {
-      this.blockObserver();
-      this._rebuildDetails();
-      this.unblockObserver();
+    return changed;
+  }
+  _syncFooter(size) {
+    const table = this.grid.table;
+    if (!table) {
+      return;
     }
     const footer = table.querySelector("tfoot");
     if (footer) {
@@ -4610,7 +4615,11 @@ class ResponsiveGrid extends base_plugin_default {
         footer.classList.remove("dg-footer-compact");
       }
     }
-    table.style.visibility = "visible";
+  }
+  _rebuildDetailsSafely() {
+    this.blockObserver();
+    this._rebuildDetails();
+    this.unblockObserver();
   }
   computeLabelWidth() {
     let idealWidth = 0;
@@ -4719,28 +4728,28 @@ class ResponsiveGrid extends base_plugin_default {
       return;
     }
     if (childRow && hasChildRow) {
-      for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
-        tr.appendChild(col);
-        col.setAttribute("hidden", "");
-      }
-      childRow.remove();
-      this._canonicalizeRow(tr);
+      this._restoreChildRow(tr, childRow);
     }
     tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
     this._setToggleIcon(tr, false);
+  }
+  _restoreChildRow(tr, childRow) {
+    for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
+      tr.appendChild(col);
+      col.setAttribute("hidden", "");
+    }
+    childRow.remove();
+    this._canonicalizeRow(tr);
   }
   _restoreDetails() {
     for (const childRow of this.grid.querySelectorAll(`tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
       const tr = childRow.previousElementSibling;
       if (tr) {
-        for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
-          tr.appendChild(col);
-          col.setAttribute("hidden", "");
-        }
-        this._canonicalizeRow(tr);
+        this._restoreChildRow(tr, childRow);
         tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
+      } else {
+        childRow.remove();
       }
-      childRow.remove();
     }
   }
   _rebuildDetails() {
@@ -4814,10 +4823,10 @@ class RowActions extends base_plugin_default {
     this.menu = null;
   }
   connected() {
-    const menu = this.grid.ownerDocument.createElement("ul");
     if (!supportsPopoverAnchor()) {
       return;
     }
+    const menu = this.grid.ownerDocument.createElement("ul");
     menu.id = randstr("dg-actions-menu-");
     menu.className = "dg-menu dg-actions-menu";
     menu.popover = "auto";
@@ -4846,7 +4855,7 @@ class RowActions extends base_plugin_default {
     }
     const rowIndex = Number(tr.dataset.rowIndex);
     const row = this.grid.rows[rowIndex];
-    if (!tr || !row) {
+    if (!row) {
       return;
     }
     this.renderActionMenu(row);
@@ -4869,15 +4878,16 @@ class RowActions extends base_plugin_default {
       width: COLLAPSED_ACTIONS_WIDTH,
       minWidth: COLLAPSED_ACTIONS_WIDTH,
       class: "dg-actions",
-      renderHeaderCell: (th) => this.createHeaderCell(th),
-      renderFilterCell: () => this.createFilterCell(),
+      renderHeaderCell: (th) => th.classList.add("dg-not-sortable", "dg-not-resizable"),
+      renderFilterCell: () => {},
       renderCell: (ctx) => this.makeActionRow(ctx)
     });
   }
-  createHeaderCell(th) {
-    th.classList.add("dg-not-sortable", "dg-not-resizable");
+  _visibleActions(row, rowIndex) {
+    const grid = this.grid;
+    const rowKey = grid.resolveRowKey(row, rowIndex);
+    return grid.getActionsForRow(row).filter((action) => !action.visible || action.visible(row, { grid, action, rowKey }));
   }
-  createFilterCell() {}
   updateLabels() {
     const toggleLabel = this.grid.labels.toggleActions;
     const toggles = this.grid.querySelectorAll(".dg-actions-toggle");
@@ -4896,16 +4906,9 @@ class RowActions extends base_plugin_default {
     const grid = this.grid;
     const collapse = grid.options.collapseActions;
     let maxCount = 0;
-    for (const row of grid.rows ?? []) {
-      let count = 0;
-      const actions = grid.getActionsForRow(row);
-      const rowKey = grid.resolveRowKey(row);
-      for (const action of actions) {
-        if (action.visible && !action.visible(row, { grid, action, rowKey })) {
-          continue;
-        }
-        count++;
-      }
+    const rows = grid.rows ?? [];
+    for (let rowIndex = 0;rowIndex < rows.length; rowIndex++) {
+      const count = this._visibleActions(rows[rowIndex], rowIndex).length;
       if (count > maxCount) {
         maxCount = count;
       }
@@ -4940,16 +4943,11 @@ class RowActions extends base_plugin_default {
     if (!menu) {
       return;
     }
-    const labels2 = grid.labels;
     const rowIndex = grid.rows.indexOf(row);
     menu.replaceChildren();
-    const rowKey = grid.resolveRowKey(row, rowIndex);
-    for (const action of grid.getActionsForRow(row)) {
-      if (action.visible && !action.visible(row, { grid, action, rowKey })) {
-        continue;
-      }
+    for (const action of this._visibleActions(row, rowIndex)) {
       const li = grid.ownerDocument.createElement("li");
-      const { el } = this.createActionElement(action, row, rowIndex, grid, labels2, true);
+      const el = this.createActionElement(action, row, rowIndex, true);
       li.appendChild(el);
       menu.appendChild(li);
     }
@@ -4957,7 +4955,8 @@ class RowActions extends base_plugin_default {
   makeActionRow({ row, tr, grid, rowIndex }) {
     const labels2 = grid.labels;
     const rowData = row ?? {};
-    const actions = grid.getActionsForRow(rowData);
+    const index = rowIndex ?? 0;
+    const actions = this._visibleActions(rowData, index);
     const fragment = document.createDocumentFragment();
     if (!actions.length) {
       return fragment;
@@ -4972,12 +4971,9 @@ class RowActions extends base_plugin_default {
       fragment.appendChild(actionsToggle);
     }
     let defaultApplied = false;
-    const rowKey = grid.resolveRowKey(rowData, rowIndex ?? 0);
+    const rowKey = grid.resolveRowKey(rowData, index);
     for (const action of actions) {
-      if (action.visible && !action.visible(rowData, { grid, action, rowKey })) {
-        continue;
-      }
-      const { el } = this.createActionElement(action, rowData, rowIndex ?? 0, grid, labels2);
+      const el = this.createActionElement(action, rowData, index);
       fragment.appendChild(el);
       if (action.default) {
         if (defaultApplied) {
@@ -5000,10 +4996,8 @@ class RowActions extends base_plugin_default {
       action.click();
     }
   }
-  createActionElement(action, row, rowIndex, grid, labels2, menu = false) {
-    const rowKey = grid.resolveRowKey(row, rowIndex);
-    const ctx = { grid, action, rowKey };
-    const href = action.href ? typeof action.href === "function" ? action.href(row, ctx) : interpolate(action.href, row) : null;
+  _createActionControl(action, row, href, menu) {
+    const grid = this.grid;
     const render = action.render ?? grid.options.actionRenderer;
     const content = render ? render({ action, row, grid }) : null;
     let el;
@@ -5032,6 +5026,14 @@ class RowActions extends base_plugin_default {
     if (href !== null && !el.hasAttribute("href")) {
       el.href = href;
     }
+    return el;
+  }
+  createActionElement(action, row, rowIndex, menu = false) {
+    const grid = this.grid;
+    const rowKey = grid.resolveRowKey(row, rowIndex);
+    const ctx = { grid, action, rowKey };
+    const href = action.href ? typeof action.href === "function" ? action.href(row, ctx) : interpolate(action.href, row) : null;
+    const el = this._createActionControl(action, row, href, menu);
     el.dataset.action = action.name;
     if (action.intent) {
       el.dataset.intent = action.intent;
@@ -5048,7 +5050,7 @@ class RowActions extends base_plugin_default {
       el.setAttribute("aria-disabled", "true");
       el.classList.add("dg-disabled");
     }
-    const message = resolveActionConfirmation(action.confirm, labels2.areYouSure, row, ctx);
+    const message = resolveActionConfirmation(action.confirm, grid.labels.areYouSure, row, ctx);
     const dispatchAction = (ev) => {
       ev.stopPropagation();
       if (isDisabled) {
@@ -5069,7 +5071,7 @@ class RowActions extends base_plugin_default {
       });
     };
     el.addEventListener("click", dispatchAction);
-    return { el, dispatchAction };
+    return el;
   }
 }
 var row_actions_default = RowActions;

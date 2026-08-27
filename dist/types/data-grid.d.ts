@@ -8,21 +8,6 @@ export type QueryState = import("./data-source.js").QueryState;
 export type PageResult = import("./data-source.js").PageResult;
 export type FilterState = import("./data-source.js").FilterState;
 export type FilterOption = import("./data-source.js").FilterOption;
-export type SortState = import("./data-source.js").SortState;
-export type DeclarativeCellMeta = {
-    /**
-     * - the original machine value the cell was authored for
-     */
-    value: any;
-    /**
-     * - the user-facing text of the cell
-     */
-    label: string;
-    /**
-     * - the authored child nodes, cloned on render
-     */
-    content: Node[];
-};
 export type DateFormatOptions = Intl.DateTimeFormatOptions & {
     style?: "full" | "long" | "medium" | "short";
 };
@@ -1271,6 +1256,12 @@ declare class DataGrid extends BaseElement {
      * query operator.
      */
     filterData(): Promise<void>;
+    /**
+     * Translate one filter control into canonical query state.
+     * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} input
+     * @returns {FilterState|undefined}
+     */
+    _readFilterControl(input: HTMLInputElement | HTMLSelectElement | HTMLDivElement): FilterState | undefined;
     renderTable(): void;
     /**
      * Give the table an accessible name: a real <caption> when options.caption
@@ -1292,6 +1283,23 @@ declare class DataGrid extends BaseElement {
      */
     createColumnHeaders(thead: HTMLTableSectionElement): void;
     /**
+     * @param {Column} column
+     * @param {{ sampleTh: HTMLTableCellElement, availableWidth: Number, colMaxWidth: Number }} layout
+     * @returns {HTMLTableCellElement}
+     */
+    _createHeaderColumn(column: Column, { sampleTh, availableWidth, colMaxWidth }: {
+        sampleTh: HTMLTableCellElement;
+        availableWidth: number;
+        colMaxWidth: number;
+    }): HTMLTableCellElement;
+    /**
+     * Compress explicit header widths when they overflow the viewport.
+     * @param {HTMLTableSectionElement} thead
+     * @param {HTMLTableRowElement} tr
+     * @param {Number} availableWidth
+     */
+    _fitHeaderWidths(thead: HTMLTableSectionElement, tr: HTMLTableRowElement, availableWidth: number): void;
+    /**
      * Default header cell renderer for base columns.
      * @param {HTMLTableCellElement} th
      * @param {CellContext} ctx
@@ -1308,6 +1316,12 @@ declare class DataGrid extends BaseElement {
      * @param {HTMLTableCellElement} relatedTh
      */
     renderDefaultFilterCell(th: HTMLTableCellElement, column: Column, relatedTh: HTMLTableCellElement): void;
+    /**
+     * Reflect canonical query state into one filter control.
+     * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} filter
+     * @param {FilterState} filterState
+     */
+    _writeFilterControl(filter: HTMLInputElement | HTMLSelectElement | HTMLDivElement, filterState: FilterState): void;
     /**
      * @param {Column} column
      * @param {HTMLTableCellElement} relatedTh
@@ -1328,6 +1342,13 @@ declare class DataGrid extends BaseElement {
      * It will call paginate() at the end
      */
     renderBody(): void;
+    /**
+     * Render one record row and its cells.
+     * @param {Record<string, any>} item
+     * @param {Number} rowIndex
+     * @returns {HTMLTableRowElement}
+     */
+    _renderDataRow(item: Record<string, any>, rowIndex: number): HTMLTableRowElement;
     /**
      * Default cell renderer for base columns (transform).
      * Editable cells are marked for the EditableColumn plugin.

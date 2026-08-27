@@ -3,17 +3,28 @@
  * https://github.com/lekoala/data-grid
  */
 
+import {
+    applyColumnDefinition,
+    getColumnAlign,
+    getColumnFilterType,
+    getFirstFilterOption,
+    isColumnHidden,
+    isPercentColumn,
+    orderColumns,
+} from "./columns.js";
 import BaseElement from "./core/base-element.js";
 import { ArrayDataSource, FetchDataSource } from "./data-source.js";
+import { declarativeCells, parseDeclarativeTable, rowsFromTable } from "./declarative-table.js";
 import {
     formatDateFilterQuery,
     formatTextFilterQuery,
     parseDateFilterQuery,
     parseTextFilterQuery,
 } from "./filter-query.js";
+import { normalizeQuery } from "./query-state.js";
 import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
-import { parseBooleanAttribute, parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
+import { parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
@@ -26,7 +37,6 @@ import {
     setMultiSelectValues,
     updateMultiSelectSummary,
 } from "./utils/multiSelectFilter.js";
-import normalizeData from "./utils/normalizeData.js";
 import { supportsPopoverAnchor } from "./utils/popover.js";
 import randstr from "./utils/randstr.js";
 import { createSpanningRow } from "./utils/spanningRow.js";
@@ -37,51 +47,6 @@ import transformValue from "./utils/transformValue.js";
 /** @typedef {import("./data-source.js").PageResult} PageResult */
 /** @typedef {import("./data-source.js").FilterState} FilterState */
 /** @typedef {import("./data-source.js").FilterOption} FilterOption */
-/** @typedef {import("./data-source.js").SortState} SortState */
-
-/**
- * Non-enumerable symbol keyed on a declarative row. Holds the snapshot of each
- * declarative cell: its original machine value, its text label and its authored
- * child nodes, so presentation survives rerenders while the value is unchanged.
- * @type {unique symbol}
- */
-const DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
-
-/**
- * @typedef DeclarativeCellMeta
- * @property {any} value - the original machine value the cell was authored for
- * @property {String} label - the user-facing text of the cell
- * @property {Node[]} content - the authored child nodes, cloned on render
- */
-
-/**
- * Read the non-enumerable declarative-cell snapshot of a row.
- * @param {Record<string, any>} row
- * @returns {Record<string, DeclarativeCellMeta>|undefined}
- */
-function declarativeCells(row) {
-    return /** @type {any} */ (row)[DECLARATIVE_CELLS];
-}
-
-/**
- * Store the declarative-cell snapshot of one field on a row, as a
- * non-enumerable property so it never leaks into Object.keys / JSON / spread.
- * @param {Record<string, any>} row
- * @param {String} field
- * @param {DeclarativeCellMeta} meta
- */
-function setDeclarativeCell(row, field, meta) {
-    let cells = declarativeCells(row);
-    if (!cells) {
-        cells = {};
-        Object.defineProperty(row, DECLARATIVE_CELLS, {
-            value: cells,
-            enumerable: false,
-            configurable: true,
-        });
-    }
-    cells[field] = meta;
-}
 
 /**
  * Options of the `date`/`datetime` formatters: native `Intl.DateTimeFormatOptions`
@@ -348,6 +313,18 @@ let labels = {
 };
 
 const LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
+const CORE_EVENTS = [
+    "click",
+    "change",
+    "input",
+    "keydown",
+    "mouseover",
+    "compositionstart",
+    "compositionend",
+    "columnResized",
+    "columnReordered",
+    "columnVisibility",
+];
 
 /**
  * @param {string} template
@@ -356,375 +333,6 @@ const LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
  */
 function formatLabel(template, values) {
     return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
-}
-
-/**
- * Build a fresh, normalized QueryState.
- * @param {?QueryState} [query]
- * @returns {QueryState}
- */
-function normalizeQuery(query) {
-    const q = /** @type {QueryState} */ (query || {});
-    const page = Math.floor(Number(q.page)) || 1;
-    const pageSize = Math.floor(Number(q.pageSize)) || 10;
-    const search = typeof q.search === "string" ? q.search : "";
-    const sort = Array.isArray(q.sort)
-        ? q.sort
-              .filter((s) => s?.field)
-              .map((s) => ({
-                  field: String(s.field),
-                  direction: /** @type {"asc"|"desc"} */ (s.direction === "desc" ? "desc" : "asc"),
-              }))
-        : [];
-    /** @type {Record<string, FilterState>} */
-    const filters = {};
-    if (q.filters && typeof q.filters === "object") {
-        for (const [key, filter] of Object.entries(q.filters)) {
-            if (filter === null || filter === undefined) {
-                continue;
-            }
-            let operator;
-            let value;
-            if (typeof filter === "object") {
-                // Structured form: the operator is explicit.
-                operator = filter.operator;
-                if (!operator) {
-                    continue;
-                }
-                value = filter.value;
-            } else {
-                // Shorthand: a scalar value means the default operator.
-                operator = "contains";
-                value = filter;
-            }
-            // Preserve valid falsy values (0, false); drop empty ones, unless
-            // the operator works without a value (empty/notEmpty). An empty
-            // array is an empty selection ("no filter"), not a value.
-            const hasValue =
-                value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
-            if (hasValue || operator === "empty" || operator === "notEmpty") {
-                filters[key] = /** @type {FilterState} */ (hasValue ? { operator, value } : { operator });
-            }
-        }
-    }
-    return { page: Math.max(1, page), pageSize: Math.max(1, pageSize), search, sort, filters };
-}
-
-/**
- * Parse the declarative `<th data-field>` header row of a supplied table into
- * column definitions and an optional initial sort. Column order follows the DOM
- * order of the `<th>` elements; `data-sort` order is the sort priority.
- *
- * The parsed columns still go through convertColumns(): this helper only
- * translates HTML, it never normalizes.
- * @param {HTMLTableElement} table
- * @returns {{ columns: Column[], sort: SortState[] }}
- */
-function parseDeclarativeTable(table) {
-    /** @type {Column[]} */
-    const columns = [];
-    /** @type {SortState[]} */
-    const sort = [];
-    const headerRow = table.querySelector("thead > tr:first-child");
-    if (!headerRow) {
-        return { columns, sort };
-    }
-    const ths = /** @type {NodeListOf<HTMLTableCellElement>} */ (headerRow.querySelectorAll(":scope > th[data-field]"));
-    for (const th of ths) {
-        const field = th.dataset.field;
-        if (!field) {
-            continue;
-        }
-        /** @type {Column} */
-        const column = {
-            field,
-            title: th.textContent.trim(),
-        };
-        if (th.dataset.sortable !== undefined) {
-            column.sortable = parseBooleanAttribute(th.dataset.sortable);
-        }
-        if (th.dataset.filterable !== undefined) {
-            column.filterable = parseBooleanAttribute(th.dataset.filterable);
-        }
-        if (th.dataset.wrap !== undefined) {
-            column.wrap = parseBooleanAttribute(th.dataset.wrap);
-        }
-        if (th.dataset.filter) {
-            // Only known modes set an explicit filter type: an invalid value
-            // must not silently become an option, so the resolved default stays.
-            const mode = th.dataset.filter;
-            if (["text", "select", "boolean", "number", "date"].includes(mode)) {
-                column.filterType = /** @type {NonNullable<Column["filterType"]>} */ (mode);
-            }
-        }
-        if (th.dataset.filterPlaceholder !== undefined) {
-            column.filterPlaceholder = th.dataset.filterPlaceholder;
-        }
-        if (th.dataset.responsive !== undefined) {
-            const responsive = Number(th.dataset.responsive);
-            if (Number.isFinite(responsive)) {
-                column.responsive = responsive;
-            }
-        }
-        if (th.dataset.frozen === "start") {
-            column.frozen = "start";
-        }
-        if (th.dataset.hidden !== undefined) {
-            column.hidden = parseBooleanAttribute(th.dataset.hidden);
-        }
-        if (th.dataset.editable !== undefined) {
-            column.editable = parseBooleanAttribute(th.dataset.editable);
-        }
-        if (th.dataset.editableType) {
-            column.editableType = th.dataset.editableType;
-        }
-        if (th.dataset.transform) {
-            column.transform = /** @type {NonNullable<Column["transform"]>} */ (th.dataset.transform);
-        }
-        if (th.dataset.format) {
-            column.format = /** @type {NonNullable<Column["format"]>} */ (th.dataset.format);
-        }
-        if (th.dataset.align) {
-            // Only known values set an explicit alignment: an invalid value must
-            // not silently become an option, so the normal grid behavior stays.
-            if (["start", "center", "end"].includes(th.dataset.align)) {
-                column.align = /** @type {NonNullable<Column["align"]>} */ (th.dataset.align);
-            }
-        }
-        if (th.dataset.width !== undefined) {
-            const width = Number(th.dataset.width);
-            if (Number.isFinite(width)) {
-                column.width = width;
-            }
-        }
-        if (th.dataset.minWidth !== undefined) {
-            const minWidth = Number(th.dataset.minWidth);
-            if (Number.isFinite(minWidth)) {
-                column.minWidth = minWidth;
-            }
-        }
-        const direction = th.dataset.sort;
-        if (direction === "asc" || direction === "desc") {
-            sort.push({ field, direction });
-        }
-        columns.push(column);
-    }
-    return { columns, sort };
-}
-
-/**
- * Parse a `<td data-actions>` cell into row action descriptors.
- * @param {HTMLTableCellElement} td
- * @returns {Action[]}
- */
-function parseActionsCell(td) {
-    const actions = [];
-    const elements = /** @type {NodeListOf<HTMLElement>} */ (td.querySelectorAll("[data-action]"));
-    for (const el of elements) {
-        const name = el.dataset.action;
-        if (!name) {
-            continue;
-        }
-        /** @type {Action} */
-        const action = { name };
-        const label = el.textContent.trim();
-        if (label) {
-            action.label = label;
-        }
-        const href = el.getAttribute("href");
-        if (href) {
-            action.href = href;
-        }
-        if (el.dataset.intent) {
-            action.intent = el.dataset.intent;
-        }
-        if (el.dataset.confirm !== undefined) {
-            action.confirm = el.dataset.confirm;
-        }
-        if (el.dataset.default !== undefined) {
-            action.default = parseBooleanAttribute(el.dataset.default);
-        }
-        if (el.hasAttribute("disabled")) {
-            action.disabled = true;
-        }
-        actions.push(action);
-    }
-    return actions;
-}
-
-/**
- * Extract the local dataset from a supplied table body. The first `<tbody>`
- * row maps to the columns by index: `value = td[data-value] ?? td.textContent`.
- * A `tr[data-row-key]` is the authoritative row identity and overrides the
- * parsed value of the `rowKey` field (when `rowKey` is a field name). Only
- * used to seed an ArrayDataSource when no explicit source exists.
- * @param {HTMLTableElement} table
- * @param {Column[]} columns
- * @param {String|Function|null} [rowKey] The configured rowKey option
- * @returns {Array<Record<string, any>>}
- */
-function rowsFromTable(table, columns, rowKey = "id") {
-    const tbody = table.querySelector("tbody");
-    if (!tbody) {
-        return [];
-    }
-    const rows = [];
-    const trs = /** @type {NodeListOf<HTMLTableRowElement>} */ (tbody.querySelectorAll(":scope > tr"));
-    for (const tr of trs) {
-        /** @type {Record<string, any>} */
-        const row = {};
-        // `td[data-actions]` cells are consumed as actions, never as data, so
-        // they cannot shift the positional column mapping.
-        const tds = Array.from(
-            /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll(":scope > td")),
-        ).filter((td) => !td.hasAttribute("data-actions"));
-        for (let index = 0; index < columns.length; index++) {
-            const column = columns[index];
-            if (!column.field) {
-                continue;
-            }
-            const td = tds[index];
-            if (!td) {
-                continue;
-            }
-            const raw = td.dataset.value;
-            if (raw !== undefined) {
-                // data-value is the machine value (typed); the cell content is
-                // the authored user representation, snapshotted so it survives
-                // rerenders while the value is unchanged.
-                row[column.field] = normalizeData(raw);
-                setDeclarativeCell(row, column.field, {
-                    value: row[column.field],
-                    label: td.textContent.trim(),
-                    content: Array.from(td.childNodes),
-                });
-            } else {
-                row[column.field] = td.textContent.trim();
-            }
-        }
-        const actionsCell = /** @type {HTMLTableCellElement|null} */ (tr.querySelector(":scope > td[data-actions]"));
-        if (actionsCell) {
-            const actions = parseActionsCell(actionsCell);
-            if (actions.length) {
-                row.$actions = actions;
-            }
-        }
-        if (tr.dataset.rowKey !== undefined && typeof rowKey === "string") {
-            row[rowKey] = tr.dataset.rowKey;
-        }
-        rows.push(row);
-    }
-    return rows;
-}
-
-/**
- * Order columns: plugin "start" columns first (in plugin registration order),
- * then base columns, then plugin "end" columns.
- * Start columns are unshifted by plugins, so reversing restores registration order.
- * @param {Column[]} columns
- * @returns {Column[]}
- */
-function orderColumns(columns) {
-    const start = [];
-    const middle = [];
-    const end = [];
-    for (const col of columns) {
-        if (col.position === "start") {
-            start.push(col);
-        } else if (col.position === "end") {
-            end.push(col);
-        } else {
-            middle.push(col);
-        }
-    }
-    return [...start.reverse(), ...middle, ...end];
-}
-
-/**
- * A column is hidden when the host/config hides it (`hidden`) or when
- * ResponsiveGrid temporarily hides it (`responsiveHidden`). These are two
- * distinct states: only `hidden` is the explicit, persisted choice.
- * @param {import("./data-grid.js").Column} column
- * @returns {Boolean}
- */
-function isColumnHidden(column) {
-    return Boolean(column.hidden || column.responsiveHidden);
-}
-
-/**
- * Effective alignment of a column: the explicit option wins over the formatter
- * default. Drives `data-align` on header, body, and filter cells.
- * @param {Column} column
- * @returns {String|null}
- */
-function getColumnAlign(column) {
-    return column.align ?? getFormatDefaults(column.format, column.formatOptions)?.align ?? null;
-}
-
-/**
- * The leading select-filter option always clears the filter. Normalize its
- * value while preserving an explicitly empty label.
- * @param {Column} column
- * @param {Column} defaultColumn
- * @returns {FilterOption}
- */
-function getFirstFilterOption(column, defaultColumn) {
-    const option = column.firstFilterOption || defaultColumn.firstFilterOption || { value: "", text: "" };
-    return { value: "", text: option.text ?? "" };
-}
-
-/**
- * Effective filter mode of a column: the explicit option wins over the
- * formatter hint, then falls back to the generic text filter. Drives both the
- * rendered control and how `filterData()` maps its value onto a query filter.
- * @param {Column} column
- * @returns {"text"|"select"|"boolean"|"number"|"date"}
- */
-function getColumnFilterType(column) {
-    return column.filterType ?? getFormatDefaults(column.format, column.formatOptions)?.filter ?? "text";
-}
-
-/**
- * A percent column is the only numeric case whose displayed scale differs from
- * the raw value: `Intl.NumberFormat` multiplies by 100, so a filter typed as
- * the visible "20" must query the raw `0.2`. Kept as a small exception of the
- * number mode, not a general normalization engine.
- * @param {Column} column
- * @returns {Boolean}
- */
-function isPercentColumn(column) {
-    return column.format === "number" && /** @type {Record<string, any>} */ (column.formatOptions)?.style === "percent";
-}
-
-/**
- * Column definition will update some props on the html element
- * @param {HTMLElement} el
- * @param {Column} column
- */
-function applyColumnDefinition(el, column) {
-    if (column.width) {
-        // The declared min-width (data-min-width) is an invariant: a preferred
-        // width below the floor is raised to it.
-        const minWidth = Number.parseInt(el.dataset.minWidth ?? "") || 0;
-        el.setAttribute("width", String(Math.max(column.width, minWidth)));
-    }
-    if (column.class) {
-        el.classList.add(...column.class.trim().split(/\s+/));
-    }
-    if (column.frozen === "start") {
-        el.dataset.frozen = "start";
-    } else {
-        delete el.dataset.frozen;
-    }
-    if (isColumnHidden(column)) {
-        el.setAttribute("hidden", "");
-        if (column.responsiveHidden) {
-            el.classList.add("dg-responsive-hidden");
-        }
-    }
-    if (column.sortable === false && el.tagName === "TH") {
-        el.classList.add("dg-not-sortable");
-    }
 }
 
 /**
@@ -1925,16 +1533,9 @@ class DataGrid extends BaseElement {
         // listener and routes bubbled events to the matching control. This
         // keeps rerendered chrome (filters, sort headers) working without
         // reinstalling per-element listeners.
-        this.addEventListener("click", this);
-        this.addEventListener("change", this);
-        this.addEventListener("input", this);
-        this.addEventListener("keydown", this);
-        this.addEventListener("mouseover", this);
-        this.addEventListener("compositionstart", this);
-        this.addEventListener("compositionend", this);
-        this.addEventListener("columnResized", this);
-        this.addEventListener("columnReordered", this);
-        this.addEventListener("columnVisibility", this);
+        for (const type of CORE_EVENTS) {
+            this.addEventListener(type, this);
+        }
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
         this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
 
@@ -1967,16 +1568,9 @@ class DataGrid extends BaseElement {
             textInputState.delete(input);
         }
 
-        this.removeEventListener("click", this);
-        this.removeEventListener("change", this);
-        this.removeEventListener("input", this);
-        this.removeEventListener("keydown", this);
-        this.removeEventListener("mouseover", this);
-        this.removeEventListener("compositionstart", this);
-        this.removeEventListener("compositionend", this);
-        this.removeEventListener("columnResized", this);
-        this.removeEventListener("columnReordered", this);
-        this.removeEventListener("columnVisibility", this);
+        for (const type of CORE_EVENTS) {
+            this.removeEventListener(type, this);
+        }
         if (this._frozenFrame !== null) {
             cancelAnimationFrame(this._frozenFrame);
             this._frozenFrame = null;
@@ -3178,48 +2772,48 @@ class DataGrid extends BaseElement {
             if (!name) {
                 continue;
             }
-            // A multi select maps its checked boxes onto an `in` filter; an
-            // empty selection means no filter at all.
-            if (input.dataset.filterMode === "multi") {
-                const values = readMultiSelect(input);
-                if (values.length) {
-                    filters[name] = { operator: "in", value: values };
-                }
-                continue;
-            }
-            const value = /** @type {HTMLInputElement|HTMLSelectElement} */ (input).value;
-            if (value) {
-                const mode = /** @type {"text"|"select"|"boolean"|"number"|"date"|undefined} */ (
-                    input.dataset.filterMode
-                );
-                if (mode === "text") {
-                    filters[name] = parseTextFilterQuery(value);
-                } else if (mode === "boolean") {
-                    filters[name] = { operator: "eq", value: value === "true" };
-                } else if (mode === "number") {
-                    const parsed = parseTextFilterQuery(value);
-                    const num = Number(parsed.value);
-                    const isPercent = input.dataset.percent === "true";
-                    // Substring match on the raw value so partial digits match
-                    // (12 -> 129.9). A percent column divides by 100: the user
-                    // types the visible scale (20) and queries the raw fraction
-                    // (0.2).
-                    filters[name] = {
-                        operator: parsed.operator,
-                        value: Number.isFinite(num) ? (isPercent ? num / 100 : num) : parsed.value,
-                    };
-                } else if (mode === "date") {
-                    filters[name] = parseDateFilterQuery(value);
-                } else {
-                    const isSelect = /select/i.test(input.tagName);
-                    filters[name] = {
-                        operator: isSelect ? "eq" : "contains",
-                        value,
-                    };
-                }
+            const filter = this._readFilterControl(input);
+            if (filter) {
+                filters[name] = filter;
             }
         }
         return this.setQuery({ filters });
+    }
+
+    /**
+     * Translate one filter control into canonical query state.
+     * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} input
+     * @returns {FilterState|undefined}
+     */
+    _readFilterControl(input) {
+        if (input.dataset.filterMode === "multi") {
+            const values = readMultiSelect(input);
+            return values.length ? { operator: "in", value: values } : undefined;
+        }
+        const value = /** @type {HTMLInputElement|HTMLSelectElement} */ (input).value;
+        if (!value) {
+            return undefined;
+        }
+        const mode = input.dataset.filterMode;
+        if (mode === "text") {
+            return parseTextFilterQuery(value);
+        }
+        if (mode === "boolean") {
+            return { operator: "eq", value: value === "true" };
+        }
+        if (mode === "number") {
+            const parsed = parseTextFilterQuery(value);
+            const number = Number(parsed.value);
+            const isPercent = input.dataset.percent === "true";
+            return {
+                operator: parsed.operator,
+                value: Number.isFinite(number) ? (isPercent ? number / 100 : number) : parsed.value,
+            };
+        }
+        if (mode === "date") {
+            return parseDateFilterQuery(value);
+        }
+        return { operator: /select/i.test(input.tagName) ? "eq" : "contains", value };
     }
 
     renderTable() {
@@ -3355,33 +2949,13 @@ class DataGrid extends BaseElement {
             if (column.attr) {
                 continue;
             }
-            const th = document.createElement("th");
-            th.setAttribute("scope", "col");
-            th.setAttribute("data-column-id", this.getColumnId(column));
-            if (!column.virtual) {
-                th.setAttribute("id", randstr("dg-col-"));
-                th.setAttribute("field", column.field ?? "");
-            }
-
-            const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
-            if (column.renderHeaderCell) {
-                column.renderHeaderCell(th, ctx);
-            } else {
-                this.renderDefaultHeaderCell(th, ctx);
-            }
-            // Plugin header renderers only add their structural classes; apply
-            // the full column definition (width, class, hidden, dg-not-sortable)
-            // uniformly so header and body share the same geometry and styling
-            // hooks, including virtual columns carrying their own width.
-            applyColumnDefinition(th, column);
-            // The header follows the column alignment so the title shares the
-            // axis of its values (explicit option > formatter default).
-            const align = getColumnAlign(column);
-            if (align) {
-                th.dataset.align = align;
-            }
-
-            tr.appendChild(th);
+            tr.appendChild(
+                this._createHeaderColumn(column, {
+                    sampleTh: /** @type {HTMLTableCellElement} */ (sampleTh),
+                    availableWidth,
+                    colMaxWidth,
+                }),
+            );
         }
 
         // The measurement cell seeded for a declarative table is not a column.
@@ -3395,34 +2969,66 @@ class DataGrid extends BaseElement {
         // When there was no standard header row, the row was already attached
         // before the column cells were created.
 
-        // Once columns are inserted, we have an actual dom to query
-        if (thead && thead.offsetWidth > availableWidth) {
-            this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
-            const scrollbarWidth = this.scrollEl.offsetWidth - this.scrollEl.clientWidth;
-            let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
-            if (this.options.responsive) {
-                diff += scrollbarWidth;
-            }
-            // Remove diff for columns that can afford it
-            const thWithWidth = /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll("th[width]"));
+        this._fitHeaderWidths(thead, tr, availableWidth);
+    }
 
-            for (const th of thWithWidth) {
-                if (th.classList.contains("dg-not-resizable")) {
-                    continue;
-                }
-                if (diff <= 0) {
-                    continue;
-                }
-                const actualWidth = Number.parseInt(th.getAttribute("width") ?? "");
-                const minWidth = Number.parseInt(th.dataset.minWidth ?? "") || 0;
-                if (actualWidth > minWidth) {
-                    let newWidth = actualWidth - diff;
-                    if (newWidth < minWidth) {
-                        newWidth = minWidth;
-                    }
-                    diff -= actualWidth - newWidth;
-                    th.setAttribute("width", String(newWidth));
-                }
+    /**
+     * @param {Column} column
+     * @param {{ sampleTh: HTMLTableCellElement, availableWidth: Number, colMaxWidth: Number }} layout
+     * @returns {HTMLTableCellElement}
+     */
+    _createHeaderColumn(column, { sampleTh, availableWidth, colMaxWidth }) {
+        const th = document.createElement("th");
+        th.setAttribute("scope", "col");
+        th.setAttribute("data-column-id", this.getColumnId(column));
+        if (!column.virtual) {
+            th.setAttribute("id", randstr("dg-col-"));
+            th.setAttribute("field", column.field ?? "");
+        }
+
+        const ctx = { grid: this, column, sampleTh, availableWidth, colMaxWidth };
+        if (column.renderHeaderCell) {
+            column.renderHeaderCell(th, ctx);
+        } else {
+            this.renderDefaultHeaderCell(th, ctx);
+        }
+        // Plugin renderers only add structure; every column still receives the
+        // same geometry, visibility and alignment contract.
+        applyColumnDefinition(th, column);
+        const align = getColumnAlign(column);
+        if (align) {
+            th.dataset.align = align;
+        }
+        return th;
+    }
+
+    /**
+     * Compress explicit header widths when they overflow the viewport.
+     * @param {HTMLTableSectionElement} thead
+     * @param {HTMLTableRowElement} tr
+     * @param {Number} availableWidth
+     */
+    _fitHeaderWidths(thead, tr, availableWidth) {
+        if (!thead || thead.offsetWidth <= availableWidth) {
+            return;
+        }
+        this.log(`adjust width to fix size, ${thead.offsetWidth} > ${availableWidth}`);
+        const scrollbarWidth = this.scrollEl.offsetWidth - this.scrollEl.clientWidth;
+        let diff = thead.offsetWidth - availableWidth - scrollbarWidth;
+        if (this.options.responsive) {
+            diff += scrollbarWidth;
+        }
+        const thWithWidth = /** @type {NodeListOf<HTMLTableCellElement>} */ (tr.querySelectorAll("th[width]"));
+        for (const th of thWithWidth) {
+            if (th.classList.contains("dg-not-resizable") || diff <= 0) {
+                continue;
+            }
+            const actualWidth = Number.parseInt(th.getAttribute("width") ?? "");
+            const minWidth = Number.parseInt(th.dataset.minWidth ?? "") || 0;
+            if (actualWidth > minWidth) {
+                const newWidth = Math.max(minWidth, actualWidth - diff);
+                diff -= actualWidth - newWidth;
+                th.setAttribute("width", String(newWidth));
             }
         }
     }
@@ -3591,31 +3197,7 @@ class DataGrid extends BaseElement {
         if (field) {
             const filterState = /** @type {FilterState|undefined} */ (this._query.filters?.[field]);
             if (filterState) {
-                if (filter.dataset.filterMode === "multi") {
-                    // A multi select restores its checked boxes from the array
-                    setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
-                } else if (filter.dataset.filterMode === "text") {
-                    /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery(filterState);
-                } else if (filter.dataset.filterMode === "number") {
-                    const numericValue = Number(filterState.value);
-                    const value =
-                        filter.dataset.percent === "true" && Number.isFinite(numericValue)
-                            ? numericValue * 100
-                            : filterState.value;
-                    /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery({
-                        operator: filterState.operator,
-                        value,
-                    });
-                } else if (filter.dataset.filterMode === "date") {
-                    /** @type {HTMLInputElement} */ (filter).value = formatDateFilterQuery(filterState);
-                } else {
-                    // A percent query stores the raw fraction; show the visible
-                    // scale (0.2 -> 20) so the control matches what was typed.
-                    /** @type {HTMLInputElement|HTMLSelectElement} */ (filter).value =
-                        filter.dataset.percent === "true"
-                            ? String(Number(filterState.value) * 100)
-                            : String(filterState.value ?? "");
-                }
+                this._writeFilterControl(filter, filterState);
             }
         }
 
@@ -3627,6 +3209,43 @@ class DataGrid extends BaseElement {
         } else {
             th.appendChild(filter);
         }
+    }
+
+    /**
+     * Reflect canonical query state into one filter control.
+     * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} filter
+     * @param {FilterState} filterState
+     */
+    _writeFilterControl(filter, filterState) {
+        const mode = filter.dataset.filterMode;
+        if (mode === "multi") {
+            setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
+            return;
+        }
+        if (mode === "text") {
+            /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery(filterState);
+            return;
+        }
+        if (mode === "number") {
+            const numericValue = Number(filterState.value);
+            const value =
+                filter.dataset.percent === "true" && Number.isFinite(numericValue)
+                    ? numericValue * 100
+                    : filterState.value;
+            /** @type {HTMLInputElement} */ (filter).value = formatTextFilterQuery({
+                operator: filterState.operator,
+                value,
+            });
+            return;
+        }
+        if (mode === "date") {
+            /** @type {HTMLInputElement} */ (filter).value = formatDateFilterQuery(filterState);
+            return;
+        }
+        /** @type {HTMLInputElement|HTMLSelectElement} */ (filter).value =
+            filter.dataset.percent === "true"
+                ? String(Number(filterState.value) * 100)
+                : String(filterState.value ?? "");
     }
 
     /**
@@ -3779,66 +3398,8 @@ class DataGrid extends BaseElement {
         const prev = this.tbody;
         const message = prev?.getAttribute("data-empty-message") ?? "";
 
-        let i = 0;
-        for (const item of this.rows) {
-            const tr = document.createElement("tr");
-            // Explicit data-row marker so row-index-dependent logic (selection
-            // sync, fixed-height, responsive) can ignore responsive child rows.
-            tr.classList.add("dg-data-row");
-            tr.dataset.rowIndex = String(i);
-
-            // rowClick="select" makes every data row a click target; the
-            // interaction itself is delegated in _handleClick().
-            if (this.options.rowClick === "select" && this.options.selectable) {
-                tr.classList.add("dg-clickable-row");
-            }
-
-            for (const column of this.getColumns()) {
-                if (!column) {
-                    console.error("Empty column found!", this.getColumns());
-                    continue;
-                }
-                const field = column.field;
-                // It should be applied as an attr of the row
-                if (column.attr) {
-                    if (field && item[field] != null) {
-                        // Special case if we try to write over the class attr
-                        if (column.attr === "class") {
-                            tr.classList.add(...item[field].trim().split(/\s+/));
-                        } else {
-                            tr.setAttribute(column.attr, item[field]);
-                        }
-                    }
-                    continue;
-                }
-                const td = this._createColumnCell("td", column);
-                if (column.wrap ?? this.options.wrap) {
-                    td.classList.add("dg-wrap");
-                }
-                // Kept for ResponsiveGrid: the expanded child rows label each
-                // hidden value with the column title.
-                td.setAttribute("data-name", column.title ?? "");
-
-                const ctx = { grid: this, column, row: item, rowIndex: i, value: field ? item[field] : undefined, tr };
-                const cellClass = typeof column.cellClass === "function" ? column.cellClass(ctx) : column.cellClass;
-                // A whitespace-only return is truthy but yields [""] below:
-                // normalize before touching the class list.
-                const classes = String(cellClass ?? "").trim();
-                if (classes) {
-                    td.classList.add(...classes.split(/\s+/));
-                }
-                if (column.renderCell) {
-                    applyContent(td, column.renderCell(ctx));
-                } else {
-                    this.renderDefaultCell(td, ctx);
-                }
-                tr.appendChild(td);
-            }
-
-            tbody.appendChild(tr);
-
-            dispatch(this, "rowRendered", { rowData: item, tr });
-            i++;
+        for (let rowIndex = 0; rowIndex < this.rows.length; rowIndex++) {
+            tbody.appendChild(this._renderDataRow(this.rows[rowIndex], rowIndex));
         }
 
         // Real rows for the empty/error states: no CSS-generated content.
@@ -3872,6 +3433,70 @@ class DataGrid extends BaseElement {
         }
 
         dispatch(this, "bodyRendered");
+    }
+
+    /**
+     * Render one record row and its cells.
+     * @param {Record<string, any>} item
+     * @param {Number} rowIndex
+     * @returns {HTMLTableRowElement}
+     */
+    _renderDataRow(item, rowIndex) {
+        const tr = document.createElement("tr");
+        // Explicit marker lets selection, fixed-height and responsive logic
+        // ignore detail rows.
+        tr.classList.add("dg-data-row");
+        tr.dataset.rowIndex = String(rowIndex);
+        if (this.options.rowClick === "select" && this.options.selectable) {
+            tr.classList.add("dg-clickable-row");
+        }
+
+        for (const column of this.getColumns()) {
+            if (!column) {
+                console.error("Empty column found!", this.getColumns());
+                continue;
+            }
+            const field = column.field;
+            if (column.attr) {
+                if (field && item[field] != null) {
+                    if (column.attr === "class") {
+                        tr.classList.add(...item[field].trim().split(/\s+/));
+                    } else {
+                        tr.setAttribute(column.attr, item[field]);
+                    }
+                }
+                continue;
+            }
+
+            const td = this._createColumnCell("td", column);
+            if (column.wrap ?? this.options.wrap) {
+                td.classList.add("dg-wrap");
+            }
+            td.setAttribute("data-name", column.title ?? "");
+
+            const ctx = {
+                grid: this,
+                column,
+                row: item,
+                rowIndex,
+                value: field ? item[field] : undefined,
+                tr,
+            };
+            const cellClass = typeof column.cellClass === "function" ? column.cellClass(ctx) : column.cellClass;
+            const classes = String(cellClass ?? "").trim();
+            if (classes) {
+                td.classList.add(...classes.split(/\s+/));
+            }
+            if (column.renderCell) {
+                applyContent(td, column.renderCell(ctx));
+            } else {
+                this.renderDefaultCell(td, ctx);
+            }
+            tr.appendChild(td);
+        }
+
+        dispatch(this, "rowRendered", { rowData: item, tr });
+        return tr;
     }
 
     /**
