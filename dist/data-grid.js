@@ -2733,7 +2733,7 @@ class DataGrid extends base_element_default {
       const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
       for (let i = 0;i < this.rows.length; i++) {
         const tr = trs[i];
-        if (!tr || tr.classList.contains("dg-fake-row")) {
+        if (!tr) {
           continue;
         }
         if (this.isRowSelected(this.rows[i], i)) {
@@ -4191,26 +4191,27 @@ class FixedHeight extends base_plugin_default {
     if (context !== "body") {
       return;
     }
-    this.createFakeRow();
-    this.updateFakeRow();
+    this.createSpacerRow();
+    this.updateSpacerRow();
   }
-  createFakeRow() {
+  createSpacerRow() {
     const grid = this.grid;
-    const tbody = grid.querySelector("tbody");
-    const tr = document.createElement("tr");
-    tr.setAttribute("hidden", "");
-    tr.classList.add("dg-fake-row");
-    tbody?.appendChild(tr);
+    const { row } = createSpanningRow(grid, { className: "dg-spacer-row" });
+    row.hidden = true;
+    row.setAttribute("aria-hidden", "true");
+    grid.tbody?.appendChild(row);
   }
-  get fakeRow() {
-    return this.grid.querySelector(".dg-fake-row");
+  get spacerRow() {
+    return this.grid.querySelector(".dg-spacer-row");
   }
-  updateFakeRow() {
+  updateSpacerRow() {
     const grid = this.grid;
-    const fakeRow = this.fakeRow;
-    if (!fakeRow) {
+    const spacerRow = this.spacerRow;
+    if (!spacerRow) {
       return;
     }
+    spacerRow.hidden = true;
+    spacerRow.removeAttribute("height");
     if (grid.query.pageSize > grid.total) {
       return;
     }
@@ -4223,12 +4224,10 @@ class FixedHeight extends base_plugin_default {
     const rowHeight = grid.rowHeight ?? 0;
     const max = grid.query.pageSize * rowHeight;
     const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
-    const fakeHeight = visibleRows > 1 ? max - visibleRows * rowHeight : max;
-    if (fakeHeight > 0) {
-      fakeRow.setAttribute("height", String(fakeHeight));
-      fakeRow.removeAttribute("hidden");
-    } else {
-      fakeRow.removeAttribute("height");
+    const spacerHeight = max - visibleRows * rowHeight;
+    if (spacerHeight > 0) {
+      spacerRow.setAttribute("height", String(spacerHeight));
+      spacerRow.hidden = false;
     }
   }
 }

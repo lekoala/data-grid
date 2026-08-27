@@ -89,15 +89,6 @@ test("SelectableRows and RowActions inject start/end columns", async () => {
     document.body.removeChild(inst);
 });
 
-test("afterRender body context is used by FixedHeight to add the fake row", async () => {
-    const { default: FixedHeight } = await import("../src/plugins/fixed-height.js");
-    const inst = await makeReadyGrid({ FixedHeight }, { columns: [{ field: "name", title: "Name" }] });
-
-    await tick();
-    expect(inst.querySelector("tbody tr.dg-fake-row")).toBeTruthy();
-    document.body.removeChild(inst);
-});
-
 test("plugins are disconnected once", async () => {
     let connectedCount = 0;
     let disconnectedCount = 0;

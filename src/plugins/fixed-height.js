@@ -1,9 +1,8 @@
 import BasePlugin from "../core/base-plugin.js";
+import { createSpanningRow } from "../utils/spanningRow.js";
 
 /**
- * Support for fixed table height
- *
- * We should add a fake row to push the footer down in case we don't have enough rows
+ * Keep the footer at the height of a full page on a partial last page.
  */
 class FixedHeight extends BasePlugin {
     /**
@@ -13,36 +12,36 @@ class FixedHeight extends BasePlugin {
         if (context !== "body") {
             return;
         }
-        this.createFakeRow();
-        this.updateFakeRow();
+        this.createSpacerRow();
+        this.updateSpacerRow();
+    }
+
+    createSpacerRow() {
+        const grid = this.grid;
+        const { row } = createSpanningRow(grid, { className: "dg-spacer-row" });
+        row.hidden = true;
+        row.setAttribute("aria-hidden", "true");
+        grid.tbody?.appendChild(row);
+    }
+
+    /** @returns {HTMLTableRowElement|null} */
+    get spacerRow() {
+        return this.grid.querySelector(".dg-spacer-row");
     }
 
     /**
+     * On a partial last page, use a spacer row to push the footer down.
      */
-    createFakeRow() {
+    updateSpacerRow() {
         const grid = this.grid;
-        const tbody = grid.querySelector("tbody");
-        const tr = document.createElement("tr");
-        tr.setAttribute("hidden", "");
-        tr.classList.add("dg-fake-row");
-        tbody?.appendChild(tr);
-    }
-
-    get fakeRow() {
-        return this.grid.querySelector(".dg-fake-row");
-    }
-
-    /**
-     * On last page, use a fake row to push footer down
-     */
-    updateFakeRow() {
-        const grid = this.grid;
-        const fakeRow = this.fakeRow;
-        if (!fakeRow) {
+        const spacerRow = this.spacerRow;
+        if (!spacerRow) {
             return;
         }
+        spacerRow.hidden = true;
+        spacerRow.removeAttribute("height");
 
-        // We don't need a fake row if we display everything
+        // A single-page result follows its natural content height.
         if (grid.query.pageSize > grid.total) {
             return;
         }
@@ -59,12 +58,10 @@ class FixedHeight extends BasePlugin {
         // Count real data rows only: responsive child rows are structure, not
         // records, and would otherwise inflate the fill-the-last-page measure.
         const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
-        const fakeHeight = visibleRows > 1 ? max - visibleRows * rowHeight : max;
-        if (fakeHeight > 0) {
-            fakeRow.setAttribute("height", String(fakeHeight));
-            fakeRow.removeAttribute("hidden");
-        } else {
-            fakeRow.removeAttribute("height");
+        const spacerHeight = max - visibleRows * rowHeight;
+        if (spacerHeight > 0) {
+            spacerRow.setAttribute("height", String(spacerHeight));
+            spacerRow.hidden = false;
         }
     }
 }

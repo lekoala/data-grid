@@ -1,22 +1,19 @@
 import BasePlugin from "../core/base-plugin.js";
 /**
- * Support for fixed table height
- *
- * We should add a fake row to push the footer down in case we don't have enough rows
+ * Keep the footer at the height of a full page on a partial last page.
  */
 declare class FixedHeight extends BasePlugin {
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context: import("../core/base-plugin.js").RenderContext): void;
+    createSpacerRow(): void;
+    /** @returns {HTMLTableRowElement|null} */
+    get spacerRow(): HTMLTableRowElement | null;
     /**
+     * On a partial last page, use a spacer row to push the footer down.
      */
-    createFakeRow(): void;
-    get fakeRow(): Element | null;
-    /**
-     * On last page, use a fake row to push footer down
-     */
-    updateFakeRow(): void;
+    updateSpacerRow(): void;
 }
 export default FixedHeight;
 //# sourceMappingURL=fixed-height.d.ts.map

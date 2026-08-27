@@ -13,7 +13,7 @@ test.skipIf(IS_WINDOWS)(
         await using v = view();
         await v.navigate(`${ensureServer()}/${FIXTURE}`);
         await waitFor(v, "window.grid && window.grid.rows.length > 0");
-        expect(await read(v, "window.grid.querySelectorAll('tbody tr:not(.dg-fake-row)').length")).toBe(10);
+        expect(await read(v, "window.grid.querySelectorAll('tbody tr.dg-data-row').length")).toBe(10);
         expect(await read(v, "window.grid.getSelectionState().mode")).toBe("explicit");
     },
     TIMEOUT,

@@ -2481,7 +2481,7 @@ class DataGrid extends BaseElement {
             const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
             for (let i = 0; i < this.rows.length; i++) {
                 const tr = trs[i];
-                if (!tr || tr.classList.contains("dg-fake-row")) {
+                if (!tr) {
                     continue;
                 }
                 if (this.isRowSelected(this.rows[i], i)) {
