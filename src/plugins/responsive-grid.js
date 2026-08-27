@@ -69,10 +69,15 @@ class ResponsiveGrid extends BasePlugin {
      * @param {Boolean} enabled
      */
     responsiveChanged(enabled) {
+        // A same-width observation must be processed after every off/on cycle.
+        this._lastProcessedWidth = null;
         if (enabled) {
             this.observe();
-        } else {
-            this.unobserve();
+            return;
+        }
+        this.unobserve();
+        for (const column of this.grid.options.columns) {
+            column.responsiveHidden = false;
         }
     }
 

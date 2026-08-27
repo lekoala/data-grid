@@ -797,7 +797,6 @@ declare class DataGrid extends BaseElement {
     snapColumnsChanged(): void;
     wrapChanged(): void;
     rowDetailsStartOpenChanged(): void;
-    menuChanged(): void;
     selectableChanged(): void;
     /**
      * singleSelect implies selectable: enforce the invariant without clobbering

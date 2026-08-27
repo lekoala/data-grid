@@ -50,3 +50,29 @@ test("dragging a column keeps header, filter and body column order aligned", asy
 
     document.body.removeChild(inst);
 });
+
+test("reorder attribute enables and disables header dragging at runtime", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                { field: "first", title: "First" },
+                { field: "second", title: "Second" },
+            ],
+        },
+        [{ first: "Ada", second: "Lovelace" }],
+    );
+    const headers = () => inst.querySelectorAll("thead .dg-head-columns > th[data-column-id]");
+
+    expect(Array.from(headers()).every((header) => !header.draggable)).toBe(true);
+    drop(inst, "first", "second");
+    expect(columnIds(inst, "thead .dg-head-columns > th[data-column-id]")).toEqual(["first", "second"]);
+
+    inst.setAttribute("reorder", "");
+    expect(Array.from(headers()).every((header) => header.draggable)).toBe(true);
+    drop(inst, "first", "second");
+    expect(columnIds(inst, "thead .dg-head-columns > th[data-column-id]")).toEqual(["second", "first"]);
+
+    inst.removeAttribute("reorder");
+    expect(Array.from(headers()).every((header) => !header.draggable)).toBe(true);
+    document.body.removeChild(inst);
+});

@@ -40,3 +40,36 @@ test("keeps the native browser menu when Popover is unavailable", async () => {
     grid.querySelector("thead th").dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
 });
+
+test("menu is read at interaction time without rebuilding the header", () => {
+    const grid = document.createElement("div");
+    const table = document.createElement("table");
+    const thead = document.createElement("thead");
+    const header = document.createElement("th");
+    thead.appendChild(header);
+    table.appendChild(thead);
+    grid.appendChild(table);
+    grid.options = { menu: false };
+    grid._ownsControl = () => true;
+
+    const plugin = new ContextMenu(/** @type {any} */ (grid));
+    const menu = document.createElement("ul");
+    let opened = 0;
+    menu.showPopover = () => opened++;
+    plugin.menu = menu;
+    grid.addEventListener("contextmenu", plugin);
+
+    const disabled = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    header.dispatchEvent(disabled);
+    expect(disabled.defaultPrevented).toBe(false);
+
+    grid.options.menu = true;
+    const enabled = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
+    header.dispatchEvent(enabled);
+    expect(enabled.defaultPrevented).toBe(true);
+    expect(opened).toBe(1);
+
+    grid.options.menu = false;
+    header.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    expect(opened).toBe(1);
+});

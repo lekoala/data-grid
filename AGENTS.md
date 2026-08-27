@@ -65,6 +65,13 @@ properties would then be optional, not automatic.
   they encapsulate reusable parsing, normalization, event semantics, or
   component invariants that would otherwise obscure the code's intent. Do not
   wrap native APIs merely for brevity.
+- `BaseElement` discovers `${option}Changed()` methods dynamically for observed
+  attributes. Add one only when a runtime attribute change requires an
+  immediate effect that a native attribute or a live option read does not
+  already provide. The hook must fully synchronize the affected model,
+  lifecycle and DOM state in both directions, with transition tests; never add
+  a rerender-only hook merely to satisfy the naming convention. Reuse the hook
+  during initial setup when it performs the same synchronization.
 
 ## Public surface
 

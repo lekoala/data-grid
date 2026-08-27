@@ -1209,6 +1209,7 @@ class DataGrid extends BaseElement {
     responsiveChanged() {
         this.runPlugins("responsiveChanged", this.options.responsive);
         this.renderTable();
+        this.renderBody();
     }
 
     snapColumnsChanged() {
@@ -1225,10 +1226,6 @@ class DataGrid extends BaseElement {
         if (this.table) {
             this.renderBody();
         }
-    }
-
-    menuChanged() {
-        this.renderHeader();
     }
 
     selectableChanged() {
@@ -1522,8 +1519,7 @@ class DataGrid extends BaseElement {
         // keeps rerendered chrome (filters, sort headers) working without
         // reinstalling per-element listeners.
         on(this, CORE_EVENTS, this);
-        this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
-        this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
+        this.showPageSizeChanged();
 
         this.setupDataSource();
         this.setupInitialState();

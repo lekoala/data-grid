@@ -61,6 +61,26 @@ test("responsive restores columns when space comes back", async () => {
     document.body.removeChild(inst);
 });
 
+test("responsive can be disabled and re-enabled at the same width", async () => {
+    const inst = await makeReadyGrid({ columns: COLS });
+    inst.setAttribute("responsive", "");
+    const plugin = forceResize(inst, 200);
+    expect(hiddenFields(inst)).toEqual(["b", "c", "d"]);
+
+    inst.removeAttribute("responsive");
+    expect(hiddenFields(inst)).toEqual([]);
+    expect(inst.querySelector('thead th[data-column-id="$responsive"]')).toBeNull();
+    expect(inst.querySelector("tbody tr.dg-responsive-child-row")).toBeNull();
+    expect(Array.from(inst.querySelectorAll("tbody td[data-column-id]")).every((cell) => !cell.hidden)).toBe(true);
+    expect(plugin._lastProcessedWidth).toBeNull();
+
+    inst.setAttribute("responsive", "");
+    expect(inst.querySelector('thead th[data-column-id="$responsive"]')).toBeTruthy();
+    forceResize(inst, 200);
+    expect(hiddenFields(inst)).toEqual(["b", "c", "d"]);
+    document.body.removeChild(inst);
+});
+
 test("a responsive:0 column is never hidden", async () => {
     const cols = COLS.map((c) => ({ ...c }));
     cols[0].responsive = 0;

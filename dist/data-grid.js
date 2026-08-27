@@ -1932,6 +1932,7 @@ class DataGrid extends base_element_default {
   responsiveChanged() {
     this.runPlugins("responsiveChanged", this.options.responsive);
     this.renderTable();
+    this.renderBody();
   }
   snapColumnsChanged() {
     this.classList.toggle("dg-snap-columns", Boolean(this.options.snapColumns));
@@ -1945,9 +1946,6 @@ class DataGrid extends base_element_default {
     if (this.table) {
       this.renderBody();
     }
-  }
-  menuChanged() {
-    this.renderHeader();
   }
   selectableChanged() {
     this.renderTable();
@@ -2141,8 +2139,7 @@ class DataGrid extends base_element_default {
     this.inputPage = this.querySelector(".dg-input-page");
     this._syncSelectionOptions();
     on(this, CORE_EVENTS, this);
-    this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
-    this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
+    this.showPageSizeChanged();
     this.setupDataSource();
     this.setupInitialState();
     for (const plugin of Object.values(this.plugins)) {
@@ -3749,10 +3746,13 @@ class DraggableHeaders extends base_plugin_default {
     }
     const headers = this.grid.querySelectorAll('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
     for (const th of headers) {
-      th.draggable = true;
+      th.draggable = Boolean(this.grid.options.reorder);
     }
   }
   _draggableHeader(event) {
+    if (!this.grid.options.reorder) {
+      return null;
+    }
     const target = event.target;
     if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
       return null;
@@ -4346,10 +4346,14 @@ class ResponsiveGrid extends base_plugin_default {
     }
   }
   responsiveChanged(enabled) {
+    this._lastProcessedWidth = null;
     if (enabled) {
       this.observe();
-    } else {
-      this.unobserve();
+      return;
+    }
+    this.unobserve();
+    for (const column of this.grid.options.columns) {
+      column.responsiveHidden = false;
     }
   }
   observe() {

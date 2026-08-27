@@ -27,7 +27,7 @@ class DraggableHeaders extends BasePlugin {
             this.grid.querySelectorAll('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])')
         );
         for (const th of headers) {
-            th.draggable = true;
+            th.draggable = Boolean(this.grid.options.reorder);
         }
     }
 
@@ -38,6 +38,9 @@ class DraggableHeaders extends BasePlugin {
      * @returns {HTMLTableCellElement|null}
      */
     _draggableHeader(event) {
+        if (!this.grid.options.reorder) {
+            return null;
+        }
         const target = event.target;
         if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
             return null;
