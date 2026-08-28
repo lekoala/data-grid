@@ -181,7 +181,6 @@ data-grid > .dg-scroll {
   background: var(--dg-bg);
   border: 1px solid var(--dg-border-color);
   border-radius: var(--dg-radius);
-  overscroll-behavior: contain;
 }
 
 data-grid > .dg-scroll:focus-visible {

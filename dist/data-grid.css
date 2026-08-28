@@ -148,7 +148,6 @@ data-grid > .dg-scroll {
   background: var(--dg-bg);
   border: 1px solid var(--dg-border-color);
   border-radius: var(--dg-radius);
-  overscroll-behavior: contain;
   flex: auto;
   min-height: 0;
 }

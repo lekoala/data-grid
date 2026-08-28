@@ -25,6 +25,10 @@ test("core css ships the density presets", () => {
     expect(coreCss).toMatch(/data-grid\[density=?["']?comfortable["']?\]/);
 });
 
+test("the scroll viewport lets wheel input chain to the page", () => {
+    expect(coreCss).not.toContain("overscroll-behavior: contain");
+});
+
 test("all selects share the component caret", () => {
     expect(coreCss).toMatch(/data-grid select \{[\s\S]*?appearance: none;/);
     expect(coreCss).toMatch(/data-grid \.dg-select-field:after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/);
