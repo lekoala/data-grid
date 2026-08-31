@@ -4327,55 +4327,65 @@ function sortByPriority(list) {
 }
 
 class ResponsiveGrid extends base_plugin_default {
+  #lastEntry;
+  #lastProcessedWidth;
+  #scheduleResize;
+  #observer;
+  #observed;
+  #observerBlocked;
+  #unblockTimeout;
   constructor(grid) {
     super(grid);
-    this.observerBlocked = false;
-    this.unblockTimeout = null;
-    this._lastEntry = null;
-    this._lastProcessedWidth = null;
-    this._scheduleResize = debounce(() => this.resize(), 100);
-    this.observer = new ResizeObserver((entries) => {
-      this._lastEntry = entries[entries.length - 1];
-      this._scheduleResize();
+    this.#observerBlocked = false;
+    this.#unblockTimeout = null;
+    this.#lastEntry = null;
+    this.#lastProcessedWidth = null;
+    this.#observed = null;
+    this.#scheduleResize = debounce(() => this.resize(), 100);
+    this.#observer = new ResizeObserver((entries) => {
+      this.#lastEntry = entries[entries.length - 1];
+      this.#scheduleResize();
     });
   }
   connected() {
     if (this.grid.options.responsive) {
-      this.observe();
+      this.#observe();
     }
   }
   disconnected() {
-    this.unobserve();
-    if (this.unblockTimeout) {
-      clearTimeout(this.unblockTimeout);
+    this.#unobserve();
+    if (this.#unblockTimeout) {
+      clearTimeout(this.#unblockTimeout);
+      this.#unblockTimeout = null;
     }
+    this.#scheduleResize.cancel();
   }
   responsiveChanged(enabled) {
-    this._lastProcessedWidth = null;
+    this.#lastProcessedWidth = null;
     if (enabled) {
-      this.observe();
+      this.#observe();
       return;
     }
-    this.unobserve();
+    this.#unobserve();
     for (const column of this.grid.options.columns) {
       column.responsiveHidden = false;
     }
   }
-  observe() {
+  #observe() {
     if (!this.grid.options.responsive) {
       return;
     }
-    this._observed = this.grid.scrollEl || this.grid;
-    this.observer.observe(this._observed);
+    this.#observed = this.grid.scrollEl || this.grid;
+    this.#observer.observe(this.#observed);
   }
-  unobserve() {
-    if (this._observed) {
-      this.observer.unobserve(this._observed);
-      this._observed = null;
+  #unobserve() {
+    if (this.#observed) {
+      this.#observer.unobserve(this.#observed);
+      this.#observed = null;
     }
   }
   extendColumns(columns) {
-    if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this._sharesDisclosure()) {
+    if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this.#sharesDisclosure()) {
       return;
     }
     columns.unshift({
@@ -4387,52 +4397,53 @@ class ResponsiveGrid extends base_plugin_default {
       sortable: false,
       title: "",
       class: `dg-disclosure-cell ${RESPONSIVE_CLASS}-toggle`,
-      hidden: !this.hasHiddenColumns(),
+      hidden: !this.#hasHiddenColumns(),
       renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
       renderFilterCell: () => {},
-      renderCell: (ctx) => this.createDataCell(ctx)
+      renderCell: (ctx) => this.#createDataCell(ctx)
     });
   }
-  blockObserver() {
-    this.observerBlocked = true;
-    if (this.unblockTimeout) {
-      clearTimeout(this.unblockTimeout);
+  #blockObserver() {
+    this.#observerBlocked = true;
+    if (this.#unblockTimeout) {
+      clearTimeout(this.#unblockTimeout);
     }
   }
-  unblockObserver() {
-    this.unblockTimeout = setTimeout(() => {
-      this.observerBlocked = false;
-      const entry = this._lastEntry;
+  #unblockObserver() {
+    this.#unblockTimeout = setTimeout(() => {
+      this.#unblockTimeout = null;
+      this.#observerBlocked = false;
+      const entry = this.#lastEntry;
       if (entry) {
-        const size = Math.round(this._entryWidth(entry));
-        if (size !== this._lastProcessedWidth) {
+        const size = Math.round(this.#entryWidth(entry));
+        if (size !== this.#lastProcessedWidth) {
           this.resize();
         }
       }
     }, 200);
   }
-  _entryWidth(entry) {
+  #entryWidth(entry) {
     const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
     return Math.round(contentBoxSize?.inlineSize ?? entry.contentRect?.width ?? 0);
   }
-  hasHiddenColumns() {
+  #hasHiddenColumns() {
     return this.grid.options.columns.some((column) => column.responsiveHidden);
   }
-  createDataCell({ row, rowIndex = 0 }) {
+  #createDataCell({ row, rowIndex = 0 }) {
     const cell = createDisclosureButton(`${RESPONSIVE_CLASS}-toggle-control`);
     cell.setAttribute("aria-expanded", "false");
-    cell.setAttribute("aria-controls", this._detailId(rowIndex));
+    cell.setAttribute("aria-controls", this.#detailId(rowIndex));
     cell.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showHiddenColumns, {
       row: this.grid.getRowLabel(row ?? {}, rowIndex)
     }));
     cell.addEventListener("click", this);
     return cell;
   }
-  _detailId(rowIndex) {
+  #detailId(rowIndex) {
     return `dg-responsive-detail-${this.grid.id}-${rowIndex}`;
   }
-  resize() {
-    const size = this._resizeWidth();
+  resize(width) {
+    const size = this.#resizeWidth(width);
     if (size === null) {
       return;
     }
@@ -4440,36 +4451,35 @@ class ResponsiveGrid extends base_plugin_default {
     if (!table) {
       return;
     }
-    const layout = this._measureLayout();
+    const layout = this.#measureLayout();
     if (!layout) {
       return;
     }
-    const changed = this._fitColumns(layout, size);
+    const changed = this.#fitColumns(layout, size);
     if (changed) {
-      this._rebuildDetailsSafely();
+      this.#rebuildDetailsSafely();
     }
-    this._syncFooter(size);
+    this.#syncFooter(size);
     table.style.visibility = "visible";
   }
-  _resizeWidth() {
-    if (this.observerBlocked) {
+  #resizeWidth(width) {
+    if (width === undefined && this.#observerBlocked) {
       return null;
     }
     if (!this.grid.table || !this.grid.headerRow) {
       return null;
     }
-    const entry = this._lastEntry;
-    if (!entry) {
+    const size = width ?? (this.#lastEntry ? this.#entryWidth(this.#lastEntry) : null);
+    if (size === null) {
       return null;
     }
-    const size = this._entryWidth(entry);
-    if (size === this._lastProcessedWidth) {
+    if (size === this.#lastProcessedWidth) {
       return null;
     }
-    this._lastProcessedWidth = size;
+    this.#lastProcessedWidth = size;
     return size;
   }
-  _measureLayout() {
+  #measureLayout() {
     const grid = this.grid;
     const headerRow = grid.headerRow;
     if (!headerRow) {
@@ -4483,7 +4493,7 @@ class ResponsiveGrid extends base_plugin_default {
     const preferredWidth = (th) => widths.get(th) ?? 0;
     const items = sortByPriority([...headerRow.querySelectorAll("th[field]")].reverse().filter((th) => {
       const column = grid.getCol(th.getAttribute("field") ?? "");
-      return column && this._isEssential(column) === false;
+      return column && this.#isEssential(column) === false;
     })).map((th) => {
       return {
         th,
@@ -4500,7 +4510,7 @@ class ResponsiveGrid extends base_plugin_default {
     }, 0);
     const requiredWidth = (visibleItems) => {
       let total = fixedWidth;
-      if (grid.options.responsiveToggle && !this._sharesDisclosure() && items.some(({ column }) => column?.responsiveHidden)) {
+      if (grid.options.responsiveToggle && !this.#sharesDisclosure() && items.some(({ column }) => column?.responsiveHidden)) {
         total += RESPONSIVE_TOGGLE_WIDTH;
       }
       for (const { th } of visibleItems) {
@@ -4516,7 +4526,7 @@ class ResponsiveGrid extends base_plugin_default {
     }).filter(({ column }) => !isColumnHidden2(column));
     return { items, visible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 };
   }
-  _fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 }, size) {
+  #fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 }, size) {
     const grid = this.grid;
     let visible = initialVisible;
     let changed = false;
@@ -4553,7 +4563,7 @@ class ResponsiveGrid extends base_plugin_default {
     }
     return changed;
   }
-  _syncFooter(size) {
+  #syncFooter(size) {
     const table = this.grid.table;
     if (!table) {
       return;
@@ -4573,12 +4583,12 @@ class ResponsiveGrid extends base_plugin_default {
       }
     }
   }
-  _rebuildDetailsSafely() {
-    this.blockObserver();
-    this._rebuildDetails();
-    this.unblockObserver();
+  #rebuildDetailsSafely() {
+    this.#blockObserver();
+    this.#rebuildDetails();
+    this.#unblockObserver();
   }
-  computeLabelWidth() {
+  #computeLabelWidth() {
     let idealWidth = 0;
     const hCols = this.grid.querySelectorAll(".dg-head-columns th");
     for (const hCol of hCols) {
@@ -4589,10 +4599,10 @@ class ResponsiveGrid extends base_plugin_default {
     }
     return idealWidth;
   }
-  _dataRows() {
+  #dataRows() {
     return Array.from(this.grid.querySelectorAll("tbody > tr.dg-data-row"));
   }
-  _isEssential(column) {
+  #isEssential(column) {
     if (!column?.field) {
       return false;
     }
@@ -4607,7 +4617,7 @@ class ResponsiveGrid extends base_plugin_default {
     }
     return false;
   }
-  _canonicalizeRow(tr) {
+  #canonicalizeRow(tr) {
     let previous = null;
     for (const column of this.grid.getColumns()) {
       if (column.attr) {
@@ -4625,18 +4635,18 @@ class ResponsiveGrid extends base_plugin_default {
       previous = td;
     }
   }
-  _sharesDisclosure() {
+  #sharesDisclosure() {
     return Boolean(this.grid.options.responsiveToggle) && typeof this.grid.options.rowDetails === "function" && Boolean(this.grid.getPlugin("RowDetails"));
   }
   followDisclosure(tr, expanded) {
-    if (!this._sharesDisclosure()) {
+    if (!this.#sharesDisclosure()) {
       return;
     }
-    this.blockObserver();
-    this._setRowExpanded(tr, expanded);
-    this.unblockObserver();
+    this.#blockObserver();
+    this.#setRowExpanded(tr, expanded);
+    this.#unblockObserver();
   }
-  _setToggleIcon(tr, expanded) {
+  #setToggleIcon(tr, expanded) {
     const control = tr.querySelector(`.${RESPONSIVE_CLASS}-toggle-control`);
     const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
     const row = this.grid.rows[rowIndex] ?? {};
@@ -4648,7 +4658,7 @@ class ResponsiveGrid extends base_plugin_default {
       control.classList.toggle(`${RESPONSIVE_CLASS}-toggle-control-open`, expanded);
     }
   }
-  _setRowExpanded(tr, expanded) {
+  #setRowExpanded(tr, expanded) {
     tr.dataset.responsiveExpanded = String(expanded);
     const childRow = tr.nextElementSibling;
     const hasChildRow = childRow?.classList.contains(`${RESPONSIVE_CLASS}-child-row`);
@@ -4660,18 +4670,18 @@ class ResponsiveGrid extends base_plugin_default {
       if (!hiddenCols.length) {
         return;
       }
-      this._canonicalizeRow(tr);
+      this.#canonicalizeRow(tr);
       tr.classList.add(`${RESPONSIVE_CLASS}-expanded`);
       const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
       const { row: detailRow, cell: detailTd } = createSpanningRow(this.grid, {
-        id: this._detailId(rowIndex),
+        id: this.#detailId(rowIndex),
         className: `${RESPONSIVE_CLASS}-child-row`
       });
       tr.after(detailRow);
       const childTable = document.createElement("table");
       detailTd.appendChild(childTable);
       childTable.classList.add(`${RESPONSIVE_CLASS}-table`);
-      const idealWidth = this.computeLabelWidth();
+      const idealWidth = this.#computeLabelWidth();
       for (const col of tr.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
         const childTableRow = document.createElement("tr");
         const labelCol = document.createElement("th");
@@ -4681,67 +4691,67 @@ class ResponsiveGrid extends base_plugin_default {
         childTable.appendChild(childTableRow);
         col.removeAttribute("hidden");
       }
-      this._setToggleIcon(tr, true);
+      this.#setToggleIcon(tr, true);
       return;
     }
     if (childRow && hasChildRow) {
-      this._restoreChildRow(tr, childRow);
+      this.#restoreChildRow(tr, childRow);
     }
     tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
-    this._setToggleIcon(tr, false);
+    this.#setToggleIcon(tr, false);
   }
-  _restoreChildRow(tr, childRow) {
+  #restoreChildRow(tr, childRow) {
     for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
       tr.appendChild(col);
       col.setAttribute("hidden", "");
     }
     childRow.remove();
-    this._canonicalizeRow(tr);
+    this.#canonicalizeRow(tr);
   }
-  _restoreDetails() {
+  #restoreDetails() {
     for (const childRow of this.grid.querySelectorAll(`tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
       const tr = childRow.previousElementSibling;
       if (tr) {
-        this._restoreChildRow(tr, childRow);
+        this.#restoreChildRow(tr, childRow);
         tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
       } else {
         childRow.remove();
       }
     }
   }
-  _rebuildDetails() {
-    this._restoreDetails();
+  #rebuildDetails() {
+    this.#restoreDetails();
     this.grid.syncColumnVisibility();
-    if (!this.hasHiddenColumns()) {
+    if (!this.#hasHiddenColumns()) {
       return;
     }
-    this._seedRows();
+    this.#seedRows();
   }
-  _seedRows() {
-    for (const tr of this._dataRows()) {
+  #seedRows() {
+    for (const tr of this.#dataRows()) {
       let expanded = tr.dataset.responsiveExpanded;
       if (expanded === undefined) {
         expanded = String(this.grid.options.responsiveStartOpen);
         tr.dataset.responsiveExpanded = expanded;
       }
       if (expanded === "true") {
-        this._setRowExpanded(tr, true);
+        this.#setRowExpanded(tr, true);
       }
     }
   }
   updateLabels() {
-    for (const tr of this._dataRows()) {
-      this._setToggleIcon(tr, tr.dataset.responsiveExpanded === "true");
+    for (const tr of this.#dataRows()) {
+      this.#setToggleIcon(tr, tr.dataset.responsiveExpanded === "true");
     }
   }
   afterRender(context) {
     if (context !== "body") {
       return;
     }
-    if (!this.grid.options.responsiveStartOpen || !this.hasHiddenColumns()) {
+    if (!this.grid.options.responsiveStartOpen || !this.#hasHiddenColumns()) {
       return;
     }
-    this._seedRows();
+    this.#seedRows();
   }
   onclick(ev) {
     ev.stopPropagation();
@@ -4750,9 +4760,9 @@ class ResponsiveGrid extends base_plugin_default {
     if (!tr) {
       return;
     }
-    this.blockObserver();
-    this._setRowExpanded(tr, tr.dataset.responsiveExpanded !== "true");
-    this.unblockObserver();
+    this.#blockObserver();
+    this.#setRowExpanded(tr, tr.dataset.responsiveExpanded !== "true");
+    this.#unblockObserver();
   }
 }
 var responsive_grid_default = ResponsiveGrid;

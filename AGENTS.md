@@ -134,6 +134,7 @@ Avoid:
 - `for...of` (not `forEach`); optional chaining / nullish coalescing
 - early-2022 browser baseline; no polyfills
 - Docs and commit messages in English
+- Leave one blank line between class methods.
 
 ## Testing
 

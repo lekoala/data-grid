@@ -15,6 +15,7 @@ class ContextMenu extends BasePlugin {
         /** @type {HTMLUListElement|null} */
         this.menu = null;
     }
+
     connected() {
         const menu = this.grid.ownerDocument.createElement("ul");
         if (typeof menu.showPopover !== "function") {
@@ -26,6 +27,7 @@ class ContextMenu extends BasePlugin {
         this.menu = menu;
         on(this.grid, MENU_EVENTS, this);
     }
+
     disconnected() {
         off(this.grid, MENU_EVENTS, this);
         this.menu?.remove();
@@ -103,6 +105,7 @@ class ContextMenu extends BasePlugin {
         menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
         menu.style.top = `${Math.min(y, viewport.clientHeight - rect.height)}px`;
     }
+
     createMenu() {
         const grid = this.grid;
         const menu = this.menu;

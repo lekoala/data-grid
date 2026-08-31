@@ -14,6 +14,7 @@ class TouchSupport extends BasePlugin {
         super(grid);
         this.touch = null;
     }
+
     connected() {
         on(this.grid, TOUCH_EVENTS, this, { passive: true });
     }

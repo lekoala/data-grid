@@ -29,13 +29,7 @@ async function makeReadyGrid(opts = {}, pluginSet = { ResponsiveGrid }) {
 
 function forceResize(inst, size) {
     const plugin = inst.plugins.ResponsiveGrid;
-    // Release the post-render observer block so tests can drive consecutive cycles.
-    if (plugin.unblockTimeout) {
-        clearTimeout(plugin.unblockTimeout);
-    }
-    plugin.observerBlocked = false;
-    plugin._lastEntry = { contentBoxSize: [{ inlineSize: size }] };
-    plugin.resize();
+    plugin.resize(size);
     return plugin;
 }
 
@@ -64,7 +58,7 @@ test("responsive restores columns when space comes back", async () => {
 test("responsive can be disabled and re-enabled at the same width", async () => {
     const inst = await makeReadyGrid({ columns: COLS });
     inst.setAttribute("responsive", "");
-    const plugin = forceResize(inst, 200);
+    forceResize(inst, 200);
     expect(hiddenFields(inst)).toEqual(["b", "c", "d"]);
 
     inst.removeAttribute("responsive");
@@ -72,8 +66,6 @@ test("responsive can be disabled and re-enabled at the same width", async () => 
     expect(inst.querySelector('thead th[data-column-id="$responsive"]')).toBeNull();
     expect(inst.querySelector("tbody tr.dg-responsive-child-row")).toBeNull();
     expect(Array.from(inst.querySelectorAll("tbody td[data-column-id]")).every((cell) => !cell.hidden)).toBe(true);
-    expect(plugin._lastProcessedWidth).toBeNull();
-
     inst.setAttribute("responsive", "");
     expect(inst.querySelector('thead th[data-column-id="$responsive"]')).toBeTruthy();
     forceResize(inst, 200);
@@ -89,6 +81,18 @@ test("a responsive:0 column is never hidden", async () => {
     expect(hiddenFields(inst)).toEqual(["b", "c", "d"]);
     const a = inst.options.columns.find((c) => c.field === "a");
     expect(a.responsiveHidden).toBe(false);
+    document.body.removeChild(inst);
+});
+
+test("a frozen start column is never hidden", async () => {
+    const cols = [
+        { field: "a", title: "A", width: 100, frozen: "start" },
+        { field: "b", title: "B", width: 100 },
+        { field: "c", title: "C", width: 100 },
+    ];
+    const inst = await makeReadyGrid({ columns: cols });
+    forceResize(inst, 50);
+    expect(hiddenFields(inst)).not.toContain("a");
     document.body.removeChild(inst);
 });
 
@@ -276,14 +280,12 @@ test("narrow -> wide -> narrow roundtrip keeps canonical order and no lost/dupli
 
 test("a user-collapsed row stays collapsed across responsive rebuilds", async () => {
     const inst = await makeReadyGrid({ columns: COLS, responsiveStartOpen: true });
-    const plugin = inst.plugins.ResponsiveGrid;
-
     forceResize(inst, 200);
     const first = inst.querySelector("tbody tr.dg-data-row");
     expect(first.dataset.responsiveExpanded).toBe("true");
 
     // Simulate the user collapsing the first row
-    plugin._setRowExpanded(first, false);
+    first.querySelector(".dg-responsive-toggle-control").click();
     expect(first.dataset.responsiveExpanded).toBe("false");
 
     forceResize(inst, 1000); // wide: details disappear

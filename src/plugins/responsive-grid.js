@@ -35,34 +35,52 @@ function sortByPriority(list) {
  * Responsive data grid
  */
 class ResponsiveGrid extends BasePlugin {
+    /** @type {ResizeObserverEntry|null} */
+    #lastEntry;
+    /** @type {Number|null} */
+    #lastProcessedWidth;
+    /** @type {(() => void) & { cancel: () => void }} */
+    #scheduleResize;
+    /** @type {ResizeObserver} */
+    #observer;
+    /** @type {Element|null} */
+    #observed;
+    /** @type {Boolean} */
+    #observerBlocked;
+    /** @type {ReturnType<typeof setTimeout>|null} */
+    #unblockTimeout;
+
     /**
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid) {
         super(grid);
 
-        this.observerBlocked = false;
-        this.unblockTimeout = null;
-        this._lastEntry = null;
-        this._lastProcessedWidth = /** @type {Number|null} */ (null);
-        this._scheduleResize = /** @type {() => void} */ (debounce(() => this.resize(), 100));
-        this.observer = new ResizeObserver((entries) => {
-            this._lastEntry = entries[entries.length - 1];
-            this._scheduleResize();
+        this.#observerBlocked = false;
+        this.#unblockTimeout = null;
+        this.#lastEntry = null;
+        this.#lastProcessedWidth = null;
+        this.#observed = null;
+        this.#scheduleResize = debounce(() => this.resize(), 100);
+        this.#observer = new ResizeObserver((entries) => {
+            this.#lastEntry = entries[entries.length - 1];
+            this.#scheduleResize();
         });
     }
 
     connected() {
         if (this.grid.options.responsive) {
-            this.observe();
+            this.#observe();
         }
     }
 
     disconnected() {
-        this.unobserve();
-        if (this.unblockTimeout) {
-            clearTimeout(this.unblockTimeout);
+        this.#unobserve();
+        if (this.#unblockTimeout) {
+            clearTimeout(this.#unblockTimeout);
+            this.#unblockTimeout = null;
         }
+        this.#scheduleResize.cancel();
     }
 
     /**
@@ -70,32 +88,32 @@ class ResponsiveGrid extends BasePlugin {
      */
     responsiveChanged(enabled) {
         // A same-width observation must be processed after every off/on cycle.
-        this._lastProcessedWidth = null;
+        this.#lastProcessedWidth = null;
         if (enabled) {
-            this.observe();
+            this.#observe();
             return;
         }
-        this.unobserve();
+        this.#unobserve();
         for (const column of this.grid.options.columns) {
             column.responsiveHidden = false;
         }
     }
 
-    observe() {
+    #observe() {
         if (!this.grid.options.responsive) {
             return;
         }
         // The table viewport is the real horizontal constraint for responsive
         // columns. The grid no longer owns the scroll (the .dg-scroll wrapper
         // does), so no overflow/display mutation is needed.
-        this._observed = this.grid.scrollEl || this.grid;
-        this.observer.observe(this._observed);
+        this.#observed = this.grid.scrollEl || this.grid;
+        this.#observer.observe(this.#observed);
     }
 
-    unobserve() {
-        if (this._observed) {
-            this.observer.unobserve(this._observed);
-            this._observed = null;
+    #unobserve() {
+        if (this.#observed) {
+            this.#observer.unobserve(this.#observed);
+            this.#observed = null;
         }
     }
 
@@ -106,7 +124,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {import("../data-grid.js").Column[]} columns
      */
     extendColumns(columns) {
-        if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this._sharesDisclosure()) {
+        if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this.#sharesDisclosure()) {
             return;
         }
         columns.unshift({
@@ -118,30 +136,31 @@ class ResponsiveGrid extends BasePlugin {
             sortable: false,
             title: "",
             class: `dg-disclosure-cell ${RESPONSIVE_CLASS}-toggle`,
-            hidden: !this.hasHiddenColumns(),
+            hidden: !this.#hasHiddenColumns(),
             renderHeaderCell: (th) => th.classList.add("dg-not-resizable", "dg-not-sortable"),
             renderFilterCell: () => {},
-            renderCell: (ctx) => this.createDataCell(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
+            renderCell: (ctx) => this.#createDataCell(/** @type {import("../data-grid.js").CellContext} */ (ctx)),
         });
     }
 
-    blockObserver() {
-        this.observerBlocked = true;
-        if (this.unblockTimeout) {
-            clearTimeout(this.unblockTimeout);
+    #blockObserver() {
+        this.#observerBlocked = true;
+        if (this.#unblockTimeout) {
+            clearTimeout(this.#unblockTimeout);
         }
     }
 
-    unblockObserver() {
-        this.unblockTimeout = setTimeout(() => {
-            this.observerBlocked = false;
+    #unblockObserver() {
+        this.#unblockTimeout = setTimeout(() => {
+            this.#unblockTimeout = null;
+            this.#observerBlocked = false;
             // Re-evaluate only when a genuinely new inlineSize arrived while the
             // observer was blocked; re-running for the same width is useless
             // (the state is idempotent for a given width).
-            const entry = this._lastEntry;
+            const entry = this.#lastEntry;
             if (entry) {
-                const size = Math.round(this._entryWidth(entry));
-                if (size !== this._lastProcessedWidth) {
+                const size = Math.round(this.#entryWidth(entry));
+                if (size !== this.#lastProcessedWidth) {
                     this.resize();
                 }
             }
@@ -152,7 +171,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {ResizeObserverEntry} entry
      * @returns {Number}
      */
-    _entryWidth(entry) {
+    #entryWidth(entry) {
         const contentBoxSize = Array.isArray(entry.contentBoxSize) ? entry.contentBoxSize[0] : entry.contentBoxSize;
         return Math.round(contentBoxSize?.inlineSize ?? entry.contentRect?.width ?? 0);
     }
@@ -160,7 +179,7 @@ class ResponsiveGrid extends BasePlugin {
     /**
      * @returns {Boolean}
      */
-    hasHiddenColumns() {
+    #hasHiddenColumns() {
         return this.grid.options.columns.some((column) => column.responsiveHidden);
     }
 
@@ -168,10 +187,10 @@ class ResponsiveGrid extends BasePlugin {
      * @param {import("../data-grid.js").CellContext} ctx
      * @returns {HTMLButtonElement}
      */
-    createDataCell({ row, rowIndex = 0 }) {
+    #createDataCell({ row, rowIndex = 0 }) {
         const cell = createDisclosureButton(`${RESPONSIVE_CLASS}-toggle-control`);
         cell.setAttribute("aria-expanded", "false");
-        cell.setAttribute("aria-controls", this._detailId(rowIndex));
+        cell.setAttribute("aria-controls", this.#detailId(rowIndex));
         cell.setAttribute(
             "aria-label",
             this.grid.formatLabel(this.grid.labels.showHiddenColumns, {
@@ -185,15 +204,17 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /** @param {Number} rowIndex */
-    _detailId(rowIndex) {
+    #detailId(rowIndex) {
         return `dg-responsive-detail-${this.grid.id}-${rowIndex}`;
     }
 
     /**
-     * Apply responsive hide/show based on the last observed size.
+     * Apply responsive hide/show using the last observed size, or an explicit
+     * viewport width supplied by a caller that already measured it.
+     * @param {Number} [width]
      */
-    resize() {
-        const size = this._resizeWidth();
+    resize(width) {
+        const size = this.#resizeWidth(width);
         if (size === null) {
             return;
         }
@@ -201,41 +222,42 @@ class ResponsiveGrid extends BasePlugin {
         if (!table) {
             return;
         }
-        const layout = this._measureLayout();
+        const layout = this.#measureLayout();
         if (!layout) {
             return;
         }
-        const changed = this._fitColumns(layout, size);
+        const changed = this.#fitColumns(layout, size);
         if (changed) {
-            this._rebuildDetailsSafely();
+            this.#rebuildDetailsSafely();
         }
-        this._syncFooter(size);
+        this.#syncFooter(size);
         table.style.visibility = "visible";
     }
 
     /**
      * Resolve a new observed width worth processing.
+     * @param {Number|undefined} width
      * @returns {Number|null}
      */
-    _resizeWidth() {
-        if (this.observerBlocked) {
+    #resizeWidth(width) {
+        if (width === undefined && this.#observerBlocked) {
             return null;
         }
         if (!this.grid.table || !this.grid.headerRow) {
             return null;
         }
-        const entry = this._lastEntry;
-        if (!entry) {
+        // Check inlineSize (width) and not blockSize (height). An explicit
+        // width also keeps behavior tests independent of observer internals.
+        const size = width ?? (this.#lastEntry ? this.#entryWidth(this.#lastEntry) : null);
+        if (size === null) {
             return null;
         }
-        // check inlineSize (width) and not blockSize (height)
-        const size = this._entryWidth(entry);
         // The state is idempotent for a given width: skip duplicate evaluations
         // (ex: a resize that merely re-renders after a visibility change).
-        if (size === this._lastProcessedWidth) {
+        if (size === this.#lastProcessedWidth) {
             return null;
         }
-        this._lastProcessedWidth = size;
+        this.#lastProcessedWidth = size;
         return size;
     }
 
@@ -243,7 +265,7 @@ class ResponsiveGrid extends BasePlugin {
      * Read the current column geometry once for a responsive fitting cycle.
      * @returns {ResponsiveLayout|null}
      */
-    _measureLayout() {
+    #measureLayout() {
         const grid = this.grid;
         const headerRow = grid.headerRow;
         if (!headerRow) {
@@ -281,7 +303,7 @@ class ResponsiveGrid extends BasePlugin {
                         const column = grid.getCol(th.getAttribute("field") ?? "");
                         // Essential columns (never hidden) are excluded from the
                         // hideable candidates.
-                        return column && this._isEssential(column) === false;
+                        return column && this.#isEssential(column) === false;
                     }),
             ).map((th) => {
                 return {
@@ -311,7 +333,7 @@ class ResponsiveGrid extends BasePlugin {
             let total = fixedWidth;
             if (
                 grid.options.responsiveToggle &&
-                !this._sharesDisclosure() &&
+                !this.#sharesDisclosure() &&
                 items.some(({ column }) => column?.responsiveHidden)
             ) {
                 total += RESPONSIVE_TOGGLE_WIDTH;
@@ -346,7 +368,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {Number} size
      * @returns {Boolean}
      */
-    _fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden }, size) {
+    #fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden }, size) {
         const grid = this.grid;
         let visible = initialVisible;
         let changed = false;
@@ -391,7 +413,7 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /** @param {Number} size */
-    _syncFooter(size) {
+    #syncFooter(size) {
         // Footer compact state is independent of column changes.
         const table = this.grid.table;
         if (!table) {
@@ -413,13 +435,13 @@ class ResponsiveGrid extends BasePlugin {
         }
     }
 
-    _rebuildDetailsSafely() {
-        this.blockObserver();
-        this._rebuildDetails();
-        this.unblockObserver();
+    #rebuildDetailsSafely() {
+        this.#blockObserver();
+        this.#rebuildDetails();
+        this.#unblockObserver();
     }
 
-    computeLabelWidth() {
+    #computeLabelWidth() {
         let idealWidth = 0;
         const hCols = /** @type {NodeListOf<HTMLElement>} */ (this.grid.querySelectorAll(".dg-head-columns th"));
         for (const hCol of hCols) {
@@ -436,7 +458,7 @@ class ResponsiveGrid extends BasePlugin {
      * empty/error rows).
      * @returns {HTMLTableRowElement[]}
      */
-    _dataRows() {
+    #dataRows() {
         return /** @type {HTMLTableRowElement[]} */ (Array.from(this.grid.querySelectorAll("tbody > tr.dg-data-row")));
     }
 
@@ -448,7 +470,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {import("../data-grid.js").Column|null|undefined} column
      * @returns {Boolean}
      */
-    _isEssential(column) {
+    #isEssential(column) {
         if (!column?.field) {
             return false;
         }
@@ -472,7 +494,7 @@ class ResponsiveGrid extends BasePlugin {
      * is operating from the keyboard (the toggle itself, typically).
      * @param {HTMLTableRowElement} tr
      */
-    _canonicalizeRow(tr) {
+    #canonicalizeRow(tr) {
         /** @type {Element|null} */
         let previous = null;
         for (const column of this.grid.getColumns()) {
@@ -505,7 +527,7 @@ class ResponsiveGrid extends BasePlugin {
      * control, never hidden values with no way to reach them.
      * @returns {Boolean}
      */
-    _sharesDisclosure() {
+    #sharesDisclosure() {
         return (
             Boolean(this.grid.options.responsiveToggle) &&
             typeof this.grid.options.rowDetails === "function" &&
@@ -523,12 +545,12 @@ class ResponsiveGrid extends BasePlugin {
      * @param {Boolean} expanded
      */
     followDisclosure(tr, expanded) {
-        if (!this._sharesDisclosure()) {
+        if (!this.#sharesDisclosure()) {
             return;
         }
-        this.blockObserver();
-        this._setRowExpanded(tr, expanded);
-        this.unblockObserver();
+        this.#blockObserver();
+        this.#setRowExpanded(tr, expanded);
+        this.#unblockObserver();
     }
 
     /**
@@ -537,7 +559,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {HTMLTableRowElement} tr
      * @param {Boolean} expanded
      */
-    _setToggleIcon(tr, expanded) {
+    #setToggleIcon(tr, expanded) {
         const control = tr.querySelector(`.${RESPONSIVE_CLASS}-toggle-control`);
         const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
         const row = this.grid.rows[rowIndex] ?? {};
@@ -563,7 +585,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {HTMLTableRowElement} tr
      * @param {Boolean} expanded
      */
-    _setRowExpanded(tr, expanded) {
+    #setRowExpanded(tr, expanded) {
         tr.dataset.responsiveExpanded = String(expanded);
 
         const childRow = tr.nextElementSibling;
@@ -577,12 +599,12 @@ class ResponsiveGrid extends BasePlugin {
             if (!hiddenCols.length) {
                 return;
             }
-            this._canonicalizeRow(tr);
+            this.#canonicalizeRow(tr);
             tr.classList.add(`${RESPONSIVE_CLASS}-expanded`);
 
             const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
             const { row: detailRow, cell: detailTd } = createSpanningRow(this.grid, {
-                id: this._detailId(rowIndex),
+                id: this.#detailId(rowIndex),
                 className: `${RESPONSIVE_CLASS}-child-row`,
             });
             tr.after(detailRow);
@@ -591,7 +613,7 @@ class ResponsiveGrid extends BasePlugin {
             detailTd.appendChild(childTable);
             childTable.classList.add(`${RESPONSIVE_CLASS}-table`);
 
-            const idealWidth = this.computeLabelWidth();
+            const idealWidth = this.#computeLabelWidth();
             for (const col of /** @type {NodeListOf<HTMLElement>} */ (
                 tr.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)
             )) {
@@ -604,17 +626,17 @@ class ResponsiveGrid extends BasePlugin {
                 col.removeAttribute("hidden");
             }
 
-            this._setToggleIcon(tr, true);
+            this.#setToggleIcon(tr, true);
             return;
         }
 
         // Collapse: move real cells back into the data row (canonical order)
         // and drop the wrapper.
         if (childRow && hasChildRow) {
-            this._restoreChildRow(tr, /** @type {HTMLTableRowElement} */ (childRow));
+            this.#restoreChildRow(tr, /** @type {HTMLTableRowElement} */ (childRow));
         }
         tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
-        this._setToggleIcon(tr, false);
+        this.#setToggleIcon(tr, false);
     }
 
     /**
@@ -622,13 +644,13 @@ class ResponsiveGrid extends BasePlugin {
      * @param {HTMLTableRowElement} tr
      * @param {HTMLTableRowElement} childRow
      */
-    _restoreChildRow(tr, childRow) {
+    #restoreChildRow(tr, childRow) {
         for (const col of childRow.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
             tr.appendChild(col);
             col.setAttribute("hidden", "");
         }
         childRow.remove();
-        this._canonicalizeRow(tr);
+        this.#canonicalizeRow(tr);
     }
 
     /**
@@ -637,11 +659,11 @@ class ResponsiveGrid extends BasePlugin {
      * column order, and the detail wrappers are removed. The row expansion
      * state attribute is left untouched.
      */
-    _restoreDetails() {
+    #restoreDetails() {
         for (const childRow of this.grid.querySelectorAll(`tbody tr.${RESPONSIVE_CLASS}-child-row`)) {
             const tr = /** @type {HTMLTableRowElement} */ (childRow.previousElementSibling);
             if (tr) {
-                this._restoreChildRow(tr, /** @type {HTMLTableRowElement} */ (childRow));
+                this.#restoreChildRow(tr, /** @type {HTMLTableRowElement} */ (childRow));
                 tr.classList.remove(`${RESPONSIVE_CLASS}-expanded`);
             } else {
                 childRow.remove();
@@ -655,36 +677,36 @@ class ResponsiveGrid extends BasePlugin {
      * `responsiveStartOpen`) have their hidden values moved into a fresh detail
      * row; user-collapsed rows stay collapsed.
      */
-    _rebuildDetails() {
-        this._restoreDetails();
+    #rebuildDetails() {
+        this.#restoreDetails();
         this.grid.syncColumnVisibility();
 
-        if (!this.hasHiddenColumns()) {
+        if (!this.#hasHiddenColumns()) {
             return;
         }
-        this._seedRows();
+        this.#seedRows();
     }
 
     /**
      * Expand every data row whose (materialized) expansion state is open. Rows
      * with no state yet are seeded from `responsiveStartOpen`.
      */
-    _seedRows() {
-        for (const tr of this._dataRows()) {
+    #seedRows() {
+        for (const tr of this.#dataRows()) {
             let expanded = tr.dataset.responsiveExpanded;
             if (expanded === undefined) {
                 expanded = String(this.grid.options.responsiveStartOpen);
                 tr.dataset.responsiveExpanded = expanded;
             }
             if (expanded === "true") {
-                this._setRowExpanded(tr, true);
+                this.#setRowExpanded(tr, true);
             }
         }
     }
 
     updateLabels() {
-        for (const tr of this._dataRows()) {
-            this._setToggleIcon(tr, tr.dataset.responsiveExpanded === "true");
+        for (const tr of this.#dataRows()) {
+            this.#setToggleIcon(tr, tr.dataset.responsiveExpanded === "true");
         }
     }
 
@@ -699,10 +721,10 @@ class ResponsiveGrid extends BasePlugin {
         if (context !== "body") {
             return;
         }
-        if (!this.grid.options.responsiveStartOpen || !this.hasHiddenColumns()) {
+        if (!this.grid.options.responsiveStartOpen || !this.#hasHiddenColumns()) {
             return;
         }
-        this._seedRows();
+        this.#seedRows();
     }
 
     /**
@@ -717,9 +739,9 @@ class ResponsiveGrid extends BasePlugin {
         if (!tr) {
             return;
         }
-        this.blockObserver();
-        this._setRowExpanded(tr, tr.dataset.responsiveExpanded !== "true");
-        this.unblockObserver();
+        this.#blockObserver();
+        this.#setRowExpanded(tr, tr.dataset.responsiveExpanded !== "true");
+        this.#unblockObserver();
     }
 }
 

@@ -265,8 +265,6 @@ test("frozen columns stack after frozen control columns and mark the edge", asyn
     expect(name.style.getPropertyValue("--dg-frozen-offset")).toBe("40px");
     expect(name.hasAttribute("data-frozen-edge")).toBe(true);
     expect(inst.scrollEl.style.getPropertyValue("--dg-frozen-start-width")).toBe("160px");
-    expect(inst.getPlugin("ResponsiveGrid")._isEssential(inst.getCol("name"))).toBe(true);
-
     inst.hideColumn("name");
     inst.syncFrozenColumns();
     expect(selection.hasAttribute("data-frozen-edge")).toBe(true);
