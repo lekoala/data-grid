@@ -488,39 +488,11 @@ export type TextInputState = {
  */
 declare class DataGrid extends BaseElement {
     #private;
-    _filterSelector: string;
-    _excludedRowElementSelector: string;
-    /**
-     * Instantiated plugins, keyed by their registration name.
-     * @type {PluginInstances}
-     */
-    plugins: PluginInstances;
-    /**
-     * Initial query used by resetQuery()
-     * @type {QueryState}
-     */
-    _initialQuery: QueryState;
-    /**
-     * Runtime query state, single source of truth
-     * @type {QueryState}
-     */
-    _query: QueryState;
-    /**
-     * Selection state, single source of truth for row selection
-     * @type {SelectionState}
-     */
-    _selection: SelectionState;
-    /** @type {Number} */
-    _requestSeq: number;
-    /** @type {?AbortController} */
-    _controller: AbortController | null;
     /**
      * Optional initial result, can be set as a property before connection
      * @type {PageResult|null}
      */
     initialResult: PageResult | null;
-    /** @type {PageResult|null} */
-    _initialResult: PageResult | null;
     /**
      * Rows of the current page
      * @type {Array<Record<string, any>>}
@@ -542,11 +514,6 @@ declare class DataGrid extends BaseElement {
     loading: boolean;
     /** @type {?Error} */
     error: Error | null;
-    /**
-     * Normalized columns of the current render cycle
-     * @type {Column[]}
-     */
-    _columns: Column[];
     /**
      * The active data source, set by setupDataSource().
      * @type {DataSource|null}
@@ -582,27 +549,11 @@ declare class DataGrid extends BaseElement {
     headerRow: HTMLTableRowElement | null;
     /** @type {Number|null} */
     rowHeight: number | null;
-    /** @type {IntersectionObserver|null} */
-    _loadObserver: IntersectionObserver | null;
-    /** @type {Boolean} */
-    _lazyPending: boolean;
-    /**
-     * Current render context, set by renderTable/renderBody.
-     * @type {import("./core/base-plugin.js").RenderContext|null}
-     */
-    _renderContext: import("./core/base-plugin.js").RenderContext | null;
-    /** @type {Number|null} */
-    _frozenFrame: number | null;
     /**
      * @param {Object} [options]
      */
     constructor(options?: Object);
     _ready(): void;
-    /**
-     * Instantiate the registered plugin constructors.
-     * @returns {PluginInstances}
-     */
-    _initPlugins(): PluginInstances;
     static template(): string;
     /**
      * @public
@@ -828,24 +779,6 @@ declare class DataGrid extends BaseElement {
      * @returns {Promise<void>|undefined}
      */
     commitSearch(): Promise<void> | undefined;
-    /**
-     * Adopt a supplied `<table>` (a direct child that is not the generated
-     * template table). The supplied table keeps its own attributes, caption
-     * and colgroup; the grid installs its generated header rows, tbody and
-     * tfoot. A declarative `<th data-field>` row defines the columns (it wins
-     * over `options.columns`); when no explicit data source exists, the
-     * declarative `<tbody>` becomes the local ArrayDataSource dataset.
-     * Idempotent: the adopted table is marked `data-dg-table` and is never
-     * re-parsed or re-seeded.
-     */
-    _adoptDeclarativeTable(): void;
-    /**
-     * Make the table viewport an explicit structural invariant: a direct
-     * `.dg-scroll` child of the host that owns the scroll, the outer border and
-     * radius, and is the sticky containing block. Idempotent and reconnect-safe
-     * (a `.dg-scroll` from a previous connect is reused, its table re-located).
-     */
-    _wrapScroll(): void;
     _connected(): Promise<void>;
     _disconnected(): void;
     /**
@@ -866,60 +799,6 @@ declare class DataGrid extends BaseElement {
      * @returns {Boolean}
      */
     ownsControl(element: Element | null | undefined): boolean;
-    /**
-     * Expose the full text through the native tooltip when a data cell is
-     * visually truncated. Resolve this on hover so the measurement always
-     * reflects the current column width, including user resizing.
-     * @param {Element} target
-     */
-    _handleMouseover(target: Element): void;
-    /**
-     * @param {Event} event
-     * @param {Element} target
-     * @returns {*}
-     */
-    _handleClick(event: Event, target: Element): any;
-    /**
-     * A click inside a row is excluded when it originates from an interactive
-     * element or a subtree explicitly opting out. The whole composed path is
-     * inspected so a control living in a shadow root still counts.
-     * @param {Event} event
-     * @returns {Boolean}
-     */
-    _isRowClickExcluded(event: Event): boolean;
-    /**
-     * Apply the configured row click policy to a data row click. The cancelable
-     * `rowClick` event always fires first so business logic can veto the
-     * automatic behavior with preventDefault().
-     * @param {Event} event
-     * @param {Record<string, any>} row
-     * @param {Number} rowIndex
-     * @returns {*}
-     */
-    _handleRowClick(event: Event, row: Record<string, any>, rowIndex: number): any;
-    /**
-     * @param {Event} event
-     * @param {Element} target
-     * @returns {*}
-     */
-    _handleChange(event: Event, target: Element): any;
-    /**
-     * @param {Element} target
-     * @returns {void}
-     */
-    _handleInput(target: Element): void;
-    /**
-     * @param {KeyboardEvent} event
-     * @param {Element} target
-     * @returns {*}
-     */
-    _handleKeydown(event: KeyboardEvent, target: Element): any;
-    /**
-     * @param {Element} target
-     * @param {Boolean} composing
-     * @returns {void}
-     */
-    _handleComposition(target: Element, composing: boolean): void;
     init(): Promise<void> | undefined;
     /**
      * @param {String} field
@@ -951,14 +830,6 @@ declare class DataGrid extends BaseElement {
      * @returns {Column|null}
      */
     getColumnById(id: string): Column | null;
-    /**
-     * Create a column cell (<th> or <td>) tagged with its stable column id and
-     * styled by the column definition.
-     * @param {"th"|"td"} tag
-     * @param {Column} column
-     * @returns {HTMLTableCellElement}
-     */
-    _createColumnCell(tag: "th" | "td", column: Column): HTMLTableCellElement;
     visibleColumns(): Column[];
     /**
      * Whether a column can be sorted: the grid-wide option must be on and the
@@ -1237,52 +1108,15 @@ declare class DataGrid extends BaseElement {
      */
     createColumnHeaders(thead: HTMLTableSectionElement): void;
     /**
-     * @param {Column} column
-     * @param {{ sampleTh: HTMLTableCellElement, availableWidth: Number, colMaxWidth: Number }} layout
-     * @returns {HTMLTableCellElement}
-     */
-    _createHeaderColumn(column: Column, { sampleTh, availableWidth, colMaxWidth }: {
-        sampleTh: HTMLTableCellElement;
-        availableWidth: number;
-        colMaxWidth: number;
-    }): HTMLTableCellElement;
-    /**
-     * Compress explicit header widths when they overflow the viewport.
-     * @param {HTMLTableSectionElement} thead
-     * @param {HTMLTableRowElement} tr
-     * @param {Number} availableWidth
-     */
-    _fitHeaderWidths(thead: HTMLTableSectionElement, tr: HTMLTableRowElement, availableWidth: number): void;
-    /**
      * Default header cell renderer for base columns.
      * @param {HTMLTableCellElement} th
      * @param {CellContext} ctx
      */
     renderDefaultHeaderCell(th: HTMLTableCellElement, ctx: CellContext): void;
     /**
-     * Apply the intrinsic minimum and optional preferred width of a header.
-     * @param {HTMLTableCellElement} th
-     * @param {Column} column
-     * @param {HTMLTableCellElement|undefined} sampleTh
-     */
-    _applyHeaderSizing(th: HTMLTableCellElement, column: Column, sampleTh: HTMLTableCellElement | undefined): void;
-    /**
-     * Render a plain title or the sortable header control.
-     * @param {HTMLTableCellElement} th
-     * @param {Column} column
-     * @param {Boolean} sortable
-     */
-    _renderHeaderContent(th: HTMLTableCellElement, column: Column, sortable: boolean): void;
-    /**
      * @param {HTMLTableSectionElement} thead
      */
     createColumnFilters(thead: HTMLTableSectionElement): void;
-    /**
-     * Register the transient IME/debounce state of text filter inputs. Event
-     * handling itself remains delegated to the host.
-     * @param {HTMLTableRowElement} tr
-     */
-    _registerFilterInputs(tr: HTMLTableRowElement): void;
     /**
      * Default filter cell renderer for base columns.
      * @param {HTMLTableCellElement} th
@@ -1297,19 +1131,6 @@ declare class DataGrid extends BaseElement {
      */
     createFilterElement(column: Column, relatedTh: HTMLTableCellElement): HTMLInputElement | HTMLSelectElement | HTMLDivElement;
     /**
-     * @param {Column} column
-     * @param {"select"|"boolean"} type
-     * @returns {HTMLSelectElement}
-     */
-    _createSelectFilter(column: Column, type: "select" | "boolean"): HTMLSelectElement;
-    /**
-     * @param {HTMLInputElement} input
-     * @param {Column} column
-     * @param {"text"|"number"|"date"} type
-     * @returns {HTMLInputElement}
-     */
-    _configureTextFilter(input: HTMLInputElement, column: Column, type: "text" | "number" | "date"): HTMLInputElement;
-    /**
      * Resolve the options of a select filter, directly consumable by the
      * <select>. Never derives from the currently loaded page: for a server
      * grid the options must come from meta.filters or an explicit list.
@@ -1323,13 +1144,6 @@ declare class DataGrid extends BaseElement {
      * It will call paginate() at the end
      */
     renderBody(): void;
-    /**
-     * Render one record row and its cells.
-     * @param {Record<string, any>} item
-     * @param {Number} rowIndex
-     * @returns {HTMLTableRowElement}
-     */
-    _renderDataRow(item: Record<string, any>, rowIndex: number): HTMLTableRowElement;
     /**
      * Default cell renderer for base columns (transform).
      * Editable cells are marked for the EditableColumn plugin.

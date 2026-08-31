@@ -71,6 +71,9 @@ properties would then be optional, not automatic.
   lifecycle and DOM state in both directions, with transition tests; never add
   a rerender-only hook merely to satisfy the naming convention. Reuse the hook
   during initial setup when it performs the same synchronization.
+- Keep `BaseElement` lifecycle entry points (`_ready`, `_connected`, and
+  `_disconnected`) accessible; other `DataGrid` state and helpers should be
+  private unless they are part of the documented public or plugin API.
 
 ## Public surface
 

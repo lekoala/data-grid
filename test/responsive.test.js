@@ -28,7 +28,7 @@ async function makeReadyGrid(opts = {}, pluginSet = { ResponsiveGrid }) {
 }
 
 function forceResize(inst, size) {
-    const plugin = inst.plugins.ResponsiveGrid;
+    const plugin = inst.getPlugin("ResponsiveGrid");
     plugin.resize(size);
     return plugin;
 }

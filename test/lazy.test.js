@@ -33,7 +33,11 @@ class FakeIntersectionObserver {
 
     unobserve() {}
 
-    disconnect() {}
+    disconnect() {
+        if (lastObserverCallback === this.callback) {
+            lastObserverCallback = null;
+        }
+    }
 }
 
 /** Fire an intersecting entry into the currently-observed grid. */
@@ -82,7 +86,6 @@ test("loading lazy defers the first data source load until visible", async () =>
     expect(inst.classList.contains("dg-initialized")).toBe(true);
     expect(ds.count).toBe(0);
     expect(lastObserverCallback).toBeTruthy();
-    expect(inst._lazyPending).toBe(true);
     expect(inst.rows).toEqual([]);
 
     // Approaching the viewport triggers exactly one load
@@ -90,7 +93,6 @@ test("loading lazy defers the first data source load until visible", async () =>
     await tick();
     expect(ds.count).toBe(1);
     expect(inst.rows).toEqual(ROWS);
-    expect(inst._lazyPending).toBe(false);
     document.body.removeChild(inst);
 });
 
@@ -122,8 +124,7 @@ test("an explicit refresh bypasses lazy and disarms the observer", async () => {
     await inst.refresh();
 
     expect(ds.count).toBe(1);
-    expect(inst._lazyPending).toBe(false);
-    expect(inst._loadObserver).toBeNull();
+    expect(lastObserverCallback).toBeNull();
     document.body.removeChild(inst);
 });
 
@@ -135,7 +136,7 @@ test("an explicit load() also bypasses lazy", async () => {
     await inst.load();
 
     expect(ds.count).toBe(1);
-    expect(inst._lazyPending).toBe(false);
+    expect(lastObserverCallback).toBeNull();
     document.body.removeChild(inst);
 });
 
@@ -159,7 +160,7 @@ test("a grid without an async source never defers, even under lazy", async () =>
 
     expect(inst.classList.contains("dg-initialized")).toBe(true);
     expect(lastObserverCallback).toBeNull();
-    expect(inst._lazyPending).toBe(false);
+    expect(inst.rows).toEqual([]);
     document.body.removeChild(inst);
 });
 
@@ -181,7 +182,7 @@ test("disconnecting a lazy grid cleans up the observer before it fires", async (
     await tick();
     await tick();
 
-    expect(inst._loadObserver).toBeNull();
+    expect(lastObserverCallback).toBeNull();
     expect(ds.count).toBe(0);
 });
 
