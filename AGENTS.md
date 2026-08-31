@@ -14,9 +14,8 @@ runtime requirement (no Bun/Node APIs in `src/`).
 - tsc: typecheck from JSDoc (`checkJs`, `strict` on) via `bun run typecheck`; emits
   `.d.ts` into `dist/types` via `bun run types` (`tsconfig.types.json`)
 - `scripts/custom-elements.js` generates `custom-elements.json` (`bun run manifest`), schema `2.1.0`
-- `bun run check:baseline` (`scripts/check-baseline.js`) greps `src/` for the
-  post-baseline APIs below (private members, class fields, `structuredClone`,
-  `Object.hasOwn`, `replaceAll`, `.at(`, `scrollend`, `getRootNode`) and `css/`
+- `bun run check:baseline` (`scripts/check-baseline.js`) greps `src/` for APIs
+  newer than the documented browser floor (`scrollend`) and `css/`
   for directional inline-axis logical properties (see "Bun CSS workaround")
 - `bun run size` (`scripts/css-size.js`) reports raw/gzip/brotli of the built CSS
 - `bun run ci` = check + check:baseline + typecheck + test + types + manifest +
@@ -91,8 +90,15 @@ Add one only when it buys a consumer something they could not already do:
 ## Browser baseline (JS)
 
 `src/` is itself exported by the package (see `exports`), so the source must be
-compatible by construction — never transpiled, and matching a ~2020 browser
-target. This is enforced by review, not by a build step.
+compatible by construction — never transpiled, and matching these early-2022
+evergreen browser floors:
+
+- Chromium 99+
+- Firefox 98+
+- Safari 15.4+
+
+No JavaScript polyfills are included or required. This is enforced by review and
+by the compatibility gate below.
 
 Optional floating UI may use newer native platform APIs when that materially
 removes custom lifecycle or positioning code. The feature must be capability
@@ -103,22 +109,22 @@ with Popover API and CSS Anchor Positioning get the checkbox popover emitting
 add a polyfill or a JavaScript positioning fallback for this feature.
 
 This exception does not change the package-wide JS baseline or the
-`check:baseline` rules. Keep the core runtime compatible with the established
-~2020 contract.
+`check:baseline` rules. Keep the core runtime compatible with the documented
+floor.
 
 Allowed:
 - ES modules, async/await, `for...of`
 - `Object.entries` / `Object.fromEntries`
 - optional chaining (`?.`) and nullish coalescing (`??`)
+- private class members (`#method`, `#field`)
+- `Object.hasOwn`, `Array.prototype.at`, `String.prototype.replaceAll`
+- `structuredClone` when a real structured clone is required
 - `AbortController`, `ResizeObserver`, template literals
 
-Avoid (post-baseline APIs and syntax):
-- private class members (`#method`) and class-field initializers — use an
-  explicit `constructor` for instance state and ordinary prototype methods
-  (prototype methods are also shared between instances, unlike arrow-function
-  fields)
-- `Array.prototype.at`, `Object.hasOwn`, `structuredClone`, `replaceAll`
-  (use `replace`), `Node.getRootNode`, dynamic `import()`, top-level await
+Avoid:
+- APIs and syntax newer than the documented browser floor
+- top-level await in public entry modules unless there is a concrete need
+- class fields when constructor initialization is clearer
 - Web APIs newer than the baseline such as `scrollend`
 - forcing `passive` implicitly in the `on()`/`off()` event helper — pass
   explicit options instead
@@ -126,8 +132,7 @@ Avoid (post-baseline APIs and syntax):
 ## Code style
 
 - `for...of` (not `forEach`); optional chaining / nullish coalescing
-- ~2020 browser baseline; no polyfills; avoid `structuredClone`, `Array.at`,
-  `Object.hasOwn`
+- early-2022 browser baseline; no polyfills
 - Docs and commit messages in English
 
 ## Testing

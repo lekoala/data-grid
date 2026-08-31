@@ -58,15 +58,25 @@ after the repo folder (e.g. `~/k-grid`) to avoid sharing the Windows
 
 ## Browser baseline
 
-Runtime code targets modern evergreen browsers with native ES modules and
-commonly available Web Platform APIs (~2020). No JavaScript polyfills are
-included or required.
+Runtime code targets modern evergreen browsers with native ES modules and these
+explicit early-2022 floors:
+
+- Chromium 99+
+- Firefox 98+
+- Safari 15.4+
+
+Source is distributed untranspiled. No JavaScript polyfills are included or
+required. The baseline permits private class members, `Object.hasOwn()`,
+`Array.prototype.at()`, `String.prototype.replaceAll()` and `structuredClone()`
+when they make the implementation clearer. `check:baseline` only rejects APIs
+that exceed this floor; architectural preferences remain documented in
+`AGENTS.md`.
 
 `filterMultiple` is a progressive enhancement with a narrower, capability-based
 floor: it requires the native Popover API plus CSS Anchor Positioning, including
 the combined viewport fallback tactic. The exact test is performed at runtime
 with `HTMLElement.prototype` and `CSS.supports`, so the core grid still works on
-the established ~2020 floor. Unsupported browsers render the ordinary native
+the documented browser floor. Unsupported browsers render the ordinary native
 single select and emit `eq`; they do not receive a multi-select polyfill or
 broken popover markup. This newer requirement is intentional because native
 Popover owns top-layer rendering, light dismissal, Escape handling and focus

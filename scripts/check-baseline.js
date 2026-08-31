@@ -1,9 +1,9 @@
 /**
- * Baseline gate: keep `src/` compatible with the ~2020 browser target by
+ * Baseline gate: keep `src/` compatible with the early-2022 browser target by
  * construction (nodes/helpers drop transpilation; this is review + checks).
  *
- * Scans `src/**\/*.js` for APIs and syntax that are newer than the baseline or
- * explicitly off-contract, and `css/**\/*.css` for directional inline-axis
+ * Scans `src/**\/*.js` for APIs that are newer than the baseline, and
+ * `css/**\/*.css` for directional inline-axis
  * logical properties that Bun's CSS bundler would downlevel into :lang()
  * fallback sets. See AGENTS.md "Browser baseline (JS)" and
  * "Bun CSS workaround" for the authoritative Allow / Avoid lists.
@@ -13,14 +13,7 @@ import { join, resolve } from "node:path";
 
 /** @type {Array<{ re: RegExp, why: string }>} */
 const RULES = [
-    { re: /^(\s+)#\w+/gm, why: "private class members (#) are post-baseline" },
-    { re: /structuredClone/g, why: "structuredClone is post-baseline" },
-    { re: /Object\.hasOwn/g, why: "Object.hasOwn is post-baseline" },
-    { re: /replaceAll/g, why: "replaceAll is post-baseline (use replace)" },
-    { re: /scrollend/g, why: "scrollend is post-baseline (use scroll + debounce)" },
-    { re: /getRootNode/g, why: "Node.getRootNode is post-baseline" },
-    { re: /\.at\(/g, why: "Array.prototype.at is post-baseline" },
-    { re: /#\{/g, why: "private class-field initializers are post-baseline" },
+    { re: /scrollend/g, why: "scrollend is newer than the documented browser floor (use scroll + debounce)" },
 ];
 
 /**

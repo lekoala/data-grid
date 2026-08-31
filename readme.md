@@ -534,7 +534,7 @@ All UI labels are plain strings, configurable through `setLabels()`,
 ## Browser Support
 
 The core runtime targets modern evergreen browsers with native ES modules and
-commonly available Web Platform APIs (~2020). Newer platform features such as
+these early-2022 floors: Chromium 99+, Firefox 98+ and Safari 15.4+. Newer platform features such as
 native Popover and CSS Anchor Positioning are used as progressive enhancements:
 `filterMultiple` falls back to a working single-select filter emitting `eq`,
 and the optional context menu plugin only requires Popover support. See
