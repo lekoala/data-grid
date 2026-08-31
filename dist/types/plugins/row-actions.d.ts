@@ -3,6 +3,7 @@ import BasePlugin from "../core/base-plugin.js";
  * Add actions on rows
  */
 declare class RowActions extends BasePlugin {
+    #private;
     /** @type {HTMLUListElement|null} */
     menu: HTMLUListElement | null;
     /**
@@ -29,13 +30,6 @@ declare class RowActions extends BasePlugin {
      * @param {import("../data-grid.js").Column[]} columns
      */
     extendColumns(columns: import("../data-grid.js").Column[]): void;
-    /**
-     * Resolve the actions visible for one row with one consistent context.
-     * @param {Record<string, any>} row
-     * @param {Number} rowIndex
-     * @returns {import("../data-grid.js").Action[]}
-     */
-    _visibleActions(row: Record<string, any>, rowIndex: number): import("../data-grid.js").Action[];
     updateLabels(): void;
     beforeRender(): void;
     afterRender(): void;
@@ -73,16 +67,6 @@ declare class RowActions extends BasePlugin {
      * @param {Number} rowIndex
      */
     activateDefaultAction(rowIndex: number): void;
-    /**
-     * Create or adopt the visual control before action state and behavior are
-     * applied.
-     * @param {import("../data-grid.js").Action} action
-     * @param {Record<string, any>} row
-     * @param {String|null} href
-     * @param {Boolean} menu
-     * @returns {HTMLElement}
-     */
-    _createActionControl(action: import("../data-grid.js").Action, row: Record<string, any>, href: string | null, menu: boolean): HTMLElement;
     /**
      * Create the button (or link) for a single action.
      * @param {import("../data-grid.js").Action} action

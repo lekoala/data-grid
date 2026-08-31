@@ -45,6 +45,8 @@ Built-in and third-party plugins may use the following stable grid operations:
 - `grid.syncColumnVisibility()` reconciles header, filter and body cells after a
   plugin changes column visibility.
 - `grid.query` reads a snapshot of the current query state.
+- `grid.restoreQuery(query)` replaces the runtime query before the first load
+  without triggering a refresh.
 
 Other underscored members and internal state are implementation details. A
 plugin should use the documented lifecycle hooks and operations above instead

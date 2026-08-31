@@ -58,7 +58,7 @@ class SelectableRows extends BasePlugin {
             target.closest(`.${SELECTABLE_CLASS} input[type="checkbox"]`)
         );
         if (checkbox) {
-            const rowIndex = this._rowIndex(checkbox);
+            const rowIndex = this.#rowIndex(checkbox);
             if (rowIndex === null) {
                 return;
             }
@@ -95,7 +95,7 @@ class SelectableRows extends BasePlugin {
             return;
         }
         event.preventDefault();
-        const rowIndex = this._rowIndex(radio);
+        const rowIndex = this.#rowIndex(radio);
         if (rowIndex === null) {
             return;
         }
@@ -116,7 +116,7 @@ class SelectableRows extends BasePlugin {
      * @param {Element} element
      * @returns {Number|null}
      */
-    _rowIndex(element) {
+    #rowIndex(element) {
         const tr = element.closest("tr");
         if (!tr) {
             return null;

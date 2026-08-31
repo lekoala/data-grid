@@ -82,17 +82,17 @@ class RowDetails extends BasePlugin {
 
     /** @public @param {String} rowKey */
     expand(rowKey) {
-        this._change(rowKey, true);
+        this.#change(rowKey, true);
     }
 
     /** @public @param {String} rowKey */
     collapse(rowKey) {
-        this._change(rowKey, false);
+        this.#change(rowKey, false);
     }
 
     /** @public @param {String} rowKey */
     toggle(rowKey) {
-        this._change(rowKey, !this.isExpanded(rowKey));
+        this.#change(rowKey, !this.isExpanded(rowKey));
     }
 
     /** @public */
@@ -105,7 +105,7 @@ class RowDetails extends BasePlugin {
     }
 
     /** @param {String} rowKey @param {Boolean} expanded */
-    _change(rowKey, expanded) {
+    #change(rowKey, expanded) {
         const key = String(rowKey);
         const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === key);
         if (index < 0) {
@@ -120,12 +120,12 @@ class RowDetails extends BasePlugin {
         }
         const tr = this.grid.tbody?.querySelector(`tr.dg-data-row[data-row-index="${index}"]`);
         if (tr) {
-            this._setRowExpanded(/** @type {HTMLTableRowElement} */ (tr), this.grid.rows[index], index, expanded, true);
+            this.#setRowExpanded(/** @type {HTMLTableRowElement} */ (tr), this.grid.rows[index], index, expanded, true);
         }
     }
 
     /** @param {Number} rowIndex */
-    _detailId(rowIndex) {
+    #detailId(rowIndex) {
         return `dg-row-detail-${this.grid.id}-${rowIndex}`;
     }
 
@@ -134,13 +134,13 @@ class RowDetails extends BasePlugin {
         const key = this.grid.resolveRowKey(row, rowIndex);
         const expanded = this.isExpanded(key);
         const button = createDisclosureButton(`${DETAILS_CLASS}-toggle-control`);
-        button.setAttribute("aria-controls", this._detailId(rowIndex));
-        this._syncToggle(button, row, rowIndex, expanded);
+        button.setAttribute("aria-controls", this.#detailId(rowIndex));
+        this.#syncToggle(button, row, rowIndex, expanded);
         return button;
     }
 
     /** @param {HTMLButtonElement} button @param {Record<string, any>} row @param {Number} rowIndex @param {Boolean} expanded */
-    _syncToggle(button, row, rowIndex, expanded) {
+    #syncToggle(button, row, rowIndex, expanded) {
         button.setAttribute("aria-expanded", String(expanded));
         button.setAttribute(
             "aria-label",
@@ -158,11 +158,11 @@ class RowDetails extends BasePlugin {
      * @param {Boolean} expanded
      * @param {Boolean} emit
      */
-    _setRowExpanded(tr, row, rowIndex, expanded, emit) {
+    #setRowExpanded(tr, row, rowIndex, expanded, emit) {
         const key = this.grid.resolveRowKey(row, rowIndex);
         const button = /** @type {HTMLButtonElement|null} */ (tr.querySelector(`.${DETAILS_CLASS}-toggle-control`));
         if (button) {
-            this._syncToggle(button, row, rowIndex, expanded);
+            this.#syncToggle(button, row, rowIndex, expanded);
         }
 
         // The toggle governs the whole expansion surface of the row, so a
@@ -176,7 +176,7 @@ class RowDetails extends BasePlugin {
             responsive.followDisclosure(tr, expanded);
         }
 
-        const id = this._detailId(rowIndex);
+        const id = this.#detailId(rowIndex);
         const current = document.getElementById(id);
         if (!expanded) {
             current?.remove();
@@ -218,7 +218,7 @@ class RowDetails extends BasePlugin {
                 this.expanded.add(key);
             }
             if (this.expanded.has(key)) {
-                this._setRowExpanded(/** @type {HTMLTableRowElement} */ (tr), row, rowIndex, true, false);
+                this.#setRowExpanded(/** @type {HTMLTableRowElement} */ (tr), row, rowIndex, true, false);
             }
         }
     }
@@ -229,7 +229,7 @@ class RowDetails extends BasePlugin {
             const row = this.grid.rows[rowIndex];
             const button = /** @type {HTMLButtonElement|null} */ (tr.querySelector(`.${DETAILS_CLASS}-toggle-control`));
             if (row && button) {
-                this._syncToggle(button, row, rowIndex, this.isExpanded(this.grid.resolveRowKey(row, rowIndex)));
+                this.#syncToggle(button, row, rowIndex, this.isExpanded(this.grid.resolveRowKey(row, rowIndex)));
             }
         }
     }

@@ -185,6 +185,11 @@
             },
             {
               "kind": "method",
+              "name": "restoreQuery",
+              "description": "Restore the runtime query before the first load without triggering a refresh. This is intended for stateful plugins connected during setup."
+            },
+            {
+              "kind": "method",
               "name": "resetQuery",
               "description": "Reset the query to its initial state and reload."
             },

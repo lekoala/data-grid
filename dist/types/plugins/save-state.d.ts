@@ -12,6 +12,7 @@ export type CachedGridState = {
  * @property {Array<{ field: string, hidden?: boolean }>} columns
  */
 declare class SaveState extends BasePlugin {
+    #private;
     cachedState: CachedGridState | null;
     /** @type {(() => void) | null} */
     onBodyRendered: (() => void) | null;
@@ -24,21 +25,9 @@ declare class SaveState extends BasePlugin {
     connected(): void;
     disconnected(): void;
     /**
-     * Persist the current query, columns and scroll position.
-     */
-    _update(): void;
-    /**
      * @param {...any} data
      */
     log(...data: any[]): void;
-    /**
-     * @returns {CachedGridState|undefined}
-     */
-    _getState(): CachedGridState | undefined;
-    /**
-     * @param {CachedGridState} state
-     */
-    _setState(state: CachedGridState): void;
 }
 export default SaveState;
 //# sourceMappingURL=save-state.d.ts.map

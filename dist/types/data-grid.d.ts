@@ -757,6 +757,14 @@ declare class DataGrid extends BaseElement {
      */
     setQuery(patch: Partial<QueryState>): Promise<void>;
     /**
+     * Restore the runtime query before the first load without triggering a
+     * refresh. This is intended for stateful plugins connected during setup.
+     * @public
+     * @plugin
+     * @param {?QueryState} query
+     */
+    restoreQuery(query: QueryState | null): void;
+    /**
      * Reset the query to its initial state and reload.
      * @public
      * @returns {Promise<void>}

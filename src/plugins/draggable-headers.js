@@ -37,7 +37,7 @@ class DraggableHeaders extends BasePlugin {
      * @param {Event} event
      * @returns {HTMLTableCellElement|null}
      */
-    _draggableHeader(event) {
+    #draggableHeader(event) {
         if (!this.grid.options.reorder) {
             return null;
         }
@@ -54,7 +54,7 @@ class DraggableHeaders extends BasePlugin {
      * @param {DragEvent} event
      */
     ondragstart(event) {
-        const th = this._draggableHeader(event);
+        const th = this.#draggableHeader(event);
         if (!th) {
             return;
         }
@@ -71,7 +71,7 @@ class DraggableHeaders extends BasePlugin {
      * @param {DragEvent} event
      */
     ondragover(event) {
-        if (!this._draggableHeader(event)) {
+        if (!this.#draggableHeader(event)) {
             return;
         }
         event.preventDefault();
@@ -84,7 +84,7 @@ class DraggableHeaders extends BasePlugin {
      * @param {DragEvent} event
      */
     ondrop(event) {
-        const target = this._draggableHeader(event);
+        const target = this.#draggableHeader(event);
         if (!target) {
             return;
         }

@@ -124,7 +124,7 @@ class RowActions extends BasePlugin {
      * @param {Number} rowIndex
      * @returns {import("../data-grid.js").Action[]}
      */
-    _visibleActions(row, rowIndex) {
+    #visibleActions(row, rowIndex) {
         const grid = this.grid;
         const rowKey = grid.resolveRowKey(row, rowIndex);
         return grid
@@ -171,7 +171,7 @@ class RowActions extends BasePlugin {
         let maxCount = 0;
         const rows = grid.rows ?? [];
         for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
-            const count = this._visibleActions(rows[rowIndex], rowIndex).length;
+            const count = this.#visibleActions(rows[rowIndex], rowIndex).length;
             if (count > maxCount) {
                 maxCount = count;
             }
@@ -216,7 +216,7 @@ class RowActions extends BasePlugin {
         }
         const rowIndex = grid.rows.indexOf(row);
         menu.replaceChildren();
-        for (const action of this._visibleActions(row, rowIndex)) {
+        for (const action of this.#visibleActions(row, rowIndex)) {
             const li = grid.ownerDocument.createElement("li");
             const el = this.createActionElement(action, row, rowIndex, true);
             li.appendChild(el);
@@ -234,7 +234,7 @@ class RowActions extends BasePlugin {
         const labels = grid.labels;
         const rowData = row ?? {};
         const index = rowIndex ?? 0;
-        const actions = this._visibleActions(rowData, index);
+        const actions = this.#visibleActions(rowData, index);
         const fragment = document.createDocumentFragment();
         if (!actions.length) {
             return fragment;
@@ -302,7 +302,7 @@ class RowActions extends BasePlugin {
      * @param {Boolean} menu
      * @returns {HTMLElement}
      */
-    _createActionControl(action, row, href, menu) {
+    #createActionControl(action, row, href, menu) {
         const grid = this.grid;
         const render = action.render ?? grid.options.actionRenderer;
         const content = render ? render({ action, row, grid }) : null;
@@ -360,7 +360,7 @@ class RowActions extends BasePlugin {
                 ? action.href(row, ctx)
                 : interpolate(action.href, row)
             : null;
-        const el = this._createActionControl(action, row, href, menu);
+        const el = this.#createActionControl(action, row, href, menu);
         el.dataset.action = action.name;
         if (action.intent) {
             el.dataset.intent = action.intent;

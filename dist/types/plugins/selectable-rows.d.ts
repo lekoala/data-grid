@@ -3,6 +3,7 @@ import BasePlugin from "../core/base-plugin.js";
  * Allows to select rows
  */
 declare class SelectableRows extends BasePlugin {
+    #private;
     selectAll: HTMLInputElement | undefined;
     get isSingleSelect(): boolean;
     get visibleOnly(): boolean;
@@ -22,13 +23,6 @@ declare class SelectableRows extends BasePlugin {
      * @param {MouseEvent} event
      */
     onclick(event: MouseEvent): void;
-    /**
-     * The row index of a control living in a data row, or null when the DOM
-     * does not carry one.
-     * @param {Element} element
-     * @returns {Number|null}
-     */
-    _rowIndex(element: Element): number | null;
     /**
      * Inject the selection column at the start.
      * @param {import("../data-grid.js").Column[]} columns

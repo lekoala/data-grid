@@ -1084,6 +1084,17 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Restore the runtime query before the first load without triggering a
+     * refresh. This is intended for stateful plugins connected during setup.
+     * @public
+     * @plugin
+     * @param {?QueryState} query
+     */
+    restoreQuery(query) {
+        this._query = normalizeQuery(query);
+    }
+
+    /**
      * Reset the query to its initial state and reload.
      * @public
      * @returns {Promise<void>}

@@ -1842,6 +1842,9 @@ class DataGrid extends base_element_default {
     }
     return this.refresh();
   }
+  restoreQuery(query) {
+    this._query = normalizeQuery(query);
+  }
   resetQuery() {
     this._query = normalizeQuery(this._initialQuery);
     this.#clearSelectionIfNeeded();
@@ -3752,7 +3755,7 @@ class DraggableHeaders extends base_plugin_default {
       th.draggable = Boolean(this.grid.options.reorder);
     }
   }
-  _draggableHeader(event) {
+  #draggableHeader(event) {
     if (!this.grid.options.reorder) {
       return null;
     }
@@ -3763,7 +3766,7 @@ class DraggableHeaders extends base_plugin_default {
     return target.closest('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
   }
   ondragstart(event) {
-    const th = this._draggableHeader(event);
+    const th = this.#draggableHeader(event);
     if (!th) {
       return;
     }
@@ -3776,7 +3779,7 @@ class DraggableHeaders extends base_plugin_default {
     dt.setData("text/plain", th.getAttribute("data-column-id") ?? "");
   }
   ondragover(event) {
-    if (!this._draggableHeader(event)) {
+    if (!this.#draggableHeader(event)) {
       return;
     }
     event.preventDefault();
@@ -3785,7 +3788,7 @@ class DraggableHeaders extends base_plugin_default {
     }
   }
   ondrop(event) {
-    const target = this._draggableHeader(event);
+    const target = this.#draggableHeader(event);
     if (!target) {
       return;
     }
@@ -3904,7 +3907,7 @@ class SelectableRows extends base_plugin_default {
     }
     const checkbox = target.closest(`.${SELECTABLE_CLASS} input[type="checkbox"]`);
     if (checkbox) {
-      const rowIndex = this._rowIndex(checkbox);
+      const rowIndex = this.#rowIndex(checkbox);
       if (rowIndex === null) {
         return;
       }
@@ -3931,7 +3934,7 @@ class SelectableRows extends base_plugin_default {
       return;
     }
     event.preventDefault();
-    const rowIndex = this._rowIndex(radio);
+    const rowIndex = this.#rowIndex(radio);
     if (rowIndex === null) {
       return;
     }
@@ -3945,7 +3948,7 @@ class SelectableRows extends base_plugin_default {
       grid.selectRow(row, rowIndex);
     }
   }
-  _rowIndex(element) {
+  #rowIndex(element) {
     const tr = element.closest("tr");
     if (!tr) {
       return null;
@@ -4837,7 +4840,7 @@ class RowActions extends base_plugin_default {
       renderCell: (ctx) => this.makeActionRow(ctx)
     });
   }
-  _visibleActions(row, rowIndex) {
+  #visibleActions(row, rowIndex) {
     const grid = this.grid;
     const rowKey = grid.resolveRowKey(row, rowIndex);
     return grid.getActionsForRow(row).filter((action) => !action.visible || action.visible(row, { grid, action, rowKey }));
@@ -4862,7 +4865,7 @@ class RowActions extends base_plugin_default {
     let maxCount = 0;
     const rows = grid.rows ?? [];
     for (let rowIndex = 0;rowIndex < rows.length; rowIndex++) {
-      const count = this._visibleActions(rows[rowIndex], rowIndex).length;
+      const count = this.#visibleActions(rows[rowIndex], rowIndex).length;
       if (count > maxCount) {
         maxCount = count;
       }
@@ -4899,7 +4902,7 @@ class RowActions extends base_plugin_default {
     }
     const rowIndex = grid.rows.indexOf(row);
     menu.replaceChildren();
-    for (const action of this._visibleActions(row, rowIndex)) {
+    for (const action of this.#visibleActions(row, rowIndex)) {
       const li = grid.ownerDocument.createElement("li");
       const el = this.createActionElement(action, row, rowIndex, true);
       li.appendChild(el);
@@ -4910,7 +4913,7 @@ class RowActions extends base_plugin_default {
     const labels2 = grid.labels;
     const rowData = row ?? {};
     const index = rowIndex ?? 0;
-    const actions = this._visibleActions(rowData, index);
+    const actions = this.#visibleActions(rowData, index);
     const fragment = document.createDocumentFragment();
     if (!actions.length) {
       return fragment;
@@ -4950,7 +4953,7 @@ class RowActions extends base_plugin_default {
       action.click();
     }
   }
-  _createActionControl(action, row, href, menu) {
+  #createActionControl(action, row, href, menu) {
     const grid = this.grid;
     const render = action.render ?? grid.options.actionRenderer;
     const content = render ? render({ action, row, grid }) : null;
@@ -4987,7 +4990,7 @@ class RowActions extends base_plugin_default {
     const rowKey = grid.resolveRowKey(row, rowIndex);
     const ctx = { grid, action, rowKey };
     const href = action.href ? typeof action.href === "function" ? action.href(row, ctx) : interpolate(action.href, row) : null;
-    const el = this._createActionControl(action, row, href, menu);
+    const el = this.#createActionControl(action, row, href, menu);
     el.dataset.action = action.name;
     if (action.intent) {
       el.dataset.intent = action.intent;
@@ -5187,7 +5190,7 @@ class SaveState extends base_plugin_default {
       return;
     }
     this.log("enabled");
-    const cachedState = this._getState();
+    const cachedState = this.#getState();
     if (cachedState) {
       this.cachedState = cachedState;
       this.log("restore state");
@@ -5200,11 +5203,11 @@ class SaveState extends base_plugin_default {
         }
       }
       if (cachedState.query) {
-        grid._query = cachedState.query;
+        grid.restoreQuery(cachedState.query);
       }
     }
-    this.onBodyRendered = () => this._update();
-    this.onScroll = debounce(() => this._update(), 200);
+    this.onBodyRendered = () => this.#update();
+    this.onScroll = debounce(() => this.#update(), 200);
     grid.addEventListener("bodyRendered", this.onBodyRendered);
     document.addEventListener("scroll", this.onScroll);
   }
@@ -5219,12 +5222,12 @@ class SaveState extends base_plugin_default {
       this.onScroll = null;
     }
   }
-  _update() {
+  #update() {
     const grid = this.grid;
     if (!grid.options.saveState || !grid.classList.contains("dg-initialized")) {
       return;
     }
-    this._setState({
+    this.#setState({
       query: grid.query,
       columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) }))
     });
@@ -5232,7 +5235,7 @@ class SaveState extends base_plugin_default {
   log(...data) {
     this.grid.log("[Save-State] ", ...data);
   }
-  _getState() {
+  #getState() {
     let state;
     try {
       const raw = sessionStorage.getItem(`gridSaveState_${this.grid.id}`);
@@ -5242,7 +5245,7 @@ class SaveState extends base_plugin_default {
     } catch (_) {}
     return state;
   }
-  _setState(state) {
+  #setState(state) {
     try {
       sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
     } catch (_) {}
@@ -5309,13 +5312,13 @@ class RowDetails extends base_plugin_default {
     return this.expanded.has(String(rowKey));
   }
   expand(rowKey) {
-    this._change(rowKey, true);
+    this.#change(rowKey, true);
   }
   collapse(rowKey) {
-    this._change(rowKey, false);
+    this.#change(rowKey, false);
   }
   toggle(rowKey) {
-    this._change(rowKey, !this.isExpanded(rowKey));
+    this.#change(rowKey, !this.isExpanded(rowKey));
   }
   collapseAll() {
     for (const key of this.expanded) {
@@ -5324,7 +5327,7 @@ class RowDetails extends base_plugin_default {
     this.expanded.clear();
     this.grid.renderBody();
   }
-  _change(rowKey, expanded) {
+  #change(rowKey, expanded) {
     const key = String(rowKey);
     const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === key);
     if (index < 0) {
@@ -5339,38 +5342,38 @@ class RowDetails extends base_plugin_default {
     }
     const tr = this.grid.tbody?.querySelector(`tr.dg-data-row[data-row-index="${index}"]`);
     if (tr) {
-      this._setRowExpanded(tr, this.grid.rows[index], index, expanded, true);
+      this.#setRowExpanded(tr, this.grid.rows[index], index, expanded, true);
     }
   }
-  _detailId(rowIndex) {
+  #detailId(rowIndex) {
     return `dg-row-detail-${this.grid.id}-${rowIndex}`;
   }
   createToggle({ row = {}, rowIndex = 0 }) {
     const key = this.grid.resolveRowKey(row, rowIndex);
     const expanded = this.isExpanded(key);
     const button = createDisclosureButton(`${DETAILS_CLASS}-toggle-control`);
-    button.setAttribute("aria-controls", this._detailId(rowIndex));
-    this._syncToggle(button, row, rowIndex, expanded);
+    button.setAttribute("aria-controls", this.#detailId(rowIndex));
+    this.#syncToggle(button, row, rowIndex, expanded);
     return button;
   }
-  _syncToggle(button, row, rowIndex, expanded) {
+  #syncToggle(button, row, rowIndex, expanded) {
     button.setAttribute("aria-expanded", String(expanded));
     button.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
       row: this.grid.getRowLabel(row, rowIndex)
     }));
     button.classList.toggle(`${DETAILS_CLASS}-toggle-control-open`, expanded);
   }
-  _setRowExpanded(tr, row, rowIndex, expanded, emit) {
+  #setRowExpanded(tr, row, rowIndex, expanded, emit) {
     const key = this.grid.resolveRowKey(row, rowIndex);
     const button = tr.querySelector(`.${DETAILS_CLASS}-toggle-control`);
     if (button) {
-      this._syncToggle(button, row, rowIndex, expanded);
+      this.#syncToggle(button, row, rowIndex, expanded);
     }
     const responsive = this.grid.getPlugin("ResponsiveGrid");
     if (typeof responsive?.followDisclosure === "function") {
       responsive.followDisclosure(tr, expanded);
     }
-    const id = this._detailId(rowIndex);
+    const id = this.#detailId(rowIndex);
     const current = document.getElementById(id);
     if (!expanded) {
       current?.remove();
@@ -5407,7 +5410,7 @@ class RowDetails extends base_plugin_default {
         this.expanded.add(key);
       }
       if (this.expanded.has(key)) {
-        this._setRowExpanded(tr, row, rowIndex, true, false);
+        this.#setRowExpanded(tr, row, rowIndex, true, false);
       }
     }
   }
@@ -5417,7 +5420,7 @@ class RowDetails extends base_plugin_default {
       const row = this.grid.rows[rowIndex];
       const button = tr.querySelector(`.${DETAILS_CLASS}-toggle-control`);
       if (row && button) {
-        this._syncToggle(button, row, rowIndex, this.isExpanded(this.grid.resolveRowKey(row, rowIndex)));
+        this.#syncToggle(button, row, rowIndex, this.isExpanded(this.grid.resolveRowKey(row, rowIndex)));
       }
     }
   }

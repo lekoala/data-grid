@@ -32,7 +32,7 @@ class SaveState extends BasePlugin {
 
         this.log("enabled");
 
-        const cachedState = this._getState();
+        const cachedState = this.#getState();
         if (cachedState) {
             this.cachedState = cachedState;
 
@@ -50,12 +50,12 @@ class SaveState extends BasePlugin {
 
             // Restore the runtime query (the initial load will use it)
             if (cachedState.query) {
-                grid._query = cachedState.query;
+                grid.restoreQuery(cachedState.query);
             }
         }
 
-        this.onBodyRendered = () => this._update();
-        this.onScroll = debounce(() => this._update(), 200);
+        this.onBodyRendered = () => this.#update();
+        this.onScroll = debounce(() => this.#update(), 200);
         grid.addEventListener("bodyRendered", this.onBodyRendered);
         document.addEventListener("scroll", this.onScroll);
     }
@@ -75,12 +75,12 @@ class SaveState extends BasePlugin {
     /**
      * Persist the current query, columns and scroll position.
      */
-    _update() {
+    #update() {
         const grid = this.grid;
         if (!grid.options.saveState || !grid.classList.contains("dg-initialized")) {
             return;
         }
-        this._setState({
+        this.#setState({
             query: grid.query,
             columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) })),
         });
@@ -96,7 +96,7 @@ class SaveState extends BasePlugin {
     /**
      * @returns {CachedGridState|undefined}
      */
-    _getState() {
+    #getState() {
         /** @type {CachedGridState|undefined} */
         let state;
         try {
@@ -111,7 +111,7 @@ class SaveState extends BasePlugin {
     /**
      * @param {CachedGridState} state
      */
-    _setState(state) {
+    #setState(state) {
         try {
             sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
         } catch (_) {}
