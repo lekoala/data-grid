@@ -1,6 +1,4 @@
-import camelize from "../utils/camelize.js";
 import { dispatch } from "../utils/dispatch.js";
-import normalizeData from "../utils/normalizeData.js";
 
 /** @typedef {import('../data-grid.js').Options} Options */
 
@@ -129,16 +127,16 @@ class BaseElement extends HTMLElement {
     }
 
     /**
-     * Custom transformers per attribute name.
-     * @returns {Object}
+     * Handle an observed attribute change in a subclass.
+     * @param {String} attributeName
+     * @param {String|null} newValue
+     * @param {String|null} oldValue
      */
-    get transformAttributes() {
-        return {};
-    }
+    attributeChanged(attributeName, newValue, oldValue) {}
 
     /**
-     * Observed attributes map to options (kebab-case -> camelCase).
-     * An attribute without a value means "true".
+     * Forward the native custom-element callback to the subclass policy.
+     * BaseElement deliberately does not know how attributes map to options.
      * @param {String} attributeName
      * @param {String|null} oldValue
      * @param {String|null} newValue
@@ -150,21 +148,7 @@ class BaseElement extends HTMLElement {
         }
 
         this.log(`attributeChangedCallback: ${attributeName}`);
-
-        const options = /** @type {Record<string, any>} */ (this.options);
-        const transformer =
-            /** @type {Record<string, any>} */ (this.transformAttributes)[attributeName] ?? normalizeData;
-        const attr = camelize(attributeName);
-        const raw = newValue === "" ? "true" : newValue;
-        options[attr] = transformer(raw);
-
-        // Fire internal event
-        if (this.fireEvents) {
-            const handler = /** @type {Record<string, any>} */ (this)[`${attr}Changed`];
-            if (typeof handler === "function") {
-                handler.call(this);
-            }
-        }
+        this.attributeChanged(attributeName, newValue, oldValue);
     }
 }
 

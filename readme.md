@@ -222,9 +222,10 @@ described in `docs/plugins.md`. Set `column.wrap` to override the grid-wide
 ### Attributes
 
 The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`,
-`search-placeholder`, `min-search-length`, `responsive`, `responsive-toggle`,
-`responsive-start-open`, `row-details-start-open`, `selectable`, `single-select`, `select-visible-only`, `row-key`, `row-label`,
-`collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`,
+`search-placeholder`, `search-delay`, `min-search-length`, `filter-delay`, `responsive`,
+`responsive-toggle`, `responsive-start-open`, `row-details-start-open`, `selectable`, `single-select`,
+`select-visible-only`, `row-click`, `row-key`, `row-label`,
+`collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`, `row-actions`,
 `reorder`, `menu`, `wrap`, `snap-columns`, `autosize`, `resizable`, `autoheight`,
 `autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
 

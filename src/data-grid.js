@@ -25,6 +25,7 @@ import { normalizeQuery } from "./query-state.js";
 import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
 import { parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
+import camelize from "./utils/camelize.js";
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
@@ -331,6 +332,183 @@ function formatLabel(template, values) {
 }
 
 /**
+ * Defaults shared by the instance getter and the static inspection API.
+ * Mutable collection values are copied by createDefaultOptions().
+ * @type {Record<string, any>}
+ */
+const DEFAULT_OPTIONS = {
+    id: null,
+    src: "",
+    params: {},
+    loading: "eager",
+    debug: false,
+    sortable: false,
+    filterable: false,
+    menu: false,
+    reorder: false,
+    dir: "ltr",
+    density: "default",
+    pageSizes: [10, 25, 50, 100, 250],
+    showPageSize: true,
+    columns: [],
+    actions: [],
+    rowActions: false,
+    collapseActions: false,
+    selectable: false,
+    selectVisibleOnly: true,
+    singleSelect: false,
+    rowClick: "action",
+    rowKey: "id",
+    rowLabel: null,
+    bulkActions: [],
+    resizable: false,
+    autosize: false,
+    wrap: false,
+    snapColumns: false,
+    autoheight: true,
+    autohidePager: false,
+    responsive: false,
+    responsiveToggle: true,
+    responsiveStartOpen: false,
+    rowDetails: null,
+    rowDetailsStartOpen: false,
+    filterDelay: 300,
+    searchable: false,
+    searchPlaceholder: "",
+    searchDelay: 300,
+    minSearchLength: 0,
+    spinnerClass: "",
+    saveState: false,
+    errorMessage: "",
+    noData: "",
+    caption: "",
+    initialQuery: null,
+    initialResult: null,
+    dataSource: null,
+};
+
+/**
+ * The serializable HTML configuration surface of DataGrid.
+ * @type {Record<string, {type?: "boolean"|"integer"|"number"|"string", option?: string, parse?: (value: string) => any}>}
+ */
+const OPTION_ATTRIBUTES = {
+    src: { type: "string" },
+    loading: { parse: (value) => parseEnumAttribute(value, ["eager", "lazy"], "eager") },
+    sortable: { type: "boolean" },
+    filterable: { type: "boolean" },
+    "filter-delay": { option: "filterDelay", type: "integer" },
+    searchable: { type: "boolean" },
+    "search-placeholder": { option: "searchPlaceholder", type: "string" },
+    "search-delay": { option: "searchDelay", type: "integer" },
+    "min-search-length": { option: "minSearchLength", type: "integer" },
+    responsive: { type: "boolean" },
+    "responsive-toggle": { option: "responsiveToggle", type: "boolean" },
+    "responsive-start-open": { option: "responsiveStartOpen", type: "boolean" },
+    "row-details-start-open": { option: "rowDetailsStartOpen", type: "boolean" },
+    selectable: { type: "boolean" },
+    "single-select": { option: "singleSelect", type: "boolean" },
+    "select-visible-only": { option: "selectVisibleOnly", type: "boolean" },
+    "row-click": {
+        option: "rowClick",
+        parse: (value) => parseEnumAttribute(value, ["action", "select", "none"], "action"),
+    },
+    "row-key": { option: "rowKey", type: "string" },
+    "row-label": { option: "rowLabel", type: "string" },
+    "collapse-actions": { option: "collapseActions", type: "boolean" },
+    "save-state": { option: "saveState", type: "boolean" },
+    "no-data": { option: "noData", type: "string" },
+    "error-message": { option: "errorMessage", type: "string" },
+    "page-sizes": { option: "pageSizes", parse: parseIntegerListAttribute },
+    "row-actions": { option: "rowActions", type: "boolean" },
+    reorder: { type: "boolean" },
+    menu: { type: "boolean" },
+    wrap: { type: "boolean" },
+    "snap-columns": { option: "snapColumns", type: "boolean" },
+    autosize: { type: "boolean" },
+    resizable: { type: "boolean" },
+    autoheight: { type: "boolean" },
+    "autohide-pager": { option: "autohidePager", type: "boolean" },
+    "show-page-size": { option: "showPageSize", type: "boolean" },
+    debug: { type: "boolean" },
+    dir: { type: "string" },
+    density: { parse: (value) => parseEnumAttribute(value, ["compact", "default", "comfortable"], "default") },
+};
+
+/**
+ * @returns {Record<string, any>}
+ */
+function createDefaultOptions() {
+    return {
+        ...DEFAULT_OPTIONS,
+        params: { ...DEFAULT_OPTIONS.params },
+        pageSizes: [...DEFAULT_OPTIONS.pageSizes],
+        columns: [],
+        actions: [],
+        bulkActions: [],
+    };
+}
+
+/**
+ * Parse an option boolean. Presence is true, except for the explicit string
+ * "false", which makes server-rendered boolean configuration practical.
+ * @param {string} value
+ * @returns {boolean}
+ */
+function parseBooleanOption(value) {
+    return value !== "false";
+}
+
+/**
+ * Parse a numeric option without ever returning NaN or a truncated value.
+ * @param {string} value
+ * @param {"integer"|"number"} type
+ * @returns {number|undefined}
+ */
+function parseNumberAttribute(value, type) {
+    if (value.trim() === "") {
+        return undefined;
+    }
+    const number = Number(value);
+    if (!Number.isFinite(number)) {
+        return undefined;
+    }
+    return type === "integer" && !Number.isInteger(number) ? undefined : number;
+}
+
+/**
+ * @param {string} name
+ * @param {string|null} value
+ * @returns {{option: string, value: any}|null}
+ */
+function parseOptionAttribute(name, value) {
+    const config = OPTION_ATTRIBUTES[name];
+    if (!config || value === null) {
+        return null;
+    }
+
+    const option = config.option ?? camelize(name);
+    let parsed;
+    if (config.parse) {
+        parsed = config.parse(value);
+    } else {
+        switch (config.type) {
+            case "boolean":
+                parsed = parseBooleanOption(value);
+                break;
+            case "integer":
+            case "number":
+                parsed = parseNumberAttribute(value, config.type);
+                break;
+            default:
+                parsed = value;
+        }
+    }
+
+    // Invalid numeric input leaves the previous/default value active.
+    return parsed === undefined ? null : { option, value: parsed };
+}
+
+/**
  * Enforce the option invariant needed before the DataGrid private brand exists.
  * BaseElement invokes `_ready()` from `super()`, so that first call cannot use
  * a private method on the subclass.
@@ -345,6 +523,8 @@ function normalizeSelectionOptions(options) {
 /**
  */
 class DataGrid extends BaseElement {
+    /** @type {Record<string, any>} */
+    #optionDefaults;
     /** @type {String} */
     #filterSelector;
     /** @type {String} */
@@ -379,6 +559,10 @@ class DataGrid extends BaseElement {
      */
     constructor(options = {}) {
         super(options);
+
+        // Attribute removal returns to the documented default value. While an
+        // attribute is present it still overrides constructor options.
+        this.#optionDefaults = createDefaultOptions();
 
         this.#filterSelector = "[id^=dg-filter]";
         this.#excludedRowElementSelector =
@@ -764,59 +948,15 @@ class DataGrid extends BaseElement {
      * @returns {Options}
      */
     get defaultOptions() {
-        return {
-            id: null,
-            src: "",
-            params: {},
-            loading: "eager",
-            debug: false,
-            sortable: false,
-            filterable: false,
-            menu: false,
-            reorder: false,
-            dir: "ltr",
-            density: "default",
-            pageSizes: [10, 25, 50, 100, 250],
-            showPageSize: true,
-            columns: [],
-            actions: [],
-            rowActions: false,
-            collapseActions: false,
-            selectable: false,
-            selectVisibleOnly: true,
-            singleSelect: false,
-            rowClick: "action",
-            rowKey: "id",
-            rowLabel: null,
-            bulkActions: [],
-            resizable: false,
-            // Off by default: columns without a preferred width stay flexible
-            // and absorb the remaining space. Turning it on asks the plugin to
-            // measure those columns and pin them to a computed width.
-            autosize: false,
-            wrap: false,
-            snapColumns: false,
-            autoheight: true,
-            autohidePager: false,
-            responsive: false,
-            responsiveToggle: true,
-            responsiveStartOpen: false,
-            rowDetails: null,
-            rowDetailsStartOpen: false,
-            filterDelay: 300,
-            searchable: false,
-            searchPlaceholder: "",
-            searchDelay: 300,
-            minSearchLength: 0,
-            spinnerClass: "",
-            saveState: false,
-            errorMessage: "",
-            noData: "",
-            caption: "",
-            initialQuery: null,
-            initialResult: null,
-            dataSource: null,
-        };
+        return /** @type {Options} */ (createDefaultOptions());
+    }
+
+    /**
+     * Inspect the default option values without instantiating a grid.
+     * @returns {Options}
+     */
+    static get defaultOptions() {
+        return /** @type {Options} */ (createDefaultOptions());
     }
 
     /**
@@ -970,56 +1110,37 @@ class DataGrid extends BaseElement {
      * @returns {Array<any>}
      */
     static get observedAttributes() {
-        return [
-            "src",
-            "loading",
-            "sortable",
-            "filterable",
-            "searchable",
-            "search-placeholder",
-            "min-search-length",
-            "responsive",
-            "responsive-toggle",
-            "responsive-start-open",
-            "row-details-start-open",
-            "selectable",
-            "single-select",
-            "select-visible-only",
-            "row-click",
-            "row-key",
-            "row-label",
-            "collapse-actions",
-            "save-state",
-            "no-data",
-            "error-message",
-            "page-sizes",
-            "row-actions",
-            "reorder",
-            "menu",
-            "wrap",
-            "snap-columns",
-            "autosize",
-            "resizable",
-            "autoheight",
-            "autohide-pager",
-            "show-page-size",
-            "debug",
-            "dir",
-            "density",
-        ];
+        return Object.keys(OPTION_ATTRIBUTES);
     }
 
     /**
-     * Custom attribute transformers, keyed by attribute name.
-     * @returns {Record<string, (raw: string) => any>}
+     * Resolve a declarative attribute into an option and apply its runtime
+     * reaction when the grid has completed initialization.
+     * @param {String} name
+     * @param {String|null} value
+     * @param {String|null} oldValue
      */
-    get transformAttributes() {
-        return {
-            "page-sizes": parseIntegerListAttribute,
-            // A valueless attribute parses to "true" and a removal to null:
-            // normalize both back to the documented default.
-            "row-click": (raw) => parseEnumAttribute(raw, ["action", "select", "none"], "action"),
-        };
+    attributeChanged(name, value, oldValue) {
+        const config = OPTION_ATTRIBUTES[name];
+        if (!config) {
+            return;
+        }
+
+        const option = config.option ?? camelize(name);
+        const options = /** @type {Record<string, any>} */ (this.options);
+        if (value === null) {
+            options[option] = this.#optionDefaults[option];
+        } else {
+            const resolved = parseOptionAttribute(name, value);
+            if (!resolved) {
+                return;
+            }
+            options[resolved.option] = resolved.value;
+        }
+
+        if (this.fireEvents) {
+            this.#optionChanged(option);
+        }
     }
 
     /** @returns {HTMLTableSectionElement} */
@@ -1242,6 +1363,75 @@ class DataGrid extends BaseElement {
         }
         this.renderBody();
         return false;
+    }
+
+    /**
+     * Apply only the runtime synchronization that an option actually needs.
+     * Reading an option at interaction/render time does not need a hook here.
+     * @param {String} option
+     */
+    #optionChanged(option) {
+        switch (option) {
+            case "src":
+                this.srcChanged();
+                break;
+            case "showPageSize":
+                this.showPageSizeChanged();
+                break;
+            case "responsive":
+                this.responsiveChanged();
+                break;
+            case "snapColumns":
+                this.snapColumnsChanged();
+                break;
+            case "wrap":
+                this.wrapChanged();
+                break;
+            case "rowDetailsStartOpen":
+                this.rowDetailsStartOpenChanged();
+                break;
+            case "selectable":
+                this.selectableChanged();
+                break;
+            case "singleSelect":
+                this.singleSelectChanged();
+                break;
+            case "rowClick":
+                this.rowClickChanged();
+                break;
+            case "reorder":
+                this.reorderChanged();
+                break;
+            case "sortable":
+                this.sortableChanged();
+                break;
+            case "filterable":
+                this.filterableChanged();
+                break;
+            case "searchable":
+                this.searchableChanged();
+                break;
+            case "searchPlaceholder":
+                this.searchPlaceholderChanged();
+                break;
+            case "responsiveToggle":
+                if (this.table) {
+                    this.renderTable();
+                    this.renderBody();
+                }
+                break;
+            case "responsiveStartOpen":
+                if (this.table) {
+                    this.renderBody();
+                }
+                break;
+            case "collapseActions":
+                if (this.table) {
+                    this.renderTable();
+                    this.renderBody();
+                }
+                break;
+        }
     }
 
     /**

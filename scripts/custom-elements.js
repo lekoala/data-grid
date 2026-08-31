@@ -3,7 +3,7 @@
  *
  * The sources are read as text: the script never imports the browser-only
  * modules under Bun. The JS source stays the single source of truth:
- * - attributes come from the static `observedAttributes` getter
+ * - attributes come from the `OPTION_ATTRIBUTES` schema
  * - members come from methods/getters explicitly marked with `@public`
  * - events come from literal `dispatch(...)` / `new CustomEvent(...)` calls
  * - CSS custom properties come from the public token block in css/_core.css
@@ -28,6 +28,15 @@ const read = (file) => readFile(file, "utf8");
  * @returns {string[]}
  */
 function extractAttributes(source) {
+    const schema = source.match(/const\s+OPTION_ATTRIBUTES\s*=\s*\{([\s\S]*?)\n\};/);
+    if (schema) {
+        const names = [];
+        for (const m of schema[1].matchAll(/(?:^|\n)    (?:"([^"]+)"|'([^']+)'|([A-Za-z_$][\w$]*))\s*:/g)) {
+            names.push(m[1] ?? m[2] ?? m[3]);
+        }
+        return names;
+    }
+
     const match = source.match(/static\s+get\s+observedAttributes\s*\(\)\s*\{([\s\S]*?)\n\s*\}/);
     if (!match) {
         return [];

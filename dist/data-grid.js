@@ -252,43 +252,9 @@ function applyColumnDefinition(el, column) {
   }
 }
 
-// src/utils/camelize.js
-function camelize(str) {
-  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
-}
-
 // src/utils/dispatch.js
 function dispatch(target, type, detail = {}, options = {}) {
   return target.dispatchEvent(new CustomEvent(type, { ...options, detail }));
-}
-
-// src/utils/normalizeData.js
-function normalizeData(v) {
-  if (v === "true") {
-    return true;
-  }
-  if (v === "false") {
-    return false;
-  }
-  if (v === "" || v === "null") {
-    return null;
-  }
-  if (v === Number(v).toString()) {
-    return Number(v);
-  }
-  if (v && typeof v.substring === "function" && ["[", "{"].includes(v.substring(0, 1))) {
-    try {
-      let val = v;
-      if (val.indexOf('"') === -1) {
-        val = val.replace(/'/g, '"');
-      }
-      return JSON.parse(decodeURIComponent(val));
-    } catch {
-      console.error(`Failed to parse ${v}`);
-      return {};
-    }
-  }
-  return v;
 }
 
 // src/core/base-element.js
@@ -354,25 +320,13 @@ class BaseElement extends HTMLElement {
       }
     }, 0);
   }
-  get transformAttributes() {
-    return {};
-  }
+  attributeChanged(attributeName, newValue, oldValue) {}
   attributeChangedCallback(attributeName, oldValue, newValue) {
     if (oldValue === newValue) {
       return;
     }
     this.log(`attributeChangedCallback: ${attributeName}`);
-    const options = this.options;
-    const transformer = this.transformAttributes[attributeName] ?? normalizeData;
-    const attr = camelize(attributeName);
-    const raw = newValue === "" ? "true" : newValue;
-    options[attr] = transformer(raw);
-    if (this.fireEvents) {
-      const handler = this[`${attr}Changed`];
-      if (typeof handler === "function") {
-        handler.call(this);
-      }
-    }
+    this.attributeChanged(attributeName, newValue, oldValue);
   }
 }
 var base_element_default = BaseElement;
@@ -637,6 +591,35 @@ function parseIntegerListAttribute(value) {
 }
 function parseEnumAttribute(value, allowed, fallback) {
   return allowed.includes(value) ? value : fallback;
+}
+
+// src/utils/normalizeData.js
+function normalizeData(v) {
+  if (v === "true") {
+    return true;
+  }
+  if (v === "false") {
+    return false;
+  }
+  if (v === "" || v === "null") {
+    return null;
+  }
+  if (v === Number(v).toString()) {
+    return Number(v);
+  }
+  if (v && typeof v.substring === "function" && ["[", "{"].includes(v.substring(0, 1))) {
+    try {
+      let val = v;
+      if (val.indexOf('"') === -1) {
+        val = val.replace(/'/g, '"');
+      }
+      return JSON.parse(decodeURIComponent(val));
+    } catch {
+      console.error(`Failed to parse ${v}`);
+      return {};
+    }
+  }
+  return v;
 }
 
 // src/declarative-table.js
@@ -1132,6 +1115,11 @@ function applyContent(el, content) {
   el.textContent = content;
 }
 
+// src/utils/camelize.js
+function camelize(str) {
+  return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
+}
+
 // src/utils/columnWidth.js
 var MIN_COLUMN_WIDTH = 40;
 function getColumnMinWidth(th) {
@@ -1388,6 +1376,145 @@ var CORE_EVENTS = [
 function formatLabel(template, values) {
   return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
 }
+var DEFAULT_OPTIONS = {
+  id: null,
+  src: "",
+  params: {},
+  loading: "eager",
+  debug: false,
+  sortable: false,
+  filterable: false,
+  menu: false,
+  reorder: false,
+  dir: "ltr",
+  density: "default",
+  pageSizes: [10, 25, 50, 100, 250],
+  showPageSize: true,
+  columns: [],
+  actions: [],
+  rowActions: false,
+  collapseActions: false,
+  selectable: false,
+  selectVisibleOnly: true,
+  singleSelect: false,
+  rowClick: "action",
+  rowKey: "id",
+  rowLabel: null,
+  bulkActions: [],
+  resizable: false,
+  autosize: false,
+  wrap: false,
+  snapColumns: false,
+  autoheight: true,
+  autohidePager: false,
+  responsive: false,
+  responsiveToggle: true,
+  responsiveStartOpen: false,
+  rowDetails: null,
+  rowDetailsStartOpen: false,
+  filterDelay: 300,
+  searchable: false,
+  searchPlaceholder: "",
+  searchDelay: 300,
+  minSearchLength: 0,
+  spinnerClass: "",
+  saveState: false,
+  errorMessage: "",
+  noData: "",
+  caption: "",
+  initialQuery: null,
+  initialResult: null,
+  dataSource: null
+};
+var OPTION_ATTRIBUTES = {
+  src: { type: "string" },
+  loading: { parse: (value) => parseEnumAttribute(value, ["eager", "lazy"], "eager") },
+  sortable: { type: "boolean" },
+  filterable: { type: "boolean" },
+  "filter-delay": { option: "filterDelay", type: "integer" },
+  searchable: { type: "boolean" },
+  "search-placeholder": { option: "searchPlaceholder", type: "string" },
+  "search-delay": { option: "searchDelay", type: "integer" },
+  "min-search-length": { option: "minSearchLength", type: "integer" },
+  responsive: { type: "boolean" },
+  "responsive-toggle": { option: "responsiveToggle", type: "boolean" },
+  "responsive-start-open": { option: "responsiveStartOpen", type: "boolean" },
+  "row-details-start-open": { option: "rowDetailsStartOpen", type: "boolean" },
+  selectable: { type: "boolean" },
+  "single-select": { option: "singleSelect", type: "boolean" },
+  "select-visible-only": { option: "selectVisibleOnly", type: "boolean" },
+  "row-click": {
+    option: "rowClick",
+    parse: (value) => parseEnumAttribute(value, ["action", "select", "none"], "action")
+  },
+  "row-key": { option: "rowKey", type: "string" },
+  "row-label": { option: "rowLabel", type: "string" },
+  "collapse-actions": { option: "collapseActions", type: "boolean" },
+  "save-state": { option: "saveState", type: "boolean" },
+  "no-data": { option: "noData", type: "string" },
+  "error-message": { option: "errorMessage", type: "string" },
+  "page-sizes": { option: "pageSizes", parse: parseIntegerListAttribute },
+  "row-actions": { option: "rowActions", type: "boolean" },
+  reorder: { type: "boolean" },
+  menu: { type: "boolean" },
+  wrap: { type: "boolean" },
+  "snap-columns": { option: "snapColumns", type: "boolean" },
+  autosize: { type: "boolean" },
+  resizable: { type: "boolean" },
+  autoheight: { type: "boolean" },
+  "autohide-pager": { option: "autohidePager", type: "boolean" },
+  "show-page-size": { option: "showPageSize", type: "boolean" },
+  debug: { type: "boolean" },
+  dir: { type: "string" },
+  density: { parse: (value) => parseEnumAttribute(value, ["compact", "default", "comfortable"], "default") }
+};
+function createDefaultOptions() {
+  return {
+    ...DEFAULT_OPTIONS,
+    params: { ...DEFAULT_OPTIONS.params },
+    pageSizes: [...DEFAULT_OPTIONS.pageSizes],
+    columns: [],
+    actions: [],
+    bulkActions: []
+  };
+}
+function parseBooleanOption(value) {
+  return value !== "false";
+}
+function parseNumberAttribute(value, type) {
+  if (value.trim() === "") {
+    return;
+  }
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return;
+  }
+  return type === "integer" && !Number.isInteger(number) ? undefined : number;
+}
+function parseOptionAttribute(name, value) {
+  const config = OPTION_ATTRIBUTES[name];
+  if (!config || value === null) {
+    return null;
+  }
+  const option = config.option ?? camelize(name);
+  let parsed;
+  if (config.parse) {
+    parsed = config.parse(value);
+  } else {
+    switch (config.type) {
+      case "boolean":
+        parsed = parseBooleanOption(value);
+        break;
+      case "integer":
+      case "number":
+        parsed = parseNumberAttribute(value, config.type);
+        break;
+      default:
+        parsed = value;
+    }
+  }
+  return parsed === undefined ? null : { option, value: parsed };
+}
 function normalizeSelectionOptions(options) {
   if (options.singleSelect) {
     options.selectable = true;
@@ -1395,6 +1522,7 @@ function normalizeSelectionOptions(options) {
 }
 
 class DataGrid extends base_element_default {
+  #optionDefaults;
   #filterSelector;
   #excludedRowElementSelector;
   #plugins;
@@ -1411,6 +1539,7 @@ class DataGrid extends base_element_default {
   #frozenFrame;
   constructor(options = {}) {
     super(options);
+    this.#optionDefaults = createDefaultOptions();
     this.#filterSelector = "[id^=dg-filter]";
     this.#excludedRowElementSelector = "a,button,input,select,textarea,[contenteditable]:not([contenteditable='false']),[data-row-click-ignore]";
     this.#plugins = this.#initPlugins();
@@ -1620,56 +1749,10 @@ class DataGrid extends base_element_default {
     };
   }
   get defaultOptions() {
-    return {
-      id: null,
-      src: "",
-      params: {},
-      loading: "eager",
-      debug: false,
-      sortable: false,
-      filterable: false,
-      menu: false,
-      reorder: false,
-      dir: "ltr",
-      density: "default",
-      pageSizes: [10, 25, 50, 100, 250],
-      showPageSize: true,
-      columns: [],
-      actions: [],
-      rowActions: false,
-      collapseActions: false,
-      selectable: false,
-      selectVisibleOnly: true,
-      singleSelect: false,
-      rowClick: "action",
-      rowKey: "id",
-      rowLabel: null,
-      bulkActions: [],
-      resizable: false,
-      autosize: false,
-      wrap: false,
-      snapColumns: false,
-      autoheight: true,
-      autohidePager: false,
-      responsive: false,
-      responsiveToggle: true,
-      responsiveStartOpen: false,
-      rowDetails: null,
-      rowDetailsStartOpen: false,
-      filterDelay: 300,
-      searchable: false,
-      searchPlaceholder: "",
-      searchDelay: 300,
-      minSearchLength: 0,
-      spinnerClass: "",
-      saveState: false,
-      errorMessage: "",
-      noData: "",
-      caption: "",
-      initialQuery: null,
-      initialResult: null,
-      dataSource: null
-    };
+    return createDefaultOptions();
+  }
+  static get defaultOptions() {
+    return createDefaultOptions();
   }
   get isInit() {
     return this.classList.contains("dg-initialized");
@@ -1747,49 +1830,27 @@ class DataGrid extends base_element_default {
     return cols;
   }
   static get observedAttributes() {
-    return [
-      "src",
-      "loading",
-      "sortable",
-      "filterable",
-      "searchable",
-      "search-placeholder",
-      "min-search-length",
-      "responsive",
-      "responsive-toggle",
-      "responsive-start-open",
-      "row-details-start-open",
-      "selectable",
-      "single-select",
-      "select-visible-only",
-      "row-click",
-      "row-key",
-      "row-label",
-      "collapse-actions",
-      "save-state",
-      "no-data",
-      "error-message",
-      "page-sizes",
-      "row-actions",
-      "reorder",
-      "menu",
-      "wrap",
-      "snap-columns",
-      "autosize",
-      "resizable",
-      "autoheight",
-      "autohide-pager",
-      "show-page-size",
-      "debug",
-      "dir",
-      "density"
-    ];
+    return Object.keys(OPTION_ATTRIBUTES);
   }
-  get transformAttributes() {
-    return {
-      "page-sizes": parseIntegerListAttribute,
-      "row-click": (raw) => parseEnumAttribute(raw, ["action", "select", "none"], "action")
-    };
+  attributeChanged(name, value, oldValue) {
+    const config = OPTION_ATTRIBUTES[name];
+    if (!config) {
+      return;
+    }
+    const option = config.option ?? camelize(name);
+    const options = this.options;
+    if (value === null) {
+      options[option] = this.#optionDefaults[option];
+    } else {
+      const resolved = parseOptionAttribute(name, value);
+      if (!resolved) {
+        return;
+      }
+      options[resolved.option] = resolved.value;
+    }
+    if (this.fireEvents) {
+      this.#optionChanged(option);
+    }
   }
   get thead() {
     return this.querySelector("thead");
@@ -1941,6 +2002,69 @@ class DataGrid extends base_element_default {
     }
     this.renderBody();
     return false;
+  }
+  #optionChanged(option) {
+    switch (option) {
+      case "src":
+        this.srcChanged();
+        break;
+      case "showPageSize":
+        this.showPageSizeChanged();
+        break;
+      case "responsive":
+        this.responsiveChanged();
+        break;
+      case "snapColumns":
+        this.snapColumnsChanged();
+        break;
+      case "wrap":
+        this.wrapChanged();
+        break;
+      case "rowDetailsStartOpen":
+        this.rowDetailsStartOpenChanged();
+        break;
+      case "selectable":
+        this.selectableChanged();
+        break;
+      case "singleSelect":
+        this.singleSelectChanged();
+        break;
+      case "rowClick":
+        this.rowClickChanged();
+        break;
+      case "reorder":
+        this.reorderChanged();
+        break;
+      case "sortable":
+        this.sortableChanged();
+        break;
+      case "filterable":
+        this.filterableChanged();
+        break;
+      case "searchable":
+        this.searchableChanged();
+        break;
+      case "searchPlaceholder":
+        this.searchPlaceholderChanged();
+        break;
+      case "responsiveToggle":
+        if (this.table) {
+          this.renderTable();
+          this.renderBody();
+        }
+        break;
+      case "responsiveStartOpen":
+        if (this.table) {
+          this.renderBody();
+        }
+        break;
+      case "collapseActions":
+        if (this.table) {
+          this.renderTable();
+          this.renderBody();
+        }
+        break;
+    }
   }
   srcChanged() {
     this.setupDataSource();

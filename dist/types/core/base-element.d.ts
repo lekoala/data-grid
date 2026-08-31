@@ -54,13 +54,15 @@ declare class BaseElement extends HTMLElement {
      */
     disconnectedCallback(): void;
     /**
-     * Custom transformers per attribute name.
-     * @returns {Object}
+     * Handle an observed attribute change in a subclass.
+     * @param {String} attributeName
+     * @param {String|null} newValue
+     * @param {String|null} oldValue
      */
-    get transformAttributes(): Object;
+    attributeChanged(attributeName: string, newValue: string | null, oldValue: string | null): void;
     /**
-     * Observed attributes map to options (kebab-case -> camelCase).
-     * An attribute without a value means "true".
+     * Forward the native custom-element callback to the subclass policy.
+     * BaseElement deliberately does not know how attributes map to options.
      * @param {String} attributeName
      * @param {String|null} oldValue
      * @param {String|null} newValue

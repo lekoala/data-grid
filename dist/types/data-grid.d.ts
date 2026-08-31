@@ -603,6 +603,11 @@ declare class DataGrid extends BaseElement {
      */
     get defaultOptions(): Options;
     /**
+     * Inspect the default option values without instantiating a grid.
+     * @returns {Options}
+     */
+    static get defaultOptions(): Options;
+    /**
      * Determines if the grid is initialized.
      * @returns {Boolean}
      */
@@ -678,10 +683,13 @@ declare class DataGrid extends BaseElement {
      */
     static get observedAttributes(): Array<any>;
     /**
-     * Custom attribute transformers, keyed by attribute name.
-     * @returns {Record<string, (raw: string) => any>}
+     * Resolve a declarative attribute into an option and apply its runtime
+     * reaction when the grid has completed initialization.
+     * @param {String} name
+     * @param {String|null} value
+     * @param {String|null} oldValue
      */
-    get transformAttributes(): Record<string, (raw: string) => any>;
+    attributeChanged(name: string, value: string | null, oldValue: string | null): void;
     /** @returns {HTMLTableSectionElement} */
     get thead(): HTMLTableSectionElement;
     /** @returns {HTMLTableSectionElement} */

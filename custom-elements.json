@@ -25,10 +25,16 @@
               "name": "filterable"
             },
             {
+              "name": "filter-delay"
+            },
+            {
               "name": "searchable"
             },
             {
               "name": "search-placeholder"
+            },
+            {
+              "name": "search-delay"
             },
             {
               "name": "min-search-length"
