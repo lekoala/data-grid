@@ -50,7 +50,7 @@ class ContextMenu extends BasePlugin {
      */
     onchange(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const t = /** @type {HTMLInputElement|null} */ (target.closest(".dg-menu input[data-name]"));
@@ -85,7 +85,7 @@ class ContextMenu extends BasePlugin {
             return;
         }
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const header = target.closest("thead th");

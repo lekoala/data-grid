@@ -195,6 +195,16 @@
             },
             {
               "kind": "method",
+              "name": "ownsControl",
+              "description": "A control is owned by this grid when it lives inside this host (not a nested grid), so bubbled events from an inner grid never affect the outer one."
+            },
+            {
+              "kind": "method",
+              "name": "syncColumnVisibility",
+              "description": "Reconcile the rendered cells (header, filters and body) with the current column visibility without rebuilding the DOM. Used whenever only the visibility changed: showColumn/hideColumn and ResponsiveGrid adaptations. The column list is rebuilt so plugin columns (ex: the responsive toggle) reflect their fresh hidden state."
+            },
+            {
+              "kind": "method",
               "name": "syncFrozenColumns",
               "description": "Measure visible frozen columns and assign their logical sticky offsets."
             },

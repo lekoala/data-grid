@@ -34,6 +34,22 @@ DataGrid.registerPlugins({ MyPlugin });
 `registerPlugins` takes a map of constructors keyed by name; the core calls
 `new Plugin(grid)` for every grid instance.
 
+## Plugin-facing grid API
+
+Built-in and third-party plugins may use the following stable grid operations:
+
+- `grid.ownsControl(element)` checks that an event target belongs to this grid
+  rather than to a nested grid.
+- `grid.getColumns()` reads the normalized columns for the current render cycle.
+- `grid.getPlugin(name)` reads another instantiated plugin when composing features.
+- `grid.syncColumnVisibility()` reconciles header, filter and body cells after a
+  plugin changes column visibility.
+- `grid.query` reads a snapshot of the current query state.
+
+Other underscored members and internal state are implementation details. A
+plugin should use the documented lifecycle hooks and operations above instead
+of reaching into `_...` members.
+
 ## Virtual columns
 
 A plugin can inject columns through `extendColumns`. Columns added by plugins

@@ -36,7 +36,7 @@ class SelectableRows extends BasePlugin {
      */
     onchange(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const grid = this.grid;
@@ -77,7 +77,7 @@ class SelectableRows extends BasePlugin {
      */
     onclick(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const grid = this.grid;

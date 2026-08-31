@@ -109,8 +109,8 @@ test("higher priority values are hidden first", async () => {
 test("a single render per changed cycle", async () => {
     const inst = await makeReadyGrid({ columns: COLS });
     let calls = 0;
-    const orig = inst._syncColumnVisibility.bind(inst);
-    inst._syncColumnVisibility = () => {
+    const orig = inst.syncColumnVisibility.bind(inst);
+    inst.syncColumnVisibility = () => {
         calls++;
         orig();
     };

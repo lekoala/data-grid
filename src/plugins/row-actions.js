@@ -65,7 +65,7 @@ class RowActions extends BasePlugin {
      */
     onclick(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const toggle = target.closest(".dg-actions-toggle");

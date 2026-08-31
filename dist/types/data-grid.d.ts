@@ -487,6 +487,7 @@ export type TextInputState = {
 /**
  */
 declare class DataGrid extends BaseElement {
+    #private;
     _filterSelector: string;
     _excludedRowElementSelector: string;
     /**
@@ -633,15 +634,6 @@ declare class DataGrid extends BaseElement {
     /** Gets the text to be displayed when no data is loaded.
      * @public */
     get noData(): string;
-    /**
-     * @param {HTMLTableSectionElement} tbody
-     */
-    _setNoData(tbody: HTMLTableSectionElement): void;
-    /**
-     * Update the persistent status live region.
-     * @param {String} text
-     */
-    _updateStatus(text: string): void;
     /** @public */
     updateLabels(): void;
     updateMetaLabel(): void;
@@ -798,11 +790,6 @@ declare class DataGrid extends BaseElement {
     wrapChanged(): void;
     rowDetailsStartOpenChanged(): void;
     selectableChanged(): void;
-    /**
-     * singleSelect implies selectable: enforce the invariant without clobbering
-     * an explicit selectable option when singleSelect is turned back off.
-     */
-    _syncSelectionOptions(): void;
     singleSelectChanged(): void;
     rowClickChanged(): void;
     reorderChanged(): void;
@@ -865,10 +852,12 @@ declare class DataGrid extends BaseElement {
      * A control is owned by this grid when it lives inside this host (not a
      * nested grid), so bubbled events from an inner grid never affect the outer
      * one.
+     * @public
+     * @plugin
      * @param {Element|null|undefined} element
      * @returns {Boolean}
      */
-    _ownsControl(element: Element | null | undefined): boolean;
+    ownsControl(element: Element | null | undefined): boolean;
     /**
      * Expose the full text through the native tooltip when a data cell is
      * visually truncated. Resolve this on hover so the measurement always
@@ -876,13 +865,6 @@ declare class DataGrid extends BaseElement {
      * @param {Element} target
      */
     _handleMouseover(target: Element): void;
-    /**
-     * Cancel the pending text-input debounces of inputs within `root` and drop
-     * their state. Used before replacing a filter row so a stale update never
-     * fires on a detached element.
-     * @param {Element} root
-     */
-    _cancelTextInputs(root: Element): void;
     /**
      * @param {Event} event
      * @param {Element} target
@@ -931,19 +913,6 @@ declare class DataGrid extends BaseElement {
      */
     _handleComposition(target: Element, composing: boolean): void;
     init(): Promise<void> | undefined;
-    /**
-     * Whether the initial data source load should be deferred until the grid
-     * is near the viewport. Only async sources benefit: a purely declarative
-     * local table and a provided initialResult have no fetch worth deferring.
-     * @returns {Boolean}
-     */
-    _deferInitialLoad(): boolean;
-    /**
-     * Watch the grid and trigger the first load once it is near the viewport.
-     * The observer is intended to be one-shot and is disconnected on the first
-     * intersection.
-     */
-    _observeInitialLoad(): void;
     /**
      * @param {String} field
      * @returns {Column|null}
@@ -1004,10 +973,10 @@ declare class DataGrid extends BaseElement {
      * visibility changed: showColumn/hideColumn and ResponsiveGrid adaptations.
      * The column list is rebuilt so plugin columns (ex: the responsive toggle)
      * reflect their fresh hidden state.
+     * @public
+     * @plugin
      */
-    _syncColumnVisibility(): void;
-    /** Keep auxiliary full-width rows aligned with the visible column list. */
-    _syncSpanningCells(): void;
+    syncColumnVisibility(): void;
     /** Queue one frozen-column geometry pass for the next frame. */
     queueFrozenSync(): void;
     /**
@@ -1143,11 +1112,6 @@ declare class DataGrid extends BaseElement {
      */
     clearSelection(): void;
     /**
-     * Clear the selection only when it is not already empty, to avoid firing a
-     * `selectionChange` on every population change once nothing is selected.
-     */
-    _clearSelectionIfNeeded(): void;
-    /**
      * Get selected rows or specific fields from selected rows.
      * Only reflects the currently loaded page.
      * For cross-page/server-side selection, use getSelectionState().
@@ -1160,11 +1124,6 @@ declare class DataGrid extends BaseElement {
      * @returns {Array<any>|Object} Selected rows, values, or objects depending on selection and keys.
      */
     getSelection(...keys: string[]): Array<any> | Object;
-    /**
-     * Reflect the selection on the DOM and notify listeners.
-     * The core owns the tr[data-selected] state attribute.
-     */
-    _selectionChanged(): void;
     /**
      * @public
      * @returns {Promise<void>|undefined}
@@ -1206,12 +1165,6 @@ declare class DataGrid extends BaseElement {
      * @returns {Promise<void>|undefined}
      */
     sortData(baseCol?: Element | null): Promise<void> | undefined;
-    /**
-     * @param {String} columnName
-     * @param {"asc"|"desc"|"none"} direction
-     * @returns {Promise<void>}
-     */
-    _sort(columnName: string, direction: "asc" | "desc" | "none"): Promise<void>;
     /**
      * @public
      * @param {String} columnName
@@ -1255,12 +1208,6 @@ declare class DataGrid extends BaseElement {
      * query operator.
      */
     filterData(): Promise<void>;
-    /**
-     * Translate one filter control into canonical query state.
-     * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} input
-     * @returns {FilterState|undefined}
-     */
-    _readFilterControl(input: HTMLInputElement | HTMLSelectElement | HTMLDivElement): FilterState | undefined;
     renderTable(): void;
     /**
      * Give the table an accessible name: a real <caption> when options.caption
@@ -1335,12 +1282,6 @@ declare class DataGrid extends BaseElement {
      * @param {HTMLTableCellElement} relatedTh
      */
     renderDefaultFilterCell(th: HTMLTableCellElement, column: Column, relatedTh: HTMLTableCellElement): void;
-    /**
-     * Reflect canonical query state into one filter control.
-     * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} filter
-     * @param {FilterState} filterState
-     */
-    _writeFilterControl(filter: HTMLInputElement | HTMLSelectElement | HTMLDivElement, filterState: FilterState): void;
     /**
      * @param {Column} column
      * @param {HTMLTableCellElement} relatedTh

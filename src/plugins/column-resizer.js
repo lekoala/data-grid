@@ -73,7 +73,7 @@ class ColumnResizer extends BasePlugin {
      */
     onclick(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         // Otherwise it could sort the col
@@ -87,7 +87,7 @@ class ColumnResizer extends BasePlugin {
      */
     onmousedown(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const resizer = /** @type {HTMLElement|null} */ (target.closest(".dg-resizer"));

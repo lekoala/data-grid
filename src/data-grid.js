@@ -331,6 +331,18 @@ function formatLabel(template, values) {
 }
 
 /**
+ * Enforce the option invariant needed before the DataGrid private brand exists.
+ * BaseElement invokes `_ready()` from `super()`, so that first call cannot use
+ * a private method on the subclass.
+ * @param {Options} options
+ */
+function normalizeSelectionOptions(options) {
+    if (options.singleSelect) {
+        options.selectable = true;
+    }
+}
+
+/**
  */
 class DataGrid extends BaseElement {
     /**
@@ -483,7 +495,7 @@ class DataGrid extends BaseElement {
         if (!this.hasAttribute("id")) {
             this.setAttribute("id", this.options.id ?? randstr("el-"));
         }
-        this._syncSelectionOptions();
+        normalizeSelectionOptions(this.options);
     }
 
     /**
@@ -599,7 +611,7 @@ class DataGrid extends BaseElement {
     /**
      * @param {HTMLTableSectionElement} tbody
      */
-    _setNoData(tbody) {
+    #setNoData(tbody) {
         if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
             tbody.setAttribute("data-empty-message", this.noData);
         }
@@ -609,7 +621,7 @@ class DataGrid extends BaseElement {
      * Update the persistent status live region.
      * @param {String} text
      */
-    _updateStatus(text) {
+    #updateStatus(text) {
         const status = this.querySelector(".dg-status");
         if (status) {
             status.textContent = text;
@@ -642,15 +654,15 @@ class DataGrid extends BaseElement {
             button.setAttribute("aria-label", label);
             button.setAttribute("title", label);
         }
-        this._setNoData(this.tbody);
+        this.#setNoData(this.tbody);
         this.updateMetaLabel();
         this.updatePageStatus();
         if (this.loading) {
-            this._updateStatus(this.labels.loading);
+            this.#updateStatus(this.labels.loading);
         } else if (this.hasDataError) {
-            this._updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+            this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
         } else {
-            this._updateStatus(
+            this.#updateStatus(
                 this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
             );
         }
@@ -1061,7 +1073,7 @@ class DataGrid extends BaseElement {
         if (patch.page !== undefined) next.page = patch.page;
         this._query = normalizeQuery(next);
         if (changesPopulation) {
-            this._clearSelectionIfNeeded();
+            this.#clearSelectionIfNeeded();
         }
         // While lazy and not yet first-loaded, only accumulate the query
         // state. The first load (when the grid becomes visible) uses it.
@@ -1078,7 +1090,7 @@ class DataGrid extends BaseElement {
      */
     resetQuery() {
         this._query = normalizeQuery(this._initialQuery);
-        this._clearSelectionIfNeeded();
+        this.#clearSelectionIfNeeded();
         return this.refresh();
     }
 
@@ -1114,7 +1126,7 @@ class DataGrid extends BaseElement {
         this.error = null;
         this.setAttribute("data-loading", "");
         this.removeAttribute("data-error");
-        this._updateStatus(this.labels.loading);
+        this.#updateStatus(this.labels.loading);
 
         try {
             let result;
@@ -1134,7 +1146,7 @@ class DataGrid extends BaseElement {
                 // shrank after a deletion): refetch on the last valid page.
                 return this.refresh();
             }
-            this._updateStatus(
+            this.#updateStatus(
                 this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
             );
         } catch (err) {
@@ -1146,7 +1158,7 @@ class DataGrid extends BaseElement {
             this.error = e;
             this.setAttribute("data-error", "");
             this.tbody?.setAttribute("data-empty-message", message);
-            this._updateStatus(message);
+            this.#updateStatus(message);
             this.renderBody();
             dispatch(this, "loadError", e);
         } finally {
@@ -1197,7 +1209,7 @@ class DataGrid extends BaseElement {
      */
     srcChanged() {
         this.setupDataSource();
-        this._clearSelectionIfNeeded();
+        this.#clearSelectionIfNeeded();
         return this.refresh();
     }
 
@@ -1237,21 +1249,19 @@ class DataGrid extends BaseElement {
      * singleSelect implies selectable: enforce the invariant without clobbering
      * an explicit selectable option when singleSelect is turned back off.
      */
-    _syncSelectionOptions() {
-        if (this.options.singleSelect) {
-            this.options.selectable = true;
-        }
+    #syncSelectionOptions() {
+        normalizeSelectionOptions(this.options);
     }
 
     singleSelectChanged() {
-        this._syncSelectionOptions();
+        this.#syncSelectionOptions();
 
         // Switching from multi to single select restarts from an empty
         // selection, so the "singleSelect implies at most one selected row"
         // invariant always holds without an arbitrary pick among the previous
         // ids (which may also be a mode "all" selection).
         if (this.options.singleSelect) {
-            this._clearSelectionIfNeeded();
+            this.#clearSelectionIfNeeded();
         }
 
         this.selectableChanged();
@@ -1512,7 +1522,7 @@ class DataGrid extends BaseElement {
         // runs, but the upgrade-time attributeChangedCallback never fires the
         // *Changed handlers (fireEvents is still false). Restore the option
         // invariants here so the first render sees them.
-        this._syncSelectionOptions();
+        this.#syncSelectionOptions();
 
         // Core UI is delegated to the host: the instance is its own event
         // listener and routes bubbled events to the matching control. This
@@ -1603,10 +1613,12 @@ class DataGrid extends BaseElement {
      * A control is owned by this grid when it lives inside this host (not a
      * nested grid), so bubbled events from an inner grid never affect the outer
      * one.
+     * @public
+     * @plugin
      * @param {Element|null|undefined} element
      * @returns {Boolean}
      */
-    _ownsControl(element) {
+    ownsControl(element) {
         return Boolean(element && element.closest("data-grid") === this);
     }
 
@@ -1618,7 +1630,7 @@ class DataGrid extends BaseElement {
      */
     _handleMouseover(target) {
         const cell = /** @type {HTMLTableCellElement|null} */ (target.closest("tbody td"));
-        if (!cell || !this._ownsControl(cell)) {
+        if (!cell || !this.ownsControl(cell)) {
             return;
         }
         const generated = cell.hasAttribute("data-dg-overflow-title");
@@ -1642,7 +1654,7 @@ class DataGrid extends BaseElement {
      * fires on a detached element.
      * @param {Element} root
      */
-    _cancelTextInputs(root) {
+    #cancelTextInputs(root) {
         for (const input of root.querySelectorAll("input")) {
             textInputState.get(input)?.apply.cancel();
             textInputState.delete(input);
@@ -1656,7 +1668,7 @@ class DataGrid extends BaseElement {
      */
     _handleClick(event, target) {
         const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
-        if (pager && this._ownsControl(pager)) {
+        if (pager && this.ownsControl(pager)) {
             if (pager.classList.contains("dg-btn-first")) return this.getFirst();
             if (pager.classList.contains("dg-btn-prev")) return this.getPrev();
             if (pager.classList.contains("dg-btn-next")) return this.getNext();
@@ -1667,7 +1679,7 @@ class DataGrid extends BaseElement {
         // Only the sort button itself delegates sorting, so a click on any other
         // header control (resize handle, ...) never triggers a sort.
         const sortButton = target.closest(".dg-sort");
-        if (sortButton && this._ownsControl(sortButton)) {
+        if (sortButton && this.ownsControl(sortButton)) {
             const th = /** @type {HTMLTableCellElement} */ (sortButton.closest("th.dg-sortable"));
             if (th) {
                 return this.sortData(th);
@@ -1677,7 +1689,7 @@ class DataGrid extends BaseElement {
         // Data row clicks follow the delegated rowClick policy. Responsive and
         // detail rows are not dg-data-row and never match.
         const tr = /** @type {HTMLTableRowElement|null} */ (target.closest("tr.dg-data-row"));
-        if (tr && this._ownsControl(tr) && this.options.rowClick !== "none") {
+        if (tr && this.ownsControl(tr) && this.options.rowClick !== "none") {
             const rowIndex = Number(tr.dataset.rowIndex);
             const row = this.rows[rowIndex];
             if (row) {
@@ -1756,24 +1768,24 @@ class DataGrid extends BaseElement {
      */
     _handleChange(event, target) {
         const pageSize = target.closest(".dg-select-per-page");
-        if (this._ownsControl(pageSize)) {
+        if (this.ownsControl(pageSize)) {
             return this.changePerPage();
         }
 
         const page = target.closest(".dg-input-page");
-        if (this._ownsControl(page)) {
+        if (this.ownsControl(page)) {
             return this.gotoPage();
         }
 
         // Select column filters apply on change; text filters run through input.
         const filter = /** @type {HTMLSelectElement|null} */ (target.closest(this._filterSelector));
-        if (filter && this._ownsControl(filter) && /select/i.test(filter.tagName)) {
+        if (filter && this.ownsControl(filter) && /select/i.test(filter.tagName)) {
             return this.filterData();
         }
 
         // Multi-select checkboxes apply on change like selects do
         const multi = target.closest(".dg-multiselect");
-        if (multi && this._ownsControl(multi)) {
+        if (multi && this.ownsControl(multi)) {
             updateMultiSelectSummary(/** @type {HTMLElement} */ (multi));
             return this.filterData();
         }
@@ -1785,8 +1797,8 @@ class DataGrid extends BaseElement {
      */
     _handleInput(target) {
         const search = target.closest(".dg-search");
-        if (this._ownsControl(search)) {
-            this._clearSelectionIfNeeded();
+        if (this.ownsControl(search)) {
+            this.#clearSelectionIfNeeded();
             const state = textInputState.get(/** @type {HTMLInputElement} */ (search));
             if (state && !state.composing) {
                 state.apply();
@@ -1795,7 +1807,7 @@ class DataGrid extends BaseElement {
         }
 
         const filter = target.closest(this._filterSelector);
-        if (this._ownsControl(filter)) {
+        if (this.ownsControl(filter)) {
             const state = textInputState.get(/** @type {HTMLInputElement} */ (filter));
             if (state && !state.composing) {
                 state.apply();
@@ -1811,12 +1823,12 @@ class DataGrid extends BaseElement {
     _handleKeydown(event, target) {
         if (event.key === "Enter") {
             const page = target.closest(".dg-input-page");
-            if (this._ownsControl(page)) {
+            if (this.ownsControl(page)) {
                 event.preventDefault();
                 return this.gotoPage();
             }
             const state = textInputState.get(/** @type {HTMLInputElement} */ (target));
-            if (this._ownsControl(target) && state && !state.composing && !event.isComposing) {
+            if (this.ownsControl(target) && state && !state.composing && !event.isComposing) {
                 event.preventDefault();
                 state.apply.flush();
                 return;
@@ -1826,13 +1838,13 @@ class DataGrid extends BaseElement {
         if (event.key === "Escape") {
             const input = /** @type {HTMLInputElement} */ (target);
             const state = textInputState.get(input);
-            if (this._ownsControl(target.closest(".dg-search")) && state && input.value) {
+            if (this.ownsControl(target.closest(".dg-search")) && state && input.value) {
                 input.value = "";
                 state.apply.cancel();
                 return this.commitSearch();
             }
             const filter = /** @type {HTMLInputElement|null} */ (target.closest(this._filterSelector));
-            if (this._ownsControl(filter) && state && input.value) {
+            if (this.ownsControl(filter) && state && input.value) {
                 input.value = "";
                 state.apply.cancel();
                 return this.filterData();
@@ -1847,7 +1859,7 @@ class DataGrid extends BaseElement {
      */
     _handleComposition(target, composing) {
         const input = /** @type {HTMLInputElement} */ (target.closest(`.dg-search, ${this._filterSelector}`));
-        if (!input || !this._ownsControl(input)) {
+        if (!input || !this.ownsControl(input)) {
             return;
         }
         const state = textInputState.get(input);
@@ -1861,7 +1873,7 @@ class DataGrid extends BaseElement {
     }
 
     init() {
-        if (this._deferInitialLoad()) {
+        if (this.#deferInitialLoad()) {
             // Build the chrome and mark the grid initialized now; only the
             // first async data source load is deferred until it's near the
             // viewport (or an explicit load/refresh is requested).
@@ -1869,7 +1881,7 @@ class DataGrid extends BaseElement {
             this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
             this.fireEvents = true;
             this._lazyPending = true;
-            this._observeInitialLoad();
+            this.#observeInitialLoad();
             this.log("initialized (lazy)");
             return;
         }
@@ -1890,7 +1902,7 @@ class DataGrid extends BaseElement {
      * local table and a provided initialResult have no fetch worth deferring.
      * @returns {Boolean}
      */
-    _deferInitialLoad() {
+    #deferInitialLoad() {
         return (
             this.options.loading === "lazy" &&
             !this._initialResult &&
@@ -1903,7 +1915,7 @@ class DataGrid extends BaseElement {
      * The observer is intended to be one-shot and is disconnected on the first
      * intersection.
      */
-    _observeInitialLoad() {
+    #observeInitialLoad() {
         this._loadObserver = new IntersectionObserver(
             (entries) => {
                 if (!entries.some((entry) => entry.isIntersecting)) {
@@ -2034,8 +2046,10 @@ class DataGrid extends BaseElement {
      * visibility changed: showColumn/hideColumn and ResponsiveGrid adaptations.
      * The column list is rebuilt so plugin columns (ex: the responsive toggle)
      * reflect their fresh hidden state.
+     * @public
+     * @plugin
      */
-    _syncColumnVisibility() {
+    syncColumnVisibility() {
         this._columns = this.buildColumns();
         for (const column of this.getColumns()) {
             const id = this.getColumnId(column);
@@ -2045,13 +2059,13 @@ class DataGrid extends BaseElement {
                 cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
             }
         }
-        this._syncSpanningCells();
+        this.#syncSpanningCells();
         this.renderFooter();
         this.queueFrozenSync();
     }
 
     /** Keep auxiliary full-width rows aligned with the visible column list. */
-    _syncSpanningCells() {
+    #syncSpanningCells() {
         const colspan = Math.max(1, this.columnsLength(true));
         for (const cell of this.querySelectorAll("[data-dg-span-columns]")) {
             cell.setAttribute("colspan", String(colspan));
@@ -2128,7 +2142,7 @@ class DataGrid extends BaseElement {
     showColumn(field, render = true) {
         this.setColProp(field, "hidden", false);
 
-        if (render) this._syncColumnVisibility();
+        if (render) this.syncColumnVisibility();
 
         dispatch(this, "columnVisibility", {
             col: field,
@@ -2144,7 +2158,7 @@ class DataGrid extends BaseElement {
     hideColumn(field, render = true) {
         this.setColProp(field, "hidden", true);
 
-        if (render) this._syncColumnVisibility();
+        if (render) this.syncColumnVisibility();
 
         dispatch(this, "columnVisibility", {
             col: field,
@@ -2191,7 +2205,7 @@ class DataGrid extends BaseElement {
                 this.rowHeight = tr.offsetHeight;
             }
         }
-        this._setNoData(this.tbody);
+        this.#setNoData(this.tbody);
         return this.fixPage();
     }
 
@@ -2372,7 +2386,7 @@ class DataGrid extends BaseElement {
         } else {
             sel.ids.add(key);
         }
-        this._selectionChanged();
+        this.#selectionChanged();
     }
 
     /**
@@ -2389,7 +2403,7 @@ class DataGrid extends BaseElement {
         } else {
             sel.ids.delete(key);
         }
-        this._selectionChanged();
+        this.#selectionChanged();
     }
 
     /**
@@ -2417,7 +2431,7 @@ class DataGrid extends BaseElement {
         } else {
             this._selection = { mode: "all", ids: new Set(), except: new Set() };
         }
-        this._selectionChanged();
+        this.#selectionChanged();
     }
 
     /**
@@ -2426,14 +2440,14 @@ class DataGrid extends BaseElement {
      */
     clearSelection() {
         this._selection = { mode: "explicit", ids: new Set(), except: new Set() };
-        this._selectionChanged();
+        this.#selectionChanged();
     }
 
     /**
      * Clear the selection only when it is not already empty, to avoid firing a
      * `selectionChange` on every population change once nothing is selected.
      */
-    _clearSelectionIfNeeded() {
+    #clearSelectionIfNeeded() {
         const selection = this._selection;
         if (selection.mode === "explicit" && selection.ids.size === 0) {
             return;
@@ -2475,7 +2489,7 @@ class DataGrid extends BaseElement {
      * Reflect the selection on the DOM and notify listeners.
      * The core owns the tr[data-selected] state attribute.
      */
-    _selectionChanged() {
+    #selectionChanged() {
         const tbody = this.tbody;
         if (tbody) {
             const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
@@ -2648,7 +2662,7 @@ class DataGrid extends BaseElement {
      * @param {"asc"|"desc"|"none"} direction
      * @returns {Promise<void>}
      */
-    _sort(columnName, direction) {
+    #sort(columnName, direction) {
         // The capability is enforced on the programmatic API too: sorting can
         // not bypass a column-level `sortable: false`. sortNone stays allowed.
         if (direction !== "none") {
@@ -2667,7 +2681,7 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     sortAsc(columnName) {
-        return this._sort(columnName, "asc");
+        return this.#sort(columnName, "asc");
     }
 
     /**
@@ -2676,7 +2690,7 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     sortDesc(columnName) {
-        return this._sort(columnName, "desc");
+        return this.#sort(columnName, "desc");
     }
 
     /**
@@ -2685,7 +2699,7 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     sortNone(columnName) {
-        return this._sort(columnName, "none");
+        return this.#sort(columnName, "none");
     }
 
     /**
@@ -2751,7 +2765,7 @@ class DataGrid extends BaseElement {
             if (!name) {
                 continue;
             }
-            const filter = this._readFilterControl(input);
+            const filter = this.#readFilterControl(input);
             if (filter) {
                 filters[name] = filter;
             }
@@ -2764,7 +2778,7 @@ class DataGrid extends BaseElement {
      * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} input
      * @returns {FilterState|undefined}
      */
-    _readFilterControl(input) {
+    #readFilterControl(input) {
         if (input.dataset.filterMode === "multi") {
             const values = readMultiSelect(input);
             return values.length ? { operator: "in", value: values } : undefined;
@@ -3148,7 +3162,7 @@ class DataGrid extends BaseElement {
         // A replaced filter row must have its pending text-input debounces
         // cancelled, or a stale update could fire on a detached element.
         if (oldRow) {
-            this._cancelTextInputs(oldRow);
+            this.#cancelTextInputs(oldRow);
         }
         if (thead && oldRow) {
             thead.replaceChild(tr, oldRow);
@@ -3193,7 +3207,7 @@ class DataGrid extends BaseElement {
         if (field) {
             const filterState = /** @type {FilterState|undefined} */ (this._query.filters?.[field]);
             if (filterState) {
-                this._writeFilterControl(filter, filterState);
+                this.#writeFilterControl(filter, filterState);
             }
         }
 
@@ -3212,7 +3226,7 @@ class DataGrid extends BaseElement {
      * @param {HTMLInputElement|HTMLSelectElement|HTMLDivElement} filter
      * @param {FilterState} filterState
      */
-    _writeFilterControl(filter, filterState) {
+    #writeFilterControl(filter, filterState) {
         const mode = filter.dataset.filterMode;
         if (mode === "multi") {
             setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);

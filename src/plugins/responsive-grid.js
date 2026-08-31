@@ -458,7 +458,7 @@ class ResponsiveGrid extends BasePlugin {
         if (this.grid.getColumnSortDirection(column.field)) {
             return true;
         }
-        if (this.grid._query?.filters?.[column.field]) {
+        if (this.grid.query.filters?.[column.field]) {
             return true;
         }
         return false;
@@ -657,7 +657,7 @@ class ResponsiveGrid extends BasePlugin {
      */
     _rebuildDetails() {
         this._restoreDetails();
-        this.grid._syncColumnVisibility();
+        this.grid.syncColumnVisibility();
 
         if (!this.hasHiddenColumns()) {
             return;

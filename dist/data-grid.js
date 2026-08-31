@@ -1388,6 +1388,11 @@ var CORE_EVENTS = [
 function formatLabel(template, values) {
   return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
 }
+function normalizeSelectionOptions(options) {
+  if (options.singleSelect) {
+    options.selectable = true;
+  }
+}
 
 class DataGrid extends base_element_default {
   constructor(options = {}) {
@@ -1431,7 +1436,7 @@ class DataGrid extends base_element_default {
     if (!this.hasAttribute("id")) {
       this.setAttribute("id", this.options.id ?? randstr("el-"));
     }
-    this._syncSelectionOptions();
+    normalizeSelectionOptions(this.options);
   }
   _initPlugins() {
     const instances = {};
@@ -1507,12 +1512,12 @@ class DataGrid extends base_element_default {
   get noData() {
     return this.options.noData || this.labels.noData;
   }
-  _setNoData(tbody) {
+  #setNoData(tbody) {
     if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
       tbody.setAttribute("data-empty-message", this.noData);
     }
   }
-  _updateStatus(text) {
+  #updateStatus(text) {
     const status = this.querySelector(".dg-status");
     if (status) {
       status.textContent = text;
@@ -1542,15 +1547,15 @@ class DataGrid extends base_element_default {
       button.setAttribute("aria-label", label);
       button.setAttribute("title", label);
     }
-    this._setNoData(this.tbody);
+    this.#setNoData(this.tbody);
     this.updateMetaLabel();
     this.updatePageStatus();
     if (this.loading) {
-      this._updateStatus(this.labels.loading);
+      this.#updateStatus(this.labels.loading);
     } else if (this.hasDataError) {
-      this._updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+      this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
     } else {
-      this._updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
     }
     this.runPlugins("updateLabels");
   }
@@ -1830,7 +1835,7 @@ class DataGrid extends base_element_default {
       next.page = patch.page;
     this._query = normalizeQuery(next);
     if (changesPopulation) {
-      this._clearSelectionIfNeeded();
+      this.#clearSelectionIfNeeded();
     }
     if (this._lazyPending) {
       return Promise.resolve();
@@ -1839,7 +1844,7 @@ class DataGrid extends base_element_default {
   }
   resetQuery() {
     this._query = normalizeQuery(this._initialQuery);
-    this._clearSelectionIfNeeded();
+    this.#clearSelectionIfNeeded();
     return this.refresh();
   }
   refresh() {
@@ -1859,7 +1864,7 @@ class DataGrid extends base_element_default {
     this.error = null;
     this.setAttribute("data-loading", "");
     this.removeAttribute("data-error");
-    this._updateStatus(this.labels.loading);
+    this.#updateStatus(this.labels.loading);
     try {
       let result;
       if (this._initialResult) {
@@ -1877,7 +1882,7 @@ class DataGrid extends base_element_default {
       if (this.applyResult(result)) {
         return this.refresh();
       }
-      this._updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
     } catch (err) {
       if (requestId !== this._requestSeq)
         return;
@@ -1888,7 +1893,7 @@ class DataGrid extends base_element_default {
       this.error = e;
       this.setAttribute("data-error", "");
       this.tbody?.setAttribute("data-empty-message", message);
-      this._updateStatus(message);
+      this.#updateStatus(message);
       this.renderBody();
       dispatch(this, "loadError", e);
     } finally {
@@ -1922,7 +1927,7 @@ class DataGrid extends base_element_default {
   }
   srcChanged() {
     this.setupDataSource();
-    this._clearSelectionIfNeeded();
+    this.#clearSelectionIfNeeded();
     return this.refresh();
   }
   showPageSizeChanged() {
@@ -1951,15 +1956,13 @@ class DataGrid extends base_element_default {
     this.renderTable();
     this.renderBody();
   }
-  _syncSelectionOptions() {
-    if (this.options.singleSelect) {
-      this.options.selectable = true;
-    }
+  #syncSelectionOptions() {
+    normalizeSelectionOptions(this.options);
   }
   singleSelectChanged() {
-    this._syncSelectionOptions();
+    this.#syncSelectionOptions();
     if (this.options.singleSelect) {
-      this._clearSelectionIfNeeded();
+      this.#clearSelectionIfNeeded();
     }
     this.selectableChanged();
   }
@@ -2137,7 +2140,7 @@ class DataGrid extends base_element_default {
     this.btnLast = this.querySelector(".dg-btn-last");
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
-    this._syncSelectionOptions();
+    this.#syncSelectionOptions();
     on(this, CORE_EVENTS, this);
     this.showPageSizeChanged();
     this.setupDataSource();
@@ -2200,12 +2203,12 @@ class DataGrid extends base_element_default {
         super.handleEvent(event);
     }
   }
-  _ownsControl(element) {
+  ownsControl(element) {
     return Boolean(element && element.closest("data-grid") === this);
   }
   _handleMouseover(target) {
     const cell = target.closest("tbody td");
-    if (!cell || !this._ownsControl(cell)) {
+    if (!cell || !this.ownsControl(cell)) {
       return;
     }
     const generated = cell.hasAttribute("data-dg-overflow-title");
@@ -2222,7 +2225,7 @@ class DataGrid extends base_element_default {
       cell.removeAttribute("data-dg-overflow-title");
     }
   }
-  _cancelTextInputs(root) {
+  #cancelTextInputs(root) {
     for (const input of root.querySelectorAll("input")) {
       textInputState.get(input)?.apply.cancel();
       textInputState.delete(input);
@@ -2230,7 +2233,7 @@ class DataGrid extends base_element_default {
   }
   _handleClick(event, target) {
     const pager = target.closest(".dg-btn-first, .dg-btn-prev, .dg-btn-next, .dg-btn-last");
-    if (pager && this._ownsControl(pager)) {
+    if (pager && this.ownsControl(pager)) {
       if (pager.classList.contains("dg-btn-first"))
         return this.getFirst();
       if (pager.classList.contains("dg-btn-prev"))
@@ -2242,14 +2245,14 @@ class DataGrid extends base_element_default {
       return;
     }
     const sortButton = target.closest(".dg-sort");
-    if (sortButton && this._ownsControl(sortButton)) {
+    if (sortButton && this.ownsControl(sortButton)) {
       const th = sortButton.closest("th.dg-sortable");
       if (th) {
         return this.sortData(th);
       }
     }
     const tr = target.closest("tr.dg-data-row");
-    if (tr && this._ownsControl(tr) && this.options.rowClick !== "none") {
+    if (tr && this.ownsControl(tr) && this.options.rowClick !== "none") {
       const rowIndex = Number(tr.dataset.rowIndex);
       const row = this.rows[rowIndex];
       if (row) {
@@ -2292,27 +2295,27 @@ class DataGrid extends base_element_default {
   }
   _handleChange(event, target) {
     const pageSize = target.closest(".dg-select-per-page");
-    if (this._ownsControl(pageSize)) {
+    if (this.ownsControl(pageSize)) {
       return this.changePerPage();
     }
     const page = target.closest(".dg-input-page");
-    if (this._ownsControl(page)) {
+    if (this.ownsControl(page)) {
       return this.gotoPage();
     }
     const filter = target.closest(this._filterSelector);
-    if (filter && this._ownsControl(filter) && /select/i.test(filter.tagName)) {
+    if (filter && this.ownsControl(filter) && /select/i.test(filter.tagName)) {
       return this.filterData();
     }
     const multi = target.closest(".dg-multiselect");
-    if (multi && this._ownsControl(multi)) {
+    if (multi && this.ownsControl(multi)) {
       updateMultiSelectSummary(multi);
       return this.filterData();
     }
   }
   _handleInput(target) {
     const search = target.closest(".dg-search");
-    if (this._ownsControl(search)) {
-      this._clearSelectionIfNeeded();
+    if (this.ownsControl(search)) {
+      this.#clearSelectionIfNeeded();
       const state = textInputState.get(search);
       if (state && !state.composing) {
         state.apply();
@@ -2320,7 +2323,7 @@ class DataGrid extends base_element_default {
       return;
     }
     const filter = target.closest(this._filterSelector);
-    if (this._ownsControl(filter)) {
+    if (this.ownsControl(filter)) {
       const state = textInputState.get(filter);
       if (state && !state.composing) {
         state.apply();
@@ -2330,12 +2333,12 @@ class DataGrid extends base_element_default {
   _handleKeydown(event, target) {
     if (event.key === "Enter") {
       const page = target.closest(".dg-input-page");
-      if (this._ownsControl(page)) {
+      if (this.ownsControl(page)) {
         event.preventDefault();
         return this.gotoPage();
       }
       const state = textInputState.get(target);
-      if (this._ownsControl(target) && state && !state.composing && !event.isComposing) {
+      if (this.ownsControl(target) && state && !state.composing && !event.isComposing) {
         event.preventDefault();
         state.apply.flush();
         return;
@@ -2344,13 +2347,13 @@ class DataGrid extends base_element_default {
     if (event.key === "Escape") {
       const input = target;
       const state = textInputState.get(input);
-      if (this._ownsControl(target.closest(".dg-search")) && state && input.value) {
+      if (this.ownsControl(target.closest(".dg-search")) && state && input.value) {
         input.value = "";
         state.apply.cancel();
         return this.commitSearch();
       }
       const filter = target.closest(this._filterSelector);
-      if (this._ownsControl(filter) && state && input.value) {
+      if (this.ownsControl(filter) && state && input.value) {
         input.value = "";
         state.apply.cancel();
         return this.filterData();
@@ -2359,7 +2362,7 @@ class DataGrid extends base_element_default {
   }
   _handleComposition(target, composing) {
     const input = target.closest(`.dg-search, ${this._filterSelector}`);
-    if (!input || !this._ownsControl(input)) {
+    if (!input || !this.ownsControl(input)) {
       return;
     }
     const state = textInputState.get(input);
@@ -2372,12 +2375,12 @@ class DataGrid extends base_element_default {
     }
   }
   init() {
-    if (this._deferInitialLoad()) {
+    if (this.#deferInitialLoad()) {
       this.configureUi();
       this.classList.add("dg-initialized");
       this.fireEvents = true;
       this._lazyPending = true;
-      this._observeInitialLoad();
+      this.#observeInitialLoad();
       this.log("initialized (lazy)");
       return;
     }
@@ -2388,10 +2391,10 @@ class DataGrid extends base_element_default {
       this.log("initialized");
     });
   }
-  _deferInitialLoad() {
+  #deferInitialLoad() {
     return this.options.loading === "lazy" && !this._initialResult && (Boolean(this.options.src) || Boolean(this.options.dataSource));
   }
-  _observeInitialLoad() {
+  #observeInitialLoad() {
     this._loadObserver = new IntersectionObserver((entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) {
         return;
@@ -2456,7 +2459,7 @@ class DataGrid extends base_element_default {
       return isColumnHidden(col);
     });
   }
-  _syncColumnVisibility() {
+  syncColumnVisibility() {
     this._columns = this.buildColumns();
     for (const column of this.getColumns()) {
       const id = this.getColumnId(column);
@@ -2466,11 +2469,11 @@ class DataGrid extends base_element_default {
         cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
       }
     }
-    this._syncSpanningCells();
+    this.#syncSpanningCells();
     this.renderFooter();
     this.queueFrozenSync();
   }
-  _syncSpanningCells() {
+  #syncSpanningCells() {
     const colspan = Math.max(1, this.columnsLength(true));
     for (const cell of this.querySelectorAll("[data-dg-span-columns]")) {
       cell.setAttribute("colspan", String(colspan));
@@ -2527,7 +2530,7 @@ class DataGrid extends base_element_default {
   showColumn(field, render = true) {
     this.setColProp(field, "hidden", false);
     if (render)
-      this._syncColumnVisibility();
+      this.syncColumnVisibility();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "visible"
@@ -2536,7 +2539,7 @@ class DataGrid extends base_element_default {
   hideColumn(field, render = true) {
     this.setColProp(field, "hidden", true);
     if (render)
-      this._syncColumnVisibility();
+      this.syncColumnVisibility();
     dispatch(this, "columnVisibility", {
       col: field,
       visibility: "hidden"
@@ -2568,7 +2571,7 @@ class DataGrid extends base_element_default {
         this.rowHeight = tr.offsetHeight;
       }
     }
-    this._setNoData(this.tbody);
+    this.#setNoData(this.tbody);
     return this.fixPage();
   }
   resolveRowKey(row, index = 0) {
@@ -2671,7 +2674,7 @@ class DataGrid extends base_element_default {
     } else {
       sel.ids.add(key);
     }
-    this._selectionChanged();
+    this.#selectionChanged();
   }
   deselectRow(row, index = 0) {
     const key = this.resolveRowKey(row, index);
@@ -2681,7 +2684,7 @@ class DataGrid extends base_element_default {
     } else {
       sel.ids.delete(key);
     }
-    this._selectionChanged();
+    this.#selectionChanged();
   }
   toggleRow(row, index = 0) {
     if (this.isRowSelected(row, index)) {
@@ -2697,13 +2700,13 @@ class DataGrid extends base_element_default {
     } else {
       this._selection = { mode: "all", ids: new Set, except: new Set };
     }
-    this._selectionChanged();
+    this.#selectionChanged();
   }
   clearSelection() {
     this._selection = { mode: "explicit", ids: new Set, except: new Set };
-    this._selectionChanged();
+    this.#selectionChanged();
   }
-  _clearSelectionIfNeeded() {
+  #clearSelectionIfNeeded() {
     const selection = this._selection;
     if (selection.mode === "explicit" && selection.ids.size === 0) {
       return;
@@ -2727,7 +2730,7 @@ class DataGrid extends base_element_default {
     }
     return this.options.singleSelect ? selected[0] ?? {} : selected;
   }
-  _selectionChanged() {
+  #selectionChanged() {
     const tbody = this.tbody;
     if (tbody) {
       const trs = Array.from(tbody.querySelectorAll("tr.dg-data-row"));
@@ -2839,7 +2842,7 @@ class DataGrid extends base_element_default {
     }
     return this.setQuery({ sort });
   }
-  _sort(columnName, direction) {
+  #sort(columnName, direction) {
     if (direction !== "none") {
       const column = this.getCol(columnName);
       if (column && !this.isColumnSortable(column)) {
@@ -2850,13 +2853,13 @@ class DataGrid extends base_element_default {
     return this.setQuery({ sort: direction === "none" ? [] : [{ field: columnName, direction }] });
   }
   sortAsc(columnName) {
-    return this._sort(columnName, "asc");
+    return this.#sort(columnName, "asc");
   }
   sortDesc(columnName) {
-    return this._sort(columnName, "desc");
+    return this.#sort(columnName, "desc");
   }
   sortNone(columnName) {
-    return this._sort(columnName, "none");
+    return this.#sort(columnName, "none");
   }
   clearFilters() {
     const inputs = this.querySelectorAll(this._filterSelector);
@@ -2891,14 +2894,14 @@ class DataGrid extends base_element_default {
       if (!name) {
         continue;
       }
-      const filter = this._readFilterControl(input);
+      const filter = this.#readFilterControl(input);
       if (filter) {
         filters[name] = filter;
       }
     }
     return this.setQuery({ filters });
   }
-  _readFilterControl(input) {
+  #readFilterControl(input) {
     if (input.dataset.filterMode === "multi") {
       const values = readMultiSelect(input);
       return values.length ? { operator: "in", value: values } : undefined;
@@ -3168,7 +3171,7 @@ class DataGrid extends base_element_default {
     }
     const oldRow = thead?.querySelector("tr.dg-head-filters");
     if (oldRow) {
-      this._cancelTextInputs(oldRow);
+      this.#cancelTextInputs(oldRow);
     }
     if (thead && oldRow) {
       thead.replaceChild(tr, oldRow);
@@ -3195,7 +3198,7 @@ class DataGrid extends base_element_default {
     if (field) {
       const filterState = this._query.filters?.[field];
       if (filterState) {
-        this._writeFilterControl(filter, filterState);
+        this.#writeFilterControl(filter, filterState);
       }
     }
     if (filter instanceof HTMLSelectElement) {
@@ -3207,7 +3210,7 @@ class DataGrid extends base_element_default {
       th.appendChild(filter);
     }
   }
-  _writeFilterControl(filter, filterState) {
+  #writeFilterControl(filter, filterState) {
     const mode = filter.dataset.filterMode;
     if (mode === "multi") {
       setMultiSelectValues(filter, Array.isArray(filterState.value) ? filterState.value : []);
@@ -3539,7 +3542,7 @@ class ColumnResizer extends base_plugin_default {
   }
   onclick(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     if (target.closest(".dg-resizer")) {
@@ -3548,7 +3551,7 @@ class ColumnResizer extends base_plugin_default {
   }
   onmousedown(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const resizer = target.closest(".dg-resizer");
@@ -3654,7 +3657,7 @@ class ContextMenu extends base_plugin_default {
   }
   onchange(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const t = target.closest(".dg-menu input[data-name]");
@@ -3683,7 +3686,7 @@ class ContextMenu extends base_plugin_default {
       return;
     }
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const header = target.closest("thead th");
@@ -3754,7 +3757,7 @@ class DraggableHeaders extends base_plugin_default {
       return null;
     }
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return null;
     }
     return target.closest('thead tr.dg-head-columns th[data-column-id]:not([data-column-id^="$"])');
@@ -3883,7 +3886,7 @@ class SelectableRows extends base_plugin_default {
   }
   onchange(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const grid = this.grid;
@@ -3913,7 +3916,7 @@ class SelectableRows extends base_plugin_default {
   }
   onclick(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const grid = this.grid;
@@ -4596,7 +4599,7 @@ class ResponsiveGrid extends base_plugin_default {
     if (this.grid.getColumnSortDirection(column.field)) {
       return true;
     }
-    if (this.grid._query?.filters?.[column.field]) {
+    if (this.grid.query.filters?.[column.field]) {
       return true;
     }
     return false;
@@ -4705,7 +4708,7 @@ class ResponsiveGrid extends base_plugin_default {
   }
   _rebuildDetails() {
     this._restoreDetails();
-    this.grid._syncColumnVisibility();
+    this.grid.syncColumnVisibility();
     if (!this.hasHiddenColumns()) {
       return;
     }
@@ -4793,7 +4796,7 @@ class RowActions extends base_plugin_default {
   }
   onclick(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const toggle = target.closest(".dg-actions-toggle");
@@ -5264,7 +5267,7 @@ class RowDetails extends base_plugin_default {
   }
   onclick(event) {
     const target = event.target;
-    if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+    if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;
     }
     const button = target.closest(`.${DETAILS_CLASS}-toggle-control`);

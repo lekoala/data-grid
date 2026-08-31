@@ -50,7 +50,7 @@ test("menu is read at interaction time without rebuilding the header", () => {
     table.appendChild(thead);
     grid.appendChild(table);
     grid.options = { menu: false };
-    grid._ownsControl = () => true;
+    grid.ownsControl = () => true;
 
     const plugin = new ContextMenu(/** @type {any} */ (grid));
     const menu = document.createElement("ul");

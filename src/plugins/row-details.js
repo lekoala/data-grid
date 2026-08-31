@@ -33,7 +33,7 @@ class RowDetails extends BasePlugin {
      */
     onclick(event) {
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;
         }
         const button = target.closest(`.${DETAILS_CLASS}-toggle-control`);

@@ -42,7 +42,7 @@ class DraggableHeaders extends BasePlugin {
             return null;
         }
         const target = event.target;
-        if (!(target instanceof Element) || !this.grid._ownsControl(target)) {
+        if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return null;
         }
         return /** @type {HTMLTableCellElement|null} */ (
