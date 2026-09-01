@@ -52,6 +52,12 @@ page=1&pageSize=10&search=dupont&sort[0][field]=name&sort[0][direction]=asc&filt
 
 Provide `serializeQuery` to map the state to your own server protocol.
 
+The endpoint is resolved with the platform's standard
+`new URL(endpoint, document.baseURI)` rules. `FetchDataSource` does not add a
+cache-busting parameter: normal HTTP caching applies. Applications that need
+`cache: "no-store"`, a nonce or another request policy should provide their own
+data source.
+
 ## Global search
 
 `search` is a single global search term, distinct from the column `filters`

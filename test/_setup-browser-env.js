@@ -4,7 +4,7 @@ import { GlobalRegistrator } from "@happy-dom/global-registrator";
 // that need a real HTTP round-trip (ex: demo/server.js served by Bun.serve).
 globalThis.NativeResponse = globalThis.Response;
 
-GlobalRegistrator.register();
+GlobalRegistrator.register({ url: "http://localhost/" });
 
 // happy-dom does not implement the 2d canvas context, which the grid uses to
 // compute column widths via canvas.measureText. Provide a minimal stub.

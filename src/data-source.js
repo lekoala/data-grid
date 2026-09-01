@@ -373,18 +373,9 @@ export class FetchDataSource {
      * @returns {URL}
      */
     buildUrl(query) {
-        let base = window.location.href;
-        // Tests run against about:blank where relative urls cannot resolve
-        if (!base || base === "about:blank") {
-            base = "http://localhost/";
-        }
-        const last = base.split("/").at(-1);
-        if (!last?.includes(".")) {
-            base += base.endsWith("/") ? "" : "/";
-        }
-        const url = new URL(this.url, base);
+        const url = new URL(this.url, document.baseURI);
         const serialized = this.serializeQuery ? this.serializeQuery(query) : query;
-        const merged = { ...serialized, ...this.params, r: Date.now() };
+        const merged = { ...serialized, ...this.params };
         encodeSearchParams(merged, "", url.searchParams);
         return url;
     }

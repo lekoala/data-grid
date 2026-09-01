@@ -196,7 +196,22 @@ test("FetchDataSource builds a structured url", () => {
     expect(url.searchParams.get("sort[0][direction]")).toBe("asc");
     expect(url.searchParams.get("filters[status][operator]")).toBe("eq");
     expect(url.searchParams.get("filters[status][value]")).toBe("active");
-    expect(url.searchParams.get("r")).toBeTruthy();
+    expect(url.searchParams.has("r")).toBe(false);
+});
+
+test("FetchDataSource follows native relative URL resolution", () => {
+    const base = document.createElement("base");
+    base.href = "https://example.test/admin/users";
+    document.head.appendChild(base);
+
+    try {
+        const ds = new FetchDataSource("api/users");
+        const url = ds.buildUrl({ page: 1, pageSize: 10, search: "", sort: [], filters: {} });
+        expect(url.origin).toBe("https://example.test");
+        expect(url.pathname).toBe("/admin/api/users");
+    } finally {
+        base.remove();
+    }
 });
 
 test("FetchDataSource parses an array response", async () => {
