@@ -90,7 +90,7 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                          |
 | `FixedHeight`      | `autoheight`                  | fills the table height on the last page                         |
 | `AutosizeColumn`   | `autosize`                    | measures widthless columns when enabled (off by default)        |
-| `SaveState`        | `saveState`                   | persists query + column state                                   |
+| `SaveState`        | `saveState`                   | persists query + column visibility                              |
 
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.

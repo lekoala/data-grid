@@ -1,23 +1,23 @@
 import BasePlugin from "../core/base-plugin.js";
-import debounce from "../utils/debounce.js";
+
+const STATE_EVENTS = ["bodyRendered", "columnVisibility"];
 
 /**
  * @typedef CachedGridState
  * @property {import("../data-source.js").QueryState} query
- * @property {Array<{ field: string, hidden?: boolean }>} columns
+ * @property {Array<{ field: string, hidden: boolean }>} columns
  */
 
 class SaveState extends BasePlugin {
+    /** @type {(() => void) | null} */
+    #onStateChanged;
+
     /**
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid) {
         super(grid);
-        this.cachedState = null;
-        /** @type {(() => void) | null} */
-        this.onBodyRendered = null;
-        /** @type {((() => void) & { cancel: () => void }) | null} */
-        this.onScroll = null;
+        this.#onStateChanged = null;
         this.log("Init");
     }
 
@@ -34,16 +34,14 @@ class SaveState extends BasePlugin {
 
         const cachedState = this.#getState();
         if (cachedState) {
-            this.cachedState = cachedState;
-
             this.log("restore state");
 
-            // Restore hidden columns
+            // Restore column visibility in both directions.
             if (Array.isArray(cachedState.columns)) {
                 for (const col of cachedState.columns) {
                     const target = grid.options.columns.find((c) => c.field === col.field);
-                    if (target && col.hidden) {
-                        target.hidden = true;
+                    if (target) {
+                        target.hidden = Boolean(col.hidden);
                     }
                 }
             }
@@ -58,28 +56,25 @@ class SaveState extends BasePlugin {
     }
 
     #listen() {
-        if (this.onBodyRendered) {
+        if (this.#onStateChanged) {
             return;
         }
         const grid = this.grid;
-        this.onBodyRendered = () => this.#update();
-        this.onScroll = debounce(() => this.#update(), 200);
-        grid.addEventListener("bodyRendered", this.onBodyRendered);
-        document.addEventListener("scroll", this.onScroll);
+        this.#onStateChanged = () => this.#update();
+        for (const eventName of STATE_EVENTS) {
+            grid.addEventListener(eventName, this.#onStateChanged);
+        }
         this.#update();
     }
 
     #unlisten() {
-        const grid = this.grid;
-        if (this.onBodyRendered) {
-            grid.removeEventListener("bodyRendered", this.onBodyRendered);
-            this.onBodyRendered = null;
+        if (!this.#onStateChanged) {
+            return;
         }
-        if (this.onScroll) {
-            document.removeEventListener("scroll", this.onScroll);
-            this.onScroll.cancel();
-            this.onScroll = null;
+        for (const eventName of STATE_EVENTS) {
+            this.grid.removeEventListener(eventName, this.#onStateChanged);
         }
+        this.#onStateChanged = null;
     }
 
     /** @param {Boolean} enabled */
@@ -96,7 +91,7 @@ class SaveState extends BasePlugin {
     }
 
     /**
-     * Persist the current query, columns and scroll position.
+     * Persist the current query and column visibility.
      */
     #update() {
         const grid = this.grid;
@@ -127,7 +122,7 @@ class SaveState extends BasePlugin {
             if (raw) {
                 state = JSON.parse(raw);
             }
-        } catch (_) {}
+        } catch {}
         return state;
     }
 
@@ -137,7 +132,7 @@ class SaveState extends BasePlugin {
     #setState(state) {
         try {
             sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
-        } catch (_) {}
+        } catch {}
     }
 }
 

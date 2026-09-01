@@ -5245,12 +5245,13 @@ class EditableColumn extends base_plugin_default {
 var editable_column_default = EditableColumn;
 
 // src/plugins/save-state.js
+var STATE_EVENTS = ["bodyRendered", "columnVisibility"];
+
 class SaveState extends base_plugin_default {
+  #onStateChanged;
   constructor(grid) {
     super(grid);
-    this.cachedState = null;
-    this.onBodyRendered = null;
-    this.onScroll = null;
+    this.#onStateChanged = null;
     this.log("Init");
   }
   connected() {
@@ -5263,13 +5264,12 @@ class SaveState extends base_plugin_default {
     this.log("enabled");
     const cachedState = this.#getState();
     if (cachedState) {
-      this.cachedState = cachedState;
       this.log("restore state");
       if (Array.isArray(cachedState.columns)) {
         for (const col of cachedState.columns) {
           const target = grid.options.columns.find((c) => c.field === col.field);
-          if (target && col.hidden) {
-            target.hidden = true;
+          if (target) {
+            target.hidden = Boolean(col.hidden);
           }
         }
       }
@@ -5280,27 +5280,24 @@ class SaveState extends base_plugin_default {
     this.#listen();
   }
   #listen() {
-    if (this.onBodyRendered) {
+    if (this.#onStateChanged) {
       return;
     }
     const grid = this.grid;
-    this.onBodyRendered = () => this.#update();
-    this.onScroll = debounce(() => this.#update(), 200);
-    grid.addEventListener("bodyRendered", this.onBodyRendered);
-    document.addEventListener("scroll", this.onScroll);
+    this.#onStateChanged = () => this.#update();
+    for (const eventName of STATE_EVENTS) {
+      grid.addEventListener(eventName, this.#onStateChanged);
+    }
     this.#update();
   }
   #unlisten() {
-    const grid = this.grid;
-    if (this.onBodyRendered) {
-      grid.removeEventListener("bodyRendered", this.onBodyRendered);
-      this.onBodyRendered = null;
+    if (!this.#onStateChanged) {
+      return;
     }
-    if (this.onScroll) {
-      document.removeEventListener("scroll", this.onScroll);
-      this.onScroll.cancel();
-      this.onScroll = null;
+    for (const eventName of STATE_EVENTS) {
+      this.grid.removeEventListener(eventName, this.#onStateChanged);
     }
+    this.#onStateChanged = null;
   }
   saveStateChanged(enabled) {
     if (enabled) {
@@ -5332,13 +5329,13 @@ class SaveState extends base_plugin_default {
       if (raw) {
         state = JSON.parse(raw);
       }
-    } catch (_) {}
+    } catch {}
     return state;
   }
   #setState(state) {
     try {
       sessionStorage.setItem(`gridSaveState_${this.grid.id}`, JSON.stringify(state));
-    } catch (_) {}
+    } catch {}
   }
 }
 var save_state_default = SaveState;

@@ -3,23 +3,16 @@ export type CachedGridState = {
     query: import("../data-source.js").QueryState;
     columns: Array<{
         field: string;
-        hidden?: boolean;
+        hidden: boolean;
     }>;
 };
 /**
  * @typedef CachedGridState
  * @property {import("../data-source.js").QueryState} query
- * @property {Array<{ field: string, hidden?: boolean }>} columns
+ * @property {Array<{ field: string, hidden: boolean }>} columns
  */
 declare class SaveState extends BasePlugin {
     #private;
-    cachedState: CachedGridState | null;
-    /** @type {(() => void) | null} */
-    onBodyRendered: (() => void) | null;
-    /** @type {((() => void) & { cancel: () => void }) | null} */
-    onScroll: ((() => void) & {
-        cancel: () => void;
-    }) | null;
     /**
      * @param {import("../data-grid.js").default} grid
      */

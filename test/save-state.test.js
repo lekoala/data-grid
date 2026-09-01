@@ -21,7 +21,10 @@ test("restores a cached query through the plugin API before the first load", asy
                 sort: [{ field: "name", direction: "desc" }],
                 filters: { name: { operator: "eq", value: "Ada" } },
             },
-            columns: [],
+            columns: [
+                { field: "name", hidden: false },
+                { field: "email", hidden: true },
+            ],
         }),
     );
 
@@ -29,7 +32,10 @@ test("restores a cached query through the plugin API before the first load", asy
     const queries = [];
     const grid = new DataGrid({
         id: gridId,
-        columns: [{ field: "name", title: "Name" }],
+        columns: [
+            { field: "name", title: "Name", hidden: true },
+            { field: "email", title: "Email" },
+        ],
         saveState: true,
         dataSource: {
             load(query) {
@@ -51,6 +57,38 @@ test("restores a cached query through the plugin API before the first load", asy
         filters: { name: { operator: "eq", value: "Ada" } },
     });
     expect(grid.query).toEqual(queries[0]);
+    expect(grid.options.columns[0].hidden).toBe(false);
+    expect(grid.options.columns[1].hidden).toBe(true);
+});
+
+test("persists successful queries and explicit column visibility", async () => {
+    DataGrid.registerPlugins({ SaveState });
+    const grid = new DataGrid({
+        id: gridId,
+        columns: [
+            { field: "name", title: "Name" },
+            { field: "email", title: "Email" },
+        ],
+        saveState: true,
+        dataSource: {
+            load() {
+                return Promise.resolve({ rows: [{ name: "Ada", email: "ada@example.test" }], total: 1 });
+            },
+        },
+    });
+    const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    document.body.appendChild(grid);
+    await connected;
+
+    await grid.setQuery({ search: "Ada" });
+    grid.hideColumn("email", false);
+
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    expect(stored.query.search).toBe("Ada");
+    expect(stored.columns).toEqual([
+        { field: "name", hidden: false },
+        { field: "email", hidden: true },
+    ]);
 });
 
 test("save-state can be enabled and disabled after connection", async () => {

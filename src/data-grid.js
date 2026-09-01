@@ -255,7 +255,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {String} searchPlaceholder Visible hint for the search input (defaults to "")
  * @property {Number} searchDelay Debounce delay in milliseconds before the global search is applied (0 = immediate)
  * @property {Number} minSearchLength Minimum number of characters before a search is applied (0 = always)
- * @property {Boolean} saveState Enable/disable save state plugin (SaveState module)
+ * @property {Boolean} saveState Persist the query and column visibility (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
  * @property {?String} caption A table caption, providing the accessible name of the table (falls back to aria-labelledby, then aria-label)

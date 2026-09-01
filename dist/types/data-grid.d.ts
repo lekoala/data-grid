@@ -428,7 +428,7 @@ export type Options = {
      */
     minSearchLength: number;
     /**
-     * Enable/disable save state plugin (SaveState module)
+     * Persist the query and column visibility (SaveState module)
      */
     saveState: boolean;
     /**
