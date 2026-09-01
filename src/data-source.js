@@ -378,7 +378,7 @@ export class FetchDataSource {
         if (!base || base === "about:blank") {
             base = "http://localhost/";
         }
-        const last = base.split("/").pop();
+        const last = base.split("/").at(-1);
         if (!last?.includes(".")) {
             base += base.endsWith("/") ? "" : "/";
         }

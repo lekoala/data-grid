@@ -63,7 +63,7 @@ class AutosizeColumn extends BasePlugin {
             return;
         }
         const firstVal = grid.rows[0];
-        const lastVal = grid.rows[grid.rows.length - 1];
+        const lastVal = grid.rows.at(-1) ?? firstVal;
         let v = firstVal[field] != null ? firstVal[field].toString() : "";
         const v2 = lastVal[field] != null ? lastVal[field].toString() : "";
         if (v2.length > v.length) {

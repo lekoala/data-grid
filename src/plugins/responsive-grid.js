@@ -63,7 +63,7 @@ class ResponsiveGrid extends BasePlugin {
         this.#observed = null;
         this.#scheduleResize = debounce(() => this.resize(), 100);
         this.#observer = new ResizeObserver((entries) => {
-            this.#lastEntry = entries[entries.length - 1];
+            this.#lastEntry = entries.at(-1) ?? null;
             this.#scheduleResize();
         });
     }

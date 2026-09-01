@@ -514,7 +514,7 @@ class FetchDataSource {
     if (!base || base === "about:blank") {
       base = "http://localhost/";
     }
-    const last = base.split("/").pop();
+    const last = base.split("/").at(-1);
     if (!last?.includes(".")) {
       base += base.endsWith("/") ? "" : "/";
     }
@@ -4418,7 +4418,7 @@ class AutosizeColumn extends base_plugin_default {
       return;
     }
     const firstVal = grid.rows[0];
-    const lastVal = grid.rows[grid.rows.length - 1];
+    const lastVal = grid.rows.at(-1) ?? firstVal;
     let v = firstVal[field] != null ? firstVal[field].toString() : "";
     const v2 = lastVal[field] != null ? lastVal[field].toString() : "";
     if (v2.length > v.length) {
@@ -4481,7 +4481,7 @@ class ResponsiveGrid extends base_plugin_default {
     this.#observed = null;
     this.#scheduleResize = debounce(() => this.resize(), 100);
     this.#observer = new ResizeObserver((entries) => {
-      this.#lastEntry = entries[entries.length - 1];
+      this.#lastEntry = entries.at(-1) ?? null;
       this.#scheduleResize();
     });
   }
