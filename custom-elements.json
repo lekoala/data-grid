@@ -146,6 +146,11 @@
               "static": true
             },
             {
+              "kind": "method",
+              "name": "loadLabels",
+              "static": true
+            },
+            {
               "kind": "getter",
               "name": "noData",
               "description": "Gets the text to be displayed when no data is loaded."
@@ -209,6 +214,11 @@
               "kind": "method",
               "name": "refresh",
               "description": "Reload the result matching the current query."
+            },
+            {
+              "kind": "method",
+              "name": "load",
+              "description": "Single load path: abort previous request, load the current query, protect against stale responses, then render."
             },
             {
               "kind": "method",

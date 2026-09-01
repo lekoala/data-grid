@@ -77,20 +77,21 @@ function extractPublicMembers(source) {
             continue;
         }
         if (pendingDoc) {
-            const def = line.trim().match(/^(?:static\s+)?(?:get\s+)?([A-Za-z_$][\w$]*)\s*(\(|=|\{)/);
+            const def = line
+                .trim()
+                .match(/^(?:(static)\s+)?(?:(async|get)\s+)?([A-Za-z_$][\w$]*)\s*(\(|=|\{)/);
             if (def) {
-                const trimmed = line.trim();
-                const delimiter = def[2];
+                const [, staticModifier, memberModifier, name, delimiter] = def;
                 let kind = "method";
-                if (trimmed.startsWith("get ")) {
+                if (memberModifier === "get") {
                     kind = "getter";
                 } else if (delimiter === "=") {
                     kind = "field";
                 }
                 members.push({
                     kind,
-                    name: def[1],
-                    static: trimmed.startsWith("static"),
+                    name,
+                    static: staticModifier === "static",
                     description: extractDescription(pendingDoc),
                 });
             }
