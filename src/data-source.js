@@ -360,12 +360,16 @@ export class FetchDataSource {
      * @param {Record<string, any>} [options.params] Extra constant HTTP params appended to each request
      * @param {(query: QueryState) => any} [options.serializeQuery] Defaults to identity (QueryState preserved)
      * @param {(response: any) => PageResult} [options.parseResponse] Defaults to parseResult
+     * @param {RequestInit} [options.fetch] Standard options forwarded to `fetch()`
+     * @param {Boolean} [options.cacheBust] Append a timestamp query parameter (disabled by default)
      */
-    constructor(url, { params = {}, serializeQuery, parseResponse } = {}) {
+    constructor(url, { params = {}, serializeQuery, parseResponse, fetch: fetchOptions = {}, cacheBust = false } = {}) {
         this.url = url;
         this.params = params;
         this.serializeQuery = serializeQuery;
         this.parseResponse = parseResponse;
+        this.fetchOptions = fetchOptions;
+        this.cacheBust = cacheBust;
     }
 
     /**
@@ -377,6 +381,9 @@ export class FetchDataSource {
         const serialized = this.serializeQuery ? this.serializeQuery(query) : query;
         const merged = { ...serialized, ...this.params };
         encodeSearchParams(merged, "", url.searchParams);
+        if (this.cacheBust) {
+            url.searchParams.set("_", `${Date.now()}`);
+        }
         return url;
     }
 
@@ -387,11 +394,13 @@ export class FetchDataSource {
      */
     async load(query, { signal } = {}) {
         const url = this.buildUrl(query);
+        const requestSignal = signal ?? this.fetchOptions.signal ?? undefined;
+        const fetchOptions = { ...this.fetchOptions, ...(requestSignal ? { signal: requestSignal } : {}) };
         let response;
         try {
-            response = await fetch(url, { signal });
+            response = await fetch(url, fetchOptions);
         } catch (err) {
-            if (signal?.aborted) {
+            if (requestSignal?.aborted) {
                 throw err;
             }
             throw new Error("Network response error");

@@ -196,7 +196,13 @@ test("FetchDataSource builds a structured url", () => {
     expect(url.searchParams.get("sort[0][direction]")).toBe("asc");
     expect(url.searchParams.get("filters[status][operator]")).toBe("eq");
     expect(url.searchParams.get("filters[status][value]")).toBe("active");
-    expect(url.searchParams.has("r")).toBe(false);
+    expect(url.searchParams.has("_")).toBe(false);
+});
+
+test("FetchDataSource cache busting is explicit and applied after params", () => {
+    const ds = new FetchDataSource("/api/users", { params: { _: "configured" }, cacheBust: true });
+    const url = ds.buildUrl({ page: 1, pageSize: 10, search: "", sort: [], filters: {} });
+    expect(url.searchParams.get("_")).toMatch(/^\d+$/);
 });
 
 test("FetchDataSource follows native relative URL resolution", () => {
@@ -232,6 +238,28 @@ test("FetchDataSource parses the canonical response contract", async () => {
     const result = await ds.load({ page: 1, pageSize: 10, sort: [], filters: {}, search: "" });
     expect(result.total).toBe(42);
     expect(result.meta.unfilteredTotal).toBe(100);
+    delete globalThis.fetch;
+});
+
+test("FetchDataSource forwards fetch options and prioritizes the load signal", async () => {
+    let receivedOptions;
+    globalThis.fetch = async (_url, options) => {
+        receivedOptions = options;
+        return { ok: true, json: async () => [] };
+    };
+    const configuredController = new AbortController();
+    const loadController = new AbortController();
+    const ds = new FetchDataSource("/api/users", {
+        fetch: {
+            cache: "no-store",
+            credentials: "include",
+            signal: configuredController.signal,
+        },
+    });
+    await ds.load({ page: 1, pageSize: 10, search: "", sort: [], filters: {} }, { signal: loadController.signal });
+    expect(receivedOptions.cache).toBe("no-store");
+    expect(receivedOptions.credentials).toBe("include");
+    expect(receivedOptions.signal).toBe(loadController.signal);
     delete globalThis.fetch;
 });
 

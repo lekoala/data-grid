@@ -503,26 +503,33 @@ function applySearch(rows, search) {
 }
 
 class FetchDataSource {
-  constructor(url, { params = {}, serializeQuery, parseResponse } = {}) {
+  constructor(url, { params = {}, serializeQuery, parseResponse, fetch: fetchOptions = {}, cacheBust = false } = {}) {
     this.url = url;
     this.params = params;
     this.serializeQuery = serializeQuery;
     this.parseResponse = parseResponse;
+    this.fetchOptions = fetchOptions;
+    this.cacheBust = cacheBust;
   }
   buildUrl(query) {
     const url = new URL(this.url, document.baseURI);
     const serialized = this.serializeQuery ? this.serializeQuery(query) : query;
     const merged = { ...serialized, ...this.params };
     encodeSearchParams(merged, "", url.searchParams);
+    if (this.cacheBust) {
+      url.searchParams.set("_", `${Date.now()}`);
+    }
     return url;
   }
   async load(query, { signal } = {}) {
     const url = this.buildUrl(query);
+    const requestSignal = signal ?? this.fetchOptions.signal ?? undefined;
+    const fetchOptions = { ...this.fetchOptions, ...requestSignal ? { signal: requestSignal } : {} };
     let response;
     try {
-      response = await fetch(url, { signal });
+      response = await fetch(url, fetchOptions);
     } catch (err) {
-      if (signal?.aborted) {
+      if (requestSignal?.aborted) {
         throw err;
       }
       throw new Error("Network response error");

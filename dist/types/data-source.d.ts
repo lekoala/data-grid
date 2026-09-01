@@ -180,17 +180,23 @@ export declare class FetchDataSource {
     params: Record<string, any>;
     serializeQuery: ((query: QueryState) => any) | undefined;
     parseResponse: ((response: any) => PageResult) | undefined;
+    fetchOptions: RequestInit;
+    cacheBust: boolean;
     /**
      * @param {String} url
      * @param {Object} [options]
      * @param {Record<string, any>} [options.params] Extra constant HTTP params appended to each request
      * @param {(query: QueryState) => any} [options.serializeQuery] Defaults to identity (QueryState preserved)
      * @param {(response: any) => PageResult} [options.parseResponse] Defaults to parseResult
+     * @param {RequestInit} [options.fetch] Standard options forwarded to `fetch()`
+     * @param {Boolean} [options.cacheBust] Append a timestamp query parameter (disabled by default)
      */
-    constructor(url: string, { params, serializeQuery, parseResponse }?: {
+    constructor(url: string, { params, serializeQuery, parseResponse, fetch: fetchOptions, cacheBust }?: {
         params?: Record<string, any>;
         serializeQuery?: (query: QueryState) => any;
         parseResponse?: (response: any) => PageResult;
+        fetch?: RequestInit;
+        cacheBust?: boolean;
     });
     /**
      * @param {QueryState} query

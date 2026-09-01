@@ -7,7 +7,7 @@ import DataGrid, {
 } from "data-grid-component";
 import type { RenderContext } from "data-grid-component/plugin";
 import BasePlugin from "data-grid-component/plugin";
-import type { FilterOperator, QueryState } from "data-grid-component/data-source";
+import { FetchDataSource, type FilterOperator, type QueryState } from "data-grid-component/data-source";
 
 const operator: FilterOperator = "notContains";
 
@@ -22,6 +22,13 @@ const query: QueryState = {
 };
 
 void query;
+
+const remoteSource = new FetchDataSource("/api/users", {
+    fetch: { cache: "no-store", credentials: "same-origin" },
+    cacheBust: true,
+});
+
+void remoteSource;
 
 const grid = new DataGrid({
     sortable: true,

@@ -53,10 +53,20 @@ page=1&pageSize=10&search=dupont&sort[0][field]=name&sort[0][direction]=asc&filt
 Provide `serializeQuery` to map the state to your own server protocol.
 
 The endpoint is resolved with the platform's standard
-`new URL(endpoint, document.baseURI)` rules. `FetchDataSource` does not add a
-cache-busting parameter: normal HTTP caching applies. Applications that need
-`cache: "no-store"`, a nonce or another request policy should provide their own
-data source.
+`new URL(endpoint, document.baseURI)` rules. Normal HTTP caching applies by
+default. Pass standard `RequestInit` values through `fetch` when a request needs
+a different policy:
+
+```js
+new FetchDataSource("/api/users", {
+    fetch: { cache: "no-store" },
+});
+```
+
+When an intermediary requires a unique URL instead, `cacheBust: true` appends
+`_=<timestamp>` to each request. It is disabled by default and applied after
+`serializeQuery` and `params`; prefer the standard fetch cache option when it
+solves the problem.
 
 ## Global search
 
