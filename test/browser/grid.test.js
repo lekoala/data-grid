@@ -121,12 +121,13 @@ test.skipIf(IS_WINDOWS)(
         await waitFor(v, "window.grid && window.grid.rows.length > 0");
 
         await v.evaluate(`(async () => {
-            const grid = new window.DataGrid({
+            const { DataGrid, ArrayDataSource } = await import("/dist/data-grid.js");
+            const grid = new DataGrid({
                 columns: [
                     { field: "label", wrap: false },
                     { field: "description", wrap: true },
                 ],
-                dataSource: new window.ArrayDataSource([{
+                dataSource: new ArrayDataSource([{
                     label: "Compact label",
                     description: "A normal sentence followed by " + "g".repeat(120),
                 }]),
