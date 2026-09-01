@@ -11,6 +11,7 @@ declare class ColumnResizer extends BasePlugin {
     constructor(grid: import("../data-grid.js").default);
     connected(): void;
     disconnected(): void;
+    beforeRender(): void;
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */

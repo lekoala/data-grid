@@ -28,11 +28,18 @@ class ColumnResizer extends BasePlugin {
         this._resizeController = null;
     }
 
+    beforeRender() {
+        if (!this.grid.options.resizable) {
+            this._resizeController?.abort();
+            this._resizeController = null;
+        }
+    }
+
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
-        if (context !== "table") {
+        if (context !== "table" || !this.grid.options.resizable) {
             return;
         }
         this.renderResizer(this.grid.labels.resizeColumn);
@@ -86,6 +93,9 @@ class ColumnResizer extends BasePlugin {
      * @param {MouseEvent} event
      */
     onmousedown(event) {
+        if (!this.grid.options.resizable) {
+            return;
+        }
         const target = event.target;
         if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
             return;

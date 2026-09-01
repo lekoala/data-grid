@@ -2047,6 +2047,11 @@ class DataGrid extends base_element_default {
       case "searchPlaceholder":
         this.searchPlaceholderChanged();
         break;
+      case "resizable":
+        if (this.table) {
+          this.renderTable();
+        }
+        break;
       case "responsiveToggle":
         if (this.table) {
           this.renderTable();
@@ -3656,8 +3661,14 @@ class ColumnResizer extends base_plugin_default {
     this._resizeController?.abort();
     this._resizeController = null;
   }
+  beforeRender() {
+    if (!this.grid.options.resizable) {
+      this._resizeController?.abort();
+      this._resizeController = null;
+    }
+  }
   afterRender(context) {
-    if (context !== "table") {
+    if (context !== "table" || !this.grid.options.resizable) {
       return;
     }
     this.renderResizer(this.grid.labels.resizeColumn);
@@ -3691,6 +3702,9 @@ class ColumnResizer extends base_plugin_default {
     }
   }
   onmousedown(event) {
+    if (!this.grid.options.resizable) {
+      return;
+    }
     const target = event.target;
     if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
       return;

@@ -45,7 +45,11 @@ the demo pages under `/demo/`) plus a mock server-side API (`/api/users`,
 
 `bun run test:browser` needs a real browser: `Bun.WebView` uses Chrome/Chromium
 on Linux and WKWebView on macOS. It does not run on Windows (skipped). The CI
-workflow runs it on Ubuntu (Chrome) and macOS (WKWebView).
+workflow runs it on Ubuntu (Chrome) and macOS (WKWebView), and both jobs are
+blocking. The macOS job is an inter-engine check against the current WebKit; it
+is not proof of compatibility with Safari 15.4 specifically. The documented
+floor is primarily protected by `check:baseline` and the deliberate choice of
+runtime primitives.
 
 `bun run test:browser:wsl` runs the same suite inside WSL2 (Linux/Chrome) for
 a fast local loop on Windows. It requires the default WSL distro to have `bun`

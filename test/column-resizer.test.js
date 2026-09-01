@@ -3,13 +3,13 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import ColumnResizer from "../src/plugins/column-resizer.js";
 
-async function makeGrid(column, dir = "ltr", viewportWidth = 500) {
+async function makeGrid(column, dir = "ltr", viewportWidth = 500, resizable = true) {
     DataGrid.registerPlugins({ ColumnResizer });
     const grid = new DataGrid({
         columns: Array.isArray(column) ? column : [column],
         dataSource: new ArrayDataSource([{ value: true }]),
         dir,
-        resizable: true,
+        resizable,
         sortable: false,
     });
     document.body.appendChild(grid);
@@ -32,6 +32,37 @@ async function makeGrid(column, dir = "ltr", viewportWidth = 500) {
     const th = headers[0];
     return { grid, th };
 }
+
+test("registered column resizer stays disabled until resizable is enabled", async () => {
+    const { grid } = await makeGrid(
+        [
+            { field: "value", title: "Value" },
+            { field: "fixed", title: "Fixed", class: "dg-not-resizable" },
+        ],
+        "ltr",
+        500,
+        false,
+    );
+
+    expect(grid.querySelectorAll(".dg-resizer")).toHaveLength(0);
+
+    grid.setAttribute("resizable", "");
+    expect(grid.querySelectorAll(".dg-resizer")).toHaveLength(1);
+    expect(grid.querySelector('th[data-column-id="fixed"] .dg-resizer')).toBeNull();
+
+    const th = /** @type {HTMLTableCellElement} */ (grid.querySelector('th[data-column-id="value"]'));
+    Object.defineProperty(th, "offsetWidth", { configurable: true, value: 100 });
+    const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));
+    resizer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 100 }));
+    const width = th.getAttribute("width");
+
+    grid.removeAttribute("resizable");
+    expect(grid.querySelectorAll(".dg-resizer")).toHaveLength(0);
+
+    document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 150 }));
+    expect(th.getAttribute("width")).toBe(width);
+    document.body.removeChild(grid);
+});
 
 function drag(th, startX, endX) {
     const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));

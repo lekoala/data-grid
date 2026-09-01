@@ -1414,6 +1414,11 @@ class DataGrid extends BaseElement {
             case "searchPlaceholder":
                 this.searchPlaceholderChanged();
                 break;
+            case "resizable":
+                if (this.table) {
+                    this.renderTable();
+                }
+                break;
             case "responsiveToggle":
                 if (this.table) {
                     this.renderTable();
