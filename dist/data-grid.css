@@ -471,7 +471,7 @@ data-grid input[type="checkbox"] {
   padding: 0;
 }
 
-data-grid input:not(:-webkit-any([type="checkbox"], [type="radio"])), data-grid select {
+data-grid :where(input:not(:-webkit-any([type="checkbox"], [type="radio"])), select) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
@@ -484,7 +484,7 @@ data-grid input:not(:-webkit-any([type="checkbox"], [type="radio"])), data-grid 
   transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
-data-grid input:not(:-moz-any([type="checkbox"], [type="radio"])), data-grid select {
+data-grid :where(input:not(:-moz-any([type="checkbox"], [type="radio"])), select) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
@@ -497,7 +497,7 @@ data-grid input:not(:-moz-any([type="checkbox"], [type="radio"])), data-grid sel
   transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
-data-grid input:not(:is([type="checkbox"], [type="radio"])), data-grid select {
+data-grid :where(input:not(:is([type="checkbox"], [type="radio"])), select) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;

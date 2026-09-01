@@ -528,8 +528,7 @@ data-grid input[type="checkbox"] {
   padding: 0;
 }
 
-data-grid input:not([type="checkbox"], [type="radio"]),
-data-grid select {
+data-grid :where(input:not([type="checkbox"], [type="radio"]), select) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
