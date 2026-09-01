@@ -198,5 +198,9 @@ test("loading lazy via the reflected attribute", async () => {
 
     expect(inst.options.loading).toBe("lazy");
     expect(ds.count).toBe(0);
+
+    inst.setAttribute("loading", "eager");
+    expect(inst.options.loading).toBe("lazy");
+    expect(ds.count).toBe(0);
     document.body.removeChild(inst);
 });

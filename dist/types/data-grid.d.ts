@@ -754,15 +754,8 @@ declare class DataGrid extends BaseElement {
     showPageSizeChanged(): void;
     responsiveChanged(): void;
     snapColumnsChanged(): void;
-    wrapChanged(): void;
-    rowDetailsStartOpenChanged(): void;
     selectableChanged(): void;
     singleSelectChanged(): void;
-    rowClickChanged(): void;
-    reorderChanged(): void;
-    sortableChanged(): void;
-    filterableChanged(): void;
-    searchableChanged(): void;
     searchPlaceholderChanged(): void;
     /**
      * Populate the page size select according to options

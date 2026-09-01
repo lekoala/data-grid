@@ -257,6 +257,18 @@ test("toggling selectable at runtime updates header and body", async () => {
     document.body.removeChild(inst);
 });
 
+test("changing row-key clears selection based on the previous identity", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
+
+    toggle(firstCheckbox(inst));
+    expect(inst.getSelectionState().ids.size).toBe(1);
+
+    inst.setAttribute("row-key", "name");
+    expect(inst.getSelectionState().ids.size).toBe(0);
+    expect(firstCheckbox(inst).checked).toBe(false);
+    document.body.removeChild(inst);
+});
+
 test("header and body checkboxes share the same centering box", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true });
 

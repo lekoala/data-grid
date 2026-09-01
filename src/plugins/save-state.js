@@ -16,7 +16,7 @@ class SaveState extends BasePlugin {
         this.cachedState = null;
         /** @type {(() => void) | null} */
         this.onBodyRendered = null;
-        /** @type {(() => void) | null} */
+        /** @type {((() => void) & { cancel: () => void }) | null} */
         this.onScroll = null;
         this.log("Init");
     }
@@ -54,13 +54,22 @@ class SaveState extends BasePlugin {
             }
         }
 
+        this.#listen();
+    }
+
+    #listen() {
+        if (this.onBodyRendered) {
+            return;
+        }
+        const grid = this.grid;
         this.onBodyRendered = () => this.#update();
         this.onScroll = debounce(() => this.#update(), 200);
         grid.addEventListener("bodyRendered", this.onBodyRendered);
         document.addEventListener("scroll", this.onScroll);
+        this.#update();
     }
 
-    disconnected() {
+    #unlisten() {
         const grid = this.grid;
         if (this.onBodyRendered) {
             grid.removeEventListener("bodyRendered", this.onBodyRendered);
@@ -68,8 +77,22 @@ class SaveState extends BasePlugin {
         }
         if (this.onScroll) {
             document.removeEventListener("scroll", this.onScroll);
+            this.onScroll.cancel();
             this.onScroll = null;
         }
+    }
+
+    /** @param {Boolean} enabled */
+    saveStateChanged(enabled) {
+        if (enabled) {
+            this.#listen();
+        } else {
+            this.#unlisten();
+        }
+    }
+
+    disconnected() {
+        this.#unlisten();
     }
 
     /**

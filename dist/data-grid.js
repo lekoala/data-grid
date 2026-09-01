@@ -1468,6 +1468,11 @@ var OPTION_ATTRIBUTES = {
   dir: { type: "string" },
   density: { parse: (value) => parseEnumAttribute(value, ["compact", "default", "comfortable"], "default") }
 };
+var INITIAL_ATTRIBUTES = {
+  page: { type: "integer" },
+  "page-size": { type: "integer" }
+};
+var INITIAL_ONLY_ATTRIBUTES = new Set(["loading"]);
 function createDefaultOptions() {
   return {
     ...DEFAULT_OPTIONS,
@@ -1837,6 +1842,12 @@ class DataGrid extends base_element_default {
     if (!config) {
       return;
     }
+    if (INITIAL_ONLY_ATTRIBUTES.has(name) && (this.setup || this.rendered)) {
+      if (this.options.debug) {
+        console.warn(`${name} can only be configured before connection`);
+      }
+      return;
+    }
     const option = config.option ?? camelize(name);
     const options = this.options;
     if (value === null) {
@@ -1849,7 +1860,7 @@ class DataGrid extends base_element_default {
       options[resolved.option] = resolved.value;
     }
     if (this.fireEvents) {
-      this.#optionChanged(option);
+      this.#optionChanged(name);
     }
   }
   get thead() {
@@ -1878,14 +1889,14 @@ class DataGrid extends base_element_default {
       return;
     }
     if (this.hasAttribute("page-size")) {
-      const pageSize = Number.parseInt(this.getAttribute("page-size") ?? "");
+      const pageSize = parseNumberAttribute(this.getAttribute("page-size") ?? "", INITIAL_ATTRIBUTES["page-size"].type);
       if (pageSize) {
         this.#query.pageSize = pageSize;
         this.#initialQuery.pageSize = pageSize;
       }
     }
     if (this.hasAttribute("page")) {
-      const page = Number.parseInt(this.getAttribute("page") ?? "");
+      const page = parseNumberAttribute(this.getAttribute("page") ?? "", INITIAL_ATTRIBUTES.page.type);
       if (page) {
         this.#query.page = page;
         this.#initialQuery.page = page;
@@ -2003,71 +2014,79 @@ class DataGrid extends base_element_default {
     this.renderBody();
     return false;
   }
-  #optionChanged(option) {
-    switch (option) {
+  #optionChanged(name) {
+    switch (name) {
       case "src":
         this.srcChanged();
         break;
-      case "showPageSize":
-        this.showPageSizeChanged();
+      case "sortable":
+      case "filterable":
+      case "filter-delay":
+      case "reorder":
+      case "autosize":
+      case "resizable":
+      case "autohide-pager":
+        this.renderTable();
         break;
+      case "row-click":
+      case "row-label":
+      case "no-data":
+      case "error-message":
+      case "wrap":
+      case "autoheight":
+      case "responsive-start-open":
+      case "row-details-start-open":
+        this.renderBody();
+        break;
+      case "responsive-toggle":
+      case "collapse-actions":
+      case "row-actions":
+        this.renderTable();
+        this.renderBody();
+        break;
+      case "searchable":
+        this.renderSearch();
+        break;
+      case "search-placeholder":
+        this.searchPlaceholderChanged();
+        break;
+      case "search-delay": {
+        const input = this.searchInput;
+        if (!input) {
+          break;
+        }
+        const state = textInputState.get(input);
+        state?.apply.cancel();
+        textInputState.set(input, {
+          composing: state?.composing ?? false,
+          apply: debounce(() => this.commitSearch(), this.options.searchDelay)
+        });
+        break;
+      }
       case "responsive":
         this.responsiveChanged();
-        break;
-      case "snapColumns":
-        this.snapColumnsChanged();
-        break;
-      case "wrap":
-        this.wrapChanged();
-        break;
-      case "rowDetailsStartOpen":
-        this.rowDetailsStartOpenChanged();
         break;
       case "selectable":
         this.selectableChanged();
         break;
-      case "singleSelect":
+      case "single-select":
         this.singleSelectChanged();
         break;
-      case "rowClick":
-        this.rowClickChanged();
+      case "row-key":
+        this.#clearSelectionIfNeeded();
+        this.renderBody();
         break;
-      case "reorder":
-        this.reorderChanged();
+      case "save-state":
+        this.runPlugins("saveStateChanged", this.options.saveState);
         break;
-      case "sortable":
-        this.sortableChanged();
+      case "page-sizes":
+        this.populatePageSizes();
         break;
-      case "filterable":
-        this.filterableChanged();
+      case "snap-columns":
+        this.snapColumnsChanged();
         break;
-      case "searchable":
-        this.searchableChanged();
-        break;
-      case "searchPlaceholder":
-        this.searchPlaceholderChanged();
-        break;
-      case "resizable":
-        if (this.table) {
-          this.renderTable();
-        }
-        break;
-      case "responsiveToggle":
-        if (this.table) {
-          this.renderTable();
-          this.renderBody();
-        }
-        break;
-      case "responsiveStartOpen":
-        if (this.table) {
-          this.renderBody();
-        }
-        break;
-      case "collapseActions":
-        if (this.table) {
-          this.renderTable();
-          this.renderBody();
-        }
+      case "show-page-size":
+        this.showPageSizeChanged();
         break;
     }
   }
@@ -2088,16 +2107,6 @@ class DataGrid extends base_element_default {
   snapColumnsChanged() {
     this.classList.toggle("dg-snap-columns", Boolean(this.options.snapColumns));
   }
-  wrapChanged() {
-    if (this.table) {
-      this.renderBody();
-    }
-  }
-  rowDetailsStartOpenChanged() {
-    if (this.table) {
-      this.renderBody();
-    }
-  }
   selectableChanged() {
     this.renderTable();
     this.renderBody();
@@ -2111,23 +2120,6 @@ class DataGrid extends base_element_default {
       this.#clearSelectionIfNeeded();
     }
     this.selectableChanged();
-  }
-  rowClickChanged() {
-    if (this.table) {
-      this.renderBody();
-    }
-  }
-  reorderChanged() {
-    this.renderTable();
-  }
-  sortableChanged() {
-    this.renderTable();
-  }
-  filterableChanged() {
-    this.renderTable();
-  }
-  searchableChanged() {
-    this.renderSearch();
   }
   searchPlaceholderChanged() {
     if (this.searchInput) {
@@ -3636,6 +3628,7 @@ class BasePlugin {
   afterRender(context) {}
   updateLabels() {}
   responsiveChanged(enabled) {}
+  saveStateChanged(enabled) {}
   handleEvent(event) {
     const handler = this[`on${event.type}`];
     if (typeof handler === "function") {
@@ -5368,12 +5361,20 @@ class SaveState extends base_plugin_default {
         grid.restoreQuery(cachedState.query);
       }
     }
+    this.#listen();
+  }
+  #listen() {
+    if (this.onBodyRendered) {
+      return;
+    }
+    const grid = this.grid;
     this.onBodyRendered = () => this.#update();
     this.onScroll = debounce(() => this.#update(), 200);
     grid.addEventListener("bodyRendered", this.onBodyRendered);
     document.addEventListener("scroll", this.onScroll);
+    this.#update();
   }
-  disconnected() {
+  #unlisten() {
     const grid = this.grid;
     if (this.onBodyRendered) {
       grid.removeEventListener("bodyRendered", this.onBodyRendered);
@@ -5381,8 +5382,19 @@ class SaveState extends base_plugin_default {
     }
     if (this.onScroll) {
       document.removeEventListener("scroll", this.onScroll);
+      this.onScroll.cancel();
       this.onScroll = null;
     }
+  }
+  saveStateChanged(enabled) {
+    if (enabled) {
+      this.#listen();
+    } else {
+      this.#unlisten();
+    }
+  }
+  disconnected() {
+    this.#unlisten();
   }
   #update() {
     const grid = this.grid;

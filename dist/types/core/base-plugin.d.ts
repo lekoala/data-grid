@@ -11,6 +11,7 @@ export type Plugin = {
     afterRender?: (context: RenderContext) => void;
     updateLabels?: () => void;
     responsiveChanged?: (enabled: boolean) => void;
+    saveStateChanged?: (enabled: boolean) => void;
 };
 export type PluginConstructor = new (grid: DataGrid) => Plugin;
 export type PluginRegistry = Record<string, PluginConstructor>;
@@ -29,6 +30,7 @@ export type PluginInstances = Record<string, Plugin>;
  * @property {(context: RenderContext) => void} [afterRender]
  * @property {() => void} [updateLabels]
  * @property {(enabled: boolean) => void} [responsiveChanged]
+ * @property {(enabled: boolean) => void} [saveStateChanged]
  */
 /**
  * A plugin constructor: a class (or duck-typed factory) taking the grid.
@@ -74,6 +76,11 @@ declare class BasePlugin {
      * @param {Boolean} enabled
      */
     responsiveChanged(enabled: boolean): void;
+    /**
+     * Called when runtime state persistence is enabled or disabled.
+     * @param {Boolean} enabled
+     */
+    saveStateChanged(enabled: boolean): void;
     /**
      * Handle events within the plugin
      * @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#handling-events

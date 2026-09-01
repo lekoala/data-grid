@@ -38,6 +38,36 @@ test("the page-size select and its caret wrapper toggle together", async () => {
     removeGrid(inst);
 });
 
+test("page and page-size attributes seed only the initial query", async () => {
+    const inst = new DataGrid({ dataSource: new ArrayDataSource(rows) });
+    inst.setAttribute("page", "2");
+    inst.setAttribute("page-size", "5");
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+
+    expect(inst.query.page).toBe(2);
+    expect(inst.query.pageSize).toBe(5);
+    expect(inst.rows[0].id).toBe(6);
+
+    inst.setAttribute("page", "3");
+    inst.setAttribute("page-size", "10");
+    expect(inst.query.page).toBe(2);
+    expect(inst.query.pageSize).toBe(5);
+    removeGrid(inst);
+});
+
+test("page-sizes repopulates the existing select at runtime", async () => {
+    const inst = await makeReadyGrid();
+
+    inst.setAttribute("page-sizes", "5,20,40");
+
+    expect([...inst.selectPerPage.options].map((option) => Number(option.value))).toEqual([5, 20, 40]);
+    removeGrid(inst);
+});
+
 test("the page input only navigates on change and clamps out-of-range values", async () => {
     const inst = await makeReadyGrid({ pageSize: 10 });
 

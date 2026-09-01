@@ -16,6 +16,7 @@
  * @property {(context: RenderContext) => void} [afterRender]
  * @property {() => void} [updateLabels]
  * @property {(enabled: boolean) => void} [responsiveChanged]
+ * @property {(enabled: boolean) => void} [saveStateChanged]
  */
 
 /**
@@ -73,6 +74,12 @@ class BasePlugin {
      * @param {Boolean} enabled
      */
     responsiveChanged(enabled) {}
+
+    /**
+     * Called when runtime state persistence is enabled or disabled.
+     * @param {Boolean} enabled
+     */
+    saveStateChanged(enabled) {}
 
     /**
      * Handle events within the plugin

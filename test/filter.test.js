@@ -1136,6 +1136,25 @@ test("Escape clears a text filter and cancels the pending debounce", async () =>
     document.body.removeChild(inst);
 });
 
+test("filter-delay rebuilds filter debounce state at runtime", async () => {
+    const inst = await makeReadyGrid({
+        columns: [{ field: "name" }],
+        filterable: true,
+        filterDelay: 500,
+        dataSource: new ArrayDataSource([{ name: "Alice" }, { name: "Bob" }]),
+    });
+
+    typeFilter(inst, "name", "Alice");
+    inst.setAttribute("filter-delay", "0");
+    await sleep(20);
+    expect(inst.query.filters.name).toBeUndefined();
+
+    typeFilter(inst, "name", "Bob");
+    await sleep(20);
+    expect(inst.query.filters.name).toEqual({ operator: "contains", value: "Bob" });
+    document.body.removeChild(inst);
+});
+
 test("a column with filterable: false keeps its th but renders no control", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name" }, { field: "email", filterable: false }],

@@ -143,6 +143,21 @@ test("Enter flushes the debounced search immediately", async () => {
     removeGrid(inst);
 });
 
+test("search-delay replaces the active debounce at runtime", async () => {
+    const inst = await makeReadyGrid({ searchable: true, searchDelay: 500 });
+    const search = inst.querySelector(".dg-search");
+
+    typeInto(search, "Person 1");
+    inst.setAttribute("search-delay", "0");
+    await flush();
+    expect(inst.query.search).toBe("");
+
+    typeInto(search, "Person 2");
+    await flush();
+    expect(inst.query.search).toBe("Person 2");
+    removeGrid(inst);
+});
+
 test("Escape clears the search", async () => {
     const inst = await makeReadyGrid({ searchable: true, searchDelay: 0 });
     const input = inst.querySelector(".dg-search");

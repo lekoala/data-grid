@@ -52,3 +52,27 @@ test("restores a cached query through the plugin API before the first load", asy
     });
     expect(grid.query).toEqual(queries[0]);
 });
+
+test("save-state can be enabled and disabled after connection", async () => {
+    DataGrid.registerPlugins({ SaveState });
+    const grid = new DataGrid({
+        id: gridId,
+        columns: [{ field: "name", title: "Name" }],
+        dataSource: {
+            load() {
+                return Promise.resolve({ rows: [{ name: "Ada" }], total: 1 });
+            },
+        },
+    });
+    const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    document.body.appendChild(grid);
+    await connected;
+
+    grid.setAttribute("save-state", "");
+    const stored = sessionStorage.getItem(`gridSaveState_${gridId}`);
+    expect(stored).not.toBeNull();
+
+    grid.removeAttribute("save-state");
+    await grid.setQuery({ search: "Grace" });
+    expect(sessionStorage.getItem(`gridSaveState_${gridId}`)).toBe(stored);
+});

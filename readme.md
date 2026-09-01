@@ -221,7 +221,7 @@ described in `docs/plugins.md`. Set `column.wrap` to override the grid-wide
 
 ### Attributes
 
-The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`,
+The main attributes are `src`, `loading`, `page`, `page-size`, `sortable`, `filterable`, `searchable`,
 `search-placeholder`, `search-delay`, `min-search-length`, `filter-delay`, `responsive`,
 `responsive-toggle`, `responsive-start-open`, `row-details-start-open`, `selectable`, `single-select`,
 `select-visible-only`, `row-click`, `row-key`, `row-label`,
@@ -243,6 +243,10 @@ The main attributes are `src`, `loading`, `sortable`, `filterable`, `searchable`
     no-data="No users"
 ></data-grid>
 ```
+
+`loading`, `page` and `page-size` are initial-only: they seed the first load and
+later attribute mutations are intentionally ignored. Runtime pagination uses
+`setQuery()` and the pager methods.
 
 ## Scrollable grid
 

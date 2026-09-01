@@ -156,6 +156,22 @@ test("selection controls carry accessible names from rowLabel with fallbacks", a
     document.body.removeChild(byIndex);
 });
 
+test("row-label refreshes accessible row names at runtime", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name", title: "Name" }],
+            selectable: true,
+        },
+        [{ id: 7, name: "Alice" }],
+        { SelectableRows },
+    );
+
+    expect(inst.tbody.querySelector('input[type="checkbox"]').getAttribute("aria-label")).toBe("Select 7");
+    inst.setAttribute("row-label", "name");
+    expect(inst.tbody.querySelector('input[type="checkbox"]').getAttribute("aria-label")).toBe("Select Alice");
+    document.body.removeChild(inst);
+});
+
 test("the select-all checkbox carries a stable accessible name", async () => {
     const inst = await makeReadyGrid(
         {

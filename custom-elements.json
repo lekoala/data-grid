@@ -122,6 +122,12 @@
             },
             {
               "name": "density"
+            },
+            {
+              "name": "page"
+            },
+            {
+              "name": "page-size"
             }
           ],
           "members": [

@@ -15,6 +15,7 @@ Any object exposing one of these methods is a plugin (duck typing):
 | `beforeRender()`             | before a render cycle                        |
 | `afterRender(context)`       | after a render (`"table"` or `"body"`)       |
 | `responsiveChanged(enabled)` | the `responsive` option changes              |
+| `saveStateChanged(enabled)`  | the `saveState` option changes               |
 
 ```js
 import { DataGrid } from "data-grid-component";

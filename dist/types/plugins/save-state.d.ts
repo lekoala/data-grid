@@ -16,13 +16,17 @@ declare class SaveState extends BasePlugin {
     cachedState: CachedGridState | null;
     /** @type {(() => void) | null} */
     onBodyRendered: (() => void) | null;
-    /** @type {(() => void) | null} */
-    onScroll: (() => void) | null;
+    /** @type {((() => void) & { cancel: () => void }) | null} */
+    onScroll: ((() => void) & {
+        cancel: () => void;
+    }) | null;
     /**
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid: import("../data-grid.js").default);
     connected(): void;
+    /** @param {Boolean} enabled */
+    saveStateChanged(enabled: boolean): void;
     disconnected(): void;
     /**
      * @param {...any} data
