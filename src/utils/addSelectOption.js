@@ -1,6 +1,6 @@
 /**
  * @param {HTMLSelectElement} el
- * @param {String} value
+ * @param {String|Number} value
  * @param {String|Number} label
  * @param {Boolean} checked
  */

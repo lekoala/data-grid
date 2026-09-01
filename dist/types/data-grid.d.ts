@@ -8,6 +8,10 @@ export type QueryState = import("./data-source.js").QueryState;
 export type PageResult = import("./data-source.js").PageResult;
 export type FilterState = import("./data-source.js").FilterState;
 export type FilterOption = import("./data-source.js").FilterOption;
+export type Row = Record<string, any>;
+export type RenderContent = string | number | boolean | Node | {
+    html: string;
+} | null | undefined;
 export type DateFormatOptions = Intl.DateTimeFormatOptions & {
     style?: "full" | "long" | "medium" | "short";
 };
@@ -100,7 +104,7 @@ export type Column = {
     /**
      * - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
      */
-    validate?: (value: any, ctx: Object) => (boolean | string);
+    validate?: (value: any, ctx: EditContext) => (boolean | string);
     /**
      * - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
      */
@@ -133,20 +137,20 @@ export type Column = {
     /**
      * - optional custom header cell renderer (the core creates the <th>)
      */
-    renderHeaderCell?: (th: HTMLTableCellElement, ctx: Object) => void;
+    renderHeaderCell?: (th: HTMLTableCellElement, ctx: CellContext) => void;
     /**
      * - optional custom filter cell renderer (the core creates the <th>)
      */
-    renderFilterCell?: (th: HTMLTableCellElement, ctx: Object) => void;
+    renderFilterCell?: (th: HTMLTableCellElement, ctx: CellContext) => void;
     /**
      * - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
      */
-    renderCell?: (ctx: Object) => (any);
+    renderCell?: (ctx: CellContext) => RenderContent;
 };
 export type CellContext = {
     grid: DataGrid;
     column: Column;
-    row?: Record<string, any>;
+    row?: Row;
     rowIndex?: number;
     value?: any;
     tr?: HTMLTableRowElement;
@@ -154,11 +158,21 @@ export type CellContext = {
     availableWidth?: number;
     colMaxWidth?: number;
 };
+export type EditContext = {
+    grid: DataGrid;
+    column: Column;
+    row: Row;
+};
 export type ValueTransform = (value: any, ctx: CellContext) => any;
 export type ActionContext = {
     grid: DataGrid;
     action: Action;
     rowKey: string;
+};
+export type ActionRenderContext = {
+    grid: DataGrid;
+    action: Action;
+    row: Row;
 };
 export type Action = {
     /**
@@ -170,29 +184,29 @@ export type Action = {
      */
     label?: string;
     /**
-     * - "default" | "primary" | "danger" (defaults to "default")
+     * - visual intent (defaults to "default")
      */
-    intent?: string;
+    intent?: "default" | "primary" | "danger";
     /**
-     * - link for the action (string with {field} interpolation or (row, ctx) => string)
+     * - link for the action (string with {field} interpolation or a resolver)
      */
-    href?: string | Function;
+    href?: string | ((row: Row, ctx: ActionContext) => string);
     /**
-     * - (row, ctx) => Boolean, hides the action when falsy
+     * - hides the action when falsy
      */
-    visible?: Function;
+    visible?: (row: Row, ctx: ActionContext) => boolean;
     /**
-     * - (row, ctx) => Boolean, disables the action when truthy (blocks the click)
+     * - disables the action when truthy (blocks the click)
      */
-    disabled?: boolean | Function;
+    disabled?: boolean | ((row: Row, ctx: ActionContext) => boolean);
     /**
-     * - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
+     * - replaces the button content (label stays the accessible name)
      */
-    render?: Function;
+    render?: (ctx: ActionRenderContext) => RenderContent;
     /**
-     * - boolean (generic label), message string, or (row, ctx) => Boolean | String
+     * - boolean (generic label), message string, or resolver
      */
-    confirm?: boolean | string | Function;
+    confirm?: boolean | string | ((row: Row, ctx: ActionContext) => boolean | string);
     /**
      * - is the default row action (only the first resolved default per row applies)
      */
@@ -201,6 +215,10 @@ export type Action = {
      * - the class for the button
      */
     class?: string;
+};
+export type BulkActionContext = {
+    grid: DataGrid;
+    action: BulkAction;
 };
 export type BulkAction = {
     /**
@@ -212,13 +230,13 @@ export type BulkAction = {
      */
     label: string;
     /**
-     * - "default" | "primary" | "danger" (defaults to "default")
+     * - visual intent (defaults to "default")
      */
-    intent?: string;
+    intent?: "default" | "primary" | "danger";
     /**
-     * - boolean (generic label), message string, or (selection, ctx) => Boolean | String
+     * - boolean (generic label), message string, or resolver
      */
-    confirm?: boolean | string | Function;
+    confirm?: boolean | string | ((selection: SelectionState, ctx: BulkActionContext) => boolean | string);
 };
 export type SelectionState = {
     mode: "explicit" | "all";
@@ -230,6 +248,11 @@ export type SelectionState = {
      * - unselected row keys (mode "all")
      */
     except: Set<string>;
+};
+export type RowDetailsContext = {
+    grid: DataGrid;
+    row: Row;
+    rowKey: string;
 };
 export type Plugin = import("./core/base-plugin.js").Plugin;
 export type PluginConstructor = import("./core/base-plugin.js").PluginConstructor;
@@ -247,7 +270,7 @@ export type Options = {
     /**
      * Extra constant HTTP params passed to FetchDataSource
      */
-    params: Object;
+    params: Record<string, any>;
     /**
      * Custom data source (defaults to FetchDataSource or ArrayDataSource)
      */
@@ -279,7 +302,7 @@ export type Options = {
     /**
      * Available page size options
      */
-    pageSizes: Array<any>;
+    pageSizes: number[];
     /**
      * Shows the page size select element
      */
@@ -297,9 +320,9 @@ export type Options = {
      */
     rowActions: boolean;
     /**
-     * - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
+     * - global action renderer, applied when an action has no render
      */
-    actionRenderer?: Function;
+    actionRenderer?: (ctx: ActionRenderContext) => RenderContent;
     /**
      * Group actions in a native anchored popover when supported (RowActions module)
      */
@@ -335,11 +358,11 @@ export type Options = {
     /**
      * The field name or a function resolving a stable row key (defaults to "id")
      */
-    rowKey?: string | Function;
+    rowKey?: string | ((row: Row) => string | number);
     /**
-     * Field name or (row, index) => string resolving the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
+     * Field name or a resolver for the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
      */
-    rowLabel?: string | Function | null;
+    rowLabel?: string | ((row: Row, index: number) => string) | null;
     /**
      * Bulk actions applied to the current selection (BulkActions module)
      */
@@ -379,11 +402,7 @@ export type Options = {
     /**
      * Render expanded row content (RowDetails module)
      */
-    rowDetails?: ((ctx: {
-        row: Record<string, any>;
-        rowKey: string;
-        grid: DataGrid;
-    }) => any) | null;
+    rowDetails?: ((ctx: RowDetailsContext) => RenderContent) | null;
     /**
      * Open row details by default (RowDetails module)
      */
@@ -439,7 +458,7 @@ export type Options = {
     /**
      * Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
      */
-    validate?: (value: any, ctx: Object) => (boolean | string);
+    validate?: (value: any, ctx: EditContext) => (boolean | string);
 };
 export type Labels = {
     itemsPerPage: string;
@@ -550,9 +569,9 @@ declare class DataGrid extends BaseElement {
     /** @type {Number|null} */
     rowHeight: number | null;
     /**
-     * @param {Object} [options]
+     * @param {Partial<Options>} [options]
      */
-    constructor(options?: Object);
+    constructor(options?: Partial<Options>);
     _ready(): void;
     static template(): string;
     /**

@@ -155,7 +155,7 @@ function parseActionsCell(td) {
             action.href = href;
         }
         if (el.dataset.intent) {
-            action.intent = el.dataset.intent;
+            action.intent = /** @type {"default"|"primary"|"danger"} */ (el.dataset.intent);
         }
         if (el.dataset.confirm !== undefined) {
             action.confirm = el.dataset.confirm;

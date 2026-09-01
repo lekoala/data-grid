@@ -127,7 +127,7 @@ class EditableColumn extends BasePlugin {
      * Run the column validator, then the grid-level one.
      * @param {import("../data-grid.js").Column} column
      * @param {*} value
-     * @param {Object} row
+     * @param {Record<string, any>} row
      * @returns {?String} error message or null when valid
      */
     validate(column, value, row) {

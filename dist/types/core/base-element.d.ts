@@ -11,13 +11,13 @@ declare class BaseElement extends HTMLElement {
     rendered: boolean;
     fireEvents: boolean;
     /**
-     * @param {Object} options
+     * @param {Partial<Options>} options
      */
-    constructor(options?: Object);
+    constructor(options?: Partial<Options>);
     /**
-     * @returns {Object}
+     * @returns {Partial<Options>}
      */
-    get defaultOptions(): Object;
+    get defaultOptions(): Partial<Options>;
     /**
      * @returns {Array<any>}
      */

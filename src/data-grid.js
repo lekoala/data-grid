@@ -50,6 +50,13 @@ import transformValue from "./utils/transformValue.js";
 /** @typedef {import("./data-source.js").FilterState} FilterState */
 /** @typedef {import("./data-source.js").FilterOption} FilterOption */
 
+/** @typedef {Record<string, any>} Row */
+
+/**
+ * Content accepted from render callbacks.
+ * @typedef {string|number|boolean|Node|{html: string}|null|undefined} RenderContent
+ */
+
 /**
  * Options of the `date`/`datetime` formatters: native `Intl.DateTimeFormatOptions`
  * plus the `style` shortcut that maps to `dateStyle`/`timeStyle`. Explicit Intl
@@ -90,7 +97,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {"uppercase"|"lowercase"|"array"|ValueTransform|null} [transform] - transforms the value displayed by the default cell renderer. Use renderCell for custom DOM/content rendering.
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
  * @property {String} [editableType] - type of input (EditableColumn module)
- * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
+ * @property {(value: *, ctx: EditContext) => (Boolean | String)} [validate] - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)
  * @property {"text"|"select"|"boolean"|"number"|"date"|null} [filterType] - filter control mode, defaults to the formatter hint when `format` is set (boolean: tri-state select, number: numeric input with typed equality, date: partial YYYY-MM-DD prefix match), otherwise "text"
@@ -99,9 +106,9 @@ import transformValue from "./utils/transformValue.js";
  * @property {FilterOption} [firstFilterOption] - defines the empty first option of a select filter. defaults to {value: "", text: ""}
  * @property {Boolean} [filterMultiple] - supported select filters use a checkbox popover and emit `in`; older
  * browsers fall back to a single select emitting `eq`
- * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
- * @property {(th: HTMLTableCellElement, ctx: Object) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
- * @property {(ctx: Object) => (*)} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
+ * @property {(th: HTMLTableCellElement, ctx: CellContext) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
+ * @property {(th: HTMLTableCellElement, ctx: CellContext) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
+ * @property {(ctx: CellContext) => RenderContent} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
  */
 
 /**
@@ -110,13 +117,21 @@ import transformValue from "./utils/transformValue.js";
  * @typedef {Object} CellContext
  * @property {DataGrid} grid
  * @property {Column} column
- * @property {Record<string, any>} [row]
+ * @property {Row} [row]
  * @property {Number} [rowIndex]
  * @property {any} [value]
  * @property {HTMLTableRowElement} [tr]
  * @property {HTMLTableCellElement} [sampleTh]
  * @property {Number} [availableWidth]
  * @property {Number} [colMaxWidth]
+ */
+
+/**
+ * Context passed to column and grid-level editor validators.
+ * @typedef {Object} EditContext
+ * @property {DataGrid} grid
+ * @property {Column} column
+ * @property {Row} row
  */
 
 /**
@@ -134,18 +149,33 @@ import transformValue from "./utils/transformValue.js";
  */
 
 /**
+ * Context passed to an action content renderer.
+ * @typedef {Object} ActionRenderContext
+ * @property {DataGrid} grid
+ * @property {Action} action
+ * @property {Row} row
+ */
+
+/**
  * Row action
  * @typedef Action
  * @property {String} name - the name of the action (button[data-action])
  * @property {String} [label] - the button label and accessible name
- * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
- * @property {String | Function} [href] - link for the action (string with {field} interpolation or (row, ctx) => string)
- * @property {Function} [visible] - (row, ctx) => Boolean, hides the action when falsy
- * @property {Boolean | Function} [disabled] - (row, ctx) => Boolean, disables the action when truthy (blocks the click)
- * @property {Function} [render] - ({ action, row, grid }) => content, replaces the button content (label stays the accessible name)
- * @property {Boolean | String | Function} [confirm] - boolean (generic label), message string, or (row, ctx) => Boolean | String
+ * @property {"default"|"primary"|"danger"} [intent] - visual intent (defaults to "default")
+ * @property {String | ((row: Row, ctx: ActionContext) => String)} [href] - link for the action (string with {field} interpolation or a resolver)
+ * @property {(row: Row, ctx: ActionContext) => Boolean} [visible] - hides the action when falsy
+ * @property {Boolean | ((row: Row, ctx: ActionContext) => Boolean)} [disabled] - disables the action when truthy (blocks the click)
+ * @property {(ctx: ActionRenderContext) => RenderContent} [render] - replaces the button content (label stays the accessible name)
+ * @property {Boolean | String | ((row: Row, ctx: ActionContext) => Boolean | String)} [confirm] - boolean (generic label), message string, or resolver
  * @property {Boolean} [default] - is the default row action (only the first resolved default per row applies)
  * @property {String} [class] - the class for the button
+ */
+
+/**
+ * Context passed to bulk-action confirmation resolvers.
+ * @typedef {Object} BulkActionContext
+ * @property {DataGrid} grid
+ * @property {BulkAction} action
  */
 
 /**
@@ -153,8 +183,8 @@ import transformValue from "./utils/transformValue.js";
  * @typedef BulkAction
  * @property {String} name - the name of the action
  * @property {String} label - the label of the button
- * @property {String} [intent] - "default" | "primary" | "danger" (defaults to "default")
- * @property {Boolean | String | Function} [confirm] - boolean (generic label), message string, or (selection, ctx) => Boolean | String
+ * @property {"default"|"primary"|"danger"} [intent] - visual intent (defaults to "default")
+ * @property {Boolean | String | ((selection: SelectionState, ctx: BulkActionContext) => Boolean | String)} [confirm] - boolean (generic label), message string, or resolver
  */
 
 /**
@@ -167,6 +197,14 @@ import transformValue from "./utils/transformValue.js";
  * @property {Set<String>} except - unselected row keys (mode "all")
  */
 
+/**
+ * Context passed to the row-details renderer.
+ * @typedef {Object} RowDetailsContext
+ * @property {DataGrid} grid
+ * @property {Row} row
+ * @property {String} rowKey
+ */
+
 /** @typedef {import("./core/base-plugin.js").Plugin} Plugin */
 /** @typedef {import("./core/base-plugin.js").PluginConstructor} PluginConstructor */
 /** @typedef {import("./core/base-plugin.js").PluginRegistry} PluginRegistry */
@@ -177,7 +215,7 @@ import transformValue from "./utils/transformValue.js";
  * @typedef Options
  * @property {?String} id Custom id for the grid
  * @property {?String} src An URL to a server-side endpoint (FetchDataSource)
- * @property {Object} params Extra constant HTTP params passed to FetchDataSource
+ * @property {Record<string, any>} params Extra constant HTTP params passed to FetchDataSource
  * @property {?DataSource} [dataSource] Custom data source (defaults to FetchDataSource or ArrayDataSource)
  * @property {"eager"|"lazy"} [loading] Load immediately on connect ("eager") or defer the first data source load until the grid is near the viewport ("lazy"; only affects async sources)
  * @property {Boolean} debug Log actions in DevTools console
@@ -185,12 +223,12 @@ import transformValue from "./utils/transformValue.js";
  * @property {Boolean} filterable Allows a filtering functionality
  * @property {String} dir Dir
  * @property {"compact"|"default"|"comfortable"} [density] Row density (maps to --dg-padding-* tokens)
- * @property {Array<any>} pageSizes Available page size options
+ * @property {Number[]} pageSizes Available page size options
  * @property {Boolean} showPageSize Shows the page size select element
  * @property {Column[]} columns Available columns
  * @property {Action[]} actions Row actions (RowActions module)
  * @property {Boolean} rowActions Activate the row actions column even without static `actions` (server/HTML driven $actions)
- * @property {Function} [actionRenderer] - global action renderer: ({ action, row, grid }) => content, applied when an action has no render
+ * @property {(ctx: ActionRenderContext) => RenderContent} [actionRenderer] - global action renderer, applied when an action has no render
  * @property {Boolean} collapseActions Group actions in a native anchored popover when supported (RowActions module)
  * @property {Boolean} wrap Allow data cells to wrap over multiple lines
  * @property {Boolean} snapColumns Snap horizontal scrolling near column starts
@@ -199,8 +237,8 @@ import transformValue from "./utils/transformValue.js";
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
  * @property {Boolean} singleSelect Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
  * @property {"action"|"select"|"none"} [rowClick] What a click on a data row does: "action" runs the row's default action (RowActions), "select" toggles the row selection, "none" disables row clicks
- * @property {String | Function} [rowKey] The field name or a function resolving a stable row key (defaults to "id")
- * @property {String | Function | null} [rowLabel] Field name or (row, index) => string resolving the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
+ * @property {String | ((row: Row) => String | Number)} [rowKey] The field name or a function resolving a stable row key (defaults to "id")
+ * @property {String | ((row: Row, index: Number) => String) | null} [rowLabel] Field name or a resolver for the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
  * @property {BulkAction[]} [bulkActions] Bulk actions applied to the current selection (BulkActions module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
@@ -210,7 +248,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  * @property {Boolean} responsiveStartOpen Open responsive detail rows by default when columns are hidden (ResponsiveGrid module)
- * @property {((ctx: {row: Record<string, any>, rowKey: String, grid: DataGrid}) => *)|null} [rowDetails] Render expanded row content (RowDetails module)
+ * @property {((ctx: RowDetailsContext) => RenderContent)|null} [rowDetails] Render expanded row content (RowDetails module)
  * @property {Boolean} rowDetailsStartOpen Open row details by default (RowDetails module)
  * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
  * @property {Boolean} searchable Show the global search input (core, not a plugin)
@@ -224,7 +262,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {?String} caption A table caption, providing the accessible name of the table (falls back to aria-labelledby, then aria-label)
  * @property {?QueryState} [initialQuery] Initial runtime query state
  * @property {?PageResult} [initialResult] Initial result to display without loading the data source
- * @property {(value: *, ctx: Object) => (Boolean | String)} [validate] Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
+ * @property {(value: *, ctx: EditContext) => (Boolean | String)} [validate] Grid-level editor validator, fallback when a column has no validate (EditableColumn module)
  */
 
 /**
@@ -565,7 +603,7 @@ class DataGrid extends BaseElement {
     #frozenFrame;
 
     /**
-     * @param {Object} [options]
+     * @param {Partial<Options>} [options]
      */
     constructor(options = {}) {
         super(options);

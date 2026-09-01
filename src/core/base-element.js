@@ -8,7 +8,7 @@ import { dispatch } from "../utils/dispatch.js";
  */
 class BaseElement extends HTMLElement {
     /**
-     * @param {Object} options
+     * @param {Partial<Options>} options
      */
     constructor(options = {}) {
         super();
@@ -27,7 +27,7 @@ class BaseElement extends HTMLElement {
     }
 
     /**
-     * @returns {Object}
+     * @returns {Partial<Options>}
      */
     get defaultOptions() {
         return {};
