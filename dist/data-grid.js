@@ -1417,7 +1417,6 @@ var DEFAULT_OPTIONS = {
   searchPlaceholder: "",
   searchDelay: 300,
   minSearchLength: 0,
-  spinnerClass: "",
   saveState: false,
   errorMessage: "",
   noData: "",
@@ -3971,46 +3970,6 @@ class DraggableHeaders extends base_plugin_default {
 }
 var draggable_headers_default = DraggableHeaders;
 
-// src/plugins/touch-support.js
-var TOUCH_EVENTS = ["touchstart", "touchmove"];
-
-class TouchSupport extends base_plugin_default {
-  constructor(grid) {
-    super(grid);
-    this.touch = null;
-  }
-  connected() {
-    on(this.grid, TOUCH_EVENTS, this, { passive: true });
-  }
-  disconnected() {
-    off(this.grid, TOUCH_EVENTS, this);
-  }
-  ontouchstart(e) {
-    this.touch = e.touches[0] ?? null;
-  }
-  ontouchmove(e) {
-    if (!this.touch) {
-      return;
-    }
-    const touch = e.touches[0];
-    if (!touch) {
-      return;
-    }
-    const grid = this.grid;
-    const xDiff = this.touch.clientX - touch.clientX;
-    const yDiff = this.touch.clientY - touch.clientY;
-    if (Math.abs(xDiff) > Math.abs(yDiff)) {
-      if (xDiff > 0) {
-        grid.getNext();
-      } else {
-        grid.getPrev();
-      }
-    }
-    this.touch = null;
-  }
-}
-var touch_support_default = TouchSupport;
-
 // src/plugins/selectable-rows.js
 var SELECTABLE_CLASS = "dg-selectable";
 var SELECT_ALL_CLASS = "dg-select-all";
@@ -5293,41 +5252,6 @@ class EditableColumn extends base_plugin_default {
 }
 var editable_column_default = EditableColumn;
 
-// src/plugins/spinner-support.js
-class SpinnerSupport extends base_plugin_default {
-  connected() {
-    if (this.grid.options.spinnerClass) {
-      this.add();
-    }
-  }
-  add() {
-    const grid = this.grid;
-    const classes = grid.options.spinnerClass;
-    if (!classes) {
-      return;
-    }
-    const cls = classes.trim().split(/\s+/).map((e) => `.${e}`).join("");
-    const template = `
-<style id="dg-styles">
-  data-grid ${cls} { position: absolute; top: 37%; left: 47%; z-index: 999; }
-  data-grid:not(.dg-loading) ${cls} { display: none; }
-  data-grid:not(.dg-initialized).dg-loading ${cls} { top: 0; }
-</style>
-`;
-    if (!document.querySelector("#dg-styles")) {
-      const styleParent = document.querySelector("head") ?? document.querySelector("body");
-      if (styleParent) {
-        const position = /head/i.test(styleParent.tagName) ? "beforeend" : "afterbegin";
-        styleParent.insertAdjacentHTML(position, template);
-      }
-    }
-    if (!grid.querySelector(`i${cls}`)) {
-      grid.insertAdjacentHTML("afterbegin", `<i class="${classes}"></i>`);
-    }
-  }
-}
-var spinner_support_default = SpinnerSupport;
-
 // src/plugins/save-state.js
 class SaveState extends base_plugin_default {
   constructor(grid) {
@@ -5606,7 +5530,6 @@ data_grid_default.registerPlugins({
   ColumnResizer: column_resizer_default,
   ContextMenu: context_menu_default,
   DraggableHeaders: draggable_headers_default,
-  TouchSupport: touch_support_default,
   SelectableRows: selectable_rows_default,
   BulkActions: bulk_actions_default,
   FixedHeight: fixed_height_default,
@@ -5614,7 +5537,6 @@ data_grid_default.registerPlugins({
   ResponsiveGrid: responsive_grid_default,
   RowActions: row_actions_default,
   EditableColumn: editable_column_default,
-  SpinnerSupport: spinner_support_default,
   SaveState: save_state_default,
   RowDetails: row_details_default
 });

@@ -202,7 +202,6 @@ Some options only work if the proper plugin is loaded.
 | `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
 | `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied                |
 | `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |
-| `spinnerClass`        | `String`             | `""`                 | CSS classes for the loading spinner                          |
 | `saveState`           | `Boolean`            | `false`              | Persist query and columns                                    |
 | `errorMessage`        | `String`             | `""`                 | Message shown when a load fails                              |
 | `noData`              | `String`             | `""`                 | Message shown when there is no data                          |

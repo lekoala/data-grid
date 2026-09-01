@@ -97,6 +97,44 @@ styled:
 - `data-selected` - set on `tr` of selected rows
 - `data-editing` / `data-invalid` - set on editable cells
 
+The loading status is already announced by the grid's live region. Applications
+that also want a visible indicator, especially during the otherwise empty first
+load, can add one without a plugin:
+
+```css
+data-grid[data-loading]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  margin-top: -0.75rem;
+  margin-left: -0.75rem;
+  border: 2px solid var(--dg-border-color);
+  border-top-color: var(--dg-accent);
+  border-radius: 50%;
+  animation: app-grid-spinner 0.7s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes app-grid-spinner {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  data-grid[data-loading]::after {
+    animation: none;
+  }
+}
+```
+
+The pseudo-element is deliberately decorative: do not duplicate the loading
+message with generated content or another live region.
+
 ## Sort glyphs
 
 The sort indicator is drawn entirely in CSS, driven by the `th` state

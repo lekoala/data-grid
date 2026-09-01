@@ -428,10 +428,6 @@ export type Options = {
      */
     minSearchLength: number;
     /**
-     * Sets a space-delimited string of css classes for a spinner (use spinner-border css class for bootstrap 5 spinner)
-     */
-    spinnerClass: string;
-    /**
      * Enable/disable save state plugin (SaveState module)
      */
     saveState: boolean;

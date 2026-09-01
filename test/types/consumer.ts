@@ -89,4 +89,7 @@ DataGrid.registerPlugins({ ConsumerPlugin });
 // @ts-expect-error constructor options are checked against the public contract
 new DataGrid({ sortable: "yes" });
 
+// @ts-expect-error the removed spinner plugin no longer contributes an option
+new DataGrid({ spinnerClass: "spinner-border" });
+
 void grid;

@@ -8,6 +8,11 @@ test("dist bundle exports the v3 API", () => {
     expect(typeof customElements.get("data-grid")).toBe("function");
 });
 
+test("dist bundle omits legacy touch and spinner plugins", () => {
+    expect(DataGrid.registeredPlugins()).not.toHaveProperty("TouchSupport");
+    expect(DataGrid.registeredPlugins()).not.toHaveProperty("SpinnerSupport");
+});
+
 test("dist ArrayDataSource works without a grid", async () => {
     const ds = new ArrayDataSource([{ name: "b" }, { name: "a" }]);
     const result = await ds.load({
