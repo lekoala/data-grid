@@ -8,6 +8,7 @@ import { change } from "./helpers.js";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 async function makeReadyGrid(opts = {}, data = null, pluginSet = {}) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins(pluginSet);
     const options = { ...opts };
     if (data !== null) {

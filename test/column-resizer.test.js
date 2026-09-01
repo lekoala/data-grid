@@ -4,6 +4,7 @@ import { ArrayDataSource } from "../src/data-source.js";
 import ColumnResizer from "../src/plugins/column-resizer.js";
 
 async function makeGrid(column, dir = "ltr", viewportWidth = 500, resizable = true) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ ColumnResizer });
     const grid = new DataGrid({
         columns: Array.isArray(column) ? column : [column],

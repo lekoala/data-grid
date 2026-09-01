@@ -3,7 +3,8 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import AutosizeColumn from "../src/plugins/autosize-column.js";
 
-// Test files replace the shared plugin registry: register what this file needs.
+// Give this file an explicit plugin registry.
+DataGrid.unregisterPlugins();
 DataGrid.registerPlugins({ AutosizeColumn });
 
 /**

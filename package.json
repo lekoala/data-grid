@@ -3,7 +3,7 @@
   "version": "3.3.0",
   "description": "Standalone data grid web component",
   "type": "module",
-  "main": "data-grid",
+  "main": "./data-grid.js",
   "types": "./dist/types/data-grid.d.ts",
   "packageManager": "bun@1.4.0",
   "customElements": "custom-elements.json",

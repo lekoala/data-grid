@@ -28,6 +28,7 @@ test("restores a cached query through the plugin API before the first load", asy
         }),
     );
 
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SaveState });
     const queries = [];
     const grid = new DataGrid({
@@ -62,6 +63,7 @@ test("restores a cached query through the plugin API before the first load", asy
 });
 
 test("persists successful queries and explicit column visibility", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SaveState });
     const grid = new DataGrid({
         id: gridId,
@@ -92,6 +94,7 @@ test("persists successful queries and explicit column visibility", async () => {
 });
 
 test("save-state can be enabled and disabled after connection", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SaveState });
     const grid = new DataGrid({
         id: gridId,

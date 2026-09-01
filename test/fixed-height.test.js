@@ -4,6 +4,7 @@ import { ArrayDataSource } from "../src/data-source.js";
 import FixedHeight from "../src/plugins/fixed-height.js";
 
 async function makeReadyGrid(rows, pageSize = 10) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ FixedHeight });
     const grid = new DataGrid({
         columns: [{ field: "name", title: "Name" }],

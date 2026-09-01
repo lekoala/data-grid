@@ -645,8 +645,10 @@ declare class DataGrid extends BaseElement {
      */
     get page(): number;
     /**
-     * Register plugin constructors, keyed by name. The core instantiates them
-     * on each DataGrid construction. Names are not limited to built-in plugins.
+     * Register plugin constructors, keyed by name. New registrations extend the
+     * current registry and replace constructors that use the same name. The core
+     * instantiates them on each DataGrid construction. Names are not limited to
+     * built-in plugins.
      * @public
      * @param {PluginRegistry} list
      */

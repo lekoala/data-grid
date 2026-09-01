@@ -105,8 +105,29 @@ test("loadLabels fetches and applies labels", async () => {
     }
 });
 
-test("it can register plugins", () => {
-    expect(Object.keys(DataGrid.registeredPlugins()).length > 0).toBeTruthy();
-    DataGrid.unregisterPlugins();
-    expect(Object.keys(DataGrid.registeredPlugins()).length).toBe(0);
+test("plugin registration merges by name and exposes a snapshot", () => {
+    class FirstPlugin {}
+    class ReplacementPlugin {}
+
+    const builtIns = DataGrid.registeredPlugins();
+    expect(Object.keys(builtIns).length > 0).toBeTruthy();
+
+    DataGrid.registerPlugins({ TestPlugin: FirstPlugin });
+    expect(DataGrid.registeredPlugins()).toEqual({ ...builtIns, TestPlugin: FirstPlugin });
+
+    DataGrid.registerPlugins({ TestPlugin: ReplacementPlugin });
+    const snapshot = DataGrid.registeredPlugins();
+    expect(snapshot.TestPlugin).toBe(ReplacementPlugin);
+
+    delete snapshot.TestPlugin;
+    expect(DataGrid.registeredPlugins().TestPlugin).toBe(ReplacementPlugin);
+
+    DataGrid.unregisterPlugins("TestPlugin");
+    expect(DataGrid.registeredPlugins()).toEqual(builtIns);
+});
+
+test("the ESM entry does not create legacy globals", () => {
+    expect(globalThis.DataGrid).toBeUndefined();
+    expect(globalThis.ArrayDataSource).toBeUndefined();
+    expect(globalThis.FetchDataSource).toBeUndefined();
 });

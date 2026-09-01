@@ -6,6 +6,7 @@ import RowDetails from "../src/plugins/row-details.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 
 async function makeReadyGrid(options, rows = [{ id: 1, name: "Alice", email: "alice@example.com" }]) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ ResponsiveGrid, SelectableRows, RowDetails });
     const inst = new DataGrid({ ...options, dataSource: new ArrayDataSource(rows) });
     document.body.appendChild(inst);

@@ -1770,7 +1770,7 @@ class DataGrid extends base_element_default {
     return this.#query.page;
   }
   static registerPlugins(list) {
-    plugins = list;
+    plugins = { ...plugins, ...list };
   }
   static unregisterPlugins(plugin = null) {
     if (plugin === null) {
@@ -1780,7 +1780,7 @@ class DataGrid extends base_element_default {
     }
   }
   static registeredPlugins() {
-    return plugins;
+    return { ...plugins };
   }
   runPlugins(hook, ...args) {
     for (const plugin of Object.values(this.#plugins)) {
@@ -5540,10 +5540,6 @@ if (!customElements.get("data-grid")) {
   customElements.define("data-grid", data_grid_default);
 }
 var data_grid_default2 = data_grid_default;
-var global = typeof globalThis !== "undefined" ? globalThis : self;
-global.DataGrid = data_grid_default;
-global.ArrayDataSource = ArrayDataSource;
-global.FetchDataSource = FetchDataSource;
 export {
   ArrayDataSource,
   data_grid_default as DataGrid,

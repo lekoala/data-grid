@@ -5,6 +5,7 @@ import BulkActions from "../src/plugins/bulk-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 import { change, input } from "./helpers.js";
 
+DataGrid.unregisterPlugins();
 DataGrid.registerPlugins({ SelectableRows, BulkActions });
 
 const rows = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `Person ${i}` }));

@@ -4,6 +4,7 @@ import { ArrayDataSource } from "../src/data-source.js";
 import EditableColumn from "../src/plugins/editable-column.js";
 
 async function makeReadyGrid(opts = {}, data = null) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ EditableColumn });
     const options = { ...opts };
     if (data !== null) {

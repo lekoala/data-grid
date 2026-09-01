@@ -10,7 +10,7 @@ import {
 import { change, input } from "./helpers.js";
 
 async function makeReadyGrid(opts = {}, data = null) {
-    DataGrid.registerPlugins({});
+    DataGrid.unregisterPlugins();
     const options = { ...opts };
     if (data !== null) {
         options.dataSource = new ArrayDataSource(data);
@@ -363,7 +363,7 @@ test("ArrayDataSource derives options from the full collection, not the current 
 });
 
 test("FetchDataSource never derives options from the current rows", () => {
-    DataGrid.registerPlugins({});
+    DataGrid.unregisterPlugins();
     const inst = new DataGrid({ columns: [{ field: "name", filterType: "select" }], src: "/api/users" });
     inst.setupDataSource();
     inst.rows = [{ name: "x" }];

@@ -1040,13 +1040,15 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Register plugin constructors, keyed by name. The core instantiates them
-     * on each DataGrid construction. Names are not limited to built-in plugins.
+     * Register plugin constructors, keyed by name. New registrations extend the
+     * current registry and replace constructors that use the same name. The core
+     * instantiates them on each DataGrid construction. Names are not limited to
+     * built-in plugins.
      * @public
      * @param {PluginRegistry} list
      */
     static registerPlugins(list) {
-        plugins = list;
+        plugins = { ...plugins, ...list };
     }
 
     /**
@@ -1066,7 +1068,7 @@ class DataGrid extends BaseElement {
      * @returns {PluginRegistry}
      */
     static registeredPlugins() {
-        return plugins;
+        return { ...plugins };
     }
 
     /**

@@ -8,6 +8,7 @@ import SelectableRows from "../src/plugins/selectable-rows.js";
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 async function makeReadyGrid(pluginSet, opts = {}, rows = [{ name: "Alice" }]) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins(pluginSet);
     const options = { ...opts, dataSource: new ArrayDataSource(rows) };
     const inst = new DataGrid(options);

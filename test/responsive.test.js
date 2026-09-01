@@ -16,6 +16,7 @@ const COLS = [
 ];
 
 async function makeReadyGrid(opts = {}, pluginSet = { ResponsiveGrid }) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins(pluginSet);
     const options = { ...opts, responsive: true, dataSource: new ArrayDataSource(ROWS) };
     const inst = new DataGrid(options);

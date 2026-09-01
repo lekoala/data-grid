@@ -6,6 +6,7 @@ import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 import { input } from "./helpers.js";
 
+DataGrid.unregisterPlugins();
 DataGrid.registerPlugins({ SelectableRows, BulkActions, RowActions });
 
 /**

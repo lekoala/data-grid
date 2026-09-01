@@ -364,7 +364,7 @@ response protection).
 | `getFirst()` / `getPrev()` / `getNext()` / `getLast()`   | paging                                          |
 | `clearFilters()`                                         | clear the current filters                       |
 | `sortAsc(field)` / `sortDesc(field)` / `sortNone(field)` | sort helpers                                    |
-| `DataGrid.registerPlugins(map)`                          | register plugin constructors                    |
+| `DataGrid.registerPlugins(map)`                          | merge plugin constructors by name               |
 | `DataGrid.getLabels()` / `setLabels(labels)`             | read / translate the UI labels                  |
 | `DataGrid.loadLabels(url)`                               | fetch a JSON label file and apply it            |
 | `grid.updateLabels()`                                    | refresh labels on one connected grid            |

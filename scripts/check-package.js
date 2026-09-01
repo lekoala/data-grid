@@ -4,7 +4,7 @@
  * Runs `npm pack --dry-run --json` and asserts:
  * - the public artifacts that must ship are present
  * - dev-only sources are absent
- * - every `exports` target (import/types) resolves inside the package
+ * - the `main` and every `exports` target resolve inside the package
  */
 
 import { execFileSync } from "node:child_process";
@@ -56,6 +56,13 @@ for (const prefix of ["test/", "demo/", "css/", "scripts/", ".github/"]) {
 }
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+
+if (typeof pkg.main === "string") {
+    const rel = pkg.main.replace(/^\.\//, "");
+    if (!has(rel)) {
+        errors.push(`main -> ${pkg.main} not found in package`);
+    }
+}
 
 function collectExportTargets(entry) {
     if (typeof entry === "string") {

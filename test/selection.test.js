@@ -8,6 +8,7 @@ import { change } from "./helpers.js";
 const rows = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `row${i}` }));
 
 async function makeReadyGrid(opts = {}, data = rows) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows, BulkActions });
     const options = { ...opts, dataSource: new ArrayDataSource(data) };
     const inst = new DataGrid(options);

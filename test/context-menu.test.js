@@ -13,6 +13,7 @@ afterEach(() => {
 });
 
 async function makeGrid() {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ ContextMenu });
     const grid = new DataGrid({
         columns: [

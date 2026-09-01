@@ -4,6 +4,7 @@ import { ArrayDataSource } from "../src/data-source.js";
 import DraggableHeaders from "../src/plugins/draggable-headers.js";
 
 async function makeReadyGrid(options, rows) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ DraggableHeaders });
     const inst = new DataGrid({ ...options, dataSource: new ArrayDataSource(rows) });
     document.body.appendChild(inst);

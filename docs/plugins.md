@@ -32,8 +32,10 @@ class MyPlugin extends BasePlugin {
 DataGrid.registerPlugins({ MyPlugin });
 ```
 
-`registerPlugins` takes a map of constructors keyed by name; the core calls
-`new Plugin(grid)` for every grid instance.
+`registerPlugins` merges a map of constructors keyed by name into the current
+registry; an existing name is overwritten. The core calls `new Plugin(grid)`
+for every grid instance. `registeredPlugins()` returns a snapshot, so changing
+the returned object does not alter future grids.
 
 ## Plugin-facing grid API
 

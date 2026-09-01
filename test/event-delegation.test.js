@@ -199,6 +199,7 @@ test("an inner grid interaction never triggers the outer grid", async () => {
 });
 
 test("rerendering does not duplicate delegated plugin handlers", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows });
     const inst = await connectGrid({
         dataSource: new ArrayDataSource(ROWS),
@@ -220,6 +221,7 @@ test("rerendering does not duplicate delegated plugin handlers", async () => {
 });
 
 test("reconnecting does not duplicate delegated plugin handlers", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows });
     const inst = await connectGrid({
         dataSource: new ArrayDataSource(ROWS),
@@ -242,6 +244,7 @@ test("reconnecting does not duplicate delegated plugin handlers", async () => {
 });
 
 test("an inner grid selection never triggers the outer grid selection plugin", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows });
     const outer = await connectGrid({
         dataSource: new ArrayDataSource(ROWS),
@@ -264,6 +267,7 @@ test("an inner grid selection never triggers the outer grid selection plugin", a
 });
 
 test("an inner grid header drop never reorders the outer grid columns", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows, DraggableHeaders });
     const outer = await connectGrid({
         dataSource: new ArrayDataSource(ROWS),

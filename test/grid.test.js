@@ -241,6 +241,7 @@ test("column wrap overrides the grid-wide wrapping policy without adding row int
 });
 
 test("frozen columns stack after frozen control columns and mark the edge", async () => {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows, ResponsiveGrid });
     const inst = await makeReadyGrid(
         {

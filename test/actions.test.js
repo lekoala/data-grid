@@ -6,6 +6,7 @@ import RowActions from "../src/plugins/row-actions.js";
 globalThis.confirm = () => true;
 
 async function makeReadyGrid(opts = {}, data = null, pluginSet = {}) {
+    DataGrid.unregisterPlugins();
     DataGrid.registerPlugins(pluginSet);
     const options = { ...opts };
     if (data !== null) {

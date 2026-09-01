@@ -45,8 +45,3 @@ if (!customElements.get("data-grid")) {
 
 export { DataGrid, ArrayDataSource, FetchDataSource };
 export default DataGrid;
-
-const global = typeof globalThis !== "undefined" ? globalThis : self;
-global.DataGrid = DataGrid;
-global.ArrayDataSource = ArrayDataSource;
-global.FetchDataSource = FetchDataSource;

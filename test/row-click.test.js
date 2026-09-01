@@ -4,8 +4,8 @@ import { ArrayDataSource } from "../src/data-source.js";
 import RowActions from "../src/plugins/row-actions.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 
-// The default plugin registry is shared across test files and replaced by other
-// suites, so register exactly the plugins this file exercises.
+// Register exactly the plugins this file exercises.
+DataGrid.unregisterPlugins();
 DataGrid.registerPlugins({ RowActions, SelectableRows });
 
 async function makeReadyGrid(opts = {}, data = null) {
