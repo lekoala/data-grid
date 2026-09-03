@@ -3,7 +3,8 @@ import { resolveActionConfirmation } from "../utils/actionConfirm.js";
 import applyContent from "../utils/applyContent.js";
 import { dispatch } from "../utils/dispatch.js";
 import interpolate from "../utils/interpolate.js";
-import { supportsPopoverAnchor } from "../utils/popover.js";
+import { supportsPopover } from "../utils/popover.js";
+import { attachPopoverPositioning } from "../utils/positionPopover.js";
 import randstr from "../utils/randstr.js";
 
 const COLLAPSED_ACTIONS_WIDTH = 48;
@@ -38,7 +39,7 @@ class RowActions extends BasePlugin {
     }
 
     connected() {
-        if (!supportsPopoverAnchor()) {
+        if (!supportsPopover()) {
             return;
         }
         const menu = this.grid.ownerDocument.createElement("ul");
@@ -49,6 +50,7 @@ class RowActions extends BasePlugin {
         this.grid.appendChild(menu);
         this.menu = menu;
         this.grid.addEventListener("click", this);
+        attachPopoverPositioning(this.grid, { selector: ".dg-actions-menu", placement: "bottom-end" });
     }
 
     disconnected() {

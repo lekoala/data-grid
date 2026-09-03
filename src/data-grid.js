@@ -39,7 +39,7 @@ import {
     setMultiSelectValues,
     updateMultiSelectSummary,
 } from "./utils/multiSelectFilter.js";
-import { supportsPopoverAnchor } from "./utils/popover.js";
+import { supportsPopover } from "./utils/popover.js";
 import randstr from "./utils/randstr.js";
 import { createSpanningRow } from "./utils/spanningRow.js";
 import transformValue from "./utils/transformValue.js";
@@ -3538,7 +3538,7 @@ class DataGrid extends BaseElement {
         // A capable browser gets a checkbox panel instead of a native control:
         // Ctrl-click listboxes are unusable in a narrow column. Older browsers
         // keep the ordinary select as the intentional degradation.
-        if (type === "select" && column.filterMultiple && supportsPopoverAnchor()) {
+        if (type === "select" && column.filterMultiple && supportsPopover()) {
             return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
         }
         const isSelect = type === "select" || type === "boolean";

@@ -47,17 +47,19 @@ test("decorative SVG masks keep standard and legacy WebKit declarations", () => 
     }
 });
 
-test("multi-select filters use top-layer anchor positioning", () => {
+test("multi-select filters use a JS-positioned fixed floating panel", () => {
     expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position: fixed;/);
-    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position-area: block-end span-inline-end;/);
-    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?position-try-fallbacks:/);
+    expect(coreCss).toMatch(/\.dg-multiselect-panel \{[\s\S]*?var\(--available-height/);
     expect(coreCss).toMatch(/\.dg-filter-control \{[\s\S]*?box-sizing: border-box;/);
 });
 
-test("row action menus use top-layer anchor positioning", () => {
+test("row action menus use a JS-positioned fixed floating panel", () => {
     expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position: fixed;/);
-    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position-area: block-end span-inline-start;/);
-    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?position-try-fallbacks:/);
+    expect(coreCss).toMatch(/\.dg-actions-menu \{[\s\S]*?var\(--available-height/);
+});
+
+test("floating panels no longer depend on CSS Anchor Positioning", () => {
+    expect(coreCss).not.toMatch(/position-area|position-try-fallbacks|anchor-size\(/);
 });
 
 test("multi-select keyboard focus is drawn on the filter control", () => {

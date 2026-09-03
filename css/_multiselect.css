@@ -1,8 +1,9 @@
 /* Multi-select filter: the root keeps the borderless .dg-filter-control look
-   of every filter cell. Native Popover owns lifecycle/top-layer rendering and
-   Anchor Positioning keeps the panel aligned while the grid or page scrolls.
-   Directional physical LTR declarations are mirrored for [dir="rtl"] in
-   _rtl.css. Older browsers render the ordinary select instead. */
+   of every filter cell. Native Popover owns lifecycle/top-layer rendering;
+   positionPopover.js places the panel through @lekoala/floating and mirrors
+   the trigger width (the former anchor-size()). Directional physical LTR
+   declarations are mirrored for [dir="rtl"] in _rtl.css. Older browsers render
+   the ordinary select instead. */
 
 data-grid .dg-multiselect-trigger {
   align-items: center;
@@ -55,12 +56,9 @@ data-grid .dg-multiselect-summary.dg-multiselect-empty {
 
 data-grid .dg-multiselect-panel {
   position: fixed;
-  position-area: block-end span-inline-end;
   margin: 0;
-  max-height: 280px;
+  max-block-size: min(17.5rem, var(--available-height, 17.5rem));
   max-width: 260px;
-  min-width: anchor-size(width);
   overflow-y: auto;
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   width: max-content;
 }

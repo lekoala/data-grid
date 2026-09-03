@@ -73,5 +73,8 @@
     "typescript": "^7.0.2"
   },
   "author": "LeKoala",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@lekoala/floating": "^0.1.0"
+  }
 }

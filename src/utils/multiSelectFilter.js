@@ -1,3 +1,4 @@
+import { attachPopoverPositioning } from "./positionPopover.js";
 import randstr from "./randstr.js";
 
 /**
@@ -8,8 +9,8 @@ import randstr from "./randstr.js";
  * DataGrid.filterData()).
  *
  * The control is passive: it owns no listeners. Opening and closing are routed
- * through the native Popover API. CSS Anchor Positioning keeps the panel
- * aligned with the trigger while the grid or page scrolls.
+ * through the native Popover API, while the panel placement (and its width
+ * matching the trigger) is handled in JavaScript (see positionPopover.js).
  */
 
 /**
@@ -118,6 +119,16 @@ export function createMultiSelect(column, options, relatedTh) {
     root.appendChild(trigger);
     root.appendChild(panel);
     updateMultiSelectSummary(root);
+    // One delegated listener per grid positions any rebuilt panel; the panel
+    // stays as wide as its trigger like the former `anchor-size()` style.
+    const grid = relatedTh.closest("data-grid");
+    if (grid) {
+        attachPopoverPositioning(grid, {
+            selector: ".dg-multiselect-panel",
+            placement: "bottom-start",
+            matchWidth: true,
+        });
+    }
     return root;
 }
 

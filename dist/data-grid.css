@@ -1107,6 +1107,8 @@ data-grid .dg-menu input {
 
 data-grid .dg-context-menu {
   position: fixed;
+  max-block-size: min(20rem, var(--available-height, 20rem));
+  overflow-y: auto;
   margin: 0;
   inset: auto;
 }
@@ -1156,13 +1158,10 @@ data-grid .dg-multiselect-summary.dg-multiselect-empty {
 
 data-grid .dg-multiselect-panel {
   position: fixed;
-  position-area: block-end span-inline-end;
-  min-width: anchor-size(width);
+  max-block-size: min(17.5rem, var(--available-height, 17.5rem));
   overflow-y: auto;
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   width: max-content;
   max-width: 260px;
-  max-height: 280px;
   margin: 0;
 }
 
@@ -1245,9 +1244,8 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 }
 
 data-grid .dg-actions-menu {
+  max-block-size: min(20rem, var(--available-height, 20rem));
   position: fixed;
-  position-area: block-end span-inline-start;
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
   width: max-content;
   max-width: 240px;
   margin: 0;

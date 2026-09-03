@@ -1,15 +1,10 @@
 /**
- * Whether the browser can also place a popover with CSS Anchor Positioning.
+ * Whether the browser can render native Popover surfaces. The panels that use
+ * the Popover API are positioned in JavaScript (see positionPopover.js), so a
+ * browser with Popover support gets the full feature; every older browser
+ * falls back to the ordinary controls.
  * @returns {Boolean}
  */
-export function supportsPopoverAnchor() {
-    return (
-        "popover" in HTMLElement.prototype &&
-        typeof CSS !== "undefined" &&
-        typeof CSS.supports === "function" &&
-        CSS.supports("position-area", "block-end span-inline-start") &&
-        CSS.supports("top", "anchor(bottom)") &&
-        CSS.supports("min-width", "anchor-size(width)") &&
-        CSS.supports("position-try-fallbacks", "flip-block flip-inline")
-    );
+export function supportsPopover() {
+    return "popover" in HTMLElement.prototype;
 }

@@ -77,24 +77,24 @@ that exceed this floor; architectural preferences remain documented in
 `AGENTS.md`.
 
 `filterMultiple` is a progressive enhancement with a narrower, capability-based
-floor: it requires the native Popover API plus CSS Anchor Positioning, including
-the combined viewport fallback tactic. The exact test is performed at runtime
-with `HTMLElement.prototype` and `CSS.supports`, so the core grid still works on
-the documented browser floor. Unsupported browsers render the ordinary native
+floor: it requires the native Popover API. The exact test is performed at
+runtime with `HTMLElement.prototype`, so the core grid still works on the
+documented browser floor. Unsupported browsers render the ordinary native
 single select and emit `eq`; they do not receive a multi-select polyfill or
 broken popover markup. This newer requirement is intentional because native
 Popover owns top-layer rendering, light dismissal, Escape handling and focus
-restoration, while Anchor Positioning keeps the panel aligned during scrolling.
+restoration, while `@lekoala/floating`, the package's single runtime
+dependency, keeps the panel aligned with its trigger during scrolling.
 
-The compact `RowActions` menu has the same combined capability requirement. A
-supported browser gets one shared native popover anchored to the invoking row;
-an unsupported browser renders all actions inline. There is no JavaScript
-placement or open/close fallback.
+The compact `RowActions` menu has the same single capability requirement. A
+supported browser gets one shared native popover positioned relative to the
+invoking row; an unsupported browser renders all actions inline. There is no
+open/close fallback.
 
-The `ContextMenu` plugin uses Popover without Anchor Positioning: it preserves
-the pointer coordinates and clamps the menu once to the viewport. A browser
-with Popover but without Anchor Positioning can therefore still use the custom
-column menu; browsers without Popover keep the ordinary browser context menu.
+The `ContextMenu` plugin uses the same positioning engine without following an
+anchor: it preserves the pointer coordinates and keeps the menu inside the
+viewport. A browser with Popover can therefore still use the custom column
+menu; browsers without Popover keep the ordinary browser context menu.
 
 ## Release
 

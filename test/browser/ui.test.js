@@ -464,13 +464,16 @@ test.skipIf(IS_WINDOWS)(
             window.grid.renderTable();
             window.grid.renderBody();
         })()`);
-        await v.click("#local-grid .dg-actions-toggle");
+        await waitFor(v, "document.querySelectorAll('#local-grid .dg-actions-toggle').length > 1");
+        // One shared popover has one toggle per row; the menu must follow the
+        // row that was actually clicked, not the first matching invoker.
+        await v.evaluate(`(() => document.querySelectorAll('#local-grid .dg-actions-toggle')[3].click())()`);
         await waitFor(v, "document.querySelector('#local-grid .dg-actions-menu').matches(':popover-open')");
 
         const alignment = await read(
             v,
             `(() => {
-                const toggle = document.querySelector('#local-grid .dg-actions-toggle').getBoundingClientRect();
+                const toggle = document.querySelectorAll('#local-grid .dg-actions-toggle')[3].getBoundingClientRect();
                 const menu = document.querySelector('#local-grid .dg-actions-menu').getBoundingClientRect();
                 return {
                     right: Math.abs(menu.right - toggle.right),

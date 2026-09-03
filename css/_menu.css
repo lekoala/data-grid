@@ -35,10 +35,14 @@ data-grid .dg-menu input {
   margin: 0;
 }
 
-/* The context menu is a top-layer popover positioned once at the pointer.
-   Older browsers keep the native browser context menu. */
+/* The context menu is a top-layer popover positioned at the pointer by
+   @lekoala/floating. The available room below the pointer caps the menu height
+   instead of overflowing the viewport. Older browsers keep the native browser
+   context menu. */
 data-grid .dg-context-menu {
   position: fixed;
   inset: auto;
   margin: 0;
+  max-block-size: min(20rem, var(--available-height, 20rem));
+  overflow-y: auto;
 }

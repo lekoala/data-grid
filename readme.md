@@ -539,9 +539,11 @@ All UI labels are plain strings, configurable through `setLabels()`,
 
 The core runtime targets modern evergreen browsers with native ES modules and
 these early-2022 floors: Chromium 99+, Firefox 98+ and Safari 15.4+. Newer platform features such as
-native Popover and CSS Anchor Positioning are used as progressive enhancements:
+native Popover are used as progressive enhancements:
 `filterMultiple` falls back to a working single-select filter emitting `eq`,
-and the optional context menu plugin only requires Popover support. See
+and the optional context menu plugin only requires Popover support. Floating
+panels are kept aligned by `@lekoala/floating`, the package's single runtime
+dependency. See
 `docs/development.md#browser-baseline` for the exact baseline and feature
 gating.
 

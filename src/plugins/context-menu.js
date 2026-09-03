@@ -1,3 +1,4 @@
+import { repositionAt } from "@lekoala/floating";
 import BasePlugin from "../core/base-plugin.js";
 import { off, on } from "../utils/events.js";
 
@@ -95,15 +96,18 @@ class ContextMenu extends BasePlugin {
             return;
         }
         event.preventDefault();
-        const x = event.clientX;
-        const y = event.clientY;
-        menu.style.left = `${x}px`;
-        menu.style.top = `${y}px`;
         menu.showPopover();
-        const rect = menu.getBoundingClientRect();
-        const viewport = menu.ownerDocument.documentElement;
-        menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
-        menu.style.top = `${Math.min(y, viewport.clientHeight - rect.height)}px`;
+        // Show first: the positioning engine refuses to measure a hidden
+        // surface. Then open down-right from the pointer, flipping above when
+        // there is no room below, and let shifting clamp it inside the
+        // viewport. `--available-height` caps the menu height so it scrolls
+        // instead of overflowing.
+        repositionAt(event.clientX, event.clientY, menu, {
+            placement: "bottom-start",
+            distance: 0,
+            shift: true,
+            shiftPadding: 0,
+        });
     }
 
     createMenu() {

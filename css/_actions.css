@@ -87,11 +87,10 @@ data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
 }
 
 data-grid .dg-actions-menu {
-  position: fixed;
-  position-area: block-end span-inline-start;
-  margin: 0;
-  position-try-fallbacks: flip-block, flip-inline, flip-block flip-inline;
+  max-block-size: min(20rem, var(--available-height, 20rem));
   max-width: 240px;
+  margin: 0;
+  position: fixed;
   width: max-content;
 }
 

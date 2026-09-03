@@ -184,9 +184,9 @@ either set `filterList` or return `meta.filters`.
 ## Multiple select
 
 A select column can accept several values with `filterMultiple: true` when the
-browser supports the native Popover API and CSS Anchor Positioning. The native
-`<select>` is then replaced by a compact control summarizing the selection
-("Belgium, France +1") that opens a checkbox panel:
+browser supports the native Popover API. The native `<select>` is then replaced
+by a compact control summarizing the selection ("Belgium, France +1") that
+opens a checkbox panel:
 
 ```js
 {
@@ -203,8 +203,9 @@ The contract follows the mode, not the cardinality:
 - An empty selection means no filter at all: the entry is dropped from the
   query instead of matching nothing.
 - Each change applies immediately, like single selects, and resets the page to
-  1. Native Popover closes on `Escape`, outside click, or another auto popover,
-  and restores focus to its trigger.
+  1. The native Popover closes on `Escape`, outside click, or another auto
+  popover, and restores focus to its trigger; `@lekoala/floating` keeps the
+  panel aligned with the trigger while the grid or page scrolls.
 - Options resolve through `getFilterOptions()` like single selects, but
   empty-valued options ("All", placeholders) are never rendered: an empty
   value cannot participate in a set.
@@ -214,10 +215,10 @@ The contract follows the mode, not the cardinality:
 Server grids receive the array through the standard bracket encoding
 (`filters[country][value][0]=BE`), and `ArrayDataSource` matches it natively.
 
-On browsers without all required capabilities, `filterMultiple` deliberately
-degrades to the ordinary native single select. It emits the normal `eq` query
-operator and remains filterable one value at a time; no `in` query should be
-assumed for every browser.
+On browsers without the Popover API, `filterMultiple` deliberately degrades to
+the ordinary native single select. It emits the normal `eq` query operator and
+remains filterable one value at a time; no `in` query should be assumed for
+every browser.
 
 ## Live filtering
 

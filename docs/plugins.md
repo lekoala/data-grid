@@ -83,7 +83,7 @@ The core creates the `<th>`/`<td>` and their structural attributes
 |--------------------|-------------------------------|-----------------------------------------------------------------|
 | `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column                                 |
 | `BulkActions`      | `bulkActions`                 | bulk action bar for the selection                               |
-| `RowActions`       | `actions`                     | inline actions; native anchored menu when supported             |
+| `RowActions`       | `actions`                     | inline actions; native popover menu when supported            |
 | `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room    |
 | `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row             |
 | `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers                                  |
@@ -102,9 +102,10 @@ handling, while keeping the native context-menu coordinates. It only requires
 Popover support; browsers without it do not receive `preventDefault()` and keep
 their ordinary browser context menu.
 
-`RowActions` uses Popover plus CSS Anchor Positioning only for its compact `⋯`
-presentation. Unsupported browsers keep every action inline, including when
-`collapseActions` is requested; no business action depends on floating UI.
+`RowActions` uses a native Popover, kept aligned by `@lekoala/floating`, for its
+compact `⋯` presentation. Unsupported browsers keep every action inline,
+including when `collapseActions` is requested; no business action depends on
+floating UI.
 
 ## Row details
 

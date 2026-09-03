@@ -3,9 +3,12 @@
 ## Positioning
 
 Server-first, explicitly paginated data grid Web Component. No virtualization /
-infinite scroll. Real semantic `<table>`, light DOM, vanilla JS, zero runtime
-dependencies, optional and decoupled plugins. Bun is tooling only — never a
-runtime requirement (no Bun/Node APIs in `src/`).
+infinite scroll. Real semantic `<table>`, light DOM, vanilla JS, optional and
+decoupled plugins. The only runtime dependency is `@lekoala/floating`, the same
+author's zero-dependency positioning engine used for floating panels (`dist/`
+bundles it; `src/` consumers resolve it themselves, e.g. through a bundler or an
+import map). Bun is tooling only — never a runtime requirement (no Bun/Node
+APIs in `src/`).
 
 ## Toolchain
 
@@ -107,9 +110,10 @@ Optional floating UI may use newer native platform APIs when that materially
 removes custom lifecycle or positioning code. The feature must be capability
 detected and unsupported browsers must lose or simplify only that optional UI,
 never the grid itself. `filterMultiple` is the first such exception: browsers
-with Popover API and CSS Anchor Positioning get the checkbox popover emitting
-`in`; older browsers receive the ordinary single select emitting `eq`. Do not
-add a polyfill or a JavaScript positioning fallback for this feature.
+with the Popover API get the checkbox popover emitting `in`, positioned by
+`@lekoala/floating`; older browsers receive the ordinary single select emitting
+`eq`. Do not add a polyfill or a native Capabilities Removed fallback for this
+feature.
 
 This exception does not change the package-wide JS baseline or the
 `check:baseline` rules. Keep the core runtime compatible with the documented

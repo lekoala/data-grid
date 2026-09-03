@@ -1195,6 +1195,388 @@ function getTextWidth(text, el = document.body, withPadding = false) {
   return Math.floor(metrics.width) + padding;
 }
 
+// node_modules/@lekoala/floating/src/floating.js
+function crossAxisFor(side) {
+  return side === "top" || side === "bottom" ? "x" : "y";
+}
+function parsePlacement(placement) {
+  const [side, align = null] = placement.split("-");
+  return { side, align, crossAxis: crossAxisFor(side) };
+}
+function flipSide(side) {
+  return { top: "bottom", bottom: "top", left: "right", right: "left" }[side] || side;
+}
+function computeCoords(reference, floating, side, align, rtl, distance) {
+  const crossAxis = crossAxisFor(side);
+  const commonX = reference.x + reference.width / 2 - floating.width / 2;
+  const commonY = reference.y + reference.height / 2 - floating.height / 2;
+  const commonAlign = reference[crossAxis === "x" ? "width" : "height"] / 2 - floating[crossAxis === "x" ? "width" : "height"] / 2;
+  let coords;
+  switch (side) {
+    case "top":
+      coords = { x: commonX, y: reference.y - floating.height - distance };
+      break;
+    case "bottom":
+      coords = { x: commonX, y: reference.y + reference.height + distance };
+      break;
+    case "right":
+      coords = { x: reference.x + reference.width + distance, y: commonY };
+      break;
+    case "left":
+      coords = { x: reference.x - floating.width - distance, y: commonY };
+      break;
+    default:
+      coords = { x: reference.x, y: reference.y };
+  }
+  if (align === "start" || align === "end") {
+    const direction = (rtl && crossAxis === "x" ? -1 : 1) * (align === "end" ? 1 : -1);
+    coords[crossAxis] += commonAlign * direction;
+  }
+  return coords;
+}
+function getInlineOverflow(coords, floating, minX, maxX) {
+  return Math.max(minX - coords.x, 0) + Math.max(coords.x + floating.width - maxX, 0);
+}
+function isRTL(element) {
+  const direction = "dir" in element ? element.dir : "";
+  if (direction === "rtl")
+    return true;
+  if (direction === "ltr")
+    return false;
+  const win = element.ownerDocument?.defaultView;
+  if (win?.CSS?.supports?.("selector(:dir(rtl))") && typeof element.matches === "function") {
+    return element.matches(":dir(rtl)");
+  }
+  return Boolean(win?.Element && element instanceof win.Element && win.getComputedStyle(element).direction === "rtl");
+}
+var STABLE_SCROLLBAR_MAX_WIDTH = 25;
+var NARROW_INLINE_FLIP_FALLBACK = 128;
+function getViewportBoundary(doc) {
+  const win = doc.defaultView;
+  if (!win)
+    return null;
+  const docEl = doc.documentElement;
+  const visualViewport = win.visualViewport;
+  const x = visualViewport?.offsetLeft || 0;
+  const y = visualViewport?.offsetTop || 0;
+  let width = visualViewport?.width || docEl.clientWidth || win.innerWidth;
+  const height = visualViewport?.height || docEl.clientHeight || win.innerHeight;
+  const reserved = doc.compatMode === "BackCompat" ? width - docEl.clientWidth : docEl.clientWidth - docEl.getBoundingClientRect().width;
+  if (reserved > 0 && reserved <= STABLE_SCROLLBAR_MAX_WIDTH) {
+    const gutter = win.getComputedStyle?.(docEl).scrollbarGutter;
+    if (gutter && gutter !== "auto")
+      width -= reserved;
+  }
+  return { x, y, width, height, right: x + width, bottom: y + height };
+}
+function getBoundary(reference, options) {
+  return options.scope ? options.scope.getBoundingClientRect() : getViewportBoundary(reference.ownerDocument);
+}
+function clampToBoundary(position, size, start, end, padding) {
+  const paddedMin = start + padding;
+  const paddedMax = end - size - padding;
+  const fitsPadded = paddedMax >= paddedMin;
+  const min = fitsPadded ? paddedMin : start;
+  const max = fitsPadded ? paddedMax : end - size;
+  return Math.max(min, Math.min(position, max));
+}
+function arrowPercent(referenceCenter, boxStart, size) {
+  if (!size)
+    return 50;
+  const percent = (referenceCenter - boxStart) / size * 100;
+  return Math.round(Math.min(100, Math.max(0, percent)) * 1000) / 1000;
+}
+function isOutsideBoundary(rect, boundary) {
+  return rect.right < boundary.x || rect.left > boundary.right || rect.bottom < boundary.y || rect.top > boundary.bottom;
+}
+function getAvailableHeight(referenceRect, side, boundary, distance, padding) {
+  if (side === "top") {
+    return Math.max(0, referenceRect.top - boundary.y - distance - padding);
+  }
+  if (side === "bottom") {
+    return Math.max(0, boundary.bottom - referenceRect.bottom - distance - padding);
+  }
+  return Math.max(0, boundary.height - padding * 2);
+}
+function isVisible(element) {
+  if (element.hidden)
+    return false;
+  if (typeof element.checkVisibility === "function")
+    return element.checkVisibility();
+  return element.getClientRects().length > 0;
+}
+function getFloatingSize(floating) {
+  const width = floating.offsetWidth;
+  const height = floating.offsetHeight;
+  if (width && height)
+    return { width, height };
+  const rect = floating.getBoundingClientRect();
+  return { width: width || rect.width, height: height || rect.height };
+}
+var trackers = new WeakMap;
+function createTracker(doc) {
+  const win = doc.defaultView;
+  if (!win)
+    throw new TypeError("floating must belong to a document with a browsing context");
+  const subscriptions = new Set;
+  const pending = new Map;
+  const ResizeObserverCtor = win.ResizeObserver;
+  let tick = false;
+  let listening = false;
+  const visualViewport = win.visualViewport;
+  function queue(subscription, type) {
+    let types = pending.get(subscription);
+    if (!types) {
+      types = new Set;
+      pending.set(subscription, types);
+    }
+    types.add(type);
+  }
+  function scheduleFlush() {
+    if (tick)
+      return;
+    tick = true;
+    win.requestAnimationFrame(() => {
+      const notifications = [...pending];
+      pending.clear();
+      tick = false;
+      for (const [subscription, types] of notifications) {
+        if (!subscriptions.has(subscription) || !subscription.floating.isConnected)
+          continue;
+        for (const type of types)
+          subscription.callback({ type });
+      }
+    });
+  }
+  function notifyAll(type) {
+    for (const subscription of subscriptions)
+      queue(subscription, type);
+    scheduleFlush();
+  }
+  function observeSizes(subscription) {
+    if (!ResizeObserverCtor)
+      return null;
+    const primed = new Set;
+    const observer = new ResizeObserverCtor((entries) => {
+      let changed = false;
+      for (const entry of entries) {
+        if (primed.has(entry.target))
+          changed = true;
+        else
+          primed.add(entry.target);
+      }
+      if (!changed)
+        return;
+      queue(subscription, "element-resize");
+      scheduleFlush();
+    });
+    const { reference, floating } = subscription;
+    if (reference)
+      observer.observe(reference);
+    if (floating !== reference)
+      observer.observe(floating);
+    return observer;
+  }
+  const onScroll = () => notifyAll("scroll");
+  const onResize = () => notifyAll("resize");
+  function startListening() {
+    if (listening)
+      return;
+    doc.addEventListener("scroll", onScroll, { passive: true, capture: true });
+    win.addEventListener("resize", onResize, { passive: true });
+    visualViewport?.addEventListener("scroll", onScroll, { passive: true });
+    visualViewport?.addEventListener("resize", onResize, { passive: true });
+    listening = true;
+  }
+  function stopListening() {
+    if (!listening)
+      return;
+    doc.removeEventListener("scroll", onScroll, { capture: true });
+    win.removeEventListener("resize", onResize);
+    visualViewport?.removeEventListener("scroll", onScroll);
+    visualViewport?.removeEventListener("resize", onResize);
+    listening = false;
+  }
+  return {
+    add(reference, floating, callback) {
+      const subscription = { reference, floating, callback };
+      subscriptions.add(subscription);
+      startListening();
+      const observer = observeSizes(subscription);
+      let stopped = false;
+      return () => {
+        if (stopped)
+          return;
+        stopped = true;
+        subscriptions.delete(subscription);
+        pending.delete(subscription);
+        observer?.disconnect();
+        if (subscriptions.size === 0)
+          stopListening();
+      };
+    }
+  };
+}
+function trackerFor(element) {
+  const doc = element.ownerDocument;
+  let tracker = trackers.get(doc);
+  if (!tracker) {
+    tracker = createTracker(doc);
+    trackers.set(doc, tracker);
+  }
+  return tracker;
+}
+function autoUpdate(reference, floating, callback) {
+  if (!floating?.ownerDocument) {
+    throw new TypeError("autoUpdate() expects a floating HTMLElement");
+  }
+  if (reference && reference.ownerDocument !== floating.ownerDocument) {
+    throw new TypeError("reference and floating must belong to the same document");
+  }
+  if (typeof callback !== "function")
+    throw new TypeError("callback must be a function");
+  return trackerFor(floating).add(reference, floating, callback);
+}
+function reposition(reference, floating, options = {}) {
+  if (!isVisible(floating))
+    return false;
+  const placement = options.placement || "bottom-start";
+  const distance = options.distance || 0;
+  const flip = options.flip !== false;
+  const shift = options.shift !== false;
+  const shiftPadding = options.shiftPadding ?? 4;
+  let { side, align, crossAxis } = parsePlacement(placement);
+  const rtl = align ? isRTL(reference) : false;
+  const rects = reference.getClientRects();
+  const referenceRect = side === "bottom" ? rects[rects.length - 1] : rects[0];
+  if (!referenceRect)
+    return false;
+  const boundary = getBoundary(reference, options);
+  if (!boundary || isOutsideBoundary(referenceRect, boundary))
+    return false;
+  const floatingRect = getFloatingSize(floating);
+  let coords = computeCoords(referenceRect, floatingRect, side, align, rtl, distance);
+  if (flip) {
+    const x = Math.ceil(coords.x);
+    const y = Math.ceil(coords.y);
+    if (crossAxis === "x" && (y < boundary.y || y + floatingRect.height >= boundary.bottom) || crossAxis === "y" && (x < boundary.x || x + floatingRect.width >= boundary.right)) {
+      side = flipSide(side);
+      coords = computeCoords(referenceRect, floatingRect, side, align, rtl, distance);
+    }
+    if (crossAxis === "y" && (coords.x < boundary.x || coords.x + floatingRect.width > boundary.right) && boundary.width - floatingRect.width < NARROW_INLINE_FLIP_FALLBACK) {
+      side = "top";
+      crossAxis = "x";
+      coords = computeCoords(referenceRect, floatingRect, side, align, rtl, distance);
+    }
+  }
+  if (crossAxis === "x" && shift && align) {
+    const minX = boundary.x + shiftPadding;
+    const maxX = boundary.right - shiftPadding;
+    const currentOverflow = getInlineOverflow(coords, floatingRect, minX, maxX);
+    if (currentOverflow > 0) {
+      const nextAlign = align === "end" ? "start" : "end";
+      const candidate = computeCoords(referenceRect, floatingRect, side, nextAlign, rtl, distance);
+      if (getInlineOverflow(candidate, floatingRect, minX, maxX) < currentOverflow) {
+        align = nextAlign;
+        coords = candidate;
+      }
+    }
+  }
+  if (shift) {
+    coords.x = clampToBoundary(coords.x, floatingRect.width, boundary.x, boundary.right, shiftPadding);
+    if (crossAxis === "y") {
+      coords.y = clampToBoundary(coords.y, floatingRect.height, boundary.y, boundary.bottom, shiftPadding);
+    }
+  }
+  const arrowX = arrowPercent(referenceRect.x + referenceRect.width / 2, coords.x, floatingRect.width);
+  const arrowY = arrowPercent(referenceRect.y + referenceRect.height / 2, coords.y, floatingRect.height);
+  const availableHeight = getAvailableHeight(referenceRect, side, boundary, distance, shiftPadding);
+  const { style } = floating;
+  style.left = `${coords.x}px`;
+  style.top = `${coords.y}px`;
+  style.setProperty("--arrow-x", `${arrowX}%`);
+  style.setProperty("--arrow-y", `${arrowY}%`);
+  style.setProperty("--available-height", `${availableHeight}px`);
+  floating.dataset.placement = align ? `${side}-${align}` : side;
+  return true;
+}
+function repositionAt(x, y, floating, options = {}) {
+  const doc = floating.ownerDocument;
+  const docEl = doc.documentElement;
+  const win = doc.defaultView;
+  if (!win)
+    return false;
+  const direction = doc.dir || docEl?.dir || win.getComputedStyle?.(docEl).direction || "";
+  const point = new win.DOMRect(x, y, 0, 0);
+  const reference = {
+    ownerDocument: doc,
+    dir: direction,
+    matches: (selector) => selector === ":dir(rtl)" && direction === "rtl",
+    getClientRects: () => [point]
+  };
+  return reposition(reference, floating, options);
+}
+
+// src/utils/positionPopover.js
+var ACTIVE_STATE = new WeakMap;
+function attachPopoverPositioning(grid, { selector, placement, matchWidth = false }) {
+  let state = ACTIVE_STATE.get(grid);
+  if (!state) {
+    const created = { panels: new WeakMap, listeners: new Map, invokers: new Map };
+    state = created;
+    ACTIVE_STATE.set(grid, created);
+    grid.addEventListener("click", (event) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+      const trigger = event.target.closest("[popovertarget]");
+      const panelId = trigger?.getAttribute("popovertarget");
+      if (panelId) {
+        created.invokers.set(panelId, trigger);
+      }
+    });
+  }
+  if (state.listeners.has(selector)) {
+    return;
+  }
+  const listener = (event) => {
+    const panel = event.target;
+    if (!(panel instanceof HTMLElement) || !panel.matches(selector)) {
+      return;
+    }
+    if (event.newState !== "open") {
+      const stop = state.panels.get(panel);
+      if (stop) {
+        stop();
+        state.panels.delete(panel);
+      }
+      return;
+    }
+    if (!panel.isConnected) {
+      return;
+    }
+    const trigger = state.invokers.get(panel.id) ?? grid.querySelector(`[popovertarget="${panel.id}"]`);
+    if (!trigger?.isConnected) {
+      return;
+    }
+    const update = () => {
+      if (!panel.isConnected || !trigger.isConnected) {
+        state.panels.get(panel)?.();
+        return true;
+      }
+      if (matchWidth) {
+        panel.style.inlineSize = `${trigger.getBoundingClientRect().width}px`;
+      }
+      return reposition(trigger, panel, { placement, distance: 0, flip: true, shift: true });
+    };
+    if (update()) {
+      state.panels.set(panel, autoUpdate(trigger, panel, update));
+    }
+  };
+  grid.addEventListener("toggle", listener, true);
+  state.listeners.set(selector, listener);
+}
+
 // src/utils/randstr.js
 function randstr(prefix) {
   return Math.random().toString(36).replace("0.", prefix || "");
@@ -1267,6 +1649,14 @@ function createMultiSelect(column, options, relatedTh) {
   root.appendChild(trigger);
   root.appendChild(panel);
   updateMultiSelectSummary(root);
+  const grid = relatedTh.closest("data-grid");
+  if (grid) {
+    attachPopoverPositioning(grid, {
+      selector: ".dg-multiselect-panel",
+      placement: "bottom-start",
+      matchWidth: true
+    });
+  }
   return root;
 }
 function readMultiSelect(root) {
@@ -1293,8 +1683,8 @@ function clearMultiSelect(root) {
 }
 
 // src/utils/popover.js
-function supportsPopoverAnchor() {
-  return "popover" in HTMLElement.prototype && typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("position-area", "block-end span-inline-start") && CSS.supports("top", "anchor(bottom)") && CSS.supports("min-width", "anchor-size(width)") && CSS.supports("position-try-fallbacks", "flip-block flip-inline");
+function supportsPopover() {
+  return "popover" in HTMLElement.prototype;
 }
 
 // src/utils/spanningRow.js
@@ -3373,7 +3763,7 @@ class DataGrid extends base_element_default {
   }
   createFilterElement(column, relatedTh) {
     const type = getColumnFilterType(column);
-    if (type === "select" && column.filterMultiple && supportsPopoverAnchor()) {
+    if (type === "select" && column.filterMultiple && supportsPopover()) {
       return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
     }
     const isSelect = type === "select" || type === "boolean";
@@ -3840,15 +4230,13 @@ class ContextMenu extends base_plugin_default {
       return;
     }
     event.preventDefault();
-    const x = event.clientX;
-    const y = event.clientY;
-    menu.style.left = `${x}px`;
-    menu.style.top = `${y}px`;
     menu.showPopover();
-    const rect = menu.getBoundingClientRect();
-    const viewport = menu.ownerDocument.documentElement;
-    menu.style.left = `${Math.min(x, viewport.clientWidth - rect.width)}px`;
-    menu.style.top = `${Math.min(y, viewport.clientHeight - rect.height)}px`;
+    repositionAt(event.clientX, event.clientY, menu, {
+      placement: "bottom-start",
+      distance: 0,
+      shift: true,
+      shiftPadding: 0
+    });
   }
   createMenu() {
     const grid = this.grid;
@@ -4893,7 +5281,7 @@ class RowActions extends base_plugin_default {
     this.menu = null;
   }
   connected() {
-    if (!supportsPopoverAnchor()) {
+    if (!supportsPopover()) {
       return;
     }
     const menu = this.grid.ownerDocument.createElement("ul");
@@ -4904,6 +5292,7 @@ class RowActions extends base_plugin_default {
     this.grid.appendChild(menu);
     this.menu = menu;
     this.grid.addEventListener("click", this);
+    attachPopoverPositioning(this.grid, { selector: ".dg-actions-menu", placement: "bottom-end" });
   }
   disconnected() {
     this.grid.removeEventListener("click", this);

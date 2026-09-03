@@ -92,13 +92,15 @@ a resolver returning a message string (or `false` to skip confirmation).
 ## Inline and collapsed presentation
 
 One or two actions render inline by default. More actions, or
-`collapseActions: true`, use a shared native Popover anchored to the `⋯`
-invoker when Popover and CSS Anchor Positioning are both available. The browser
-owns placement, viewport flipping, light dismissal, Escape and focus return.
+`collapseActions: true`, use a shared native Popover attached to the `⋯` invoker
+when the Popover API is available. The browser owns top-layer rendering, light
+dismissal, Escape and focus return; `@lekoala/floating` keeps the menu aligned
+with the invoker while the grid or page scrolls and flips it back inside the
+viewport when there is no room below.
 
-This is progressive enhancement only. A browser without either capability
-renders every available action inline; no action is hidden behind an unsupported
-menu and no JavaScript positioning fallback is installed.
+This is progressive enhancement only. A browser without Popover renders every
+available action inline; no action is hidden behind an unsupported menu and no
+positioning fallback is installed.
 
 ## Row click
 
