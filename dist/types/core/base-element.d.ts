@@ -5,6 +5,7 @@ export type Options = import('../data-grid.js').Options;
  * related to this project but makes HTMLElement usable
  */
 declare class BaseElement extends HTMLElement {
+    #private;
     /** @type {Options} */
     options: Options;
     setup: boolean;

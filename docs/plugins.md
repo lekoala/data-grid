@@ -94,6 +94,10 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | `AutosizeColumn`   | `autosize`                    | measures widthless columns when enabled (off by default)        |
 | `SaveState`        | `saveState`                   | persists query + column visibility                              |
 
+`SaveState` requires an explicit, stable `id` on the `<data-grid>` element (or
+the constructor `id` option). State persistence is disabled with a warning when
+the component has only its automatically generated runtime id.
+
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.
 

@@ -42,6 +42,7 @@ import {
 import { supportsPopover } from "./utils/popover.js";
 import randstr from "./utils/randstr.js";
 import { createSpanningRow } from "./utils/spanningRow.js";
+import { markGeneratedId } from "./utils/stableElementId.js";
 import transformValue from "./utils/transformValue.js";
 
 /** @typedef {import("./data-source.js").DataSource} DataSource */
@@ -752,7 +753,11 @@ class DataGrid extends BaseElement {
     _ready() {
         this.fireEvents = false;
         if (!this.hasAttribute("id")) {
-            this.setAttribute("id", this.options.id ?? randstr("el-"));
+            const id = this.options.id ?? randstr("el-");
+            this.setAttribute("id", id);
+            if (!this.options.id) {
+                markGeneratedId(this, id);
+            }
         }
         normalizeSelectionOptions(this.options);
     }
@@ -776,7 +781,7 @@ class DataGrid extends BaseElement {
         <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
         <tr class="dg-head-filters"></tr>
     </thead>
-    <tbody data-empty-message="${labels.noData}"></tbody>
+    <tbody data-empty-message=""></tbody>
     <tfoot hidden>
         <tr>
             <td>
@@ -784,26 +789,26 @@ class DataGrid extends BaseElement {
                 <div class="dg-footer-controls">
                 <div class="dg-page-nav">
                   <span class="dg-select-field">
-                    <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
+                    <select class="dg-select-per-page"></select>
                   </span>
                 </div>
-                <div class="dg-pagination" role="group" aria-label="${formatLabel(labels.pageStatus, { page: 0, pages: 0 })}">
-                  <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
+                <div class="dg-pagination" role="group">
+                  <button type="button" class="dg-btn-first dg-rotate" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-prev dg-rotate" title="${labels.gotoPrevPage}" aria-label="${labels.gotoPrevPage}" disabled>
+                  <button type="button" class="dg-btn-prev dg-rotate" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
-                  <input type="number" class="dg-input-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
-                  <button type="button" class="dg-btn-next" title="${labels.gotoNextPage}" aria-label="${labels.gotoNextPage}" disabled>
+                  <input type="number" class="dg-input-page" min="1" step="1" value="1">
+                  <button type="button" class="dg-btn-next" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-last" title="${labels.gotoLastPage}" aria-label="${labels.gotoLastPage}" disabled>
+                  <button type="button" class="dg-btn-last" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
                 </div>
                 </div>
-                <div class="dg-meta">${formatLabel(labels.pageRange, { from: 0, to: 0, total: 0 })}</div>
+                <div class="dg-meta"></div>
             </div>
             </td>
         </tr>

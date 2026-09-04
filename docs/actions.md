@@ -163,7 +163,10 @@ grid.addEventListener("rowClick", (ev) => {
 
 `grid.actionRenderer` applies a global renderer to every action that has no
 `render`. Renderer content may be a `Node`, a string, or `{ html }`. An `href`
-supports `{field}` interpolation or a `(row, ctx) => url` function.
+supports `{field}` interpolation or a `(row, ctx) => url` function. Interpolated
+values are percent-encoded as URL components; use the function form to build a
+complete URL. Unsafe executable protocols (`javascript:`, `data:`, `vbscript:`)
+are rendered as non-navigating buttons.
 
 ## Server-driven actions
 

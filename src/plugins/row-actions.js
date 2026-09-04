@@ -11,6 +11,26 @@ const COLLAPSED_ACTIONS_WIDTH = 48;
 const INLINE_ACTION_WIDTH = 64;
 const INLINE_ACTION_GAP = 4;
 const ACTIONS_CELL_PADDING = 16;
+const UNSAFE_URL_PROTOCOLS = new Set(["data:", "javascript:", "vbscript:"]);
+
+/**
+ * Keep ordinary relative and application URLs while preventing href values
+ * that execute attacker-controlled code when activated.
+ * @param {*} value
+ * @returns {String|null}
+ */
+function normalizeActionHref(value) {
+    if (value === null || value === undefined) {
+        return null;
+    }
+    const href = String(value);
+    try {
+        const protocol = new URL(href, document.baseURI).protocol.toLowerCase();
+        return UNSAFE_URL_PROTOCOLS.has(protocol) ? null : href;
+    } catch {
+        return null;
+    }
+}
 
 /**
  * Stable sizing heuristic for inline action controls: cell padding, one
@@ -357,11 +377,12 @@ class RowActions extends BasePlugin {
         const grid = this.grid;
         const rowKey = grid.resolveRowKey(row, rowIndex);
         const ctx = { grid, action, rowKey };
-        const href = action.href
+        const resolvedHref = action.href
             ? typeof action.href === "function"
                 ? action.href(row, ctx)
                 : interpolate(action.href, row)
             : null;
+        const href = normalizeActionHref(resolvedHref);
         const el = this.#createActionControl(action, row, href, menu);
         el.dataset.action = action.name;
         if (action.intent) {

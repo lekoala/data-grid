@@ -1,4 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
+import { hasStableId } from "../utils/stableElementId.js";
 
 const STATE_EVENTS = ["bodyRendered", "columnVisibility"];
 
@@ -11,6 +12,8 @@ const STATE_EVENTS = ["bodyRendered", "columnVisibility"];
 class SaveState extends BasePlugin {
     /** @type {(() => void) | null} */
     #onStateChanged;
+    /** @type {Boolean} */
+    #warnedMissingId;
 
     /**
      * @param {import("../data-grid.js").default} grid
@@ -18,6 +21,7 @@ class SaveState extends BasePlugin {
     constructor(grid) {
         super(grid);
         this.#onStateChanged = null;
+        this.#warnedMissingId = false;
         this.log("Init");
     }
 
@@ -27,6 +31,10 @@ class SaveState extends BasePlugin {
 
         if (!grid.options.saveState) {
             this.log("disabled");
+            return;
+        }
+
+        if (!this.#canPersist()) {
             return;
         }
 
@@ -79,7 +87,7 @@ class SaveState extends BasePlugin {
 
     /** @param {Boolean} enabled */
     saveStateChanged(enabled) {
-        if (enabled) {
+        if (enabled && this.#canPersist()) {
             this.#listen();
         } else {
             this.#unlisten();
@@ -95,7 +103,7 @@ class SaveState extends BasePlugin {
      */
     #update() {
         const grid = this.grid;
-        if (!grid.options.saveState || !grid.classList.contains("dg-initialized")) {
+        if (!grid.options.saveState || !hasStableId(grid) || !grid.classList.contains("dg-initialized")) {
             return;
         }
         this.#setState({
@@ -109,6 +117,18 @@ class SaveState extends BasePlugin {
      */
     log(...data) {
         this.grid.log("[Save-State] ", ...data);
+    }
+
+    /** @returns {Boolean} */
+    #canPersist() {
+        if (hasStableId(this.grid)) {
+            return true;
+        }
+        if (!this.#warnedMissingId) {
+            console.warn("saveState requires a stable id on <data-grid>; state persistence is disabled.");
+            this.#warnedMissingId = true;
+        }
+        return false;
     }
 
     /**

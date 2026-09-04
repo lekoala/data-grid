@@ -122,6 +122,16 @@ test("applySort always keeps null/undefined/empty values last", () => {
     ]);
 });
 
+test("applySort compares strings with locale-aware accent semantics", () => {
+    const rows = [{ name: "Zulu" }, { name: "Élodie" }, { name: "Ångström" }];
+
+    expect(applySort(rows, [{ field: "name", direction: "asc" }]).map((row) => row.name)).toEqual([
+        "Ångström",
+        "Élodie",
+        "Zulu",
+    ]);
+});
+
 test("paginate slices a page", () => {
     const rows = [1, 2, 3, 4, 5].map((v) => ({ v }));
     expect(paginate(rows, 2, 2)).toEqual([{ v: 3 }, { v: 4 }]);

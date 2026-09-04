@@ -277,14 +277,16 @@ export function applySort(rows, sort) {
         if (emptyA !== emptyB) {
             return emptyA ? 1 : -1;
         }
+        if (emptyA) {
+            return 0;
+        }
         if (typeof a[field] === "number" && typeof b[field] === "number") {
             return (a[field] - b[field]) * dir;
         }
-        const valA = `${a[field] ?? ""}`.toUpperCase();
-        const valB = `${b[field] ?? ""}`.toUpperCase();
-        if (valA > valB) return dir;
-        if (valA < valB) return -dir;
-        return 0;
+        // Keep strings lexical (numeric sorting above remains limited to real
+        // numbers), but use the same locale-aware, accent-insensitive text
+        // semantics as relational filters.
+        return compareValues(a[field], b[field], false) * dir;
     });
 }
 

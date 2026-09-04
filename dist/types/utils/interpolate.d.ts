@@ -1,5 +1,7 @@
 /**
- * Replace element within {} by their data value
+ * Replace elements within {} by URL-encoded data values.
+ * This treats every placeholder as one URL component. Callers that need to
+ * construct a complete URL should use the functional API instead.
  * @param {String} str
  * @param {Record<string, any>} data
  * @returns {String}

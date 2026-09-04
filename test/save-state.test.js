@@ -117,3 +117,30 @@ test("save-state can be enabled and disabled after connection", async () => {
     await grid.setQuery({ search: "Grace" });
     expect(sessionStorage.getItem(`gridSaveState_${gridId}`)).toBe(stored);
 });
+
+test("save-state warns and stays disabled for an automatically generated id", async () => {
+    DataGrid.unregisterPlugins();
+    DataGrid.registerPlugins({ SaveState });
+    const warnings = [];
+    const originalWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(" "));
+    const grid = new DataGrid({
+        columns: [{ field: "name" }],
+        saveState: true,
+        dataSource: { load: () => Promise.resolve({ rows: [{ name: "Ada" }], total: 1 }) },
+    });
+    const generatedId = grid.id;
+    const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+
+    try {
+        document.body.appendChild(grid);
+        await connected;
+
+        expect(warnings).toEqual(["saveState requires a stable id on <data-grid>; state persistence is disabled."]);
+        expect(sessionStorage.getItem(`gridSaveState_${generatedId}`)).toBeNull();
+    } finally {
+        console.warn = originalWarn;
+        grid.remove();
+        sessionStorage.removeItem(`gridSaveState_${generatedId}`);
+    }
+});

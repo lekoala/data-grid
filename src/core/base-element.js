@@ -7,6 +7,9 @@ import { dispatch } from "../utils/dispatch.js";
  * related to this project but makes HTMLElement usable
  */
 class BaseElement extends HTMLElement {
+    /** @type {Number} */
+    #lifecycleVersion;
+
     /**
      * @param {Partial<Options>} options
      */
@@ -21,6 +24,7 @@ class BaseElement extends HTMLElement {
         this.setup = false;
         this.rendered = false;
         this.fireEvents = true;
+        this.#lifecycleVersion = 0;
         this._ready();
 
         this.log("ready");
@@ -89,8 +93,14 @@ class BaseElement extends HTMLElement {
             return;
         }
         this.setup = true;
+        const lifecycleVersion = ++this.#lifecycleVersion;
         // ensure whenDefined callbacks run first
         setTimeout(async () => {
+            // The element may have been removed before deferred setup starts.
+            // A stable disconnection owns cleanup and makes this cycle stale.
+            if (!this.isConnected || lifecycleVersion !== this.#lifecycleVersion) {
+                return;
+            }
             this.log("connectedCallback");
 
             // Append only when labels had the opportunity to be set
@@ -106,6 +116,12 @@ class BaseElement extends HTMLElement {
 
             await this._connected();
 
+            // _connected() may await application or network work. Never emit a
+            // connected event for a cycle that was disconnected meanwhile.
+            if (!this.isConnected || lifecycleVersion !== this.#lifecycleVersion) {
+                return;
+            }
+
             // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events
             dispatch(this, "connected");
         }, 0);
@@ -117,6 +133,7 @@ class BaseElement extends HTMLElement {
     disconnectedCallback() {
         setTimeout(() => {
             if (!this.isConnected && this.setup) {
+                this.#lifecycleVersion++;
                 this.log("disconnectedCallback");
                 this._disconnected();
                 // @link https://gist.github.com/WebReflection/ec9f6687842aa385477c4afca625bbf4#life-cycle-events

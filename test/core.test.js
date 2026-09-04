@@ -88,6 +88,25 @@ test("connected instances update labels only when explicitly requested", async (
     resetLabels();
 });
 
+test("labels are applied as text and attributes, never parsed as template HTML", async () => {
+    const malicious = '"><img src=x data-injected="true">';
+    DataGrid.setLabels({ noData: malicious });
+    const inst = makeInst();
+    const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));
+
+    try {
+        document.body.appendChild(inst);
+        await connected;
+
+        expect(inst.querySelector("[data-injected]")).toBeNull();
+        expect(inst.tbody.getAttribute("data-empty-message")).toBe(malicious);
+        expect(inst.querySelector(".dg-status").textContent).toBe(malicious);
+    } finally {
+        inst.remove();
+        resetLabels();
+    }
+});
+
 test("loadLabels fetches and applies labels", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = async () => ({

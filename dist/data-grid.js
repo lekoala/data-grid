@@ -121,11 +121,11 @@ function parseDateValue(value, format) {
         return null;
       }
       const [year, month, day] = value.split("-").map(Number);
-      const date2 = new Date(year, month - 1, day);
-      if (date2.getFullYear() !== year || date2.getMonth() !== month - 1 || date2.getDate() !== day) {
+      const date = new Date(year, month - 1, day);
+      if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
         return null;
       }
-      return { date: date2, datetimeAttr: value };
+      return { date, datetimeAttr: value };
     }
     if (!ISO_DATETIME.test(value)) {
       return null;
@@ -259,6 +259,7 @@ function dispatch(target, type, detail = {}, options = {}) {
 
 // src/core/base-element.js
 class BaseElement extends HTMLElement {
+  #lifecycleVersion;
   constructor(options = {}) {
     super();
     this.options = Object.assign({}, this.defaultOptions, options);
@@ -266,6 +267,7 @@ class BaseElement extends HTMLElement {
     this.setup = false;
     this.rendered = false;
     this.fireEvents = true;
+    this.#lifecycleVersion = 0;
     this._ready();
     this.log("ready");
   }
@@ -297,7 +299,11 @@ class BaseElement extends HTMLElement {
       return;
     }
     this.setup = true;
+    const lifecycleVersion = ++this.#lifecycleVersion;
     setTimeout(async () => {
+      if (!this.isConnected || lifecycleVersion !== this.#lifecycleVersion) {
+        return;
+      }
       this.log("connectedCallback");
       if (!this.rendered) {
         const template = document.createElement("template");
@@ -307,12 +313,16 @@ class BaseElement extends HTMLElement {
         this.rendered = true;
       }
       await this._connected();
+      if (!this.isConnected || lifecycleVersion !== this.#lifecycleVersion) {
+        return;
+      }
       dispatch(this, "connected");
     }, 0);
   }
   disconnectedCallback() {
     setTimeout(() => {
       if (!this.isConnected && this.setup) {
+        this.#lifecycleVersion++;
         this.log("disconnectedCallback");
         this._disconnected();
         dispatch(this, "disconnected");
@@ -460,16 +470,13 @@ function applySort(rows, sort) {
     if (emptyA !== emptyB) {
       return emptyA ? 1 : -1;
     }
+    if (emptyA) {
+      return 0;
+    }
     if (typeof a[field] === "number" && typeof b[field] === "number") {
       return (a[field] - b[field]) * dir;
     }
-    const valA = `${a[field] ?? ""}`.toUpperCase();
-    const valB = `${b[field] ?? ""}`.toUpperCase();
-    if (valA > valB)
-      return dir;
-    if (valA < valB)
-      return -dir;
-    return 0;
+    return compareValues(a[field], b[field], false) * dir;
   });
 }
 function paginate(rows, page, pageSize) {
@@ -1703,6 +1710,16 @@ function createSpanningRow(grid, { id, className } = {}) {
   return { row, cell };
 }
 
+// src/utils/stableElementId.js
+var generatedIds = new WeakMap;
+function markGeneratedId(element, id) {
+  generatedIds.set(element, id);
+}
+function hasStableId(element) {
+  const id = element.getAttribute("id") ?? "";
+  return Boolean(id && generatedIds.get(element) !== id);
+}
+
 // src/utils/transformValue.js
 var transforms = {
   uppercase: (value) => String(value).toUpperCase(),
@@ -1970,7 +1987,11 @@ class DataGrid extends base_element_default {
   _ready() {
     this.fireEvents = false;
     if (!this.hasAttribute("id")) {
-      this.setAttribute("id", this.options.id ?? randstr("el-"));
+      const id = this.options.id ?? randstr("el-");
+      this.setAttribute("id", id);
+      if (!this.options.id) {
+        markGeneratedId(this, id);
+      }
     }
     normalizeSelectionOptions(this.options);
   }
@@ -1988,7 +2009,7 @@ class DataGrid extends base_element_default {
         <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
         <tr class="dg-head-filters"></tr>
     </thead>
-    <tbody data-empty-message="${labels.noData}"></tbody>
+    <tbody data-empty-message=""></tbody>
     <tfoot hidden>
         <tr>
             <td>
@@ -1996,26 +2017,26 @@ class DataGrid extends base_element_default {
                 <div class="dg-footer-controls">
                 <div class="dg-page-nav">
                   <span class="dg-select-field">
-                    <select class="dg-select-per-page" aria-label="${labels.itemsPerPage}"></select>
+                    <select class="dg-select-per-page"></select>
                   </span>
                 </div>
-                <div class="dg-pagination" role="group" aria-label="${formatLabel(labels.pageStatus, { page: 0, pages: 0 })}">
-                  <button type="button" class="dg-btn-first dg-rotate" title="${labels.gotoFirstPage}" aria-label="${labels.gotoFirstPage}" disabled>
+                <div class="dg-pagination" role="group">
+                  <button type="button" class="dg-btn-first dg-rotate" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-prev dg-rotate" title="${labels.gotoPrevPage}" aria-label="${labels.gotoPrevPage}" disabled>
+                  <button type="button" class="dg-btn-prev dg-rotate" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
-                  <input type="number" class="dg-input-page" min="1" step="1" value="1" aria-label="${labels.gotoPage}">
-                  <button type="button" class="dg-btn-next" title="${labels.gotoNextPage}" aria-label="${labels.gotoNextPage}" disabled>
+                  <input type="number" class="dg-input-page" min="1" step="1" value="1">
+                  <button type="button" class="dg-btn-next" disabled>
                     <i class="dg-nav-icon"></i>
                   </button>
-                  <button type="button" class="dg-btn-last" title="${labels.gotoLastPage}" aria-label="${labels.gotoLastPage}" disabled>
+                  <button type="button" class="dg-btn-last" disabled>
                     <i class="dg-skip-icon"></i>
                   </button>
                 </div>
                 </div>
-                <div class="dg-meta">${formatLabel(labels.pageRange, { from: 0, to: 0, total: 0 })}</div>
+                <div class="dg-meta"></div>
             </div>
             </td>
         </tr>
@@ -3728,10 +3749,10 @@ class DataGrid extends base_element_default {
       }
     }
     if (filter instanceof HTMLSelectElement) {
-      const field2 = document.createElement("span");
-      field2.className = "dg-select-field";
-      field2.appendChild(filter);
-      th.appendChild(field2);
+      const field = document.createElement("span");
+      field.className = "dg-select-field";
+      field.appendChild(filter);
+      th.appendChild(field);
     } else {
       th.appendChild(filter);
     }
@@ -3829,7 +3850,7 @@ class DataGrid extends base_element_default {
       return [firstFilterOption, ...metaOptions];
     }
     if (this.dataSource instanceof ArrayDataSource) {
-      const labels2 = new Map;
+      const labels = new Map;
       for (const row of this.dataSource.rows ?? []) {
         if (!field) {
           continue;
@@ -3840,11 +3861,11 @@ class DataGrid extends base_element_default {
         }
         const meta = declarativeCells(row)?.[field];
         const text = meta?.label || v;
-        if (!labels2.has(v)) {
-          labels2.set(v, text);
+        if (!labels.has(v)) {
+          labels.set(v, text);
         }
       }
-      const options = [...labels2.entries()].map(([value, text]) => ({ value, text })).sort((a, b) => a.text < b.text ? -1 : a.text > b.text ? 1 : 0);
+      const options = [...labels.entries()].map(([value, text]) => ({ value, text })).sort((a, b) => a.text < b.text ? -1 : a.text > b.text ? 1 : 0);
       return [firstFilterOption, ...options];
     }
     return [firstFilterOption];
@@ -4105,10 +4126,10 @@ class ColumnResizer extends base_plugin_default {
     const currentCols = [
       ...grid.querySelectorAll("thead tr.dg-head-columns th")
     ];
-    const visibleCols = currentCols.filter((col2) => {
-      return !col2.hasAttribute("hidden");
+    const visibleCols = currentCols.filter((col) => {
+      return !col.hasAttribute("hidden");
     });
-    const columnIndex = visibleCols.findIndex((col2) => col2 === resizer.parentNode);
+    const columnIndex = visibleCols.findIndex((col) => col === resizer.parentNode);
     grid.log("resize column");
     resizer.classList.add("dg-resizer-active");
     col.removeAttribute("draggable");
@@ -4761,9 +4782,9 @@ class AutosizeColumn extends base_plugin_default {
   computeSize(th, column, min, max) {
     const grid = this.grid;
     if (th.hasAttribute("width")) {
-      const width2 = th.getAttribute("width");
-      if (width2 !== null) {
-        return Number(width2);
+      const width = th.getAttribute("width");
+      if (width !== null) {
+        return Number(width);
       }
     }
     const field = column.field;
@@ -4991,7 +5012,7 @@ class ResponsiveGrid extends base_plugin_default {
         column: grid.getCol(th.getAttribute("field") ?? "")
       };
     });
-    const isColumnHidden2 = (column) => {
+    const isColumnHidden = (column) => {
       return Boolean(column && (column.hidden || column.responsiveHidden));
     };
     const fixedWidth = [...headerRow.querySelectorAll("th:not([field])")].filter((th) => {
@@ -5014,10 +5035,10 @@ class ResponsiveGrid extends base_plugin_default {
         th,
         column: grid.getCol(th.getAttribute("field") ?? "")
       };
-    }).filter(({ column }) => !isColumnHidden2(column));
-    return { items, visible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 };
+    }).filter(({ column }) => !isColumnHidden(column));
+    return { items, visible, preferredWidth, requiredWidth, isColumnHidden };
   }
-  #fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden: isColumnHidden2 }, size) {
+  #fitColumns({ items, visible: initialVisible, preferredWidth, requiredWidth, isColumnHidden }, size) {
     const grid = this.grid;
     let visible = initialVisible;
     let changed = false;
@@ -5030,7 +5051,7 @@ class ResponsiveGrid extends base_plugin_default {
           break;
         }
         const { column } = item;
-        if (!column?.field || isColumnHidden2(column)) {
+        if (!column?.field || isColumnHidden(column)) {
           continue;
         }
         grid.setColProp(column.field, "responsiveHidden", true);
@@ -5260,7 +5281,7 @@ var responsive_grid_default = ResponsiveGrid;
 
 // src/utils/interpolate.js
 function interpolate(str, data) {
-  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => data[$2] ?? "");
+  return str.replace(/\{([^}]+)?\}/g, ($1, $2) => encodeURIComponent(String(data[$2] ?? "")));
 }
 
 // src/plugins/row-actions.js
@@ -5268,6 +5289,19 @@ var COLLAPSED_ACTIONS_WIDTH = 48;
 var INLINE_ACTION_WIDTH = 64;
 var INLINE_ACTION_GAP = 4;
 var ACTIONS_CELL_PADDING = 16;
+var UNSAFE_URL_PROTOCOLS = new Set(["data:", "javascript:", "vbscript:"]);
+function normalizeActionHref(value) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const href = String(value);
+  try {
+    const protocol = new URL(href, document.baseURI).protocol.toLowerCase();
+    return UNSAFE_URL_PROTOCOLS.has(protocol) ? null : href;
+  } catch {
+    return null;
+  }
+}
 function inlineActionsWidth(count) {
   if (count <= 0) {
     return COLLAPSED_ACTIONS_WIDTH;
@@ -5412,7 +5446,7 @@ class RowActions extends base_plugin_default {
     }
   }
   makeActionRow({ row, tr, grid, rowIndex }) {
-    const labels2 = grid.labels;
+    const labels = grid.labels;
     const rowData = row ?? {};
     const index = rowIndex ?? 0;
     const actions = this.#visibleActions(rowData, index);
@@ -5424,9 +5458,9 @@ class RowActions extends base_plugin_default {
       const actionsToggle = document.createElement("button");
       actionsToggle.type = "button";
       actionsToggle.classList.add("dg-actions-toggle");
-      actionsToggle.setAttribute("aria-label", labels2.toggleActions);
+      actionsToggle.setAttribute("aria-label", labels.toggleActions);
       actionsToggle.setAttribute("popovertarget", this.menu.id);
-      actionsToggle.title = labels2.toggleActions;
+      actionsToggle.title = labels.toggleActions;
       fragment.appendChild(actionsToggle);
     }
     let defaultApplied = false;
@@ -5491,7 +5525,8 @@ class RowActions extends base_plugin_default {
     const grid = this.grid;
     const rowKey = grid.resolveRowKey(row, rowIndex);
     const ctx = { grid, action, rowKey };
-    const href = action.href ? typeof action.href === "function" ? action.href(row, ctx) : interpolate(action.href, row) : null;
+    const resolvedHref = action.href ? typeof action.href === "function" ? action.href(row, ctx) : interpolate(action.href, row) : null;
+    const href = normalizeActionHref(resolvedHref);
     const el = this.#createActionControl(action, row, href, menu);
     el.dataset.action = action.name;
     if (action.intent) {
@@ -5645,9 +5680,11 @@ var STATE_EVENTS = ["bodyRendered", "columnVisibility"];
 
 class SaveState extends base_plugin_default {
   #onStateChanged;
+  #warnedMissingId;
   constructor(grid) {
     super(grid);
     this.#onStateChanged = null;
+    this.#warnedMissingId = false;
     this.log("Init");
   }
   connected() {
@@ -5655,6 +5692,9 @@ class SaveState extends base_plugin_default {
     const grid = this.grid;
     if (!grid.options.saveState) {
       this.log("disabled");
+      return;
+    }
+    if (!this.#canPersist()) {
       return;
     }
     this.log("enabled");
@@ -5696,7 +5736,7 @@ class SaveState extends base_plugin_default {
     this.#onStateChanged = null;
   }
   saveStateChanged(enabled) {
-    if (enabled) {
+    if (enabled && this.#canPersist()) {
       this.#listen();
     } else {
       this.#unlisten();
@@ -5707,7 +5747,7 @@ class SaveState extends base_plugin_default {
   }
   #update() {
     const grid = this.grid;
-    if (!grid.options.saveState || !grid.classList.contains("dg-initialized")) {
+    if (!grid.options.saveState || !hasStableId(grid) || !grid.classList.contains("dg-initialized")) {
       return;
     }
     this.#setState({
@@ -5717,6 +5757,16 @@ class SaveState extends base_plugin_default {
   }
   log(...data) {
     this.grid.log("[Save-State] ", ...data);
+  }
+  #canPersist() {
+    if (hasStableId(this.grid)) {
+      return true;
+    }
+    if (!this.#warnedMissingId) {
+      console.warn("saveState requires a stable id on <data-grid>; state persistence is disabled.");
+      this.#warnedMissingId = true;
+    }
+    return false;
   }
   #getState() {
     let state;

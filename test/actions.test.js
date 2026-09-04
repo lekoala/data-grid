@@ -168,6 +168,40 @@ test("href renders an <a> and supports functions", async () => {
     document.body.removeChild(inst);
 });
 
+test("href placeholders encode URL components", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "view", href: "/users/{id}?q={query}" }],
+        },
+        [{ id: "team/admin", query: "Ada & Grace", name: "a" }],
+        { RowActions },
+    );
+    const link = inst.querySelector('a[data-action="view"]');
+
+    expect(link.getAttribute("href")).toBe("/users/team%2Fadmin?q=Ada%20%26%20Grace");
+    document.body.removeChild(inst);
+});
+
+test("unsafe action URL protocols are rendered as non-navigating buttons", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "script", href: "javascript:{payload}" },
+                { name: "document", href: () => "data:text/html,<script>alert(1)</script>" },
+            ],
+        },
+        [{ payload: "alert(1)", name: "a" }],
+        { RowActions },
+    );
+
+    expect(inst.querySelector('button[data-action="script"]')).toBeTruthy();
+    expect(inst.querySelector('button[data-action="document"]')).toBeTruthy();
+    expect(inst.querySelector('a[data-action="script"], a[data-action="document"]')).toBeNull();
+    document.body.removeChild(inst);
+});
+
 test("render (per action) and actionRenderer (global) replace the button content", async () => {
     const inst = await makeReadyGrid(
         {
