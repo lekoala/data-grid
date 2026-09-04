@@ -4,6 +4,9 @@ The core stylesheet (`css/data-grid.css`) is neutral and dependency-free. All
 themeable values are exposed as `--dg-*` custom properties, so the grid follows
 the application's design system.
 
+The zero-config standalone script (`dist/data-grid.standalone.min.js`) injects
+this stylesheet itself, so no `<link>` is required there - see the README.
+
 ## CSS custom properties
 
 Override them on `data-grid` (or globally with `data-grid { ... }`):

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>data-grid standalone fixture</title>
+  <!-- No stylesheet link: the standalone script must inject the grid CSS. -->
+</head>
+<body>
+  <data-grid sortable page-size="10">
+    <table>
+      <caption>Users</caption>
+      <thead>
+        <tr>
+          <th data-field="name">Name</th>
+          <th data-field="age">Age</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr data-row-key="1"><td>Ada</td><td>36</td></tr>
+        <tr data-row-key="2"><td>Grace</td><td>32</td></tr>
+      </tbody>
+    </table>
+  </data-grid>
+  <script nonce="data-grid-test" src="/dist/data-grid.standalone.min.js"></script>
+</body>
+</html>

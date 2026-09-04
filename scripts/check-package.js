@@ -28,6 +28,7 @@ const mustInclude = [
     "src/data-source.js",
     "dist/data-grid.css",
     "dist/data-grid.min.css",
+    "dist/data-grid.standalone.min.js",
     "dist/types/data-grid.d.ts",
     "dist/types/data-source.d.ts",
     "custom-elements.json",

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Grid — standalone bundle</title>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+  <link rel="stylesheet" href="demo.css" />
+
+  <!-- Single script: registers the <data-grid> element AND injects its
+       stylesheet. No <link rel="stylesheet"> to the grid CSS. The nonce is
+       propagated to the injected <style>; a CSP must allowlist it under
+       style-src (or use a nonce-less distribution). -->
+  <script nonce="data-grid-test" src="../dist/data-grid.standalone.min.js"></script>
+</head>
+
+<body>
+  <header>
+    <h1>Data Grid</h1>
+    <p><em>Standalone — dist/data-grid.standalone.min.js</em></p>
+  </header>
+  <main>
+    <p>
+      This page has <strong>no stylesheet link</strong> for the grid: the bundle
+      injects <code>&lt;style id="lekoala-data-grid-style"&gt;</code> itself and
+      auto-registers the custom element. Everything below is plain declarative
+      HTML, no application JavaScript.
+    </p>
+
+    <div class="demo-grid">
+      <data-grid sortable filterable searchable page-size="10">
+        <table>
+          <caption>Users</caption>
+          <colgroup>
+            <col style="width: 30%" />
+            <col style="width: 40%" />
+            <col style="width: 30%" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th data-field="name" data-sort="asc">Name</th>
+              <th data-field="email">Email</th>
+              <th data-field="status" data-filter="select">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-row-key="1">
+              <td>Ada Lovelace</td>
+              <td>ada@example.com</td>
+              <td>active</td>
+            </tr>
+            <tr data-row-key="2">
+              <td>Grace Hopper</td>
+              <td>grace@example.com</td>
+              <td>active</td>
+            </tr>
+            <tr data-row-key="3">
+              <td>Alan Turing</td>
+              <td>alan@example.com</td>
+              <td>inactive</td>
+            </tr>
+          </tbody>
+        </table>
+      </data-grid>
+    </div>
+  </main>
+  <footer>
+    <hr />
+    <a href="https://github.com/lekoala/data-grid">Data Grid</a> — zero-config standalone bundle
+  </footer>
+</body>
+</html>

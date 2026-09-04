@@ -22,6 +22,8 @@
     },
     "./styles": "./dist/data-grid.css",
     "./styles.min": "./dist/data-grid.min.css",
+    "./standalone": "./dist/data-grid.standalone.min.js",
+    "./dist/data-grid.standalone.min.js": "./dist/data-grid.standalone.min.js",
     "./themes/bootstrap": "./themes/bootstrap.css",
     "./locales/*": "./locales/*.js"
   },

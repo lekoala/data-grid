@@ -54,6 +54,30 @@ rather than relying on the CDN to minify the unbundled source:
 <script type="module" src="https://cdn.jsdelivr.net/npm/data-grid-component@3/dist/data-grid.min.js"></script>
 ```
 
+Still link the stylesheet (`dist/data-grid.min.css`) as usual.
+
+### Zero-config standalone script
+
+`dist/data-grid.standalone.min.js` is a single classic script that registers
+the `<data-grid>` element **and** injects the grid stylesheet itself, so no
+`<link rel="stylesheet">` is needed:
+
+```html
+<data-grid src="data.json" sortable filterable></data-grid>
+<script src="https://cdn.jsdelivr.net/npm/data-grid-component@3/dist/data-grid.standalone.min.js"></script>
+```
+
+The bundle is meant to be loaded once, without importing from it (it exposes no
+exports). Use the standalone **or** the classic CSS-included distribution, never
+both: the stylesheet it injects is the same one, so a duplicate is harmless but
+pointless.
+
+Because the stylesheet is injected as an inline `<style>` at runtime, CSP
+`style-src` must allow it (`unsafe-inline`, or a nonce propagated from the
+loading `<script nonce>`); otherwise use the non-standalone distribution. Note
+that the grid already sets `style` attributes (computed geometry) on its
+elements, which `style-src` governs as well.
+
 - using the DOM API
 
 ```js
