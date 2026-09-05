@@ -36,6 +36,13 @@
     "docs",
     "custom-elements.json"
   ],
+  "sideEffects": [
+    "./data-grid.js",
+    "./locales/*.js",
+    "./dist/*.js",
+    "./dist/*.css",
+    "./themes/*.css"
+  ],
   "publishConfig": {
     "access": "public"
   },
