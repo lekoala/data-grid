@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./data-grid.js",
   "types": "./dist/types/data-grid.d.ts",
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.2",
   "customElements": "custom-elements.json",
   "exports": {
     ".": {
@@ -77,6 +77,6 @@
   "author": "LeKoala",
   "license": "MIT",
   "dependencies": {
-    "@lekoala/floating": "^0.1.0"
+    "@lekoala/floating": "^0.1.1"
   }
 }

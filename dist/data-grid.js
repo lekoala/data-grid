@@ -1241,8 +1241,8 @@ function computeCoords(reference, floating, side, align, rtl, distance) {
   }
   return coords;
 }
-function getInlineOverflow(coords, floating, minX, maxX) {
-  return Math.max(minX - coords.x, 0) + Math.max(coords.x + floating.width - maxX, 0);
+function overflowOn(position, size, start, end) {
+  return Math.max(start - position, 0) + Math.max(position + size - end, 0);
 }
 function isRTL(element) {
   const direction = "dir" in element ? element.dir : "";
@@ -1257,7 +1257,6 @@ function isRTL(element) {
   return Boolean(win?.Element && element instanceof win.Element && win.getComputedStyle(element).direction === "rtl");
 }
 var STABLE_SCROLLBAR_MAX_WIDTH = 25;
-var NARROW_INLINE_FLIP_FALLBACK = 128;
 function getViewportBoundary(doc) {
   const win = doc.defaultView;
   if (!win)
@@ -1321,6 +1320,7 @@ function getFloatingSize(floating) {
   return { width: width || rect.width, height: height || rect.height };
 }
 var trackers = new WeakMap;
+var TYPE_PRIORITY = { scroll: 0, resize: 1, "element-resize": 2 };
 function createTracker(doc) {
   const win = doc.defaultView;
   if (!win)
@@ -1332,12 +1332,10 @@ function createTracker(doc) {
   let listening = false;
   const visualViewport = win.visualViewport;
   function queue(subscription, type) {
-    let types = pending.get(subscription);
-    if (!types) {
-      types = new Set;
-      pending.set(subscription, types);
+    const current = pending.get(subscription);
+    if (current === undefined || TYPE_PRIORITY[type] > TYPE_PRIORITY[current]) {
+      pending.set(subscription, type);
     }
-    types.add(type);
   }
   function scheduleFlush() {
     if (tick)
@@ -1347,11 +1345,10 @@ function createTracker(doc) {
       const notifications = [...pending];
       pending.clear();
       tick = false;
-      for (const [subscription, types] of notifications) {
+      for (const [subscription, type] of notifications) {
         if (!subscriptions.has(subscription) || !subscription.floating.isConnected)
           continue;
-        for (const type of types)
-          subscription.callback({ type });
+        subscription.callback({ type });
       }
     });
   }
@@ -1444,9 +1441,9 @@ function autoUpdate(reference, floating, callback) {
     throw new TypeError("callback must be a function");
   return trackerFor(floating).add(reference, floating, callback);
 }
-function reposition(reference, floating, options = {}) {
+function positionOnce(reference, floating, options) {
   if (!isVisible(floating))
-    return false;
+    return null;
   const placement = options.placement || "bottom-start";
   const distance = options.distance || 0;
   const flip = options.flip !== false;
@@ -1457,54 +1454,99 @@ function reposition(reference, floating, options = {}) {
   const rects = reference.getClientRects();
   const referenceRect = side === "bottom" ? rects[rects.length - 1] : rects[0];
   if (!referenceRect)
-    return false;
+    return null;
   const boundary = getBoundary(reference, options);
   if (!boundary || isOutsideBoundary(referenceRect, boundary))
-    return false;
+    return null;
   const floatingRect = getFloatingSize(floating);
-  let coords = computeCoords(referenceRect, floatingRect, side, align, rtl, distance);
+  const limits = {
+    x: { size: floatingRect.width, start: boundary.x, end: boundary.right },
+    y: { size: floatingRect.height, start: boundary.y, end: boundary.bottom }
+  };
+  const place = (nextSide, nextAlign) => computeCoords(referenceRect, floatingRect, nextSide, nextAlign, rtl, distance);
+  const overflowAt = (position, axis) => {
+    const { size, start, end } = limits[axis];
+    return overflowOn(position, size, start + shiftPadding, end - shiftPadding);
+  };
+  const shiftedOverflowAt = (position, axis) => {
+    const { size, start, end } = limits[axis];
+    return overflowAt(shift ? clampToBoundary(position, size, start, end, shiftPadding) : position, axis);
+  };
+  let coords = place(side, align);
   if (flip) {
-    const x = Math.ceil(coords.x);
-    const y = Math.ceil(coords.y);
-    if (crossAxis === "x" && (y < boundary.y || y + floatingRect.height >= boundary.bottom) || crossAxis === "y" && (x < boundary.x || x + floatingRect.width >= boundary.right)) {
-      side = flipSide(side);
-      coords = computeCoords(referenceRect, floatingRect, side, align, rtl, distance);
+    const mainAxis = crossAxis === "x" ? "y" : "x";
+    let overflow = overflowAt(coords[mainAxis], mainAxis);
+    if (overflow > 0) {
+      const opposite = flipSide(side);
+      const flipped = place(opposite, align);
+      const flippedOverflow = overflowAt(flipped[mainAxis], mainAxis);
+      if (flippedOverflow < overflow) {
+        side = opposite;
+        coords = flipped;
+        overflow = flippedOverflow;
+      }
     }
-    if (crossAxis === "y" && (coords.x < boundary.x || coords.x + floatingRect.width > boundary.right) && boundary.width - floatingRect.width < NARROW_INLINE_FLIP_FALLBACK) {
-      side = "top";
-      crossAxis = "x";
-      coords = computeCoords(referenceRect, floatingRect, side, align, rtl, distance);
+    if (mainAxis === "x" && overflow > 0) {
+      const above = place("top", align);
+      const below = place("bottom", align);
+      const useBottom = overflowAt(below.y, "y") < overflowAt(above.y, "y");
+      const candidate = useBottom ? below : above;
+      const swapped = overflowAt(candidate.y, "y") + shiftedOverflowAt(candidate.x, "x");
+      if (swapped < overflow + shiftedOverflowAt(coords.y, "y")) {
+        side = useBottom ? "bottom" : "top";
+        crossAxis = "x";
+        coords = candidate;
+      }
     }
   }
   if (crossAxis === "x" && shift && align) {
-    const minX = boundary.x + shiftPadding;
-    const maxX = boundary.right - shiftPadding;
-    const currentOverflow = getInlineOverflow(coords, floatingRect, minX, maxX);
-    if (currentOverflow > 0) {
+    const overflow = overflowAt(coords.x, "x");
+    if (overflow > 0) {
       const nextAlign = align === "end" ? "start" : "end";
-      const candidate = computeCoords(referenceRect, floatingRect, side, nextAlign, rtl, distance);
-      if (getInlineOverflow(candidate, floatingRect, minX, maxX) < currentOverflow) {
+      const candidate = place(side, nextAlign);
+      if (overflowAt(candidate.x, "x") < overflow) {
         align = nextAlign;
         coords = candidate;
       }
     }
   }
   if (shift) {
-    coords.x = clampToBoundary(coords.x, floatingRect.width, boundary.x, boundary.right, shiftPadding);
-    if (crossAxis === "y") {
-      coords.y = clampToBoundary(coords.y, floatingRect.height, boundary.y, boundary.bottom, shiftPadding);
-    }
+    const { size, start, end } = limits[crossAxis];
+    coords[crossAxis] = clampToBoundary(coords[crossAxis], size, start, end, shiftPadding);
   }
   const arrowX = arrowPercent(referenceRect.x + referenceRect.width / 2, coords.x, floatingRect.width);
   const arrowY = arrowPercent(referenceRect.y + referenceRect.height / 2, coords.y, floatingRect.height);
-  const availableHeight = getAvailableHeight(referenceRect, side, boundary, distance, shiftPadding);
+  const availableHeight = `${getAvailableHeight(referenceRect, side, boundary, distance, shiftPadding)}px`;
   const { style } = floating;
+  const roomChanged = style.getPropertyValue("--available-height") !== availableHeight;
   style.left = `${coords.x}px`;
   style.top = `${coords.y}px`;
   style.setProperty("--arrow-x", `${arrowX}%`);
   style.setProperty("--arrow-y", `${arrowY}%`);
-  style.setProperty("--available-height", `${availableHeight}px`);
-  floating.dataset.placement = align ? `${side}-${align}` : side;
+  style.setProperty("--available-height", availableHeight);
+  const resolved = align ? `${side}-${align}` : side;
+  floating.dataset.placement = resolved;
+  return {
+    width: floatingRect.width,
+    height: floatingRect.height,
+    roomChanged,
+    placement: resolved
+  };
+}
+function reposition(reference, floating, options = {}) {
+  const measured = positionOnce(reference, floating, options);
+  if (!measured)
+    return false;
+  if (measured.roomChanged) {
+    const settled = getFloatingSize(floating);
+    if (settled.width !== measured.width || settled.height !== measured.height) {
+      positionOnce(reference, floating, {
+        ...options,
+        placement: measured.placement,
+        flip: false
+      });
+    }
+  }
   return true;
 }
 function repositionAt(x, y, floating, options = {}) {
