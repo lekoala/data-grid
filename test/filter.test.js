@@ -206,6 +206,21 @@ test("an empty array value is dropped when the query is normalized", async () =>
     document.body.removeChild(inst);
 });
 
+test("array filter values are copied, so grid.query cannot mutate the state", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            initialQuery: { filters: { name: { operator: "in", value: ["a", "b"] } } },
+        },
+        [{ name: "Alice" }],
+    );
+    inst.query.filters.name.value.push("c");
+    expect(inst.query.filters.name.value).toEqual(["a", "b"]);
+    await inst.resetQuery();
+    expect(inst.query.filters.name.value).toEqual(["a", "b"]);
+    document.body.removeChild(inst);
+});
+
 test("scalar shorthand filters normalize to contains", async () => {
     const inst = await makeReadyGrid(
         { columns: [{ field: "name" }], filterable: true, initialQuery: { filters: { name: "Alice" } } },

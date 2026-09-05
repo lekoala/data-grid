@@ -45,7 +45,10 @@ export function normalizeQuery(query) {
             const hasValue =
                 value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
             if (hasValue || operator === "empty" || operator === "notEmpty") {
-                filters[key] = /** @type {FilterState} */ (hasValue ? { operator, value } : { operator });
+                // Copy array values so the caller cannot mutate the stored
+                // query (or the initial one) through the array it got back.
+                const stored = Array.isArray(value) ? [...value] : value;
+                filters[key] = /** @type {FilterState} */ (hasValue ? { operator, value: stored } : { operator });
             }
         }
     }

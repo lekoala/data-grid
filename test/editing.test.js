@@ -136,6 +136,22 @@ test("preventDefault on the edit event rejects the commit", async () => {
     input.focus();
     input.blur();
     expect(inst.rows[0].name).toBe("a");
+    expect(input.value).toBe("a");
+    document.body.removeChild(inst);
+});
+
+test("focus then blur without typing does not commit a numeric value", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "age", editable: true }] }, [{ id: 1, age: 42 }]);
+    const input = inst.querySelector("tbody td input.dg-editable");
+    let dispatched = 0;
+    inst.addEventListener("edit", () => {
+        dispatched++;
+    });
+
+    input.focus();
+    input.blur();
+    expect(dispatched).toBe(0);
+    expect(inst.rows[0].age).toBe(42);
     document.body.removeChild(inst);
 });
 

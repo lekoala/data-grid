@@ -60,10 +60,16 @@ class EditableColumn extends BasePlugin {
         input.classList.add("dg-editable");
         input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
         input.setAttribute("aria-label", column.title ?? field);
-        input.value = item[field] ?? "";
         input.dataset.field = field;
 
         const previous = () => item[field];
+        // input.value is always a string: compare and restore against the model
+        // value rendered the same way, so a numeric 42 does not read as edited.
+        const displayed = () => {
+            const value = previous();
+            return value === undefined || value === null ? "" : String(value);
+        };
+        input.value = displayed();
 
         const startEditing = () => {
             td.dataset.editing = "";
@@ -76,7 +82,7 @@ class EditableColumn extends BasePlugin {
         };
 
         const reject = (/** @type {String|null} */ message = null) => {
-            input.value = previous();
+            input.value = displayed();
             endEditing();
             if (message) {
                 td.dataset.invalid = "";
@@ -86,7 +92,7 @@ class EditableColumn extends BasePlugin {
 
         const commit = () => {
             const value = input.value;
-            if (value === previous()) {
+            if (value === displayed()) {
                 endEditing();
                 return;
             }
@@ -99,6 +105,9 @@ class EditableColumn extends BasePlugin {
             item[field] = value;
             if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
                 item[field] = prev;
+                // The field must follow the model back to its previous value.
+                reject();
+                return;
             }
             endEditing();
         };

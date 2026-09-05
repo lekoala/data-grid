@@ -1085,7 +1085,8 @@ function normalizeQuery(query) {
       }
       const hasValue = value !== undefined && value !== null && value !== "" && !(Array.isArray(value) && value.length === 0);
       if (hasValue || operator === "empty" || operator === "notEmpty") {
-        filters[key] = hasValue ? { operator, value } : { operator };
+        const stored = Array.isArray(value) ? [...value] : value;
+        filters[key] = hasValue ? { operator, value: stored } : { operator };
       }
     }
   }
@@ -5655,9 +5656,13 @@ class EditableColumn extends base_plugin_default {
     input.classList.add("dg-editable");
     input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
-    input.value = item[field] ?? "";
     input.dataset.field = field;
     const previous = () => item[field];
+    const displayed = () => {
+      const value = previous();
+      return value === undefined || value === null ? "" : String(value);
+    };
+    input.value = displayed();
     const startEditing = () => {
       td.dataset.editing = "";
       td.removeAttribute("data-invalid");
@@ -5667,7 +5672,7 @@ class EditableColumn extends base_plugin_default {
       td.removeAttribute("data-editing");
     };
     const reject = (message = null) => {
-      input.value = previous();
+      input.value = displayed();
       endEditing();
       if (message) {
         td.dataset.invalid = "";
@@ -5676,7 +5681,7 @@ class EditableColumn extends base_plugin_default {
     };
     const commit = () => {
       const value = input.value;
-      if (value === previous()) {
+      if (value === displayed()) {
         endEditing();
         return;
       }
@@ -5689,6 +5694,8 @@ class EditableColumn extends base_plugin_default {
       item[field] = value;
       if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
         item[field] = prev;
+        reject();
+        return;
       }
       endEditing();
     };
