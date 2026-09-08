@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data Grid — Actual CSS</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lekoala/actual-css@master/dist/actual.full.min.css" />
+    <link rel="stylesheet" href="../../dist/data-grid.css" />
+    <link rel="stylesheet" href="../../themes/actual.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" />
+    <script type="module" src="../../data-grid.js"></script>
+
+    <style>
+      body {
+        margin: 0;
+        background: var(--surface);
+        color: var(--text);
+      }
+
+      .page {
+        inline-size: min(1180px, calc(100% - 3rem));
+        margin: 0 auto;
+        padding-block: var(--space-30);
+      }
+
+      .breadcrumbs,
+      .meta {
+        color: var(--text-muted);
+        font-size: var(--font-size-xs);
+      }
+
+      .heading,
+      .toolbar,
+      .toolbar-left,
+      .toolbar-right {
+        display: flex;
+        align-items: center;
+      }
+
+      .heading,
+      .toolbar {
+        justify-content: space-between;
+        gap: var(--space-20);
+      }
+
+      .heading {
+        margin-block: var(--space-20);
+      }
+
+      .heading h1 {
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin: 0;
+        font-size: 1.35rem;
+      }
+
+      .toolbar {
+        margin-block-end: var(--space-20);
+      }
+
+      .toolbar-left,
+      .toolbar-right {
+        gap: var(--space-10);
+      }
+
+      .search {
+        position: relative;
+        inline-size: min(22rem, 46vw);
+      }
+
+      .search .ti {
+        position: absolute;
+        inset-inline-start: 0.65rem;
+        inset-block-start: 50%;
+        translate: 0 -50%;
+        color: var(--text-muted);
+      }
+
+      .search input {
+        box-sizing: border-box;
+        inline-size: 100%;
+        min-block-size: var(--control-size-sm);
+        padding-inline: 2rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+      }
+
+      data-grid {
+        font-size: var(--font-size-sm);
+      }
+
+      #product-ideas th + th,
+      #product-ideas td + td {
+        border-inline-start: 1px solid var(--border);
+      }
+
+      #product-ideas .header-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4em;
+        min-inline-size: 0;
+      }
+
+      #product-ideas .header-label > .ti {
+        line-height: 1;
+        font-size: 1.05em;
+      }
+
+      /* Keep score values centered while the sortable labels read from the left edge. */
+      #product-ideas thead tr.dg-head-columns th[field="impact"],
+      #product-ideas thead tr.dg-head-columns th[field="effort"] {
+        text-align: start;
+      }
+
+      #product-ideas thead tr.dg-head-columns th[field="impact"] > .dg-sort,
+      #product-ideas thead tr.dg-head-columns th[field="effort"] > .dg-sort {
+        justify-content: flex-start;
+        text-align: start;
+      }
+
+      .score {
+        display: inline-flex;
+        gap: 0.28rem;
+      }
+
+      .score > i {
+        inline-size: 0.5rem;
+        block-size: 0.5rem;
+        border-radius: 999px;
+        background: var(--border);
+      }
+
+      .score[data-value="1"] > i:nth-child(-n + 1),
+      .score[data-value="2"] > i:nth-child(-n + 2),
+      .score[data-value="3"] > i:nth-child(-n + 3),
+      .score[data-value="4"] > i:nth-child(-n + 4),
+      .score[data-value="5"] > i:nth-child(-n + 5) {
+        background: var(--primary);
+      }
+
+      .delivery {
+        --bar-height: 0.45rem;
+        inline-size: 9rem;
+        max-inline-size: 100%;
+      }
+
+      .delivery .done {
+        --intent: hsl(88 38% 66%);
+      }
+
+      .delivery .doing {
+        --intent: hsl(214 70% 75%);
+      }
+
+      .delivery .rest {
+        --intent: var(--surface-subtle);
+      }
+
+      @media (max-width: 850px) {
+        .page {
+          inline-size: min(100% - 2rem, 1180px);
+        }
+
+        .heading,
+        .toolbar {
+          align-items: stretch;
+          flex-direction: column;
+        }
+
+        .search {
+          inline-size: 100%;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="page">
+      <div class="breadcrumbs">Workspace / <strong>Product ideas</strong></div>
+
+      <div class="heading">
+        <div>
+          <h1><i class="ti ti-layout-list" aria-hidden="true"></i>Product ideas</h1>
+          <span class="meta">Generic product table — Actual CSS theme</span>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="btn sm" type="button">Filter <i class="ti ti-filter" aria-hidden="true"></i></button>
+          <button class="btn sm" type="button">Sort <i class="ti ti-arrows-sort" aria-hidden="true"></i></button>
+        </div>
+        <label class="search">
+          <span class="sr-only">Search product ideas</span>
+          <i class="ti ti-search" aria-hidden="true"></i>
+          <input type="search" placeholder="Search product ideas…" />
+        </label>
+      </div>
+
+      <data-grid id="product-ideas" density="compact" page-size="50" autohide-pager sortable row-key="id">
+        <table>
+          <caption class="sr-only">Product ideas</caption>
+          <thead>
+            <tr>
+              <th data-field="summary" data-width="410" data-min-width="280">
+                <span class="header-label"><i class="ti ti-letter-case" aria-hidden="true"></i>Summary</span>
+              </th>
+              <th data-field="theme" data-width="210" data-min-width="170">
+                <span class="header-label"><i class="ti ti-circle-chevron-down" aria-hidden="true"></i>Theme</span>
+              </th>
+              <th data-field="analyses" data-width="90" data-min-width="80" data-align="center">
+                <span class="header-label"><i class="ti ti-chart-line" aria-hidden="true"></i>Analysis</span>
+              </th>
+              <th data-field="impact" data-width="105" data-min-width="90" data-align="center">
+                <span class="header-label"><i class="ti ti-chart-bar" aria-hidden="true"></i>Impact</span>
+              </th>
+              <th data-field="effort" data-width="105" data-min-width="90" data-align="center">
+                <span class="header-label"><i class="ti ti-chart-bar" aria-hidden="true"></i>Effort</span>
+              </th>
+              <th data-field="roadmap" data-width="100" data-min-width="90">
+                <span class="header-label"><i class="ti ti-circle-chevron-down" aria-hidden="true"></i>Roadmap</span>
+              </th>
+              <th data-field="delivery" data-width="190" data-min-width="150" data-sortable="false">
+                <span class="header-label"><i class="ti ti-square-rounded-arrow-right-filled" aria-hidden="true"></i>Progress</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-row-key="1">
+              <td>Limit the number of daily appointments</td>
+              <td data-value="Scheduling"><span class="badge sm primary">Scheduling</span></td>
+              <td data-value="12">12</td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Impact 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Effort 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="next">Next</td>
+              <td data-value="[32,34,34]"><span class="meter delivery" role="img" aria-label="32% complete"><i class="done" style="--meter-value:32"></i><i class="doing" style="--meter-value:34"></i><i class="rest" style="--meter-value:34"></i></span></td>
+            </tr>
+            <tr data-row-key="2">
+              <td>Bulk reschedule appointments</td>
+              <td data-value="Scheduling"><span class="badge sm primary">Scheduling</span></td>
+              <td data-value="7">7</td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Impact 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Effort 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="later">Later</td>
+              <td data-value="[0,0,100]"><span class="meter delivery" role="img" aria-label="To plan"><i class="done" style="--meter-value:0"></i><i class="doing" style="--meter-value:0"></i><i class="rest" style="--meter-value:100"></i></span></td>
+            </tr>
+            <tr data-row-key="3">
+              <td>Search across customer accounts</td>
+              <td data-value="Discovery"><span class="badge sm secondary">Discovery</span></td>
+              <td data-value="18">18</td>
+              <td data-value="5"><span class="score" data-value="5" aria-label="Impact 5 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="2"><span class="score" data-value="2" aria-label="Effort 2 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="next">Next</td>
+              <td data-value="[68,20,12]"><span class="meter delivery" role="img" aria-label="68% complete"><i class="done" style="--meter-value:68"></i><i class="doing" style="--meter-value:20"></i><i class="rest" style="--meter-value:12"></i></span></td>
+            </tr>
+            <tr data-row-key="4">
+              <td>Set a minimum age for a request</td>
+              <td data-value="Workflow"><span class="badge sm success">Workflow</span></td>
+              <td data-value="4">4</td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Impact 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Effort 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="later">Later</td>
+              <td data-value="[0,0,100]"><span class="meter delivery" role="img" aria-label="To plan"><i class="done" style="--meter-value:0"></i><i class="doing" style="--meter-value:0"></i><i class="rest" style="--meter-value:100"></i></span></td>
+            </tr>
+            <tr data-row-key="5">
+              <td>Disable notifications for a request</td>
+              <td data-value="Workflow"><span class="badge sm success">Workflow</span></td>
+              <td data-value="9">9</td>
+              <td data-value="0"><span class="score" data-value="0" aria-label="Impact 0 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="4"><span class="score" data-value="4" aria-label="Effort 4 out of 5"><i></i><i></i><i></i><i></i><i></i></span></td>
+              <td data-value="next">Next</td>
+              <td data-value="[45,25,30]"><span class="meter delivery" role="img" aria-label="45% complete"><i class="done" style="--meter-value:45"></i><i class="doing" style="--meter-value:25"></i><i class="rest" style="--meter-value:30"></i></span></td>
+            </tr>
+          </tbody>
+        </table>
+      </data-grid>
+
+      <p class="meta">Rich declarative headers, one-page pagination, and columns that exercise a preferred width with a real minimum.</p>
+    </main>
+
+    <script type="module">
+      const grid = document.querySelector("#product-ideas");
+      const search = document.querySelector(".search input");
+      let timer;
+      search.addEventListener("input", () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => grid.setSearch(search.value), 120);
+      });
+    </script>
+  </body>
+</html>

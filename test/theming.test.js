@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 
 const coreCss = readFileSync(new URL("../dist/data-grid.css", import.meta.url), "utf8");
 const themeCss = readFileSync(new URL("../themes/bootstrap.css", import.meta.url), "utf8");
+const actualThemeCss = readFileSync(new URL("../themes/actual.css", import.meta.url), "utf8");
 
 test("core css exposes --dg-* tokens", () => {
     expect(coreCss).toContain("--dg-bg");
@@ -90,6 +91,13 @@ test("bootstrap theme maps --dg-* onto --bs-* and covers dark mode", () => {
     expect(themeCss).toContain("--dg-bg: var(--bs-body-bg");
     expect(themeCss).toContain("--dg-accent: var(--bs-primary");
     expect(themeCss).toContain('[data-bs-theme="dark"] data-grid');
+});
+
+test("actual theme maps --dg-* onto Actual CSS tokens", () => {
+    expect(actualThemeCss).toContain("--dg-bg: var(--surface");
+    expect(actualThemeCss).toContain("--dg-color: var(--text");
+    expect(actualThemeCss).toContain("--dg-border-color: var(--border");
+    expect(actualThemeCss).toContain("--dg-accent: var(--primary");
 });
 
 test("density attribute maps to the density option", () => {

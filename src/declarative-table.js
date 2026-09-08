@@ -13,6 +13,14 @@ import normalizeData from "./utils/normalizeData.js";
 const DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
 
 /**
+ * Internal symbol holding a declarative header's authored child nodes. The
+ * property is enumerable so Object.assign() keeps it when the grid normalizes
+ * the column definition.
+ * @type {unique symbol}
+ */
+const DECLARATIVE_HEADER = Symbol("dgDeclarativeHeader");
+
+/**
  * @typedef DeclarativeCellMeta
  * @property {any} value - original machine value
  * @property {String} label - user-facing text
@@ -26,6 +34,15 @@ const DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
  */
 export function declarativeCells(row) {
     return /** @type {any} */ (row)[DECLARATIVE_CELLS];
+}
+
+/**
+ * Read the authored child nodes of a declarative header.
+ * @param {Column} column
+ * @returns {Node[]|undefined}
+ */
+export function declarativeHeaderContent(column) {
+    return /** @type {any} */ (column)[DECLARATIVE_HEADER];
 }
 
 /**
@@ -69,6 +86,11 @@ export function parseDeclarativeTable(table) {
         }
         /** @type {Column} */
         const column = { field, title: th.textContent.trim() };
+        Object.defineProperty(column, DECLARATIVE_HEADER, {
+            value: Array.from(th.childNodes),
+            enumerable: true,
+            configurable: true,
+        });
         if (th.dataset.sortable !== undefined) {
             column.sortable = parseBooleanAttribute(th.dataset.sortable);
         }

@@ -630,8 +630,12 @@ function normalizeData(v) {
 
 // src/declarative-table.js
 var DECLARATIVE_CELLS = Symbol("dgDeclarativeCells");
+var DECLARATIVE_HEADER = Symbol("dgDeclarativeHeader");
 function declarativeCells(row) {
   return row[DECLARATIVE_CELLS];
+}
+function declarativeHeaderContent(column) {
+  return column[DECLARATIVE_HEADER];
 }
 function setDeclarativeCell(row, field, meta) {
   let cells = declarativeCells(row);
@@ -659,6 +663,11 @@ function parseDeclarativeTable(table) {
       continue;
     }
     const column = { field, title: th.textContent.trim() };
+    Object.defineProperty(column, DECLARATIVE_HEADER, {
+      value: Array.from(th.childNodes),
+      enumerable: true,
+      configurable: true
+    });
     if (th.dataset.sortable !== undefined) {
       column.sortable = parseBooleanAttribute(th.dataset.sortable);
     }
@@ -3590,7 +3599,7 @@ class DataGrid extends base_element_default {
     const td = tfoot.querySelector("td");
     if (!td)
       return;
-    tfoot.removeAttribute("hidden");
+    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
     td.colSpan = Math.max(1, this.columnsLength(true));
     tfoot.style.display = "";
   }
@@ -3715,14 +3724,29 @@ class DataGrid extends base_element_default {
       button.classList.add("dg-sort");
       const label = document.createElement("span");
       label.classList.add("dg-sort-label");
-      label.textContent = column.title ?? "";
+      this.#appendDeclarativeHeaderContent(label, column);
+      if (!label.childNodes.length) {
+        label.textContent = column.title ?? "";
+      }
       const indicator = document.createElement("span");
       indicator.classList.add("dg-sort-indicator");
       indicator.setAttribute("aria-hidden", "true");
       button.append(label, indicator);
       th.appendChild(button);
     } else {
-      th.textContent = column.title ?? "";
+      this.#appendDeclarativeHeaderContent(th, column);
+      if (!th.childNodes.length) {
+        th.textContent = column.title ?? "";
+      }
+    }
+  }
+  #appendDeclarativeHeaderContent(target, column) {
+    const content = declarativeHeaderContent(column);
+    if (!content?.length) {
+      return;
+    }
+    for (const node of content) {
+      target.appendChild(node.cloneNode(true));
     }
   }
   createColumnFilters(thead) {
@@ -4044,7 +4068,7 @@ class DataGrid extends base_element_default {
       this.btnLast.disabled = this.#query.page >= this.pages;
     this.updateMetaLabel();
     this.updatePageStatus();
-    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.#query.pageSize > this.total);
+    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
   }
   totalPages() {
     return Math.max(1, Math.ceil(this.total / (this.#query.pageSize || 1)));

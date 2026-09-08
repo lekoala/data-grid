@@ -14,7 +14,12 @@ import {
 } from "./columns.js";
 import BaseElement from "./core/base-element.js";
 import { ArrayDataSource, FetchDataSource } from "./data-source.js";
-import { declarativeCells, parseDeclarativeTable, rowsFromTable } from "./declarative-table.js";
+import {
+    declarativeCells,
+    declarativeHeaderContent,
+    parseDeclarativeTable,
+    rowsFromTable,
+} from "./declarative-table.js";
 import {
     formatDateFilterQuery,
     formatTextFilterQuery,
@@ -3167,7 +3172,7 @@ class DataGrid extends BaseElement {
         if (!tfoot) return;
         const td = tfoot.querySelector("td");
         if (!td) return;
-        tfoot.removeAttribute("hidden");
+        tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
         // Never emit a colspan of 0 (invalid, collapses to one column)
         td.colSpan = Math.max(1, this.columnsLength(true));
         tfoot.style.display = "";
@@ -3368,7 +3373,10 @@ class DataGrid extends BaseElement {
 
             const label = document.createElement("span");
             label.classList.add("dg-sort-label");
-            label.textContent = column.title ?? "";
+            this.#appendDeclarativeHeaderContent(label, column);
+            if (!label.childNodes.length) {
+                label.textContent = column.title ?? "";
+            }
 
             // Always-visible affordance: neutral glyph when unsorted, the
             // direction glyph when active. Kept out of the accessibility tree
@@ -3380,7 +3388,26 @@ class DataGrid extends BaseElement {
             button.append(label, indicator);
             th.appendChild(button);
         } else {
-            th.textContent = column.title ?? "";
+            this.#appendDeclarativeHeaderContent(th, column);
+            if (!th.childNodes.length) {
+                th.textContent = column.title ?? "";
+            }
+        }
+    }
+
+    /**
+     * Recreate authored declarative header content without moving the source
+     * nodes that were captured before the supplied table was adopted.
+     * @param {HTMLElement} target
+     * @param {Column} column
+     */
+    #appendDeclarativeHeaderContent(target, column) {
+        const content = declarativeHeaderContent(column);
+        if (!content?.length) {
+            return;
+        }
+        for (const node of content) {
+            target.appendChild(node.cloneNode(true));
         }
     }
 
@@ -3853,7 +3880,7 @@ class DataGrid extends BaseElement {
         if (this.btnLast) this.btnLast.disabled = this.#query.page >= this.pages;
         this.updateMetaLabel();
         this.updatePageStatus();
-        tfoot.toggleAttribute("hidden", this.options.autohidePager && this.#query.pageSize > this.total);
+        tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
     }
 
     /**

@@ -117,6 +117,20 @@ test("zero results report a logical page 1/1", async () => {
     removeGrid(inst);
 });
 
+test("autohide-pager hides the footer only when there is one logical page", async () => {
+    for (const [count, hidden] of [
+        [9, true],
+        [10, true],
+        [11, false],
+    ]) {
+        const data = Array.from({ length: count }, (_, i) => ({ id: i }));
+        const inst = await makeReadyGrid({ autohidePager: true, pageSize: 10 }, data);
+        expect(inst.totalPages()).toBe(hidden ? 1 : 2);
+        expect(inst.tfoot.hidden).toBe(hidden);
+        removeGrid(inst);
+    }
+});
+
 test("a requested page beyond the last page refetches on the last valid page", async () => {
     const inst = await makeReadyGrid({ pageSize: 10 });
 

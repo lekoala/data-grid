@@ -107,6 +107,30 @@ test("data-value keeps a machine value while the markup stays rich", async () =>
     removeGrid(inst);
 });
 
+test("declarative header content is preserved inside the standard sort label", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr>
+        <th data-field="theme"><i class="ti ti-circle-chevron-down" aria-hidden="true"></i> Theme</th>
+        <th data-field="status" data-sortable="false"><span class="status-label">Status</span></th>
+    </tr></thead>
+    <tbody><tr><td>Planning</td><td>Active</td></tr></tbody>
+</table>
+`,
+        { sortable: true },
+    );
+
+    const sortableLabel = inst.querySelector('th[data-column-id="theme"] .dg-sort-label');
+    expect(sortableLabel.querySelector(".ti")).toBeTruthy();
+    expect(sortableLabel.textContent.trim()).toBe("Theme");
+
+    const plainHeader = inst.querySelector('th[data-column-id="status"]');
+    expect(plainHeader.querySelector(".status-label")).toBeTruthy();
+    expect(plainHeader.textContent.trim()).toBe("Status");
+    removeGrid(inst);
+});
+
 test("data-filter-placeholder becomes the text filter placeholder", async () => {
     const inst = await makeDeclarativeGrid(
         `

@@ -89,6 +89,18 @@ mode via `[data-bs-theme="dark"]`. Load it after `data-grid.css`:
 <link rel="stylesheet" href="themes/bootstrap.css" />
 ```
 
+## Actual CSS theme
+
+`themes/actual.css` maps the grid tokens onto the Actual CSS design tokens. It
+keeps the grid's geometry and follows the light/dark values provided by Actual
+CSS through `--surface`, `--text`, `--border`, `--primary` and related tokens.
+Load it after `data-grid.css`:
+
+```html
+<link rel="stylesheet" href="dist/data-grid.css" />
+<link rel="stylesheet" href="themes/actual.css" />
+```
+
 ## State attributes
 
 The core reflects its state on the element with `data-*` attributes, ready to be

@@ -1,0 +1,35 @@
+/**
+ * Actual CSS theme for data-grid.
+ * DataGrid keeps its density and geometry; Actual CSS provides the visual tokens.
+ * Load this AFTER css/data-grid.css.
+ */
+data-grid {
+  --dg-bg: var(--surface, #fff);
+  --dg-color: var(--text, #1f2937);
+  --dg-muted-color: var(--text-muted, #6b7280);
+  --dg-border-color: var(--border, #d1d5db);
+
+  --dg-accent: var(--primary, #2563eb);
+  --dg-accent-soft: var(--primary-soft, #dbeafe);
+  --dg-focus-ring: var(--focus-ring, rgb(37 99 235 / 25%));
+
+  --dg-header-bg: var(--surface-subtle, #f8fafc);
+  --dg-header-color: var(--text-muted, #6b7280);
+  --dg-filter-bg: var(--surface, #fff);
+
+  --dg-row-stripe-bg: transparent;
+  --dg-row-hover-bg: var(--hover-overlay, #f8fafc);
+  --dg-row-selected-bg: var(--primary-soft, #dbeafe);
+  --dg-row-selected-hover-bg: var(--primary-soft, #bfdbfe);
+  --dg-row-border-color: var(--border, #d1d5db);
+
+  --dg-control-bg: var(--surface, #fff);
+  --dg-control-color: var(--text, #1f2937);
+  --dg-control-border-color: var(--border, #d1d5db);
+
+  --dg-danger-bg: var(--danger-soft, #fee2e2);
+  --dg-danger-color: var(--danger, #b91c1c);
+  --dg-danger-border-color: var(--danger, #fca5a5);
+
+  --dg-radius: var(--radius-sm, 0.375rem);
+}

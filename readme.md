@@ -131,6 +131,18 @@ seeds the initial sort (DOM order is the priority). The host still activates
 the global capabilities — `data-sortable` on a column only opts out, it never
 turns sorting on globally.
 
+Authored child nodes in a declarative `<th>` are preserved too. For a sortable
+column they are cloned into the standard `.dg-sort-label`, so an application
+can provide its own icon or web component while the grid retains sorting,
+focus, ARIA and sizing:
+
+```html
+<th data-field="theme" data-width="210" data-min-width="170">
+    <i class="ti ti-circle-chevron-down" aria-hidden="true"></i>
+    Theme
+</th>
+```
+
 The `<data-grid>` host takes the reflected attributes listed above
 (`select-visible-only`, `row-key`, `no-data`, `page-sizes`, `row-actions`,
 ...): HTML covers structure, data and scalar configuration; functions,
@@ -432,6 +444,10 @@ width stays flexible and absorbs the remaining space. Formatter defaults
 contribute a floor — and a preferred width for predictable formats — unless the
 column sets its own. With `autosize`, widthless text columns are measured once
 at render and pinned to a computed width instead of staying flexible.
+
+The package also ships `themes/actual.css`, which maps the grid tokens to the
+Actual CSS design tokens. Load it after the core stylesheet, just like the
+Bootstrap theme.
 
 ### Formatting
 

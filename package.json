@@ -25,6 +25,7 @@
     "./standalone": "./dist/data-grid.standalone.min.js",
     "./dist/data-grid.standalone.min.js": "./dist/data-grid.standalone.min.js",
     "./themes/bootstrap": "./themes/bootstrap.css",
+    "./themes/actual": "./themes/actual.css",
     "./locales/*": "./locales/*.js"
   },
   "files": [

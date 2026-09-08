@@ -28,6 +28,12 @@ export type DeclarativeCellMeta = {
  */
 export declare function declarativeCells(row: Record<string, any>): Record<string, DeclarativeCellMeta> | undefined;
 /**
+ * Read the authored child nodes of a declarative header.
+ * @param {Column} column
+ * @returns {Node[]|undefined}
+ */
+export declare function declarativeHeaderContent(column: Column): Node[] | undefined;
+/**
  * Parse declarative columns and their optional initial sort. The definitions
  * still pass through the grid's normal column normalization afterward.
  * @param {HTMLTableElement} table
