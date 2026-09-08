@@ -307,6 +307,23 @@ which expands to fill the rest of the height. On an unconstrained grid the
 viewport grows with its content, so there is nothing to stick against. Pin the
 height only when you want an internal vertical viewport.
 
+## Theming
+
+The core stylesheet handles the grid's geometry and interaction states. Its
+themeable values are exposed through `--dg-*` custom properties, which a theme
+maps to an application's design system. The package ships with two demo themes:
+Bootstrap 5 and Actual CSS. Load one after the core stylesheet:
+
+```html
+<link rel="stylesheet" href="dist/data-grid.css" />
+<!-- pick a theme -->
+<link rel="stylesheet" href="themes/bootstrap.css" />
+<link rel="stylesheet" href="themes/actual.css" />
+```
+
+See [Styling](docs/styling.md) for the complete token reference and custom
+theme guidance.
+
 ## Lazy initial load
 
 `loading="lazy"` defers the **first** data source fetch until the grid nears the
@@ -444,10 +461,6 @@ width stays flexible and absorbs the remaining space. Formatter defaults
 contribute a floor — and a preferred width for predictable formats — unless the
 column sets its own. With `autosize`, widthless text columns are measured once
 at render and pinned to a computed width instead of staying flexible.
-
-The package also ships `themes/actual.css`, which maps the grid tokens to the
-Actual CSS design tokens. Load it after the core stylesheet, just like the
-Bootstrap theme.
 
 ### Formatting
 
