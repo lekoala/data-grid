@@ -1,6 +1,6 @@
 {
   "name": "data-grid-component",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "description": "Standalone data grid web component",
   "type": "module",
   "main": "./data-grid.js",
@@ -78,8 +78,8 @@
     "es6"
   ],
   "devDependencies": {
-    "@biomejs/biome": "^2.5.8",
-    "@happy-dom/global-registrator": "^20.11.2",
+    "@biomejs/biome": "^2.5.12",
+    "@happy-dom/global-registrator": "^20.14.0",
     "typescript": "^7.0.2"
   },
   "author": "LeKoala",
