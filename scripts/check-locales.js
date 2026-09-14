@@ -1,5 +1,6 @@
 /**
- * Locale completeness gate: compare every shipped locale against English.
+ * Locale completeness gate: compare every shipped locale against the
+ * canonical core defaults (src/labels.js).
  *
  * The locale modules are auto-applicative (they import data-grid.js which
  * registers the element), so provide the minimal browser globals Bun lacks.
@@ -7,8 +8,10 @@
  * Fails if:
  * - a key is missing or unknown
  * - a value is not a string
- * - the set of {placeholders} differs from English for a key
+ * - the set of {placeholders} differs from the default for a key
  */
+
+import { DEFAULT_LABELS } from "../src/labels.js";
 
 // data-grid.js touches DOM globals at import time; Bun has none.
 if (globalThis.customElements === undefined) {
@@ -31,7 +34,7 @@ function placeholders(value) {
         .join(",");
 }
 
-const reference = (await import("../locales/en.js")).default;
+const reference = DEFAULT_LABELS;
 const expectedKeys = Object.keys(reference);
 const errors = [];
 

@@ -396,6 +396,38 @@ test("a td data-actions cell becomes row.$actions without shifting data cells", 
     removeGrid(inst);
 });
 
+test("a data-actions cell in the middle does not shift the data cells", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead>
+        <tr>
+            <th data-field="name">Name</th>
+            <th data-actions>Actions</th>
+            <th data-field="email">Email</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr data-row-key="1">
+            <td>User One</td>
+            <td data-actions>
+                <button data-action="delete" data-confirm="Delete this user?">Delete</button>
+            </td>
+            <td>user1@example.com</td>
+        </tr>
+    </tbody>
+</table>
+`,
+        {},
+    );
+
+    const row = inst.dataSource.rows[0];
+    expect(row.name).toBe("User One");
+    expect(row.email).toBe("user1@example.com");
+    expect(row.$actions).toEqual([{ name: "delete", label: "Delete", confirm: "Delete this user?" }]);
+    removeGrid(inst);
+});
+
 test("column inference never turns $actions into a data column", async () => {
     const inst = new DataGrid({ dataSource: new ArrayDataSource([{ name: "a", $actions: ["view"] }]) });
     document.body.appendChild(inst);

@@ -1,6 +1,14 @@
-import DataGrid from "../data-grid.js";
+/**
+ * Canonical default labels for DataGrid.
+ * Single source of truth for the runtime defaults and the locale gate
+ * (`scripts/check-locales.js`). Pure module: no DOM access on import.
+ * @typedef {import("./data-grid.js").Labels} Labels
+ */
 
-const labels = {
+/**
+ * @type {Labels}
+ */
+export const DEFAULT_LABELS = {
     itemsPerPage: "Items per page",
     gotoPage: "Go to page",
     gotoFirstPage: "Go to first page",
@@ -27,7 +35,3 @@ const labels = {
     booleanTrue: "Yes",
     booleanFalse: "No",
 };
-
-DataGrid.setLabels(labels);
-
-export default labels;

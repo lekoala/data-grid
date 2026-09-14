@@ -58,7 +58,7 @@ class EditableColumn extends BasePlugin {
         input.autocomplete = "off";
         input.spellcheck = false;
         input.classList.add("dg-editable");
-        input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
+        input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
         input.setAttribute("aria-label", column.title ?? field);
         input.dataset.field = field;
 
@@ -91,17 +91,31 @@ class EditableColumn extends BasePlugin {
         };
 
         const commit = () => {
-            const value = input.value;
-            if (value === displayed()) {
+            const rawValue = input.value;
+            if (rawValue === displayed()) {
                 endEditing();
                 return;
             }
-            const error = this.validate(column, value, item);
+            const error = this.validate(column, rawValue, item);
             if (error) {
                 reject(error);
                 return;
             }
             const prev = previous();
+            /** @type {*} */
+            let value = rawValue;
+            if (typeof prev === "number") {
+                if (rawValue.trim() === "") {
+                    reject();
+                    return;
+                }
+                const parsed = Number(rawValue);
+                if (!Number.isFinite(parsed)) {
+                    reject();
+                    return;
+                }
+                value = parsed;
+            }
             item[field] = value;
             if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
                 item[field] = prev;

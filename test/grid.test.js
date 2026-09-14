@@ -378,6 +378,24 @@ test("row attr columns are set for falsy values like 0, false and empty string",
     removeGrid(inst2);
 });
 
+test("row attr class coerces non-strings and ignores empty values", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "kind", attr: "class" }] }, [
+        { id: 1, kind: 42 },
+        { id: 2, kind: "  alpha  beta " },
+        { id: 3, kind: "" },
+        { id: 4, kind: "   " },
+    ]);
+    const rows = inst.querySelectorAll("tbody tr");
+    expect(rows[0].classList.contains("42")).toBe(true);
+    expect(rows[1].classList.contains("alpha")).toBe(true);
+    expect(rows[1].classList.contains("beta")).toBe(true);
+    // Empty and whitespace-only values add no class and never throw
+    expect(rows[2].classList.contains("alpha")).toBe(false);
+    expect(rows[2].classList.contains("42")).toBe(false);
+    expect(rows[3].classList.contains("alpha")).toBe(false);
+    removeGrid(inst);
+});
+
 test("uppercase/lowercase transforms coerce non-strings instead of throwing", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "n", transform: "uppercase" }] }, [{ id: 1, n: 42 }]);
     expect(inst.querySelector("tbody td").textContent).toBe("42");

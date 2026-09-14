@@ -163,3 +163,68 @@ test("null and undefined editable values render as empty, not 'null'/'undefined'
     expect(inputs[1].value).toBe("");
     document.body.removeChild(inst);
 });
+
+test("editing a numeric model value commits a number, not a string", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "age", editable: true }] }, [{ id: 1, age: 42 }]);
+    const input = inst.querySelector("tbody td input.dg-editable");
+    let detail = null;
+    inst.addEventListener("edit", (ev) => {
+        detail = ev.detail;
+    });
+
+    input.focus();
+    input.value = "43";
+    input.blur();
+    expect(inst.rows[0].age).toBe(43);
+    expect(typeof inst.rows[0].age).toBe("number");
+    expect(detail.value).toBe(43);
+    expect(typeof detail.value).toBe("number");
+    document.body.removeChild(inst);
+});
+
+test("clearing or entering a non-finite numeric value rejects and restores", async () => {
+    for (const next of ["", "   ", "abc"]) {
+        const inst = await makeReadyGrid({ columns: [{ field: "age", editable: true }] }, [{ id: 1, age: 42 }]);
+        const input = inst.querySelector("tbody td input.dg-editable");
+        let dispatched = 0;
+        inst.addEventListener("edit", () => {
+            dispatched++;
+        });
+
+        input.focus();
+        input.value = next;
+        input.blur();
+        expect(dispatched).toBe(0);
+        expect(inst.rows[0].age).toBe(42);
+        expect(input.value).toBe("42");
+        document.body.removeChild(inst);
+    }
+});
+
+test("a null model value does not infer a number from the input type", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "age", editable: true, editableType: "number" }] }, [
+        { id: 1, age: null },
+    ]);
+    const input = inst.querySelector("tbody td input.dg-editable");
+
+    input.focus();
+    input.value = "12";
+    input.blur();
+    expect(inst.rows[0].age).toBe("12");
+    document.body.removeChild(inst);
+});
+
+test("input name replaces every dash in the grid id", async () => {
+    DataGrid.unregisterPlugins();
+    DataGrid.registerPlugins({ EditableColumn });
+    const inst = new DataGrid({ columns: [editableColumn], dataSource: new ArrayDataSource([{ id: 1, name: "a" }]) });
+    inst.setAttribute("id", "my-grid-id");
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+    const input = inst.querySelector("tbody td input.dg-editable");
+    expect(input.name).toBe("my_grid_id[1][name]");
+    document.body.removeChild(inst);
+});

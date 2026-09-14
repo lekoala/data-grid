@@ -26,6 +26,7 @@ import {
     parseDateFilterQuery,
     parseTextFilterQuery,
 } from "./filter-query.js";
+import { DEFAULT_LABELS } from "./labels.js";
 import { normalizeQuery } from "./query-state.js";
 import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
@@ -323,33 +324,7 @@ const textInputState = new WeakMap();
 /**
  * @type {Labels}
  */
-let labels = {
-    itemsPerPage: "Items per page",
-    gotoPage: "Go to page",
-    gotoFirstPage: "Go to first page",
-    gotoPrevPage: "Go to previous page",
-    gotoNextPage: "Go to next page",
-    gotoLastPage: "Go to last page",
-    pageRange: "{from}–{to} / {total}",
-    pageStatus: "Page {page} of {pages}",
-    resultCount: "{count} items",
-    selectedCount: "{count} selected",
-    selectAll: "Select all rows",
-    selectRow: "Select {row}",
-    toggleActions: "Toggle row actions",
-    showDetails: "Show details for {row}",
-    hideDetails: "Hide details for {row}",
-    showHiddenColumns: "Show additional columns for {row}",
-    hideHiddenColumns: "Hide additional columns for {row}",
-    resizeColumn: "Resize column",
-    search: "Search",
-    noData: "No data",
-    loading: "Loading…",
-    areYouSure: "Are you sure?",
-    networkError: "Network response error",
-    booleanTrue: "Yes",
-    booleanFalse: "No",
-};
+let labels = { ...DEFAULT_LABELS };
 
 const LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
 const CORE_EVENTS = [
@@ -3783,7 +3758,10 @@ class DataGrid extends BaseElement {
             if (column.attr) {
                 if (field && item[field] != null) {
                     if (column.attr === "class") {
-                        tr.classList.add(...item[field].trim().split(/\s+/));
+                        const classes = String(item[field] ?? "").trim();
+                        if (classes) {
+                            tr.classList.add(...classes.split(/\s+/));
+                        }
                     } else {
                         tr.setAttribute(column.attr, item[field]);
                     }

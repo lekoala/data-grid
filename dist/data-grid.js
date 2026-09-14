@@ -1064,6 +1064,35 @@ function formatDateFilterQuery(filter) {
   }
 }
 
+// src/labels.js
+var DEFAULT_LABELS = {
+  itemsPerPage: "Items per page",
+  gotoPage: "Go to page",
+  gotoFirstPage: "Go to first page",
+  gotoPrevPage: "Go to previous page",
+  gotoNextPage: "Go to next page",
+  gotoLastPage: "Go to last page",
+  pageRange: "{from}–{to} / {total}",
+  pageStatus: "Page {page} of {pages}",
+  resultCount: "{count} items",
+  selectedCount: "{count} selected",
+  selectAll: "Select all rows",
+  selectRow: "Select {row}",
+  toggleActions: "Toggle row actions",
+  showDetails: "Show details for {row}",
+  hideDetails: "Hide details for {row}",
+  showHiddenColumns: "Show additional columns for {row}",
+  hideHiddenColumns: "Hide additional columns for {row}",
+  resizeColumn: "Resize column",
+  search: "Search",
+  noData: "No data",
+  loading: "Loading…",
+  areYouSure: "Are you sure?",
+  networkError: "Network response error",
+  booleanTrue: "Yes",
+  booleanFalse: "No"
+};
+
 // src/query-state.js
 function normalizeQuery(query) {
   const q = query || {};
@@ -1791,33 +1820,7 @@ function transformValue(value, transform, ctx) {
 // src/data-grid.js
 var plugins = {};
 var textInputState = new WeakMap;
-var labels = {
-  itemsPerPage: "Items per page",
-  gotoPage: "Go to page",
-  gotoFirstPage: "Go to first page",
-  gotoPrevPage: "Go to previous page",
-  gotoNextPage: "Go to next page",
-  gotoLastPage: "Go to last page",
-  pageRange: "{from}–{to} / {total}",
-  pageStatus: "Page {page} of {pages}",
-  resultCount: "{count} items",
-  selectedCount: "{count} selected",
-  selectAll: "Select all rows",
-  selectRow: "Select {row}",
-  toggleActions: "Toggle row actions",
-  showDetails: "Show details for {row}",
-  hideDetails: "Hide details for {row}",
-  showHiddenColumns: "Show additional columns for {row}",
-  hideHiddenColumns: "Hide additional columns for {row}",
-  resizeColumn: "Resize column",
-  search: "Search",
-  noData: "No data",
-  loading: "Loading…",
-  areYouSure: "Are you sure?",
-  networkError: "Network response error",
-  booleanTrue: "Yes",
-  booleanFalse: "No"
-};
+var labels = { ...DEFAULT_LABELS };
 var LABEL_PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
 var CORE_EVENTS = [
   "click",
@@ -3989,7 +3992,10 @@ class DataGrid extends base_element_default {
       if (column.attr) {
         if (field && item[field] != null) {
           if (column.attr === "class") {
-            tr.classList.add(...item[field].trim().split(/\s+/));
+            const classes = String(item[field] ?? "").trim();
+            if (classes) {
+              tr.classList.add(...classes.split(/\s+/));
+            }
           } else {
             tr.setAttribute(column.attr, item[field]);
           }
@@ -5678,7 +5684,7 @@ class EditableColumn extends base_plugin_default {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.classList.add("dg-editable");
-    input.name = `${gridId.replace("-", "_")}[${i + 1}][${field}]`;
+    input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
     input.dataset.field = field;
     const previous = () => item[field];
@@ -5704,17 +5710,30 @@ class EditableColumn extends base_plugin_default {
       }
     };
     const commit = () => {
-      const value = input.value;
-      if (value === displayed()) {
+      const rawValue = input.value;
+      if (rawValue === displayed()) {
         endEditing();
         return;
       }
-      const error = this.validate(column, value, item);
+      const error = this.validate(column, rawValue, item);
       if (error) {
         reject(error);
         return;
       }
       const prev = previous();
+      let value = rawValue;
+      if (typeof prev === "number") {
+        if (rawValue.trim() === "") {
+          reject();
+          return;
+        }
+        const parsed = Number(rawValue);
+        if (!Number.isFinite(parsed)) {
+          reject();
+          return;
+        }
+        value = parsed;
+      }
       item[field] = value;
       if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
         item[field] = prev;
