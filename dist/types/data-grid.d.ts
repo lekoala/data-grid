@@ -98,9 +98,16 @@ export type Column = {
      */
     editable?: boolean;
     /**
-     * - type of input (EditableColumn module)
+     * - type of input, or "select" for a select editor fed by editableOptions (EditableColumn module)
      */
     editableType?: string;
+    /**
+     * - options of the select editor; the current value is reflected as data-value on the control (EditableColumn module)
+     */
+    editableOptions?: Array<string | {
+        value: (string | number);
+        label: (string | number);
+    }>;
     /**
      * - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
      */

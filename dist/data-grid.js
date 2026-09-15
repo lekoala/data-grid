@@ -5721,6 +5721,10 @@ class EditableColumn extends base_plugin_default {
     }
   }
   makeEditableInput(td, column, item, i) {
+    if (column.editableType === "select") {
+      this.makeEditableSelect(td, column, item, i);
+      return;
+    }
     const grid = this.grid;
     const field = column.field;
     if (!field) {
@@ -5742,12 +5746,72 @@ class EditableColumn extends base_plugin_default {
     input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
     input.dataset.field = field;
+    const { displayed, commit, reject, startEditing } = this.#cellLifecycle(td, column, item, () => input.value, (value) => {
+      input.value = value;
+    });
+    input.value = displayed();
+    input.addEventListener("click", (ev) => ev.stopPropagation());
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") {
+        ev.preventDefault();
+        input.blur();
+      } else if (ev.key === "Escape") {
+        reject();
+        input.blur();
+      }
+    });
+    input.addEventListener("focus", startEditing);
+    input.addEventListener("blur", commit);
+    td.replaceChildren(input);
+  }
+  makeEditableSelect(td, column, item, i) {
+    const grid = this.grid;
+    const field = column.field;
+    if (!field) {
+      return;
+    }
+    const gridId = grid.getAttribute("id") ?? "";
+    const select = document.createElement("select");
+    select.classList.add("dg-editable");
+    select.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
+    select.setAttribute("aria-label", column.title ?? field);
+    select.dataset.field = field;
+    const { displayed, commit, startEditing } = this.#cellLifecycle(td, column, item, () => select.value, (value) => {
+      select.value = value;
+    });
+    for (const entry of column.editableOptions ?? []) {
+      const value = typeof entry === "string" ? entry : entry.value;
+      const label = typeof entry === "string" ? entry : entry.label ?? entry.value;
+      addSelectOption(select, value, label);
+    }
+    const syncValue = () => {
+      select.dataset.value = select.value;
+    };
+    select.value = displayed();
+    syncValue();
+    select.addEventListener("click", (ev) => ev.stopPropagation());
+    select.addEventListener("focus", startEditing);
+    select.addEventListener("change", () => {
+      commit();
+      syncValue();
+    });
+    select.addEventListener("blur", () => {
+      commit();
+      syncValue();
+    });
+    const wrap = document.createElement("span");
+    wrap.className = "dg-select-field";
+    wrap.appendChild(select);
+    td.replaceChildren(wrap);
+  }
+  #cellLifecycle(td, column, item, getValue, setValue) {
+    const grid = this.grid;
+    const field = column.field;
     const previous = () => item[field];
     const displayed = () => {
       const value = previous();
       return value === undefined || value === null ? "" : String(value);
     };
-    input.value = displayed();
     const startEditing = () => {
       td.dataset.editing = "";
       td.removeAttribute("data-invalid");
@@ -5757,7 +5821,7 @@ class EditableColumn extends base_plugin_default {
       td.removeAttribute("data-editing");
     };
     const reject = (message = null) => {
-      input.value = displayed();
+      setValue(displayed());
       endEditing();
       if (message) {
         td.dataset.invalid = "";
@@ -5765,7 +5829,7 @@ class EditableColumn extends base_plugin_default {
       }
     };
     const commit = () => {
-      const rawValue = input.value;
+      const rawValue = getValue();
       if (rawValue === displayed()) {
         endEditing();
         return;
@@ -5797,19 +5861,7 @@ class EditableColumn extends base_plugin_default {
       }
       endEditing();
     };
-    input.addEventListener("click", (ev) => ev.stopPropagation());
-    input.addEventListener("keydown", (ev) => {
-      if (ev.key === "Enter") {
-        ev.preventDefault();
-        input.blur();
-      } else if (ev.key === "Escape") {
-        reject();
-        input.blur();
-      }
-    });
-    input.addEventListener("focus", startEditing);
-    input.addEventListener("blur", commit);
-    td.replaceChildren(input);
+    return { displayed, commit, reject, startEditing, endEditing };
   }
   validate(column, value, row) {
     const ctx = { row, column, grid: this.grid };

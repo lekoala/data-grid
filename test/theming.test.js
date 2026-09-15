@@ -76,15 +76,20 @@ test("filter focus is an inset outline on the control", () => {
     );
 });
 
+test("editable controls paint their own focus inset, the cell stays neutral", () => {
+    expect(coreCss).toMatch(/td input\.dg-editable:focus \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-accent\);/);
+    expect(coreCss).toMatch(
+        /td select\.dg-editable:focus-visible \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-accent\);/,
+    );
+    expect(coreCss).not.toMatch(/td\.dg-editable-col\[data-editing\] \{[\s\S]*?background-color/);
+});
+
 test("collapsed action items show one neutral keyboard focus, links included", () => {
-    // Bun splits the selector list into one rule per selector; every variant
-    // shares the neutral wash plus the accent inset outline.
-    for (const selector of [
-        "\\.dg-actions-menu button:focus-visible",
-        "\\.dg-actions-menu a:focus-visible",
-        "\\.dg-actions-menu button\\[data-intent\\]:focus-visible",
-        "\\.dg-actions-menu a\\[data-intent\\]:focus-visible",
-    ]) {
+    // Bun splits the selector list into one rule per selector; both share the
+    // neutral wash plus the accent inset outline. Intent items keep their
+    // hover fill when hovered and focused at once, so only the base variants
+    // are asserted here.
+    for (const selector of ["\\.dg-actions-menu button:focus-visible", "\\.dg-actions-menu a:focus-visible"]) {
         expect(coreCss).toMatch(
             new RegExp(
                 `${selector} \\{[\\s\\S]*?background-color: var\\(--dg-row-hover-bg\\);[\\s\\S]*?outline: 2px solid var\\(--dg-accent\\);[\\s\\S]*?outline-offset: -2px;`,

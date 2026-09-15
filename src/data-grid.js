@@ -103,7 +103,8 @@ import transformValue from "./utils/transformValue.js";
  * @property {Boolean} [wrap] - allow this column's data cells to wrap (defaults to the grid-wide `wrap`)
  * @property {"uppercase"|"lowercase"|"array"|ValueTransform|null} [transform] - transforms the value displayed by the default cell renderer. Use renderCell for custom DOM/content rendering.
  * @property {Boolean} [editable] - replace with input (EditableColumn module)
- * @property {String} [editableType] - type of input (EditableColumn module)
+ * @property {String} [editableType] - type of input, or "select" for a select editor fed by editableOptions (EditableColumn module)
+ * @property {Array<String|{value: (String|Number), label: (String|Number)}>} [editableOptions] - options of the select editor; the current value is reflected as data-value on the control (EditableColumn module)
  * @property {(value: *, ctx: EditContext) => (Boolean | String)} [validate] - (value, { row, column, grid }) => Boolean | error message (EditableColumn module)
  * @property {Number} [responsive] - the higher the value, the sooner it will be hidden, disable with 0 (ResponsiveGrid module)
  * @property {Boolean} [responsiveHidden] - hidden through responsive module (ResponsiveGrid module)

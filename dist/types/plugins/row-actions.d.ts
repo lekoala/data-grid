@@ -6,6 +6,10 @@ declare class RowActions extends BasePlugin {
     #private;
     /** @type {HTMLUListElement|null} */
     menu: HTMLUListElement | null;
+    /** @type {HTMLElement|null} */
+    activeInvoker: HTMLElement | null;
+    /** @type {Boolean} */
+    _keyboardOpen: boolean;
     /**
      * @param {import("../data-grid.js").default} grid
      */
@@ -13,12 +17,23 @@ declare class RowActions extends BasePlugin {
     connected(): void;
     disconnected(): void;
     /**
-     * Delegate the collapsed-menu toggle. The row is resolved from the DOM
-     * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
-     * working across body rerenders without re-attaching anything.
+     * Delegate the collapsed actions popover toggle. The row is resolved from
+     * the DOM (`data-row-index`) through the model (`grid.rows`), so the
+     * toggle keeps working across body rerenders without re-attaching
+     * anything. The toggle is memorized as `activeInvoker` so focus can move
+     * into the shared popover on keyboard opening and back on activation.
      * @param {MouseEvent} event
      */
     onclick(event: MouseEvent): void;
+    /**
+     * Focus handoff for the shared collapsed actions popover: an ordinary
+     * action list popover, not an ARIA menu (no roving tabindex, arrows or
+     * typeahead — Tab / Shift+Tab / Enter / Space / Escape are enough).
+     * @param {Event & { newState?: "open" | "closed" }} event
+     */
+    ontoggle(event: Event & {
+        newState?: "open" | "closed";
+    }): void;
     /**
      * Whether the actions column is active: static `options.actions`, the
      * `rowActions` capability or a declarative `<th data-actions>`.
@@ -47,8 +62,10 @@ declare class RowActions extends BasePlugin {
      */
     syncCellModes(): void;
     /**
-     * Fill the shared popover before the toggle's native default action opens
-     * it. The browser owns opening, dismissal, focus restoration and placement.
+     * Fill the shared collapsed actions popover before the toggle's native
+     * default action opens it. The browser owns opening, dismissal and
+     * placement; focus moves into the popover on keyboard opening (see
+     * ontoggle) and back to the invoker after a button activation.
      * @param {Record<string, any>} row
      */
     renderActionMenu(row: Record<string, any>): void;

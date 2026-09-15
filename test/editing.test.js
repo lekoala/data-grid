@@ -228,3 +228,121 @@ test("input name replaces every dash in the grid id", async () => {
     expect(input.name).toBe("my_grid_id[1][name]");
     document.body.removeChild(inst);
 });
+
+const statusColumn = {
+    field: "status",
+    title: "Status",
+    editable: true,
+    editableType: "select",
+    editableOptions: [
+        { value: "paid", label: "Paid" },
+        { value: "unpaid", label: "Unpaid" },
+    ],
+};
+
+function changeSelect(select, value) {
+    select.value = value;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+test("select editors render options with the row value selected and reflected", async () => {
+    const inst = await makeReadyGrid({ columns: [statusColumn] }, [{ id: 1, status: "unpaid" }]);
+    const select = inst.querySelector("tbody td select.dg-editable");
+    expect(select).toBeTruthy();
+    expect(select.querySelectorAll("option")).toHaveLength(2);
+    expect(select.value).toBe("unpaid");
+    expect(select.dataset.value).toBe("unpaid");
+    expect(select.getAttribute("aria-label")).toBe("Status");
+    expect(select.dataset.field).toBe("status");
+    document.body.removeChild(inst);
+});
+
+test("select editors use the standard caret wrapper", async () => {
+    const inst = await makeReadyGrid({ columns: [statusColumn] }, [{ id: 1, status: "paid" }]);
+    const select = inst.querySelector("tbody td select.dg-editable");
+    expect(select.closest(".dg-select-field")).toBeTruthy();
+    document.body.removeChild(inst);
+});
+
+test("changing the select commits, dispatches and follows data-value", async () => {
+    const inst = await makeReadyGrid({ columns: [statusColumn] }, [{ id: 1, status: "unpaid" }]);
+    const select = inst.querySelector("tbody td select.dg-editable");
+    let detail = null;
+    inst.addEventListener("edit", (ev) => {
+        detail = ev.detail;
+    });
+    changeSelect(select, "paid");
+    expect(detail).not.toBeNull();
+    expect(detail.value).toBe("paid");
+    expect(detail.field).toBe("status");
+    expect(detail.data.status).toBe("paid");
+    expect(inst.rows[0].status).toBe("paid");
+    expect(select.dataset.value).toBe("paid");
+    document.body.removeChild(inst);
+});
+
+test("preventDefault on the edit event reverts the select and its data-value", async () => {
+    const inst = await makeReadyGrid({ columns: [statusColumn] }, [{ id: 1, status: "unpaid" }]);
+    const select = inst.querySelector("tbody td select.dg-editable");
+    inst.addEventListener("edit", (ev) => ev.preventDefault());
+    changeSelect(select, "paid");
+    expect(inst.rows[0].status).toBe("unpaid");
+    expect(select.value).toBe("unpaid");
+    expect(select.dataset.value).toBe("unpaid");
+    document.body.removeChild(inst);
+});
+
+test("select editors coerce numeric model values like inputs do", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "level",
+                    title: "Level",
+                    editable: true,
+                    editableType: "select",
+                    editableOptions: [
+                        { value: 1, label: "One" },
+                        { value: 2, label: "Two" },
+                    ],
+                },
+            ],
+        },
+        [{ id: 1, level: 1 }],
+    );
+    const select = inst.querySelector("tbody td select.dg-editable");
+    expect(select.value).toBe("1");
+    changeSelect(select, "2");
+    expect(inst.rows[0].level).toBe(2);
+    expect(typeof inst.rows[0].level).toBe("number");
+    document.body.removeChild(inst);
+});
+
+test("Escape on a select neither rejects nor dispatches", async () => {
+    const inst = await makeReadyGrid({ columns: [statusColumn] }, [{ id: 1, status: "unpaid" }]);
+    const select = inst.querySelector("tbody td select.dg-editable");
+    let dispatched = 0;
+    inst.addEventListener("edit", () => {
+        dispatched++;
+    });
+    select.focus();
+    select.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    expect(dispatched).toBe(0);
+    expect(inst.rows[0].status).toBe("unpaid");
+    expect(select.value).toBe("unpaid");
+    document.body.removeChild(inst);
+});
+
+test("plain string options use the same text as value and label", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "status", editable: true, editableType: "select", editableOptions: ["paid", "unpaid"] }],
+        },
+        [{ id: 1, status: "paid" }],
+    );
+    const select = inst.querySelector("tbody td select.dg-editable");
+    expect(select.querySelectorAll("option")).toHaveLength(2);
+    expect(select.value).toBe("paid");
+    expect(select.dataset.value).toBe("paid");
+    document.body.removeChild(inst);
+});

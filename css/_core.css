@@ -722,13 +722,15 @@ data-grid tbody td input.dg-editable {
   padding: 0 var(--dg-padding-x);
 }
 
+/* The control paints its own state (focus here, invalid below); the cell
+   stays neutral so editing never shows two stacked indicators. Inset rings
+   cannot be clipped by the cell overflow, whatever the column width. */
 data-grid tbody td input.dg-editable:focus {
-  box-shadow: inset 0 0 0 1px var(--dg-accent);
+  box-shadow: inset 0 0 0 2px var(--dg-accent);
 }
 
-data-grid tbody td.dg-editable-col[data-editing] {
-  background-color: var(--dg-accent-soft);
-  box-shadow: inset 2px 0 0 var(--dg-accent);
+data-grid tbody td select.dg-editable:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--dg-accent);
 }
 
 data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {

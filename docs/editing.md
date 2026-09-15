@@ -35,6 +35,38 @@ without one. On failure the cell gets `td[data-invalid]` with the message in
 }
 ```
 
+## Select
+
+`editableType: "select"` renders a `<select>` fed by `editableOptions`
+(`{ value, label }`, a plain string uses the same text twice):
+
+```js
+{
+    field: "status",
+    title: "Status",
+    editable: true,
+    editableType: "select",
+    editableOptions: [
+        { value: "paid", label: "Paid" },
+        { value: "unpaid", label: "Unpaid" },
+    ],
+}
+```
+
+- The choice commits on `change` with the same validation and cancelable
+  `edit` event as inputs, including numeric coercion of the model value.
+- The current value is reflected as `data-value` on the control, so per-value
+  styling needs no extra hook:
+
+```css
+select.dg-editable[data-value="paid"] { ... }
+select.dg-editable[data-value="unpaid"] { ... }
+```
+
+- Enter/Escape keep their native select behavior (pick/close the listbox);
+  there is never a pending state to reject. See `demo/actions.html` for a
+  colored status sample.
+
 ## Committing
 
 Listen to the `edit` event and call `preventDefault()` to reject the change (the

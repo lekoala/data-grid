@@ -16,8 +16,29 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
   <link rel="stylesheet" href="../dist/data-grid.css" />
   <link rel="stylesheet" href="demo.css" />
+  <style>
+    /* Demo styling: the editable select reflects its value as data-value */
+    #status-demo select.dg-editable[data-value="paid"] {
+      background-color: #e7f6ec;
+      border-color: #a9dfb9;
+      color: #157347;
+    }
+    #status-demo select.dg-editable[data-value="unpaid"] {
+      background-color: #fef3f2;
+      border-color: #fecdca;
+      color: #b42318;
+    }
+    /* Compact status control with room for its focus ring */
+    #status-demo select.dg-editable {
+      min-height: 0;
+      height: 28px;
+      max-width: 100%;
+      font-size: 0.875em;
+    }
+  </style>
 
   <script type="module">
+    import { ArrayDataSource, DataGrid } from "../data-grid.js";
     import { createStaticGrid } from "./demo.js";
 
     const actionDemo = await createStaticGrid(
@@ -125,6 +146,34 @@
     action3Demo.addEventListener("action", (ev) => {
       document.getElementById("debug-zone").innerText = JSON.stringify(ev.detail);
     });
+
+    const statusDemo = new DataGrid({
+      autohidePager: true,
+      columns: [
+        { field: "name", title: "Customer" },
+        { field: "email", title: "Email", editable: true, editableType: "email" },
+        {
+          field: "status",
+          title: "Status",
+          editable: true,
+          editableType: "select",
+          editableOptions: [
+            { value: "paid", label: "Paid" },
+            { value: "unpaid", label: "Unpaid" },
+          ],
+        },
+      ],
+      dataSource: new ArrayDataSource([
+        { id: 1, name: "John Doe", email: "johndoe@koala.be", status: "paid" },
+        { id: 2, name: "Mark Evans", email: "markevans@koala.be", status: "unpaid" },
+        { id: 3, name: "Emily Clark", email: "emilyclark@koala.be", status: "paid" },
+        { id: 4, name: "Carlos Rivera", email: "carlosrivera@koala.be", status: "unpaid" },
+      ]),
+    });
+    document.getElementById("status-demo").appendChild(statusDemo);
+    statusDemo.addEventListener("edit", (ev) => {
+      document.getElementById("debug-zone").innerText = JSON.stringify(ev.detail);
+    });
   </script>
 </head>
 
@@ -173,6 +222,19 @@
     </p>
     <div class="demo-grid">
       <div id="action3-demo"></div>
+    </div>
+
+    <h3>Editable select</h3>
+    <p>
+      A column with <code>editableType: "select"</code> renders a
+      <code>&lt;select&gt;</code> fed by <code>editableOptions</code>. The choice
+      commits on <code>change</code>, and the current value is reflected as
+      <code>data-value</code> on the control so it can be styled per value.
+      With four rows on a single page, <code>autohidePager</code> hides the
+      pager footer.
+    </p>
+    <div class="demo-grid">
+      <div id="status-demo"></div>
     </div>
   </main>
   <footer>
