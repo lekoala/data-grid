@@ -424,9 +424,22 @@ test.skipIf(IS_WINDOWS)(
         // focus contract on the Chrome backend.
         if (IS_CHROME_BACKEND) {
             expect(await read(v, "document.activeElement.className.includes('dg-multiselect-trigger')")).toBe(true);
-            expect(
-                await read(v, "getComputedStyle(document.querySelector('#local-grid .dg-multiselect')).boxShadow"),
-            ).not.toBe("none");
+            const focus = JSON.parse(
+                await read(
+                    v,
+                    `JSON.stringify((() => {
+                        const style = getComputedStyle(document.querySelector('#local-grid .dg-multiselect'));
+                        return {
+                            outlineStyle: style.outlineStyle,
+                            outlineWidth: style.outlineWidth,
+                            boxShadow: style.boxShadow,
+                        };
+                    })())`,
+                ),
+            );
+            expect(focus.outlineStyle).toBe("solid");
+            expect(focus.outlineWidth).toBe("2px");
+            expect(focus.boxShadow).toBe("none");
         }
         expect(
             await read(
@@ -576,7 +589,7 @@ test.skipIf(IS_WINDOWS)(
             v,
             "getComputedStyle(document.querySelector('#local-grid thead th.dg-sortable button.dg-sort')).color",
         );
-        expect(color.toLowerCase()).toBe("rgb(17, 24, 39)"); // --dg-header-color
+        expect(color.toLowerCase()).toBe("rgb(107, 114, 128)"); // --dg-header-color (muted)
     },
     TIMEOUT,
 );

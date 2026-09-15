@@ -66,7 +66,23 @@ test("floating panels no longer depend on CSS Anchor Positioning", () => {
 test("multi-select keyboard focus is drawn on the filter control", () => {
     expect(coreCss).toMatch(/\.dg-multiselect-trigger:focus-visible \{\s*outline: 0;/);
     expect(coreCss).toMatch(
-        /\.dg-multiselect:has\(\s*> \.dg-multiselect-trigger:focus-visible\) \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-focus-ring\);/,
+        /\.dg-multiselect:has\(\s*> \.dg-multiselect-trigger:focus-visible\) \{[\s\S]*?outline: 2px solid var\(--dg-accent\);/,
+    );
+});
+
+test("filter focus is an inset outline on the control", () => {
+    expect(coreCss).toMatch(
+        /\.dg-filter-control:focus-visible \{[\s\S]*?outline: 2px solid var\(--dg-accent\);[\s\S]*?outline-offset: -2px;/,
+    );
+});
+
+test("the filter row uses --dg-filter-bg while column headers keep --dg-header-bg", () => {
+    expect(coreCss).toMatch(/data-grid thead tr\.dg-head-filters \{[\s\S]*?background-color: var\(--dg-filter-bg\);/);
+    expect(coreCss).toMatch(
+        /data-grid thead tr\.dg-head-filters th \{[\s\S]*?background-color: var\(--dg-filter-bg\);/,
+    );
+    expect(coreCss).toMatch(
+        /data-grid thead tr\.dg-head-columns th \{[\s\S]*?background-color: var\(--dg-header-bg\);/,
     );
 });
 

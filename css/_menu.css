@@ -9,7 +9,7 @@ data-grid .dg-menu {
   min-width: 180px;
   margin: 0;
   padding: var(--dg-space-2);
-  box-shadow: 0 12px 24px rgb(15 23 42 / 10%);
+  box-shadow: 0 0.5rem 1.5rem rgb(15 23 42 / 12%);
   border-radius: var(--dg-radius);
 }
 

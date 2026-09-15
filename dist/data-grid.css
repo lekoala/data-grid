@@ -16,23 +16,23 @@ data-grid {
   --dg-space-3: 12px;
   --dg-space-4: 16px;
   --dg-bg: #fff;
-  --dg-color: #1f2937;
+  --dg-color: #1f2328;
   --dg-muted-color: #6b7280;
-  --dg-border-color: #d8e1eb;
-  --dg-accent: #0d6efd;
-  --dg-accent-soft: #e8f1ff;
-  --dg-focus-ring: #0d6efd2e;
-  --dg-header-bg: #f6f8fb;
-  --dg-header-color: #111827;
-  --dg-filter-bg: #fbfcfe;
+  --dg-border-color: #dbdcdd;
+  --dg-accent: #2563eb;
+  --dg-accent-soft: #e9effd;
+  --dg-focus-ring: #2563eb33;
+  --dg-header-bg: #f8fafc;
+  --dg-header-color: var(--dg-muted-color);
+  --dg-filter-bg: var(--dg-bg);
   --dg-row-stripe-bg: transparent;
   --dg-row-hover-bg: #f8fafc;
-  --dg-row-selected-bg: #eef4ff;
-  --dg-row-selected-hover-bg: #e7f0ff;
+  --dg-row-selected-bg: #eef3fd;
+  --dg-row-selected-hover-bg: #e5ecfd;
   --dg-row-border-color: var(--dg-border-color);
   --dg-control-bg: #fff;
   --dg-control-color: var(--dg-color);
-  --dg-control-border-color: #d4dde7;
+  --dg-control-border-color: #dbdcdd;
   --dg-danger-bg: #fef3f2;
   --dg-danger-color: #b42318;
   --dg-danger-border-color: #fecdca;
@@ -625,12 +625,12 @@ data-grid thead tr.dg-head-columns th {
 }
 
 data-grid thead tr.dg-head-filters {
-  background-color: var(--dg-header-bg);
+  background-color: var(--dg-filter-bg);
 }
 
 data-grid thead tr.dg-head-filters th {
   padding: var(--dg-space-1) var(--dg-padding-x) var(--dg-space-2);
-  background-color: var(--dg-header-bg);
+  background-color: var(--dg-filter-bg);
   border-bottom: 1px solid var(--dg-border-color);
 }
 
@@ -646,7 +646,7 @@ data-grid thead tr.dg-head-filters th.dg-filter-cell {
 data-grid thead tr.dg-head-filters .dg-filter-control {
   box-sizing: border-box;
   box-shadow: none;
-  color: inherit;
+  color: var(--dg-color);
   display: block;
   font: inherit;
   min-height: var(--dg-control-height);
@@ -675,9 +675,9 @@ data-grid thead tr.dg-head-filters .dg-filter-control:hover {
 }
 
 data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
-  background-color: var(--dg-bg);
-  box-shadow: inset 0 0 0 2px var(--dg-focus-ring);
-  outline: 0;
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 @media (forced-colors: active) {
@@ -1080,7 +1080,7 @@ data-grid .dg-menu {
   min-width: 180px;
   max-width: 220px;
   margin: 0;
-  box-shadow: 0 12px 24px #0f172a1a;
+  box-shadow: 0 .5rem 1.5rem #0f172a1f;
 }
 
 data-grid .dg-menu li {
@@ -1136,8 +1136,9 @@ data-grid .dg-multiselect-trigger:focus-visible {
 }
 
 data-grid thead tr.dg-head-filters .dg-multiselect:has( > .dg-multiselect-trigger:focus-visible) {
-  background-color: var(--dg-bg);
-  box-shadow: inset 0 0 0 2px var(--dg-focus-ring);
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 data-grid .dg-multiselect-summary {
@@ -1195,7 +1196,6 @@ data-grid .dg-actions button, data-grid .dg-actions a {
 
 data-grid .dg-actions button:hover, data-grid .dg-actions a:hover {
   background-color: var(--dg-row-hover-bg);
-  border-color: var(--dg-accent);
   opacity: 1;
 }
 
@@ -1417,7 +1417,7 @@ data-grid .dg-disclosure:before {
 
 data-grid .dg-disclosure:hover {
   color: var(--dg-color);
-  background-color: #1f293714;
+  background-color: #1f232814;
 }
 
 @supports (color: color-mix(in srgb, red 50%, transparent)) {

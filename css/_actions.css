@@ -33,7 +33,6 @@ data-grid .dg-actions a {
 data-grid .dg-actions button:hover,
 data-grid .dg-actions a:hover {
   background-color: var(--dg-row-hover-bg);
-  border-color: var(--dg-accent);
   opacity: 1;
 }
 

@@ -45,7 +45,7 @@ data-grid .dg-disclosure::before {
    readable over the plain, striped, hovered and selected row backgrounds
    alike. Internal to the control, so it stays a literal, not a token. */
 data-grid .dg-disclosure:hover {
-  background-color: rgb(31 41 55 / 8%);
+  background-color: rgb(31 35 40 / 8%);
   color: var(--dg-color);
 }
 

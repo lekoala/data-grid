@@ -14,23 +14,23 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | Token                         | Default                 | Used for                       |
 |-------------------------------|-------------------------|--------------------------------|
 | `--dg-bg`                     | `#fff`                  | table + menu surfaces          |
-| `--dg-color`                  | `#1f2937`               | primary text                   |
+| `--dg-color`                  | `#1f2328`               | primary text                   |
 | `--dg-muted-color`            | `#6b7280`               | footer/meta/placeholder text   |
-| `--dg-border-color`           | `#d8e1eb`               | outer structure + separators   |
-| `--dg-accent`                 | `#0d6efd`               | interactive accent             |
-| `--dg-accent-soft`            | `#e8f1ff`               | subtle accent surface          |
-| `--dg-focus-ring`             | `rgb(13 110 253 / 18%)` | focus ring                     |
-| `--dg-header-bg`              | `#f6f8fb`               | header + footer background     |
-| `--dg-header-color`           | `#111827`               | header text                    |
-| `--dg-filter-bg`              | `#fbfcfe`               | filter controls                |
+| `--dg-border-color`           | `#dbdcdd`               | outer structure + separators   |
+| `--dg-accent`                 | `#2563eb`               | interactive accent             |
+| `--dg-accent-soft`            | `#e9effd`               | subtle accent surface          |
+| `--dg-focus-ring`             | `rgb(37 99 235 / 20%)`  | focus ring                     |
+| `--dg-header-bg`              | `#f8fafc`               | header + footer background     |
+| `--dg-header-color`           | `var(--dg-muted-color)` | header text                    |
+| `--dg-filter-bg`              | `var(--dg-bg)`          | filter row background          |
 | `--dg-row-stripe-bg`          | `transparent`           | striped rows                   |
 | `--dg-row-hover-bg`           | `#f8fafc`               | row hover                      |
-| `--dg-row-selected-bg`        | `#eef4ff`               | selected rows                  |
-| `--dg-row-selected-hover-bg`  | `#e7f0ff`               | selected row hover             |
-| `--dg-row-border-color`       | `#edf2f7`               | row separators                 |
+| `--dg-row-selected-bg`        | `#eef3fd`               | selected rows                  |
+| `--dg-row-selected-hover-bg`  | `#e5ecfd`               | selected row hover             |
+| `--dg-row-border-color`       | `#e6e7e8`               | row separators                 |
 | `--dg-control-bg`             | `#fff`                  | buttons / inputs / selects     |
 | `--dg-control-color`          | `var(--dg-color)`       | control text                   |
-| `--dg-control-border-color`   | `#d4dde7`               | control borders                |
+| `--dg-control-border-color`   | `#dbdcdd`               | control borders                |
 | `--dg-danger-bg`              | `#fef3f2`               | error state                    |
 | `--dg-danger-color`           | `#b42318`               | error text                     |
 | `--dg-danger-border-color`    | `#fecdca`               | error borders                  |
