@@ -710,12 +710,9 @@ data-grid thead tr.dg-head-filters th.dg-actions {
 
 data-grid tbody td.dg-editable-col {
   padding: 0;
-}
-
-/* Editable cells hint at their interactivity on hover; while editing, only
-   the control ring speaks, and invalid keeps its own signal. */
-data-grid tbody td.dg-editable-col:hover:not(:focus-within):not([data-invalid]) {
-  box-shadow: inset 0 0 0 1px var(--dg-control-border-color);
+  /* Floor for grids where every column is editable: absolutely positioned
+     inputs give their row no height of their own. */
+  min-block-size: var(--dg-control-height);
 }
 
 data-grid tbody td input.dg-editable {
@@ -729,11 +726,38 @@ data-grid tbody td input.dg-editable {
   padding: 0 var(--dg-padding-x);
 }
 
-/* The control paints its own state (focus here, invalid below); the cell
-   stays neutral so editing never shows two stacked indicators. Inset rings
-   cannot be clipped by the cell overflow, whatever the column width. */
-data-grid tbody td input.dg-editable:focus {
+/* Text inputs fill their cell: the td height is indefinite in auto table
+   layout so height: 100% never resolves, while absolute offsets always do.
+   The cell is already position: relative. Checkboxes keep their intrinsic
+   size, selects stay shrink-wrapped and centered. */
+data-grid tbody td input.dg-editable:not([type="checkbox"]) {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: auto;
+  width: auto;
+}
+
+/* The control paints its own state (hover and focus here, invalid below);
+   the cell stays neutral so editing never shows two stacked indicators.
+   Inset marks cannot be clipped by the cell overflow, whatever the column
+   width. Order matters: the tied hover, focus and invalid rules below win
+   from top to bottom. */
+data-grid tbody td input.dg-editable:not([type="checkbox"]):hover {
+  box-shadow: inset 0 -1px 0 var(--dg-control-border-color);
+}
+
+data-grid tbody td input.dg-editable:not([type="checkbox"]):focus {
   box-shadow: inset 0 0 0 2px var(--dg-accent);
+}
+
+/* A 16px box cannot take an inset ring: native-looking outer outline in the
+   grid accent instead, so it never stacks with the browser default. */
+data-grid tbody td input.dg-editable[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--dg-accent);
+  outline-offset: 2px;
 }
 
 data-grid tbody td select.dg-editable:focus-visible {

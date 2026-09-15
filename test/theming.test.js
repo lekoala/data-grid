@@ -77,17 +77,30 @@ test("filter focus is an inset outline on the control", () => {
 });
 
 test("editable controls paint their own focus inset, the cell stays neutral", () => {
-    expect(coreCss).toMatch(/td input\.dg-editable:focus \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-accent\);/);
+    expect(coreCss).toMatch(
+        /td input\.dg-editable:not\(\[type="checkbox"\]\):focus \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-accent\);/,
+    );
     expect(coreCss).toMatch(
         /td select\.dg-editable:focus-visible \{[\s\S]*?box-shadow: inset 0 0 0 2px var\(--dg-accent\);/,
+    );
+    expect(coreCss).toMatch(
+        /td input\.dg-editable\[type="checkbox"\]:focus-visible \{[\s\S]*?outline: 2px solid var\(--dg-accent\);[\s\S]*?outline-offset: 2px;/,
     );
     expect(coreCss).not.toMatch(/td\.dg-editable-col\[data-editing\] \{[\s\S]*?background-color/);
 });
 
-test("editable cells hint at their interactivity on hover only", () => {
+test("editable text inputs underline on hover only", () => {
     expect(coreCss).toMatch(
-        /td\.dg-editable-col:hover:not\(:focus-within\):not\(\[data-invalid\]\) \{[\s\S]*?box-shadow: inset 0 0 0 1px var\(--dg-control-border-color\);/,
+        /td input\.dg-editable:not\(\[type="checkbox"\]\):hover \{[\s\S]*?box-shadow: inset 0 -1px 0 var\(--dg-control-border-color\);/,
     );
+});
+
+test("editable text inputs fill their cell", () => {
+    // Bun folds the zero offsets into `inset: 0`.
+    expect(coreCss).toMatch(
+        /td input\.dg-editable:not\(\[type="checkbox"\]\) \{[\s\S]*?position: absolute;[\s\S]*?inset: 0;/,
+    );
+    expect(coreCss).not.toContain("dg-editable-col:hover");
 });
 
 test("collapsed action items show one neutral keyboard focus, links included", () => {

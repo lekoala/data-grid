@@ -155,6 +155,7 @@
         {
           field: "status",
           title: "Status",
+          width: 140,
           editable: true,
           editableType: "select",
           editableOptions: [
@@ -162,7 +163,7 @@
             { value: "unpaid", label: "Unpaid" },
           ],
         },
-        { field: "active", title: "Active", align: "center", editable: true, editableType: "checkbox" },
+        { field: "active", title: "Active", align: "center", width: 80, editable: true, editableType: "checkbox" },
       ],
       dataSource: new ArrayDataSource([
         { id: 1, name: "John Doe", email: "johndoe@koala.be", status: "paid", active: true },

@@ -84,8 +84,9 @@ centered with `align: "center"`:
 
 ## Affordance
 
-Editable cells hint at their interactivity on hover (a neutral inset frame);
-while editing, only the control ring speaks, and a rejected value keeps its
+Text inputs fill their cell, hint at their interactivity with an underline on
+hover and paint a full ring on focus; checkboxes show an outer outline on
+keyboard focus. The cell itself stays neutral, and a rejected value keeps its
 own invalid signal.
 
 ## Committing
