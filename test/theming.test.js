@@ -76,6 +76,23 @@ test("filter focus is an inset outline on the control", () => {
     );
 });
 
+test("collapsed action items show one neutral keyboard focus, links included", () => {
+    // Bun splits the selector list into one rule per selector; every variant
+    // shares the neutral wash plus the accent inset outline.
+    for (const selector of [
+        "\\.dg-actions-menu button:focus-visible",
+        "\\.dg-actions-menu a:focus-visible",
+        "\\.dg-actions-menu button\\[data-intent\\]:focus-visible",
+        "\\.dg-actions-menu a\\[data-intent\\]:focus-visible",
+    ]) {
+        expect(coreCss).toMatch(
+            new RegExp(
+                `${selector} \\{[\\s\\S]*?background-color: var\\(--dg-row-hover-bg\\);[\\s\\S]*?outline: 2px solid var\\(--dg-accent\\);[\\s\\S]*?outline-offset: -2px;`,
+            ),
+        );
+    }
+});
+
 test("the filter row uses --dg-filter-bg while column headers keep --dg-header-bg", () => {
     expect(coreCss).toMatch(/data-grid thead tr\.dg-head-filters \{[\s\S]*?background-color: var\(--dg-filter-bg\);/);
     expect(coreCss).toMatch(

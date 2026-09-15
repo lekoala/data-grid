@@ -1332,6 +1332,34 @@ data-grid button[data-intent="danger"]:hover, data-grid a[data-intent="danger"]:
   }
 }
 
+data-grid .dg-actions-menu button:focus-visible {
+  background-color: var(--dg-row-hover-bg);
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  border-color: #0000;
+}
+
+data-grid .dg-actions-menu a:focus-visible {
+  background-color: var(--dg-row-hover-bg);
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  border-color: #0000;
+}
+
+data-grid .dg-actions-menu button[data-intent]:focus-visible {
+  background-color: var(--dg-row-hover-bg);
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  border-color: #0000;
+}
+
+data-grid .dg-actions-menu a[data-intent]:focus-visible {
+  background-color: var(--dg-row-hover-bg);
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+  border-color: #0000;
+}
+
 data-grid tr.dg-clickable-row {
   cursor: pointer;
 }

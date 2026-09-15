@@ -192,6 +192,20 @@ data-grid .dg-actions-menu a[data-intent="danger"]:hover {
   }
 }
 
+/* Keyboard focus in the collapsed actions popover: the same neutral wash as
+   hover, plus the accent inset outline used by the other small controls.
+   Intent items keep their tinted text color but drop the saturated fill while
+   focused, so the accent outline never sits on a danger/accent fill. */
+data-grid .dg-actions-menu button:focus-visible,
+data-grid .dg-actions-menu a:focus-visible,
+data-grid .dg-actions-menu button[data-intent]:focus-visible,
+data-grid .dg-actions-menu a[data-intent]:focus-visible {
+  background-color: var(--dg-row-hover-bg);
+  border-color: transparent;
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+}
+
 data-grid tr.dg-clickable-row {
   cursor: pointer;
 }

@@ -56,6 +56,10 @@ class RowActions extends BasePlugin {
         super(grid);
         /** @type {HTMLUListElement|null} */
         this.menu = null;
+        /** @type {HTMLElement|null} */
+        this.activeInvoker = null;
+        /** @type {Boolean} */
+        this._keyboardOpen = false;
     }
 
     connected() {
@@ -66,7 +70,7 @@ class RowActions extends BasePlugin {
         menu.id = randstr("dg-actions-menu-");
         menu.className = "dg-menu dg-actions-menu";
         menu.popover = "auto";
-        menu.addEventListener("click", () => menu.hidePopover?.(), true);
+        menu.addEventListener("toggle", this);
         this.grid.appendChild(menu);
         this.menu = menu;
         this.grid.addEventListener("click", this);
@@ -75,14 +79,19 @@ class RowActions extends BasePlugin {
 
     disconnected() {
         this.grid.removeEventListener("click", this);
+        this.menu?.removeEventListener("toggle", this);
         this.menu?.remove();
         this.menu = null;
+        this.activeInvoker = null;
+        this._keyboardOpen = false;
     }
 
     /**
-     * Delegate the collapsed-menu toggle. The row is resolved from the DOM
-     * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
-     * working across body rerenders without re-attaching anything.
+     * Delegate the collapsed actions popover toggle. The row is resolved from
+     * the DOM (`data-row-index`) through the model (`grid.rows`), so the
+     * toggle keeps working across body rerenders without re-attaching
+     * anything. The toggle is memorized as `activeInvoker` so focus can move
+     * into the shared popover on keyboard opening and back on activation.
      * @param {MouseEvent} event
      */
     onclick(event) {
@@ -103,7 +112,68 @@ class RowActions extends BasePlugin {
         if (!row) {
             return;
         }
+        this.activeInvoker = /** @type {HTMLElement} */ (toggle);
+        // A keyboard-activated click reports detail 0; a mouse click reports
+        // the click count. Only a keyboard opening moves focus into the
+        // popover — a mouse opening keeps focus on the invoker.
+        this._keyboardOpen = event.detail === 0;
         this.renderActionMenu(row);
+    }
+
+    /**
+     * Focus handoff for the shared collapsed actions popover: an ordinary
+     * action list popover, not an ARIA menu (no roving tabindex, arrows or
+     * typeahead — Tab / Shift+Tab / Enter / Space / Escape are enough).
+     * @param {Event & { newState?: "open" | "closed" }} event
+     */
+    ontoggle(event) {
+        const menu = this.menu;
+        if (!menu || event.target !== menu) {
+            return;
+        }
+        if (event.newState === "open") {
+            if (this._keyboardOpen) {
+                this._keyboardOpen = false;
+                this.#focusFirstAction();
+            }
+            return;
+        }
+        if (event.newState === "closed") {
+            this._keyboardOpen = false;
+            const invoker = this.activeInvoker;
+            this.activeInvoker = null;
+            // The native popover restores focus to the invoker on Escape and
+            // light dismissal. Only repair the focus when the browser left it
+            // nowhere (typically body) and the invoker is still connected.
+            const active = this.grid.ownerDocument.activeElement;
+            if (invoker?.isConnected && (active === null || active === this.grid.ownerDocument.body)) {
+                invoker.focus();
+            }
+        }
+    }
+
+    /**
+     * Move focus to the first enabled action of the popover, skipping
+     * disabled buttons and disabled links.
+     */
+    #focusFirstAction() {
+        const menu = this.menu;
+        if (!menu) {
+            return;
+        }
+        const candidates = menu.querySelectorAll("button, a[href]");
+        for (const candidate of candidates) {
+            if (candidate instanceof HTMLButtonElement && candidate.disabled) {
+                continue;
+            }
+            if (candidate.getAttribute("aria-disabled") === "true") {
+                continue;
+            }
+            if (candidate instanceof HTMLElement) {
+                candidate.focus();
+                return;
+            }
+        }
     }
 
     /**
@@ -226,8 +296,10 @@ class RowActions extends BasePlugin {
     }
 
     /**
-     * Fill the shared popover before the toggle's native default action opens
-     * it. The browser owns opening, dismissal, focus restoration and placement.
+     * Fill the shared collapsed actions popover before the toggle's native
+     * default action opens it. The browser owns opening, dismissal and
+     * placement; focus moves into the popover on keyboard opening (see
+     * ontoggle) and back to the invoker after a button activation.
      * @param {Record<string, any>} row
      */
     renderActionMenu(row) {
@@ -425,6 +497,16 @@ class RowActions extends BasePlugin {
                 rowIndex,
                 trigger: el,
             });
+            // Close the shared collapsed actions popover after activation, once
+            // the action has been dispatched. A button returns focus to the
+            // invoker it came from; a link lets the navigation take over.
+            const menu = this.menu;
+            if (menu?.contains(el)) {
+                menu.hidePopover?.();
+                if (el.tagName === "BUTTON") {
+                    this.activeInvoker?.focus?.();
+                }
+            }
         };
         el.addEventListener("click", dispatchAction);
 

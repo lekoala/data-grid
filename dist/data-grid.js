@@ -5386,6 +5386,8 @@ class RowActions extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.menu = null;
+    this.activeInvoker = null;
+    this._keyboardOpen = false;
   }
   connected() {
     if (!supportsPopover()) {
@@ -5395,7 +5397,7 @@ class RowActions extends base_plugin_default {
     menu.id = randstr("dg-actions-menu-");
     menu.className = "dg-menu dg-actions-menu";
     menu.popover = "auto";
-    menu.addEventListener("click", () => menu.hidePopover?.(), true);
+    menu.addEventListener("toggle", this);
     this.grid.appendChild(menu);
     this.menu = menu;
     this.grid.addEventListener("click", this);
@@ -5403,8 +5405,11 @@ class RowActions extends base_plugin_default {
   }
   disconnected() {
     this.grid.removeEventListener("click", this);
+    this.menu?.removeEventListener("toggle", this);
     this.menu?.remove();
     this.menu = null;
+    this.activeInvoker = null;
+    this._keyboardOpen = false;
   }
   onclick(event) {
     const target = event.target;
@@ -5424,7 +5429,50 @@ class RowActions extends base_plugin_default {
     if (!row) {
       return;
     }
+    this.activeInvoker = toggle;
+    this._keyboardOpen = event.detail === 0;
     this.renderActionMenu(row);
+  }
+  ontoggle(event) {
+    const menu = this.menu;
+    if (!menu || event.target !== menu) {
+      return;
+    }
+    if (event.newState === "open") {
+      if (this._keyboardOpen) {
+        this._keyboardOpen = false;
+        this.#focusFirstAction();
+      }
+      return;
+    }
+    if (event.newState === "closed") {
+      this._keyboardOpen = false;
+      const invoker = this.activeInvoker;
+      this.activeInvoker = null;
+      const active = this.grid.ownerDocument.activeElement;
+      if (invoker?.isConnected && (active === null || active === this.grid.ownerDocument.body)) {
+        invoker.focus();
+      }
+    }
+  }
+  #focusFirstAction() {
+    const menu = this.menu;
+    if (!menu) {
+      return;
+    }
+    const candidates = menu.querySelectorAll("button, a[href]");
+    for (const candidate of candidates) {
+      if (candidate instanceof HTMLButtonElement && candidate.disabled) {
+        continue;
+      }
+      if (candidate.getAttribute("aria-disabled") === "true") {
+        continue;
+      }
+      if (candidate instanceof HTMLElement) {
+        candidate.focus();
+        return;
+      }
+    }
   }
   hasActions() {
     const grid = this.grid;
@@ -5636,6 +5684,13 @@ class RowActions extends base_plugin_default {
         rowIndex,
         trigger: el
       });
+      const menu = this.menu;
+      if (menu?.contains(el)) {
+        menu.hidePopover?.();
+        if (el.tagName === "BUTTON") {
+          this.activeInvoker?.focus?.();
+        }
+      }
     };
     el.addEventListener("click", dispatchAction);
     return el;
