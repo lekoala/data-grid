@@ -67,6 +67,27 @@ select.dg-editable[data-value="unpaid"] { ... }
   there is never a pending state to reject. See `demo/actions.html` for a
   colored status sample.
 
+## Checkbox
+
+`editableType: "checkbox"` renders a checkbox for boolean models,
+centered with `align: "center"`:
+
+```js
+{ field: "active", title: "Active", align: "center", editable: true, editableType: "checkbox" }
+```
+
+- The toggle commits on `change` with the same validation and cancelable
+  `edit` event; the event carries a real boolean (`validate` sees the raw
+  `"true"`/`"false"` string, like numbers).
+- Space keeps its native toggle behavior; there is never a pending state to
+  reject. Style with `:checked`; no `data-value` reflection needed.
+
+## Affordance
+
+Editable cells hint at their interactivity on hover (a neutral inset frame);
+while editing, only the control ring speaks, and a rejected value keeps its
+own invalid signal.
+
 ## Committing
 
 Listen to the `edit` event and call `preventDefault()` to reject the change (the

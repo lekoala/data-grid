@@ -3,7 +3,7 @@ import addSelectOption from "../utils/addSelectOption.js";
 import { dispatch } from "../utils/dispatch.js";
 
 /**
- * Make editable inputs and selects in rows.
+ * Make editable inputs, selects and checkboxes in rows.
  * Editing lifecycle: start (focus) -> edit -> validate -> commit/reject.
  * Commit dispatches a cancelable "edit" event; preventDefault() rejects.
  */
@@ -43,6 +43,10 @@ class EditableColumn extends BasePlugin {
     makeEditableInput(td, column, item, i) {
         if (column.editableType === "select") {
             this.makeEditableSelect(td, column, item, i);
+            return;
+        }
+        if (column.editableType === "checkbox") {
+            this.makeEditableCheckbox(td, column, item, i);
             return;
         }
         const grid = this.grid;
@@ -168,9 +172,56 @@ class EditableColumn extends BasePlugin {
     }
 
     /**
+     * Build the checkbox editor for an `editableType: "checkbox"` column.
+     * Boolean models only: the state is string-encoded through the shared
+     * lifecycle and committed back as a real boolean on `change`. Like the
+     * select, a checkbox owns its keyboard natively (Space toggles), so
+     * there is never a pending state to reject.
+     * @param {HTMLElement} td
+     * @param {import("../data-grid.js").Column} column
+     * @param {Record<string, any>} item
+     * @param {number} i
+     */
+    makeEditableCheckbox(td, column, item, i) {
+        const grid = this.grid;
+        const field = column.field;
+        if (!field) {
+            return;
+        }
+        const gridId = grid.getAttribute("id") ?? "";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.classList.add("dg-editable");
+        input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
+        input.setAttribute("aria-label", column.title ?? field);
+        input.dataset.field = field;
+
+        const { displayed, commit, startEditing } = this.#cellLifecycle(
+            td,
+            column,
+            item,
+            () => String(input.checked),
+            (value) => {
+                input.checked = value === "true";
+            },
+        );
+        input.checked = displayed() === "true";
+
+        // Prevent row action
+        input.addEventListener("click", (ev) => ev.stopPropagation());
+        // Start editing
+        input.addEventListener("focus", startEditing);
+        // The toggle commits on change; blur repeats it as a safety net.
+        input.addEventListener("change", commit);
+        input.addEventListener("blur", commit);
+
+        td.replaceChildren(input);
+    }
+
+    /**
      * Shared editing lifecycle for one cell control: the control reads through
-     * getValue and is restored through setValue, so inputs and selects share
-     * validation, numeric coercion and the cancelable `edit` event.
+     * getValue and is restored through setValue, so inputs, selects and
+     * checkboxes share validation, coercion and the cancelable `edit` event.
      * @param {HTMLElement} td
      * @param {import("../data-grid.js").Column} column
      * @param {Record<string, any>} item
@@ -217,7 +268,9 @@ class EditableColumn extends BasePlugin {
             const prev = previous();
             /** @type {*} */
             let value = rawValue;
-            if (typeof prev === "number") {
+            if (typeof prev === "boolean") {
+                value = rawValue === "true";
+            } else if (typeof prev === "number") {
                 if (rawValue.trim() === "") {
                     reject();
                     return;

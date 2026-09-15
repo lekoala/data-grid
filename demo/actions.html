@@ -162,12 +162,13 @@
             { value: "unpaid", label: "Unpaid" },
           ],
         },
+        { field: "active", title: "Active", align: "center", editable: true, editableType: "checkbox" },
       ],
       dataSource: new ArrayDataSource([
-        { id: 1, name: "John Doe", email: "johndoe@koala.be", status: "paid" },
-        { id: 2, name: "Mark Evans", email: "markevans@koala.be", status: "unpaid" },
-        { id: 3, name: "Emily Clark", email: "emilyclark@koala.be", status: "paid" },
-        { id: 4, name: "Carlos Rivera", email: "carlosrivera@koala.be", status: "unpaid" },
+        { id: 1, name: "John Doe", email: "johndoe@koala.be", status: "paid", active: true },
+        { id: 2, name: "Mark Evans", email: "markevans@koala.be", status: "unpaid", active: false },
+        { id: 3, name: "Emily Clark", email: "emilyclark@koala.be", status: "paid", active: true },
+        { id: 4, name: "Carlos Rivera", email: "carlosrivera@koala.be", status: "unpaid", active: false },
       ]),
     });
     document.getElementById("status-demo").appendChild(statusDemo);
@@ -224,12 +225,13 @@
       <div id="action3-demo"></div>
     </div>
 
-    <h3>Editable select</h3>
+    <h3>Inline editing</h3>
     <p>
-      A column with <code>editableType: "select"</code> renders a
-      <code>&lt;select&gt;</code> fed by <code>editableOptions</code>. The choice
-      commits on <code>change</code>, and the current value is reflected as
-      <code>data-value</code> on the control so it can be styled per value.
+      An <code>email</code> input, a <code>select</code> fed by
+      <code>editableOptions</code> and a <code>checkbox</code> for booleans. The
+      choice commits on <code>change</code>, and the select reflects its value
+      as <code>data-value</code> so it can be styled per value. Editable cells
+      hint at their interactivity on hover.
       With four rows on a single page, <code>autohidePager</code> hides the
       pager footer.
     </p>

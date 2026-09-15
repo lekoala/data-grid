@@ -5725,6 +5725,10 @@ class EditableColumn extends base_plugin_default {
       this.makeEditableSelect(td, column, item, i);
       return;
     }
+    if (column.editableType === "checkbox") {
+      this.makeEditableCheckbox(td, column, item, i);
+      return;
+    }
     const grid = this.grid;
     const field = column.field;
     if (!field) {
@@ -5804,6 +5808,29 @@ class EditableColumn extends base_plugin_default {
     wrap.appendChild(select);
     td.replaceChildren(wrap);
   }
+  makeEditableCheckbox(td, column, item, i) {
+    const grid = this.grid;
+    const field = column.field;
+    if (!field) {
+      return;
+    }
+    const gridId = grid.getAttribute("id") ?? "";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.classList.add("dg-editable");
+    input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
+    input.setAttribute("aria-label", column.title ?? field);
+    input.dataset.field = field;
+    const { displayed, commit, startEditing } = this.#cellLifecycle(td, column, item, () => String(input.checked), (value) => {
+      input.checked = value === "true";
+    });
+    input.checked = displayed() === "true";
+    input.addEventListener("click", (ev) => ev.stopPropagation());
+    input.addEventListener("focus", startEditing);
+    input.addEventListener("change", commit);
+    input.addEventListener("blur", commit);
+    td.replaceChildren(input);
+  }
   #cellLifecycle(td, column, item, getValue, setValue) {
     const grid = this.grid;
     const field = column.field;
@@ -5841,7 +5868,9 @@ class EditableColumn extends base_plugin_default {
       }
       const prev = previous();
       let value = rawValue;
-      if (typeof prev === "number") {
+      if (typeof prev === "boolean") {
+        value = rawValue === "true";
+      } else if (typeof prev === "number") {
         if (rawValue.trim() === "") {
           reject();
           return;

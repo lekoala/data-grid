@@ -84,6 +84,12 @@ test("editable controls paint their own focus inset, the cell stays neutral", ()
     expect(coreCss).not.toMatch(/td\.dg-editable-col\[data-editing\] \{[\s\S]*?background-color/);
 });
 
+test("editable cells hint at their interactivity on hover only", () => {
+    expect(coreCss).toMatch(
+        /td\.dg-editable-col:hover:not\(:focus-within\):not\(\[data-invalid\]\) \{[\s\S]*?box-shadow: inset 0 0 0 1px var\(--dg-control-border-color\);/,
+    );
+});
+
 test("collapsed action items show one neutral keyboard focus, links included", () => {
     // Bun splits the selector list into one rule per selector; both share the
     // neutral wash plus the accent inset outline. Intent items keep their

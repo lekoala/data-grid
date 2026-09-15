@@ -346,3 +346,66 @@ test("plain string options use the same text as value and label", async () => {
     expect(select.dataset.value).toBe("paid");
     document.body.removeChild(inst);
 });
+
+const activeColumn = { field: "active", title: "Active", editable: true, editableType: "checkbox" };
+
+function toggleCheckbox(input, checked) {
+    input.checked = checked;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+test("checkbox editors render the boolean state", async () => {
+    const inst = await makeReadyGrid({ columns: [activeColumn] }, [
+        { id: 1, active: true },
+        { id: 2, active: false },
+    ]);
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable[type='checkbox']");
+    expect(inputs).toHaveLength(2);
+    expect(inputs[0].checked).toBe(true);
+    expect(inputs[1].checked).toBe(false);
+    expect(inputs[0].getAttribute("aria-label")).toBe("Active");
+    expect(inputs[0].dataset.field).toBe("active");
+    document.body.removeChild(inst);
+});
+
+test("toggling the checkbox commits a real boolean and dispatches", async () => {
+    const inst = await makeReadyGrid({ columns: [activeColumn] }, [{ id: 1, active: false }]);
+    const input = inst.querySelector("tbody td input.dg-editable[type='checkbox']");
+    let detail = null;
+    inst.addEventListener("edit", (ev) => {
+        detail = ev.detail;
+    });
+    toggleCheckbox(input, true);
+    expect(detail).not.toBeNull();
+    expect(detail.value).toBe(true);
+    expect(typeof detail.value).toBe("boolean");
+    expect(detail.field).toBe("active");
+    expect(inst.rows[0].active).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("preventDefault on the edit event reverts the checkbox", async () => {
+    const inst = await makeReadyGrid({ columns: [activeColumn] }, [{ id: 1, active: true }]);
+    const input = inst.querySelector("tbody td input.dg-editable[type='checkbox']");
+    inst.addEventListener("edit", (ev) => ev.preventDefault());
+    toggleCheckbox(input, false);
+    expect(inst.rows[0].active).toBe(true);
+    expect(input.checked).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("keyboard events alone never commit a checkbox", async () => {
+    const inst = await makeReadyGrid({ columns: [activeColumn] }, [{ id: 1, active: false }]);
+    const input = inst.querySelector("tbody td input.dg-editable[type='checkbox']");
+    let dispatched = 0;
+    inst.addEventListener("edit", () => {
+        dispatched++;
+    });
+    input.focus();
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: " " }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+    expect(dispatched).toBe(0);
+    expect(inst.rows[0].active).toBe(false);
+    document.body.removeChild(inst);
+});

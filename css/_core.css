@@ -399,7 +399,8 @@ data-grid .dg-selectable label {
 
 data-grid .dg-select-all,
 data-grid .dg-selectable input[type="checkbox"],
-data-grid .dg-selectable input[type="radio"] {
+data-grid .dg-selectable input[type="radio"],
+data-grid input.dg-editable[type="checkbox"] {
   accent-color: var(--dg-accent);
   height: 16px;
   width: 16px;
@@ -709,6 +710,12 @@ data-grid thead tr.dg-head-filters th.dg-actions {
 
 data-grid tbody td.dg-editable-col {
   padding: 0;
+}
+
+/* Editable cells hint at their interactivity on hover; while editing, only
+   the control ring speaks, and invalid keeps its own signal. */
+data-grid tbody td.dg-editable-col:hover:not(:focus-within):not([data-invalid]) {
+  box-shadow: inset 0 0 0 1px var(--dg-control-border-color);
 }
 
 data-grid tbody td input.dg-editable {
