@@ -58,25 +58,28 @@ class AutosizeColumn extends BasePlugin {
                 return Number(width);
             }
         }
-        const field = column.field;
-        if (!field || !grid.rows.length) {
+        if (!column.field || !grid.rows.length) {
             return;
         }
-        const firstVal = grid.rows[0];
-        const lastVal = grid.rows.at(-1) ?? firstVal;
-        let v = firstVal[field] != null ? firstVal[field].toString() : "";
-        const v2 = lastVal[field] != null ? lastVal[field].toString() : "";
-        if (v2.length > v.length) {
-            v = v2;
+        // Measure the widest cell actually rendered on the loaded page: its
+        // text reflects formatters, transforms and custom renderers, and the
+        // td carries the real cell font. Other pages are out of scope by
+        // design: autosize means "fit the loaded sample", not "fit the whole
+        // dataset".
+        const id = grid.getColumnId(column);
+        const cells = /** @type {NodeListOf<HTMLTableCellElement>|undefined} */ (
+            grid.tbody?.querySelectorAll(`:scope > tr.dg-data-row:not([hidden]) td[data-column-id="${id}"]`)
+        );
+        if (!cells?.length) {
+            return;
         }
         let width = 0;
-        if (v.length <= 6) {
-            width = min;
-        } else if (v.length > 50) {
-            width = max;
-        } else {
+        for (const td of cells) {
             // Add some extra room to have some spare space
-            width = getTextWidth(`${v}0000`, th);
+            const w = getTextWidth(`${td.textContent}0000`, td, true);
+            if (w > width) {
+                width = w;
+            }
         }
         if (width > max) {
             width = max;

@@ -1,6 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 /**
- * Make editable inputs and selects in rows.
+ * Make editable inputs, selects and checkboxes in rows.
  * Editing lifecycle: start (focus) -> edit -> validate -> commit/reject.
  * Commit dispatches a cancelable "edit" event; preventDefault() rejects.
  */
@@ -31,6 +31,18 @@ declare class EditableColumn extends BasePlugin {
      * @param {number} i
      */
     makeEditableSelect(td: HTMLElement, column: import("../data-grid.js").Column, item: Record<string, any>, i: number): void;
+    /**
+     * Build the checkbox editor for an `editableType: "checkbox"` column.
+     * Boolean models only: the state is string-encoded through the shared
+     * lifecycle and committed back as a real boolean on `change`. Like the
+     * select, a checkbox owns its keyboard natively (Space toggles), so
+     * there is never a pending state to reject.
+     * @param {HTMLElement} td
+     * @param {import("../data-grid.js").Column} column
+     * @param {Record<string, any>} item
+     * @param {number} i
+     */
+    makeEditableCheckbox(td: HTMLElement, column: import("../data-grid.js").Column, item: Record<string, any>, i: number): void;
     /**
      * Run the column validator, then the grid-level one.
      * @param {import("../data-grid.js").Column} column

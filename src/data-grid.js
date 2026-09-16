@@ -712,9 +712,6 @@ class DataGrid extends BaseElement {
         /** @type {HTMLTableRowElement|null} */
         this.headerRow = null;
 
-        /** @type {Number|null} */
-        this.rowHeight = null;
-
         /** @type {IntersectionObserver|null} */
         this.#loadObserver = null;
 
@@ -2452,15 +2449,6 @@ class DataGrid extends BaseElement {
             this.table.style.visibility = "visible";
         }
 
-        // Store row height for later usage
-        if (!this.rowHeight) {
-            const tr = /** @type {HTMLTableRowElement|null} */ (
-                this.querySelector("tbody tr") || this.querySelector("table tr")
-            );
-            if (tr) {
-                this.rowHeight = tr.offsetHeight;
-            }
-        }
         this.#setNoData(this.tbody);
         return this.fixPage();
     }

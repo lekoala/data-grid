@@ -14,6 +14,15 @@ declare class FixedHeight extends BasePlugin {
      * On a partial last page, use a spacer row to push the footer down.
      */
     updateSpacerRow(): void;
+    /**
+     * Height missing to reach a full page, measured on the freshly rendered
+     * rows. Row geometry is derived, short-lived state: reading it at use
+     * time keeps density, theme, zoom and wrap changes reflected without any
+     * invalidation. Count real data rows only: responsive child rows are
+     * structure, not records.
+     * @returns {Number}
+     */
+    missingPageHeight(): number;
 }
 export default FixedHeight;
 //# sourceMappingURL=fixed-height.d.ts.map

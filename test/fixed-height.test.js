@@ -35,9 +35,13 @@ test("FixedHeight owns one semantic spanning spacer row", async () => {
 test("a one-row last page receives only its missing page height", async () => {
     const rows = Array.from({ length: 11 }, (_, index) => ({ name: `Row ${index + 1}` }));
     const grid = await makeReadyGrid(rows);
-    grid.rowHeight = 20;
 
     await grid.setQuery({ page: 2 });
+
+    // happy-dom has no layout: stub the row measurement the plugin reads.
+    const dataRow = grid.querySelector("tbody tr.dg-data-row");
+    dataRow.getBoundingClientRect = () => ({ height: 20 });
+    grid.getPlugin("FixedHeight").updateSpacerRow();
 
     const spacer = grid.querySelector("tbody tr.dg-spacer-row");
     expect(grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])")).toHaveLength(1);

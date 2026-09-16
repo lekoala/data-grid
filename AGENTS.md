@@ -63,6 +63,11 @@ properties would then be optional, not automatic.
 - Normalize at API boundaries; every new abstraction must remove
   branching/coupling (rule: "what does it let me delete?")
 - Prefer simplification over abstraction
+- DOM geometry is derived, short-lived state: measure it at use time
+  (`getBoundingClientRect`, `offsetWidth`) rather than caching measurements on
+  the grid. Persist it only when recomputation is meaningfully expensive.
+  State changes synchronously; geometry catches up once per frame
+  (`queueFrozenSync`).
 - Prefer native platform APIs for direct DOM operations. Extract helpers when
   they encapsulate reusable parsing, normalization, event semantics, or
   component invariants that would otherwise obscure the code's intent. Do not

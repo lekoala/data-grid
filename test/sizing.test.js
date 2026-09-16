@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import AutosizeColumn from "../src/plugins/autosize-column.js";
+import getTextWidth from "../src/utils/getTextWidth.js";
 
 // Give this file an explicit plugin registry.
 DataGrid.unregisterPlugins();
@@ -131,6 +132,23 @@ test("autosize measures widthless text columns when enabled", async () => {
     const th = inst.querySelector('thead th[data-column-id="name"]');
     expect(th.hasAttribute("width")).toBe(true);
     expect(Number.isFinite(Number(th.getAttribute("width")))).toBe(true);
+    removeGrid(inst);
+});
+
+test("autosize fits the widest rendered cell of the loaded page", async () => {
+    const inst = await makeReadyGrid({ autosize: true, columns: [{ field: "name" }] }, [
+        { name: "Al" },
+        { name: "Alexandrina Maximiliana" },
+        { name: "Bo" },
+    ]);
+    const th = inst.querySelector('thead th[data-column-id="name"]');
+    const td = inst.querySelector("tbody tr.dg-data-row td");
+    const plugin = inst.getPlugin("AutosizeColumn");
+    // happy-dom reports clientWidth 0, which clamps every result to min: call
+    // computeSize with explicit bounds to observe the sampled width itself.
+    th.removeAttribute("width");
+    const width = plugin.computeSize(th, inst.getCol("name"), 0, 10000);
+    expect(width).toBe(getTextWidth("Alexandrina Maximiliana0000", td, true));
     removeGrid(inst);
 });
 

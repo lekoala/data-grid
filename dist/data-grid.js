@@ -2033,7 +2033,6 @@ class DataGrid extends base_element_default {
     this.inputPage = null;
     this.searchInput = null;
     this.headerRow = null;
-    this.rowHeight = null;
     this.#loadObserver = null;
     this.#lazyPending = false;
     this.#renderContext = null;
@@ -3166,12 +3165,6 @@ class DataGrid extends base_element_default {
     this.renderTable();
     if (!this.options.responsive) {
       this.table.style.visibility = "visible";
-    }
-    if (!this.rowHeight) {
-      const tr = this.querySelector("tbody tr") || this.querySelector("table tr");
-      if (tr) {
-        this.rowHeight = tr.offsetHeight;
-      }
     }
     this.#setNoData(this.tbody);
     return this.fixPage();
@@ -4812,14 +4805,25 @@ class FixedHeight extends base_plugin_default {
     if (!grid.options.autoheight) {
       return;
     }
-    const rowHeight = grid.rowHeight ?? 0;
-    const max = grid.query.pageSize * rowHeight;
-    const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
-    const spacerHeight = max - visibleRows * rowHeight;
+    const spacerHeight = this.missingPageHeight();
     if (spacerHeight > 0) {
-      spacerRow.setAttribute("height", String(spacerHeight));
+      spacerRow.setAttribute("height", String(Math.ceil(spacerHeight)));
       spacerRow.hidden = false;
     }
+  }
+  missingPageHeight() {
+    const rows = [
+      ...this.grid.tbody?.querySelectorAll(":scope > tr.dg-data-row:not([hidden])") ?? []
+    ];
+    const unit = rows[0]?.getBoundingClientRect().height ?? 0;
+    if (!unit) {
+      return 0;
+    }
+    let used = 0;
+    for (const row of rows) {
+      used += row.getBoundingClientRect().height;
+    }
+    return this.grid.query.pageSize * unit - used;
   }
 }
 var fixed_height_default = FixedHeight;
@@ -4860,24 +4864,20 @@ class AutosizeColumn extends base_plugin_default {
         return Number(width);
       }
     }
-    const field = column.field;
-    if (!field || !grid.rows.length) {
+    if (!column.field || !grid.rows.length) {
       return;
     }
-    const firstVal = grid.rows[0];
-    const lastVal = grid.rows.at(-1) ?? firstVal;
-    let v = firstVal[field] != null ? firstVal[field].toString() : "";
-    const v2 = lastVal[field] != null ? lastVal[field].toString() : "";
-    if (v2.length > v.length) {
-      v = v2;
+    const id = grid.getColumnId(column);
+    const cells = grid.tbody?.querySelectorAll(`:scope > tr.dg-data-row:not([hidden]) td[data-column-id="${id}"]`);
+    if (!cells?.length) {
+      return;
     }
     let width = 0;
-    if (v.length <= 6) {
-      width = min;
-    } else if (v.length > 50) {
-      width = max;
-    } else {
-      width = getTextWidth(`${v}0000`, th);
+    for (const td of cells) {
+      const w = getTextWidth(`${td.textContent}0000`, td, true);
+      if (w > width) {
+        width = w;
+      }
     }
     if (width > max) {
       width = max;

@@ -98,7 +98,7 @@ export type Column = {
      */
     editable?: boolean;
     /**
-     * - type of input, or "select" for a select editor fed by editableOptions (EditableColumn module)
+     * - type of input, "select" for a select editor fed by editableOptions, or "checkbox" for booleans (EditableColumn module)
      */
     editableType?: string;
     /**
@@ -569,8 +569,6 @@ declare class DataGrid extends BaseElement {
     searchInput: HTMLInputElement | null;
     /** @type {HTMLTableRowElement|null} */
     headerRow: HTMLTableRowElement | null;
-    /** @type {Number|null} */
-    rowHeight: number | null;
     /**
      * @param {Partial<Options>} [options]
      */

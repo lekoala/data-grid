@@ -91,7 +91,7 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | `ContextMenu`      | `menu`                        | pointer Popover to toggle columns; native context-menu fallback |
 | `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                          |
 | `FixedHeight`      | `autoheight`                  | fills the table height on the last page                         |
-| `AutosizeColumn`   | `autosize`                    | measures widthless columns when enabled (off by default)        |
+| `AutosizeColumn`   | `autosize`                    | sizes widthless columns to the widest cell of the loaded page   |
 | `SaveState`        | `saveState`                   | persists query + column visibility                              |
 
 `SaveState` requires an explicit, stable `id` on the `<data-grid>` element (or

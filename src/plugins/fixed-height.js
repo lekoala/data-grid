@@ -52,17 +52,34 @@ class FixedHeight extends BasePlugin {
         if (!grid.options.autoheight) {
             return;
         }
-        const rowHeight = grid.rowHeight ?? 0;
-        // Find remaining missing height
-        const max = grid.query.pageSize * rowHeight;
-        // Count real data rows only: responsive child rows are structure, not
-        // records, and would otherwise inflate the fill-the-last-page measure.
-        const visibleRows = grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])").length;
-        const spacerHeight = max - visibleRows * rowHeight;
+        const spacerHeight = this.missingPageHeight();
         if (spacerHeight > 0) {
-            spacerRow.setAttribute("height", String(spacerHeight));
+            spacerRow.setAttribute("height", String(Math.ceil(spacerHeight)));
             spacerRow.hidden = false;
         }
+    }
+
+    /**
+     * Height missing to reach a full page, measured on the freshly rendered
+     * rows. Row geometry is derived, short-lived state: reading it at use
+     * time keeps density, theme, zoom and wrap changes reflected without any
+     * invalidation. Count real data rows only: responsive child rows are
+     * structure, not records.
+     * @returns {Number}
+     */
+    missingPageHeight() {
+        const rows = /** @type {HTMLTableRowElement[]} */ ([
+            ...(this.grid.tbody?.querySelectorAll(":scope > tr.dg-data-row:not([hidden])") ?? []),
+        ]);
+        const unit = rows[0]?.getBoundingClientRect().height ?? 0;
+        if (!unit) {
+            return 0;
+        }
+        let used = 0;
+        for (const row of rows) {
+            used += row.getBoundingClientRect().height;
+        }
+        return this.grid.query.pageSize * unit - used;
     }
 }
 
