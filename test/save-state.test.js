@@ -1,5 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
+import ColumnResizer from "../src/plugins/column-resizer.js";
+import DraggableHeaders from "../src/plugins/draggable-headers.js";
 import SaveState from "../src/plugins/save-state.js";
 
 const gridId = "save-state-test";
@@ -88,8 +90,8 @@ test("persists successful queries and explicit column visibility", async () => {
     const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
     expect(stored.query.search).toBe("Ada");
     expect(stored.columns).toEqual([
-        { field: "name", hidden: false },
-        { field: "email", hidden: true },
+        { id: "name", hidden: false },
+        { id: "email", hidden: true },
     ]);
 });
 
@@ -143,4 +145,186 @@ test("save-state warns and stays disabled for an automatically generated id", as
         grid.remove();
         sessionStorage.removeItem(`gridSaveState_${generatedId}`);
     }
+});
+
+async function makeSaveStateGrid(columns) {
+    DataGrid.unregisterPlugins();
+    DataGrid.registerPlugins({ SaveState, ColumnResizer, DraggableHeaders });
+    const grid = new DataGrid({
+        id: gridId,
+        columns,
+        saveState: true,
+        resizable: true,
+        reorder: true,
+        dataSource: {
+            load: () =>
+                Promise.resolve({ rows: [{ name: "Ada", email: "ada@example.test", city: "Milan" }], total: 1 }),
+        },
+    });
+    document.body.appendChild(grid);
+    await new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    return grid;
+}
+
+function resizeColumn(grid, field, from, to) {
+    const th = /** @type {HTMLTableCellElement} */ (grid.querySelector(`thead th[data-column-id="${field}"]`));
+    Object.defineProperty(th, "offsetWidth", {
+        configurable: true,
+        get() {
+            return Number.parseFloat(th.getAttribute("width") ?? "") || 100;
+        },
+    });
+    const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));
+    resizer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: from }));
+    document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: to }));
+    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: to }));
+}
+
+function drop(inst, draggedId, targetId) {
+    const target = inst.querySelector(`thead th[data-column-id="${targetId}"]`);
+    const event = new Event("drop", { bubbles: true, cancelable: true });
+    Object.defineProperty(event, "dataTransfer", { value: { getData: () => draggedId } });
+    target.dispatchEvent(event);
+}
+
+test("resize commits the width to the model and persists it as user width", async () => {
+    sessionStorage.removeItem(`gridSaveState_${gridId}`);
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name", width: 180 },
+        { field: "email", title: "Email" },
+    ]);
+
+    resizeColumn(grid, "name", 100, 150);
+
+    expect(grid.options.columns.find((c) => c.field === "name").width).toBe(230);
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    // Only the resized column gains a persisted width; the authored-only one
+    // stays widthless, so a later authored width is not overwritten.
+    expect(stored.columns.find((c) => c.id === "name")).toEqual({ id: "name", hidden: false, width: 230 });
+    expect(stored.columns.find((c) => c.id === "email")).toEqual({ id: "email", hidden: false });
+    document.body.removeChild(grid);
+});
+
+test("a persisted user width wins over an authored width at restore", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            query: {},
+            columns: [
+                { id: "name", hidden: false, width: 250 },
+                { id: "email", hidden: true },
+            ],
+        }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name", width: 220 },
+        { field: "email", title: "Email" },
+    ]);
+
+    expect(grid.options.columns.find((c) => c.field === "name").width).toBe(250);
+    document.body.removeChild(grid);
+});
+
+test("an authored width stays untouched when the stored column has no user width", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            query: {},
+            columns: [{ id: "name", hidden: false }],
+        }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name", width: 180 },
+        { field: "email", title: "Email" },
+    ]);
+
+    expect(grid.options.columns.find((c) => c.field === "name").width).toBe(180);
+    document.body.removeChild(grid);
+});
+
+test("order restore keeps new columns in their authored slots", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            query: {},
+            columns: [
+                { id: "c", hidden: false },
+                { id: "a", hidden: false },
+                { id: "b", hidden: false },
+            ],
+        }),
+    );
+    const grid = await makeSaveStateGrid([{ field: "a" }, { field: "x" }, { field: "b" }, { field: "c" }]);
+
+    expect(grid.options.columns.map((c) => c.field)).toEqual(["c", "x", "a", "b"]);
+    document.body.removeChild(grid);
+});
+
+test("stale persisted ids are ignored without disturbing authored order", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            query: {},
+            columns: [{ id: "vanished", hidden: true }],
+        }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name" },
+        { field: "email", title: "Email" },
+    ]);
+
+    expect(grid.options.columns.map((c) => c.field)).toEqual(["name", "email"]);
+    expect(grid.options.columns[0].hidden).toBe(false);
+    document.body.removeChild(grid);
+});
+
+test("legacy field-based storage still restores visibility", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            query: {},
+            columns: [
+                { field: "name", hidden: true },
+                { field: "email", hidden: false },
+            ],
+        }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name" },
+        { field: "email", title: "Email" },
+    ]);
+
+    expect(grid.options.columns.find((c) => c.field === "name").hidden).toBe(true);
+    expect(grid.options.columns.find((c) => c.field === "email").hidden).toBe(false);
+    document.body.removeChild(grid);
+});
+
+test("malformed storage fails harmlessly", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({ query: {}, columns: [{ garbage: true }, null, { id: "" }] }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name" },
+        { field: "email", title: "Email" },
+    ]);
+
+    expect(grid.options.columns.map((c) => c.field)).toEqual(["name", "email"]);
+    document.body.removeChild(grid);
+});
+
+test("a resize followed by a header reorder persists both in one state", async () => {
+    sessionStorage.removeItem(`gridSaveState_${gridId}`);
+    const grid = await makeSaveStateGrid([
+        { field: "name", title: "Name" },
+        { field: "email", title: "Email" },
+    ]);
+
+    resizeColumn(grid, "name", 100, 180);
+    drop(grid, "name", "email");
+
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    expect(stored.columns.map((c) => c.id)).toEqual(["email", "name"]);
+    expect(stored.columns.find((c) => c.id === "name")).toEqual({ id: "name", hidden: false, width: 180 });
+    document.body.removeChild(grid);
 });

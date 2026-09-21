@@ -183,6 +183,17 @@ class ColumnResizer extends BasePlugin {
             this._resizeController?.abort();
             this._resizeController = null;
 
+            // Commit the user width back to the base column model so later
+            // renders derive the DOM width from the definition; the rendered
+            // <th> is otherwise the only place holding the resized value.
+            const column = grid.options.columns.find((c) => grid.getColumnId(c) === col.getAttribute("data-column-id"));
+            if (column) {
+                const width = Number(col.getAttribute("width"));
+                if (Number.isFinite(width)) {
+                    column.width = width;
+                }
+            }
+
             dispatch(grid, "columnResized", {
                 col: col.getAttribute("field"),
                 width: col.getAttribute("width"),
