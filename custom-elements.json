@@ -103,6 +103,9 @@
               "name": "autosize"
             },
             {
+              "name": "enter-moves-down"
+            },
+            {
               "name": "resizable"
             },
             {

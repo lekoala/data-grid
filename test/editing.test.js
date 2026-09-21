@@ -639,3 +639,86 @@ test("a custom editor receives the rendered model value and row context", async 
     document.body.removeChild(inst);
 });
 
+test("enterMovesDown moves editing focus to the same column on the next row after a successful Enter commit", async () => {
+    const inst = await makeReadyGrid(
+        { columns: [{ field: "name", title: "Name", editable: true }], enterMovesDown: true },
+        [
+            { id: 1, name: "a" },
+            { id: 2, name: "c" },
+        ],
+    );
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+    const first = /** @type {HTMLInputElement} */ (inputs[0]);
+    first.focus();
+    first.value = "b";
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    expect(inst.rows[0].name).toBe("b");
+    expect(document.activeElement).toBe(inputs[1]);
+    document.body.removeChild(inst);
+});
+
+test("a rejected Enter commit keeps the editing focus on the current cell", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "name",
+                    title: "Name",
+                    editable: true,
+                    validate: (value) => (value.length >= 3 ? true : "Too short"),
+                },
+            ],
+            enterMovesDown: true,
+        },
+        [
+            { id: 1, name: "abc" },
+            { id: 2, name: "def" },
+        ],
+    );
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+    const first = /** @type {HTMLInputElement} */ (inputs[0]);
+    first.focus();
+    first.value = "x";
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    expect(inst.rows[0].name).toBe("abc");
+    expect(document.activeElement).toBe(first);
+    document.body.removeChild(inst);
+});
+
+test("at the last row enterMovesDown keeps the end-of-edit blur behavior", async () => {
+    const inst = await makeReadyGrid(
+        { columns: [{ field: "name", title: "Name", editable: true }], enterMovesDown: true },
+        [
+            { id: 1, name: "a" },
+            { id: 2, name: "c" },
+        ],
+    );
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+    const last = /** @type {HTMLInputElement} */ (inputs[1]);
+    last.focus();
+    last.value = "z";
+    last.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    expect(inst.rows[1].name).toBe("z");
+    expect(document.activeElement).not.toBe(last);
+    document.body.removeChild(inst);
+});
+
+test("enterMovesDown defaults to off: Enter commits without moving focus", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name", title: "Name", editable: true }] }, [
+        { id: 1, name: "a" },
+        { id: 2, name: "c" },
+    ]);
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+    const first = /** @type {HTMLInputElement} */ (inputs[0]);
+    first.focus();
+    first.value = "b";
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    expect(inst.rows[0].name).toBe("b");
+    // Off: Enter still commits via blur, but never navigates to another cell.
+    expect(document.activeElement).not.toBe(inputs[1]);
+    document.body.removeChild(inst);
+});

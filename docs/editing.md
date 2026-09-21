@@ -125,3 +125,36 @@ The editor only owns its presentation. The grid keeps ownership of coercion,
 There is no `reject()` in this contract: how to signal an error back to the
 user stays the editor's visual responsibility, backed by `commit(...) === false`.
 
+## Enter moves down
+
+`enterMovesDown` (default `false`) makes Enter commit and move the editing
+focus one row down in the same column, the classic spreadsheet flow:
+
+```js
+{ enterMovesDown: true }
+```
+
+Rules:
+
+- navigation happens only after a successful commit; a rejected validation or
+  a canceled `edit` event keeps the focus on the current cell;
+- an unchanged value counts as a successful commit and may move down;
+- when there is no editable cell below (last row, non-editable or hidden
+  target), Enter keeps the ordinary end-of-edit behavior (commit, then blur) —
+  no artificial focus or editing state;
+- `Tab` stays fully native; selects and checkboxes stay fully native.
+
+## Committing
+
+Listen to the `edit` event and call `preventDefault()` to reject the change (the
+row is reverted):
+
+```js
+grid.addEventListener("edit", (ev) => {
+    // { data, value, field, column }
+    console.log(ev.detail.data, ev.detail.field, ev.detail.value);
+});
+```
+
+A rejected edit fires no event. See `demo/server.html` for a sample that saves
+the change back to the server.

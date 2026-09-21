@@ -264,6 +264,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {String | ((row: Row, index: Number) => String) | null} [rowLabel] Field name or a resolver for the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
  * @property {BulkAction[]} [bulkActions] Bulk actions applied to the current selection (BulkActions module)
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
+ * @property {Boolean} enterMovesDown Enter commits and moves the editing focus one row down in the same column (EditableColumn module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} autohidePager auto-hides the pager when number of records falls below the selected page size
  * @property {Boolean} menu Native Popover menu positioned at header context-menu coordinates when supported (ContextMenu module)
@@ -397,6 +398,7 @@ const DEFAULT_OPTIONS = {
     bulkActions: [],
     resizable: false,
     autosize: false,
+    enterMovesDown: false,
     wrap: false,
     snapColumns: false,
     autoheight: true,
@@ -459,6 +461,7 @@ const OPTION_ATTRIBUTES = {
     wrap: { type: "boolean" },
     "snap-columns": { option: "snapColumns", type: "boolean" },
     autosize: { type: "boolean" },
+    "enter-moves-down": { option: "enterMovesDown", type: "boolean" },
     resizable: { type: "boolean" },
     autoheight: { type: "boolean" },
     "autohide-pager": { option: "autohidePager", type: "boolean" },

@@ -153,6 +153,27 @@ export type Column = {
      * - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
      */
     renderCell?: (ctx: CellContext) => RenderContent;
+    /**
+     * - replace the built-in editable controls with an application-owned editor for this column (EditableColumn module). Only used when the column is `editable`; display stays `format`/`renderCell`. Content follows the same RenderContent protocol.
+     */
+    renderEditor?: (ctx: EditorContext) => RenderContent;
+};
+export type EditorContext = {
+    grid: DataGrid;
+    column: Column;
+    row: Row;
+    /**
+     * - the current field value rendered like the built-in editors (empty string when absent or null)
+     */
+    value: string;
+    /**
+     * - validate and commit the given value; resolves to `true` when accepted (mutation + `edit` event), `false` when a validation failed or an `edit` listener called `preventDefault()` (the row is reverted)
+     */
+    commit: (value: any) => boolean;
+    /**
+     * - abandon the edit without mutating the row
+     */
+    cancel: () => void;
 };
 export type CellContext = {
     grid: DataGrid;
@@ -378,6 +399,10 @@ export type Options = {
      * Compute column sizes based on given data (Autosize module)
      */
     autosize: boolean;
+    /**
+     * Enter commits and moves the editing focus one row down in the same column (EditableColumn module)
+     */
+    enterMovesDown: boolean;
     /**
      * Adjust height so that it matches table size (FixedHeight module)
      */

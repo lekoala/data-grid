@@ -1864,6 +1864,7 @@ var DEFAULT_OPTIONS = {
   bulkActions: [],
   resizable: false,
   autosize: false,
+  enterMovesDown: false,
   wrap: false,
   snapColumns: false,
   autoheight: true,
@@ -1920,6 +1921,7 @@ var OPTION_ATTRIBUTES = {
   wrap: { type: "boolean" },
   "snap-columns": { option: "snapColumns", type: "boolean" },
   autosize: { type: "boolean" },
+  "enter-moves-down": { option: "enterMovesDown", type: "boolean" },
   resizable: { type: "boolean" },
   autoheight: { type: "boolean" },
   "autohide-pager": { option: "autohidePager", type: "boolean" },
@@ -4000,6 +4002,11 @@ class DataGrid extends base_element_default {
         td.classList.add("dg-wrap");
       }
       td.setAttribute("data-name", column.title ?? "");
+      if (column.editable) {
+        td.classList.add("dg-editable-col");
+        td.dataset.field = field ?? "";
+        td.dataset.rowIndex = `${rowIndex}`;
+      }
       const ctx = {
         grid: this,
         column,
@@ -4024,15 +4031,10 @@ class DataGrid extends base_element_default {
     return tr;
   }
   renderDefaultCell(td, ctx) {
-    const { column, row: item, rowIndex: i } = ctx;
+    const { column, row: item } = ctx;
     const field = column.field;
     if (!field || !item) {
       return;
-    }
-    if (column.editable) {
-      td.classList.add("dg-editable-col");
-      td.dataset.field = field;
-      td.dataset.rowIndex = `${i}`;
     }
     const value = item[field] ?? "";
     const meta = declarativeCells(item)?.[field];
@@ -4237,6 +4239,13 @@ class ColumnResizer extends base_plugin_default {
       col.style.overflow = "hidden";
       this._resizeController?.abort();
       this._resizeController = null;
+      const column = grid.options.columns.find((c) => grid.getColumnId(c) === col.getAttribute("data-column-id"));
+      if (column) {
+        const width = Number(col.getAttribute("width"));
+        if (Number.isFinite(width)) {
+          column.width = width;
+        }
+      }
       dispatch(grid, "columnResized", {
         col: col.getAttribute("field"),
         width: col.getAttribute("width")
@@ -5721,6 +5730,10 @@ class EditableColumn extends base_plugin_default {
     }
   }
   makeEditableInput(td, column, item, i) {
+    if (column.renderEditor) {
+      this.#makeCustomEditor(td, column, item);
+      return;
+    }
     if (column.editableType === "select") {
       this.makeEditableSelect(td, column, item, i);
       return;
@@ -5758,7 +5771,13 @@ class EditableColumn extends base_plugin_default {
     input.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") {
         ev.preventDefault();
-        input.blur();
+        if (this.grid.options.enterMovesDown) {
+          if (commit() && !this.#focusNextEditable(td, column)) {
+            input.blur();
+          }
+        } else {
+          input.blur();
+        }
       } else if (ev.key === "Escape") {
         reject();
         input.blur();
@@ -5831,14 +5850,35 @@ class EditableColumn extends base_plugin_default {
     input.addEventListener("blur", commit);
     td.replaceChildren(input);
   }
-  #cellLifecycle(td, column, item, getValue, setValue) {
+  #makeCustomEditor(td, column, item) {
     const grid = this.grid;
-    const field = column.field;
-    const previous = () => item[field];
-    const displayed = () => {
-      const value = previous();
-      return value === undefined || value === null ? "" : String(value);
+    const endEditing = () => {
+      td.removeAttribute("data-editing");
     };
+    const commit = (value) => {
+      const raw = typeof value === "boolean" ? value ? "true" : "false" : String(value ?? "");
+      return this.#commitValue(td, column, item, raw, {
+        reject: endEditing,
+        endEditing
+      });
+    };
+    const cancel = () => {
+      endEditing();
+    };
+    const ctx = {
+      value: this.#displayed(column, item),
+      row: item,
+      column,
+      grid,
+      commit,
+      cancel
+    };
+    td.replaceChildren();
+    const renderEditor = column.renderEditor;
+    applyContent(td, renderEditor(ctx));
+  }
+  #cellLifecycle(td, column, item, getValue, setValue) {
+    const displayed = () => this.#displayed(column, item);
     const startEditing = () => {
       td.dataset.editing = "";
       td.removeAttribute("data-invalid");
@@ -5856,41 +5896,69 @@ class EditableColumn extends base_plugin_default {
       }
     };
     const commit = () => {
-      const rawValue = getValue();
-      if (rawValue === displayed()) {
-        endEditing();
-        return;
-      }
-      const error = this.validate(column, rawValue, item);
-      if (error) {
-        reject(error);
-        return;
-      }
-      const prev = previous();
-      let value = rawValue;
-      if (typeof prev === "boolean") {
-        value = rawValue === "true";
-      } else if (typeof prev === "number") {
-        if (rawValue.trim() === "") {
-          reject();
-          return;
-        }
-        const parsed = Number(rawValue);
-        if (!Number.isFinite(parsed)) {
-          reject();
-          return;
-        }
-        value = parsed;
-      }
-      item[field] = value;
-      if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
-        item[field] = prev;
-        reject();
-        return;
-      }
-      endEditing();
+      return this.#commitValue(td, column, item, getValue(), { reject, endEditing });
     };
     return { displayed, commit, reject, startEditing, endEditing };
+  }
+  #displayed(column, item) {
+    const value = item[column.field];
+    return value === undefined || value === null ? "" : String(value);
+  }
+  #commitValue(td, column, item, rawValue, { reject, endEditing }) {
+    const field = column.field;
+    if (rawValue === this.#displayed(column, item)) {
+      endEditing();
+      return true;
+    }
+    const error = this.validate(column, rawValue, item);
+    if (error) {
+      reject(error);
+      return false;
+    }
+    const prev = item[field];
+    let value = rawValue;
+    if (typeof prev === "boolean") {
+      value = rawValue === "true";
+    } else if (typeof prev === "number") {
+      if (rawValue.trim() === "") {
+        reject();
+        return false;
+      }
+      const parsed = Number(rawValue);
+      if (!Number.isFinite(parsed)) {
+        reject();
+        return false;
+      }
+      value = parsed;
+    }
+    item[field] = value;
+    if (!dispatch(this.grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
+      item[field] = prev;
+      reject();
+      return false;
+    }
+    endEditing();
+    return true;
+  }
+  #focusNextEditable(td, column) {
+    const row = td.closest("tr.dg-data-row");
+    let next = row ? row.nextElementSibling : null;
+    while (next && !(next instanceof HTMLTableRowElement && next.classList.contains("dg-data-row"))) {
+      next = next.nextElementSibling;
+    }
+    if (!next) {
+      return false;
+    }
+    const cell = next.querySelector(`td[data-column-id="${this.grid.getColumnId(column)}"]`);
+    if (!cell || cell.hasAttribute("hidden")) {
+      return false;
+    }
+    const control = cell.querySelector(".dg-editable, input, select, textarea, button, [tabindex]:not([tabindex='-1'])");
+    if (!control) {
+      return false;
+    }
+    control.focus();
+    return true;
   }
   validate(column, value, row) {
     const ctx = { row, column, grid: this.grid };
@@ -5904,15 +5972,17 @@ class EditableColumn extends base_plugin_default {
 var editable_column_default = EditableColumn;
 
 // src/plugins/save-state.js
-var STATE_EVENTS = ["bodyRendered", "columnVisibility"];
+var STATE_EVENTS = ["bodyRendered", "columnVisibility", "columnResized", "columnReordered"];
 
 class SaveState extends base_plugin_default {
   #onStateChanged;
   #warnedMissingId;
+  #userWidthIds;
   constructor(grid) {
     super(grid);
     this.#onStateChanged = null;
     this.#warnedMissingId = false;
+    this.#userWidthIds = new Set;
     this.log("Init");
   }
   connected() {
@@ -5930,12 +6000,7 @@ class SaveState extends base_plugin_default {
     if (cachedState) {
       this.log("restore state");
       if (Array.isArray(cachedState.columns)) {
-        for (const col of cachedState.columns) {
-          const target = grid.options.columns.find((c) => c.field === col.field);
-          if (target) {
-            target.hidden = Boolean(col.hidden);
-          }
-        }
+        this.#restoreColumns(cachedState.columns);
       }
       if (cachedState.query) {
         grid.restoreQuery(cachedState.query);
@@ -5948,7 +6013,7 @@ class SaveState extends base_plugin_default {
       return;
     }
     const grid = this.grid;
-    this.#onStateChanged = () => this.#update();
+    this.#onStateChanged = (event) => this.#onGridEvent(event);
     for (const eventName of STATE_EVENTS) {
       grid.addEventListener(eventName, this.#onStateChanged);
     }
@@ -5973,6 +6038,16 @@ class SaveState extends base_plugin_default {
   disconnected() {
     this.#unlisten();
   }
+  #onGridEvent(event) {
+    if (event.type === "columnResized") {
+      const detail = event.detail;
+      const id = this.#matchColumnId(detail?.col);
+      if (id) {
+        this.#userWidthIds.add(id);
+      }
+    }
+    this.#update();
+  }
   #update() {
     const grid = this.grid;
     if (!grid.options.saveState || !hasStableId(grid) || !grid.classList.contains("dg-initialized")) {
@@ -5980,8 +6055,82 @@ class SaveState extends base_plugin_default {
     }
     this.#setState({
       query: grid.query,
-      columns: grid.options.columns.map((col) => ({ field: col.field ?? "", hidden: Boolean(col.hidden) }))
+      columns: grid.options.columns.map((column) => {
+        const id = grid.getColumnId(column);
+        const state = { id, hidden: Boolean(column.hidden) };
+        if (this.#userWidthIds.has(id) && typeof column.width === "number") {
+          state.width = column.width;
+        }
+        return state;
+      })
     });
+  }
+  #restoreColumns(entries) {
+    const grid = this.grid;
+    const columns = grid.options.columns;
+    const known = [];
+    const seen = new Set;
+    for (const entry of entries) {
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      const id = String(entry.id ?? entry.field ?? "");
+      if (!id || seen.has(id)) {
+        continue;
+      }
+      seen.add(id);
+      known.push({
+        id,
+        hasHidden: Object.hasOwn(entry, "hidden"),
+        hidden: Boolean(entry.hidden),
+        width: typeof entry.width === "number" && Number.isFinite(entry.width) ? entry.width : undefined
+      });
+    }
+    if (!known.length) {
+      return;
+    }
+    for (const entry of known) {
+      const target = this.#findColumnById(entry.id);
+      if (!target) {
+        continue;
+      }
+      if (entry.hasHidden) {
+        target.hidden = entry.hidden;
+      }
+      if (entry.width !== undefined) {
+        target.width = entry.width;
+        this.#userWidthIds.add(entry.id);
+      }
+    }
+    const columnIds = new Set(columns.map((column) => grid.getColumnId(column)));
+    const persisted = known.filter((entry) => columnIds.has(entry.id)).map((entry) => entry.id);
+    const slots = [];
+    for (let i = 0;i < columns.length; i++) {
+      if (seen.has(grid.getColumnId(columns[i]))) {
+        slots.push(i);
+      }
+    }
+    const ordered = columns.slice();
+    for (let i = 0;i < Math.min(slots.length, persisted.length); i++) {
+      ordered[slots[i]] = this.#findColumnById(persisted[i]);
+    }
+    if (ordered.some((column, i) => column !== columns[i])) {
+      for (let i = 0;i < columns.length; i++) {
+        columns[i] = ordered[i];
+      }
+    }
+  }
+  #findColumnById(id) {
+    return this.grid.options.columns.find((column) => {
+      return this.grid.getColumnId(column) === id || column.field === id || column.id === id;
+    });
+  }
+  #matchColumnId(col) {
+    if (col === undefined || col === null) {
+      return null;
+    }
+    const column = this.#findColumnById(String(col));
+    return column ? this.grid.getColumnId(column) : null;
   }
   log(...data) {
     this.grid.log("[Save-State] ", ...data);

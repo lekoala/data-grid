@@ -65,6 +65,7 @@ test("DataGrid observed attributes are the declarative option surface", () => {
         "wrap",
         "snap-columns",
         "autosize",
+        "enter-moves-down",
         "resizable",
         "autoheight",
         "autohide-pager",
