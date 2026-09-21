@@ -149,6 +149,7 @@
 
     const statusDemo = new DataGrid({
       autohidePager: true,
+      enterMovesDown: true,
       columns: [
         { field: "name", title: "Customer" },
         { field: "email", title: "Email", editable: true, editableType: "email" },
@@ -163,13 +164,37 @@
             { value: "unpaid", label: "Unpaid" },
           ],
         },
+        {
+          field: "tag",
+          title: "Tag",
+          width: 120,
+          editable: true,
+          renderEditor({ value, commit, cancel }) {
+            // A custom editor is an application-owned control: it only decides
+            // when to commit (returns true/false) or cancel. No built-in input.
+            const input = document.createElement("input");
+            input.value = value;
+            input.classList.add("dg-editable");
+            input.setAttribute("list", "tag-options");
+            input.placeholder = "Pick or type";
+            input.addEventListener("change", () => {
+              commit(input.value);
+            });
+            input.addEventListener("keydown", (ev) => {
+              if (ev.key === "Escape") {
+                cancel();
+              }
+            });
+            return input;
+          },
+        },
         { field: "active", title: "Active", align: "center", width: 80, editable: true, editableType: "checkbox" },
       ],
       dataSource: new ArrayDataSource([
-        { id: 1, name: "John Doe", email: "johndoe@koala.be", status: "paid", active: true },
-        { id: 2, name: "Mark Evans", email: "markevans@koala.be", status: "unpaid", active: false },
-        { id: 3, name: "Emily Clark", email: "emilyclark@koala.be", status: "paid", active: true },
-        { id: 4, name: "Carlos Rivera", email: "carlosrivera@koala.be", status: "unpaid", active: false },
+        { id: 1, name: "John Doe", email: "johndoe@koala.be", status: "paid", tag: "vip", active: true },
+        { id: 2, name: "Mark Evans", email: "markevans@koala.be", status: "unpaid", tag: "partner", active: false },
+        { id: 3, name: "Emily Clark", email: "emilyclark@koala.be", status: "paid", tag: "starter", active: true },
+        { id: 4, name: "Carlos Rivera", email: "carlosrivera@koala.be", status: "unpaid", tag: "trial", active: false },
       ]),
     });
     document.getElementById("status-demo").appendChild(statusDemo);
@@ -231,13 +256,23 @@
       An <code>email</code> input, a <code>select</code> fed by
       <code>editableOptions</code> and a <code>checkbox</code> for booleans. The
       choice commits on <code>change</code>, and the select reflects its value
-      as <code>data-value</code> so it can be styled per value. Editable cells
-      hint at their interactivity on hover.
-      With four rows on a single page, <code>autohidePager</code> hides the
-      pager footer.
+      as <code>data-value</code> so it can be styled per value. The
+      <code>Tag</code> column uses an application-owned
+      <code>renderEditor</code> (an input backed by a <code>datalist</code>
+      that commits on <code>change</code> and cancels on Escape).
+      <code>enterMovesDown</code> makes Enter commit then move the edit focus
+      one row down. With four rows on a single page,
+      <code>autohidePager</code> hides the pager footer.
     </p>
     <div class="demo-grid">
-      <div id="status-demo"></div>
+      <div id="status-demo">
+        <datalist id="tag-options">
+          <option value="vip"></option>
+          <option value="partner"></option>
+          <option value="starter"></option>
+          <option value="trial"></option>
+        </datalist>
+      </div>
     </div>
   </main>
   <footer>
