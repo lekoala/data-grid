@@ -226,6 +226,7 @@ Some options only work if the proper plugin is loaded.
 | `rowDetails`          | `Function`           | -                    | Render expandable application content for a row              |
 | `rowDetailsStartOpen` | `Boolean`            | `false`              | Open row details by default                                  |
 | `autosize`            | `Boolean`            | `false`              | Measure widthless columns to give them a preferred width     |
+| `enterMovesDown`      | `Boolean`            | `false`              | Enter commits and moves the edit focus one row down          |
 | `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
 | `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits                          |
 | `wrap`                | `Boolean`            | `false`              | Allow data cells to wrap over multiple lines                 |
@@ -238,7 +239,7 @@ Some options only work if the proper plugin is loaded.
 | `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
 | `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied                |
 | `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |
-| `saveState`           | `Boolean`            | `false`              | Persist query and column visibility (requires a stable `id`) |
+| `saveState`           | `Boolean`            | `false`              | Persist query and column state (note below)                  |
 | `errorMessage`        | `String`             | `""`                 | Message shown when a load fails                              |
 | `noData`              | `String`             | `""`                 | Message shown when there is no data                          |
 | `caption`             | `String`             | `""`                 | Table caption (accessible name)                              |
@@ -252,7 +253,9 @@ Some options only work if the proper plugin is loaded.
 `rowLabel` falls back to the row key, then the row index. A `dataSource`
 defaults to `FetchDataSource` or `ArrayDataSource`; plugin-backed options are
 described in `docs/plugins.md`. Set `column.wrap` to override the grid-wide
-`wrap` policy for an individual data column.
+`wrap` policy for an individual data column. `saveState` persists the query,
+the column order, explicit visibility and user-resized widths, and requires a
+stable `id`.
 
 ### Attributes
 
@@ -261,7 +264,7 @@ The main attributes are `src`, `loading`, `page`, `page-size`, `sortable`, `filt
 `responsive-toggle`, `responsive-start-open`, `row-details-start-open`, `selectable`, `single-select`,
 `select-visible-only`, `row-click`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`, `row-actions`,
-`reorder`, `menu`, `wrap`, `snap-columns`, `autosize`, `resizable`, `autoheight`,
+`reorder`, `menu`, `wrap`, `snap-columns`, `autosize`, `enter-moves-down`, `resizable`, `autoheight`,
 `autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
 
 ```html
@@ -424,32 +427,33 @@ response protection).
 
 ## Column
 
-| Name                                    | Type                 | Description                                                            |
-|-----------------------------------------|----------------------|------------------------------------------------------------------------|
-| `field`                                 | `String`             | the key in the data                                                    |
-| `title`                                 | `String`             | header title (defaults to `field`)                                     |
-| `id`                                    | `String`             | stable identifier (defaults to `field`)                                |
-| `width`                                 | `Number`             | preferred width (the column stays flexible without one)                |
-| `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                          |
-| `attr`                                  | `String`             | set a row attribute instead of rendering                               |
-| `hidden`                                | `Boolean`            | hide the column                                                        |
-| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                     |
-| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                   |
-| `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value`  |
-| `minWidth`                              | `Number`             | never compress below this width                                        |
-| `align`                                 | `String`             | header and cell alignment: `start` / `center` / `end`                  |
-| `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`          |
-| `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`                |
-| `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                 |
-| `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                              |
-| `responsive`                            | `Number`             | responsive priority (`0` disables)                                     |
-| `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`         |
-| `filterList`                            | `FilterOption[]`     | business options for a select filter                                   |
+| Name                                    | Type                 | Description                                                             |
+|-----------------------------------------|----------------------|-------------------------------------------------------------------------|
+| `field`                                 | `String`             | the key in the data                                                     |
+| `title`                                 | `String`             | header title (defaults to `field`)                                      |
+| `id`                                    | `String`             | stable identifier (defaults to `field`)                                 |
+| `width`                                 | `Number`             | preferred width (the column stays flexible without one)                 |
+| `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                           |
+| `attr`                                  | `String`             | set a row attribute instead of rendering                                |
+| `hidden`                                | `Boolean`            | hide the column                                                         |
+| `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                      |
+| `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                    |
+| `transform`                             | `String \| Function` | `"uppercase"` / `"lowercase"` / `"array"`, or `(value, ctx) => value`   |
+| `minWidth`                              | `Number`             | never compress below this width                                         |
+| `align`                                 | `String`             | header and cell alignment: `start` / `center` / `end`                   |
+| `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`           |
+| `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`                 |
+| `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                  |
+| `renderEditor`                          | `(ctx) => content`   | application-owned editor for `editable` columns (see `docs/editing.md`) |
+| `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                               |
+| `responsive`                            | `Number`             | responsive priority (`0` disables)                                      |
+| `filterType`                            | `String`             | filter mode: `text` / `select` / `boolean` / `number` / `date`          |
+| `filterList`                            | `FilterOption[]`     | business options for a select filter                                    |
 | `firstFilterOption`                     | `FilterOption`       | empty select-filter option (blank by default)                           |
-| `filterMultiple`                        | `Boolean`            | checkbox popover (`in`) when supported; otherwise single select (`eq`) |
-| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                             |
-| `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                   |
-| `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                   |
+| `filterMultiple`                        | `Boolean`            | checkbox popover (`in`) when supported; otherwise single select (`eq`)  |
+| `renderHeaderCell` / `renderFilterCell` | `(th, ctx) => void`  | custom renderers (core creates the `<th>`)                              |
+| `renderCell`                            | `(ctx) => content`   | custom cell renderer (primitive / Node / `{ html }`)                    |
+| `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                    |
 
 Select filters always include an option with `value: ""`, so `filterList` can contain only business values. Use
 `firstFilterOption` to customize its label (for example, `All plans`); an explicit `text: ""` remains empty. This

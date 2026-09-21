@@ -5852,6 +5852,9 @@ class EditableColumn extends base_plugin_default {
   }
   #makeCustomEditor(td, column, item) {
     const grid = this.grid;
+    if (!column.field) {
+      return;
+    }
     const endEditing = () => {
       td.removeAttribute("data-editing");
     };
@@ -5949,7 +5952,14 @@ class EditableColumn extends base_plugin_default {
     if (!next) {
       return false;
     }
-    const cell = next.querySelector(`td[data-column-id="${this.grid.getColumnId(column)}"]`);
+    const id = this.grid.getColumnId(column);
+    let cell = null;
+    for (const candidate of next.cells) {
+      if (candidate.dataset.columnId === id) {
+        cell = candidate;
+        break;
+      }
+    }
     if (!cell || cell.hasAttribute("hidden")) {
       return false;
     }

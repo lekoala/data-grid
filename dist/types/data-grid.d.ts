@@ -18,7 +18,7 @@ export type DateFormatOptions = Intl.DateTimeFormatOptions & {
 export type NumberFormatOptions = Intl.NumberFormatOptions;
 export type Column = {
     /**
-     * - the key in the data
+     * - the key in the data, unique across columns (sorting, filtering, `getCol` and state persistence rely on it)
      */
     field?: string;
     /**
@@ -42,7 +42,7 @@ export type Column = {
      */
     title?: string;
     /**
-     * - the preferred width of the column (auto otherwise)
+     * - the preferred width of the column (auto otherwise); a user resize commits back into this value at runtime (SaveState module)
      */
     width?: number;
     /**
@@ -460,7 +460,7 @@ export type Options = {
      */
     minSearchLength: number;
     /**
-     * Persist the query and column visibility (SaveState module)
+     * Persist the query, column order, explicit visibility and user-resized column widths (SaveState module)
      */
     saveState: boolean;
     /**

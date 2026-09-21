@@ -722,3 +722,61 @@ test("enterMovesDown defaults to off: Enter commits without moving focus", async
     expect(document.activeElement).not.toBe(inputs[1]);
     document.body.removeChild(inst);
 });
+
+test("enterMovesDown handles column ids that are not safe in a CSS selector", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ id: 'n"id', field: "name", title: "Name", editable: true }],
+            enterMovesDown: true,
+        },
+        [
+            { id: 1, name: "a" },
+            { id: 2, name: "c" },
+        ],
+    );
+    const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+    const first = /** @type {HTMLInputElement} */ (inputs[0]);
+    first.focus();
+    first.value = "b";
+    first.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+
+    expect(inst.rows[0].name).toBe("b");
+    expect(document.activeElement).toBe(inputs[1]);
+    document.body.removeChild(inst);
+});
+
+test("renderEditor without a field never renders or commits", async () => {
+    const errors = [];
+    const originalError = console.error;
+    console.error = (...args) => errors.push(args.join(" "));
+    try {
+        const inst = await makeReadyGrid(
+            {
+                columns: [
+                    { field: "name", title: "Name", editable: true },
+                    {
+                        id: "fieldless",
+                        title: "No field",
+                        editable: true,
+                        renderEditor: () => {
+                            const input = document.createElement("input");
+                            input.classList.add("dg-editable");
+                            return input;
+                        },
+                    },
+                ],
+            },
+            [{ id: 1, name: "a" }],
+        );
+
+        // Only the fielded column is editable; the fieldless custom editor is
+        // skipped instead of writing into row[undefined].
+        const inputs = inst.querySelectorAll("tbody td input.dg-editable");
+        expect(inputs).toHaveLength(1);
+        expect(inst.rows[0]).toEqual({ id: 1, name: "a" });
+        expect(inst.rows[0].undefined).toBeUndefined();
+        document.body.removeChild(inst);
+    } finally {
+        console.error = originalError;
+    }
+});

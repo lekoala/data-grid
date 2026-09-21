@@ -245,6 +245,11 @@ class EditableColumn extends BasePlugin {
      */
     #makeCustomEditor(td, column, item) {
         const grid = this.grid;
+        // Same base guard as the built-in editors: without a field there is no
+        // model slot to commit into.
+        if (!column.field) {
+            return;
+        }
         const endEditing = () => {
             td.removeAttribute("data-editing");
         };
@@ -396,9 +401,18 @@ class EditableColumn extends BasePlugin {
         if (!next) {
             return false;
         }
-        const cell = /** @type {HTMLTableCellElement|null} */ (
-            next.querySelector(`td[data-column-id="${this.grid.getColumnId(column)}"]`)
-        );
+        // Match the target cell from the rendered column identity without
+        // building a CSS selector from it: ids/fields may contain characters
+        // that a selector would have to escape.
+        const id = this.grid.getColumnId(column);
+        /** @type {HTMLTableCellElement|null} */
+        let cell = null;
+        for (const candidate of next.cells) {
+            if (candidate.dataset.columnId === id) {
+                cell = candidate;
+                break;
+            }
+        }
         if (!cell || cell.hasAttribute("hidden")) {
             return false;
         }

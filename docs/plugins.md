@@ -92,11 +92,16 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                          |
 | `FixedHeight`      | `autoheight`                  | fills the table height on the last page                         |
 | `AutosizeColumn`   | `autosize`                    | sizes widthless columns to the widest cell of the loaded page   |
-| `SaveState`        | `saveState`                   | persists query + column visibility                              |
+| `SaveState`        | `saveState`                   | persists query + column order, explicit visibility and user-resized widths |
 
 `SaveState` requires an explicit, stable `id` on the `<data-grid>` element (or
 the constructor `id` option). State persistence is disabled with a warning when
 the component has only its automatically generated runtime id.
+
+The persisted column array keeps the current order and a `hidden` flag for every
+base column; `width` is stored per column only once the user actually resized it
+(the array order is the column order). Columns added to the schema later are
+kept in their authored position on restore.
 
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.

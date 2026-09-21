@@ -83,13 +83,13 @@ import transformValue from "./utils/transformValue.js";
 /**
  * Column definition
  * @typedef Column
- * @property {String} [field] - the key in the data
+ * @property {String} [field] - the key in the data, unique across columns (sorting, filtering, `getCol` and state persistence rely on it)
  * @property {String} [id] - stable identifier (defaults to field). Plugin columns use "$..." ids.
  * @property {Boolean} [virtual] - injected by a plugin
  * @property {"start"|"end"} [position] - order group for plugin columns
  * @property {"start"|null} [frozen] - keep the column pinned to the inline start edge while scrolling
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
- * @property {Number} [width] - the preferred width of the column (auto otherwise)
+ * @property {Number} [width] - the preferred width of the column (auto otherwise); a user resize commits back into this value at runtime (SaveState module)
  * @property {Number} [minWidth] - the column is never compressed below this width
  * @property {"start"|"center"|"end"|null} [align] - horizontal alignment of the column's header, body, and filter control, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
  * @property {"boolean"|"date"|"datetime"|"number"|null} [format] - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
@@ -279,7 +279,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {String} searchPlaceholder Visible hint for the search input (defaults to "")
  * @property {Number} searchDelay Debounce delay in milliseconds before the global search is applied (0 = immediate)
  * @property {Number} minSearchLength Minimum number of characters before a search is applied (0 = always)
- * @property {Boolean} saveState Persist the query and column visibility (SaveState module)
+ * @property {Boolean} saveState Persist the query, column order, explicit visibility and user-resized column widths (SaveState module)
  * @property {?String} errorMessage A generic text to be displayed in footer when error occurs.
  * @property {?String} noData A custom text to be displayed when no data is loaded. This is different from the generic labels.noData that applies for data-grid as a component.
  * @property {?String} caption A table caption, providing the accessible name of the table (falls back to aria-labelledby, then aria-label)
