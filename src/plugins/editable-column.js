@@ -1,5 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import addSelectOption from "../utils/addSelectOption.js";
+import applyContent from "../utils/applyContent.js";
 import { dispatch } from "../utils/dispatch.js";
 
 /**
@@ -41,6 +42,10 @@ class EditableColumn extends BasePlugin {
      * @param {number} i
      */
     makeEditableInput(td, column, item, i) {
+        if (column.renderEditor) {
+            this.#makeCustomEditor(td, column, item);
+            return;
+        }
         if (column.editableType === "select") {
             this.makeEditableSelect(td, column, item, i);
             return;
@@ -88,7 +93,17 @@ class EditableColumn extends BasePlugin {
         input.addEventListener("keydown", (ev) => {
             if (ev.key === "Enter") {
                 ev.preventDefault();
-                input.blur();
+                if (this.grid.options.enterMovesDown) {
+                    // Only a successful commit may move the editing focus; on
+                    // a rejection (validation or canceled edit) the user stays
+                    // on the current cell. With no editable cell below, keep
+                    // the plain end-of-edit behavior (commit then blur).
+                    if (commit() && !this.#focusNextEditable(td, column)) {
+                        input.blur();
+                    }
+                } else {
+                    input.blur();
+                }
             } else if (ev.key === "Escape") {
                 reject();
                 input.blur();
@@ -219,6 +234,53 @@ class EditableColumn extends BasePlugin {
     }
 
     /**
+     * Build an application-owned custom editor for `column.renderEditor`.
+     * The plugin keeps ownership of coercion, validation and the cancelable
+     * `edit` event; the editor only owns its presentation and decides when to
+     * commit or cancel. The returned content follows the usual RenderContent
+     * contract, exactly like `renderCell`.
+     * @param {HTMLElement} td
+     * @param {import("../data-grid.js").Column} column
+     * @param {Record<string, any>} item
+     */
+    #makeCustomEditor(td, column, item) {
+        const grid = this.grid;
+        const endEditing = () => {
+            td.removeAttribute("data-editing");
+        };
+        const commit = (/** @type {*} */ value) => {
+            // Editors may hand back real booleans/numbers; normalize to the
+            // control string protocol so comparison and coercion stay shared.
+            const raw = typeof value === "boolean" ? (value ? "true" : "false") : String(value ?? "");
+            return this.#commitValue(td, column, item, raw, {
+                // The editor owns its own feedback and control state: a
+                // rejected commit only reverts the model and ends editing.
+                reject: endEditing,
+                endEditing,
+            });
+        };
+        const cancel = () => {
+            endEditing();
+        };
+        const ctx = {
+            value: this.#displayed(column, item),
+            row: item,
+            column,
+            grid,
+            commit,
+            cancel,
+        };
+        // Editing replaces the display surface (like the built-in editors do);
+        // renderCell/format output is a display concern and steps aside.
+        td.replaceChildren();
+        const renderEditor =
+            /** @type {(ctx: import("../data-grid.js").EditorContext) => import("../data-grid.js").RenderContent} */ (
+                column.renderEditor
+            );
+        applyContent(td, renderEditor(/** @type {import("../data-grid.js").EditorContext} */ (ctx)));
+    }
+
+    /**
      * Shared editing lifecycle for one cell control: the control reads through
      * getValue and is restored through setValue, so inputs, selects and
      * checkboxes share validation, coercion and the cancelable `edit` event.
@@ -229,15 +291,7 @@ class EditableColumn extends BasePlugin {
      * @param {(value: String) => void} setValue
      */
     #cellLifecycle(td, column, item, getValue, setValue) {
-        const grid = this.grid;
-        const field = /** @type {String} */ (column.field);
-        const previous = () => item[field];
-        // Controls only carry strings: compare and restore against the model
-        // value rendered the same way, so a numeric 42 does not read as edited.
-        const displayed = () => {
-            const value = previous();
-            return value === undefined || value === null ? "" : String(value);
-        };
+        const displayed = () => this.#displayed(column, item);
         const startEditing = () => {
             td.dataset.editing = "";
             td.removeAttribute("data-invalid");
@@ -255,43 +309,107 @@ class EditableColumn extends BasePlugin {
             }
         };
         const commit = () => {
-            const rawValue = getValue();
-            if (rawValue === displayed()) {
-                endEditing();
-                return;
-            }
-            const error = this.validate(column, rawValue, item);
-            if (error) {
-                reject(error);
-                return;
-            }
-            const prev = previous();
-            /** @type {*} */
-            let value = rawValue;
-            if (typeof prev === "boolean") {
-                value = rawValue === "true";
-            } else if (typeof prev === "number") {
-                if (rawValue.trim() === "") {
-                    reject();
-                    return;
-                }
-                const parsed = Number(rawValue);
-                if (!Number.isFinite(parsed)) {
-                    reject();
-                    return;
-                }
-                value = parsed;
-            }
-            item[field] = value;
-            if (!dispatch(grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
-                item[field] = prev;
-                // The field must follow the model back to its previous value.
-                reject();
-                return;
-            }
-            endEditing();
+            return this.#commitValue(td, column, item, getValue(), { reject, endEditing });
         };
         return { displayed, commit, reject, startEditing, endEditing };
+    }
+
+    /**
+     * Render the model value like the built-in editors do, so a control value
+     * can be compared and restored against it (a numeric 42 reads as "42").
+     * @param {import("../data-grid.js").Column} column
+     * @param {Record<string, any>} item
+     * @returns {String}
+     */
+    #displayed(column, item) {
+        const value = item[/** @type {String} */ (column.field)];
+        return value === undefined || value === null ? "" : String(value);
+    }
+
+    /**
+     * Shared commit path: compare, validate, coerce, mutate and dispatch the
+     * cancelable `edit` event. Resolves to true when the value was accepted
+     * (an unchanged value counts as accepted), false when a validation failed
+     * or an `edit` listener canceled the change.
+     * @param {HTMLElement} td
+     * @param {import("../data-grid.js").Column} column
+     * @param {Record<string, any>} item
+     * @param {String} rawValue
+     * @param {{ reject: (message?: String|null) => void, endEditing: () => void }} handle
+     * @returns {Boolean}
+     */
+    #commitValue(td, column, item, rawValue, { reject, endEditing }) {
+        const field = /** @type {String} */ (column.field);
+        if (rawValue === this.#displayed(column, item)) {
+            endEditing();
+            return true;
+        }
+        const error = this.validate(column, rawValue, item);
+        if (error) {
+            reject(error);
+            return false;
+        }
+        const prev = item[field];
+        /** @type {*} */
+        let value = rawValue;
+        if (typeof prev === "boolean") {
+            value = rawValue === "true";
+        } else if (typeof prev === "number") {
+            if (rawValue.trim() === "") {
+                reject();
+                return false;
+            }
+            const parsed = Number(rawValue);
+            if (!Number.isFinite(parsed)) {
+                reject();
+                return false;
+            }
+            value = parsed;
+        }
+        item[field] = value;
+        if (!dispatch(this.grid, "edit", { data: item, value, field, column }, { cancelable: true })) {
+            // The field must follow the model back to its previous value.
+            item[field] = prev;
+            reject();
+            return false;
+        }
+        endEditing();
+        return true;
+    }
+
+    /**
+     * Move the editing focus one row down in the same column after a
+     * successful Enter commit. Returns whether the focus actually moved; when
+     * there is no editable cell below, navigate to nothing and let the caller
+     * keep its end-of-edit behavior. Non-editable or hidden target cells are
+     * not navigated to.
+     * @param {HTMLElement} td
+     * @param {import("../data-grid.js").Column} column
+     * @returns {Boolean}
+     */
+    #focusNextEditable(td, column) {
+        const row = /** @type {HTMLTableRowElement|null} */ (td.closest("tr.dg-data-row"));
+        let next = row ? row.nextElementSibling : null;
+        while (next && !(next instanceof HTMLTableRowElement && next.classList.contains("dg-data-row"))) {
+            next = next.nextElementSibling;
+        }
+        if (!next) {
+            return false;
+        }
+        const cell = /** @type {HTMLTableCellElement|null} */ (
+            next.querySelector(`td[data-column-id="${this.grid.getColumnId(column)}"]`)
+        );
+        if (!cell || cell.hasAttribute("hidden")) {
+            return false;
+        }
+        const control = /** @type {HTMLElement|null} */ (
+            cell.querySelector(".dg-editable, input, select, textarea, button, [tabindex]:not([tabindex='-1'])")
+        );
+        if (!control) {
+            return false;
+        }
+        control.focus();
+        return true;
     }
 
     /**

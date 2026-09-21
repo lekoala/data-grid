@@ -409,3 +409,233 @@ test("keyboard events alone never commit a checkbox", async () => {
     expect(inst.rows[0].active).toBe(false);
     document.body.removeChild(inst);
 });
+
+function customEditorColumn(renderEditor) {
+    return {
+        field: "name",
+        title: "Name",
+        editable: true,
+        renderEditor,
+    };
+}
+
+function commitInput(grid, value) {
+    const input = /** @type {HTMLInputElement} */ (grid.querySelector("tbody td input.dg-editable"));
+    input.value = value;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+}
+
+test("a custom editor replaces the built-in control and commits through the shared lifecycle", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                customEditorColumn(({ value, commit }) => {
+                    const input = document.createElement("input");
+                    input.value = value;
+                    input.classList.add("dg-editable");
+                    input.setAttribute("data-custom-editor", "");
+                    input.addEventListener("change", () => commit(input.value));
+                    return input;
+                }),
+            ],
+        },
+        [{ id: 1, name: "a" }],
+    );
+    const input = inst.querySelector("tbody td input[data-custom-editor]");
+    expect(input.value).toBe("a");
+
+    let detail = null;
+    inst.addEventListener("edit", (ev) => {
+        detail = ev.detail;
+    });
+    input.value = "b";
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(detail).not.toBeNull();
+    expect(detail.value).toBe("b");
+    expect(inst.rows[0].name).toBe("b");
+
+    document.body.removeChild(inst);
+});
+
+test("an unchanged custom editor value counts as an accepted commit", async () => {
+    let result;
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                customEditorColumn(({ value, commit }) => {
+                    const input = document.createElement("input");
+                    input.value = value;
+                    input.classList.add("dg-editable");
+                    input.addEventListener("change", () => {
+                        result = commit(input.value);
+                    });
+                    return input;
+                }),
+            ],
+        },
+        [{ id: 1, name: "a" }],
+    );
+    let dispatched = 0;
+    inst.addEventListener("edit", () => {
+        dispatched++;
+    });
+
+    commitInput(inst, "a");
+
+    expect(result).toBe(true);
+    expect(dispatched).toBe(0);
+    expect(inst.rows[0].name).toBe("a");
+    document.body.removeChild(inst);
+});
+
+test("a failed validation rejects a custom editor commit with a false result and no mutation", async () => {
+    let result;
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                customEditorColumn(({ value, commit }) => {
+                    const input = document.createElement("input");
+                    input.value = value;
+                    input.classList.add("dg-editable");
+                    input.addEventListener("change", () => {
+                        result = commit(input.value);
+                    });
+                    return input;
+                }),
+            ],
+            validate: (value) => (value.length >= 3 ? true : "Too short"),
+        },
+        [{ id: 1, name: "ab" }],
+    );
+    let dispatched = 0;
+    inst.addEventListener("edit", () => {
+        dispatched++;
+    });
+
+    commitInput(inst, "x");
+
+    expect(result).toBe(false);
+    expect(dispatched).toBe(0);
+    expect(inst.rows[0].name).toBe("ab");
+    document.body.removeChild(inst);
+});
+
+test("preventDefault on the edit event rejects a custom editor commit and reverts the row", async () => {
+    let result;
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                customEditorColumn(({ value, commit }) => {
+                    const input = document.createElement("input");
+                    input.value = value;
+                    input.classList.add("dg-editable");
+                    input.addEventListener("change", () => {
+                        result = commit(input.value);
+                    });
+                    return input;
+                }),
+            ],
+        },
+        [{ id: 1, name: "a" }],
+    );
+    inst.addEventListener("edit", (ev) => ev.preventDefault());
+
+    commitInput(inst, "b");
+
+    expect(result).toBe(false);
+    expect(inst.rows[0].name).toBe("a");
+    document.body.removeChild(inst);
+});
+
+test("cancel() abandons a custom editor edit without mutating the row", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                customEditorColumn(({ value, cancel }) => {
+                    const input = document.createElement("input");
+                    input.value = value;
+                    input.classList.add("dg-editable");
+                    input.addEventListener("keydown", (ev) => {
+                        if (ev.key === "Escape") {
+                            cancel();
+                        }
+                    });
+                    return input;
+                }),
+            ],
+        },
+        [{ id: 1, name: "a" }],
+    );
+    let dispatched = 0;
+    inst.addEventListener("edit", () => {
+        dispatched++;
+    });
+
+    const input = inst.querySelector("tbody td input.dg-editable");
+    input.value = "b";
+    input.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+
+    expect(dispatched).toBe(0);
+    expect(inst.rows[0].name).toBe("a");
+    document.body.removeChild(inst);
+});
+
+test("renderEditor does not replace renderCell: display stays custom, editing uses the editor", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "name",
+                    title: "Name",
+                    editable: true,
+                    renderCell: ({ value }) => `Cell: ${value}`,
+                    renderEditor: () => {
+                        const input = document.createElement("input");
+                        input.classList.add("dg-editable");
+                        input.setAttribute("data-custom-editor", "");
+                        return input;
+                    },
+                },
+            ],
+        },
+        [{ id: 1, name: "a" }],
+    );
+
+    // Editing surface: the editor, not the renderCell output.
+    expect(inst.querySelector("tbody td input[data-custom-editor]")).not.toBeNull();
+    expect(inst.querySelector("tbody td").textContent).not.toContain("Cell:");
+
+    document.body.removeChild(inst);
+});
+
+test("a custom editor receives the rendered model value and row context", async () => {
+    let seen;
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                {
+                    field: "name",
+                    title: "Name",
+                    editable: true,
+                    renderEditor(ctx) {
+                        seen = ctx;
+                        return document.createElement("input");
+                    },
+                },
+            ],
+        },
+        [{ id: 1, name: "Grace" }],
+    );
+
+    expect(seen).toEqual(
+        expect.objectContaining({
+            value: "Grace",
+            row: { id: 1, name: "Grace" },
+        }),
+    );
+    expect(seen.column.field).toBe("name");
+    expect(typeof seen.commit).toBe("function");
+    expect(typeof seen.cancel).toBe("function");
+    document.body.removeChild(inst);
+});
+

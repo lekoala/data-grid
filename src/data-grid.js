@@ -117,6 +117,21 @@ import transformValue from "./utils/transformValue.js";
  * @property {(th: HTMLTableCellElement, ctx: CellContext) => void} [renderHeaderCell] - optional custom header cell renderer (the core creates the <th>)
  * @property {(th: HTMLTableCellElement, ctx: CellContext) => void} [renderFilterCell] - optional custom filter cell renderer (the core creates the <th>)
  * @property {(ctx: CellContext) => RenderContent} [renderCell] - optional custom cell renderer returning content (primitive -> textContent, Node -> append, { html } -> innerHTML)
+ * @property {(ctx: EditorContext) => RenderContent} [renderEditor] - replace the built-in editable controls with an application-owned editor for this column (EditableColumn module). Only used when the column is `editable`; display stays `format`/`renderCell`. Content follows the same RenderContent protocol.
+ */
+
+/**
+ * Context passed to an application-owned custom editor (`column.renderEditor`).
+ * The plugin keeps ownership of coercion, validation and the cancelable
+ * `edit` event; the editor owns its presentation and decides when to commit
+ * or cancel.
+ * @typedef {Object} EditorContext
+ * @property {DataGrid} grid
+ * @property {Column} column
+ * @property {Row} row
+ * @property {String} value - the current field value rendered like the built-in editors (empty string when absent or null)
+ * @property {(value: *) => boolean} commit - validate and commit the given value; resolves to `true` when accepted (mutation + `edit` event), `false` when a validation failed or an `edit` listener called `preventDefault()` (the row is reverted)
+ * @property {() => void} cancel - abandon the edit without mutating the row
  */
 
 /**
@@ -3763,6 +3778,11 @@ class DataGrid extends BaseElement {
                 td.classList.add("dg-wrap");
             }
             td.setAttribute("data-name", column.title ?? "");
+            if (column.editable) {
+                td.classList.add("dg-editable-col");
+                td.dataset.field = field ?? "";
+                td.dataset.rowIndex = `${rowIndex}`;
+            }
 
             const ctx = {
                 grid: this,
@@ -3796,16 +3816,10 @@ class DataGrid extends BaseElement {
      * @param {CellContext} ctx
      */
     renderDefaultCell(td, ctx) {
-        const { column, row: item, rowIndex: i } = ctx;
+        const { column, row: item } = ctx;
         const field = column.field;
         if (!field || !item) {
             return;
-        }
-
-        if (column.editable) {
-            td.classList.add("dg-editable-col");
-            td.dataset.field = field;
-            td.dataset.rowIndex = `${i}`;
         }
 
         const value = item[field] ?? "";

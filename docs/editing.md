@@ -89,17 +89,39 @@ hover and paint a full ring on focus; checkboxes show an outer outline on
 keyboard focus. The cell itself stays neutral, and a rejected value keeps its
 own invalid signal.
 
-## Committing
+## Custom editor
 
-Listen to the `edit` event and call `preventDefault()` to reject the change (the
-row is reverted):
+For editors the built-in types cannot express (combobox, date picker,
+autocomplete, textarea...), `column.renderEditor` replaces the built-in control
+with an application-owned editor:
 
 ```js
-grid.addEventListener("edit", (ev) => {
-    // { data, value, field, column }
-    console.log(ev.detail.data, ev.detail.field, ev.detail.value);
-});
+{
+    field: "doctor",
+    title: "Doctor",
+    editable: true,
+    renderEditor({ value, commit, cancel }) {
+        const input = createDoctorCombobox({ initial: value });
+        input.addEventListener("pick", (ev) => commit(ev.detail.id));
+        input.addEventListener("blur", () => cancel());
+        return input;
+    },
+}
 ```
 
-A rejected edit fires no event. See `demo/server.html` for a sample that saves
-the change back to the server.
+The editor only owns its presentation. The grid keeps ownership of coercion,
+`column.validate` / `options.validate` and the cancelable `edit` event:
+
+- `renderEditor` is used only when the column is `editable`; display unchanged
+  (stays `format` / `renderCell` — the editor steps aside, it does not replace
+  `renderCell`).
+- The returned value follows the same `RenderContent` contract as `renderCell`.
+- `commit(value)` validates and commits the given value. It resolves to `true`
+  when the change was accepted (model mutated and `edit` dispatched), `false`
+  when a validation failed or an `edit` listener called `preventDefault()`
+  (the row is reverted). An unchanged value also resolves to `true`.
+- `cancel()` abandons the edit without touching the row.
+
+There is no `reject()` in this contract: how to signal an error back to the
+user stays the editor's visual responsibility, backed by `commit(...) === false`.
+
