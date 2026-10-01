@@ -29,6 +29,15 @@
       .log-status-error { color: #d92d20; }
       .log-path { color: var(--dg-muted-color); }
       tr.dg-data-row.is-error { background: rgb(217 45 32 / 6%); }
+      /* Let the error tint cover the frozen toggle cell too: the core paints
+         sticky cells opaque for scroll correctness, so neutralize both the
+         color and the state gradient here. The frozen-edge border stays as
+         the separator; scrolled content may faintly show through this narrow
+         cell in horizontal scroll. */
+      tr.dg-data-row.is-error > td.dg-disclosure-cell {
+        background-color: transparent;
+        background-image: none;
+      }
       .log-details { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; margin: 0; font-size: 0.9rem; }
       .log-details dt { color: var(--dg-muted-color); }
       .log-details dd { margin: 0; font-variant-numeric: tabular-nums; }
