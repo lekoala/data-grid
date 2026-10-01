@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "पृष्ठ {page} / {pages}",
     resultCount: "आइटम: {count}",
+    loadMore: "और लोड करें",
+    loadedCount: "{count} / {total}",
     selectedCount: "चयनित: {count}",
     selectAll: "सभी पंक्तियाँ चुनें",
     selectRow: "{row} चुनें",

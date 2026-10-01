@@ -267,6 +267,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {Boolean} enterMovesDown Enter commits and moves the editing focus one row down in the same column (EditableColumn module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
  * @property {Boolean} autohidePager auto-hides the pager when number of records falls below the selected page size
+ * @property {"pages"|"more"} [pager] Result navigation mode: "pages" replaces rows on page change, "more" appends transport chunks through loadMore() while query.page stays 1
  * @property {Boolean} menu Native Popover menu positioned at header context-menu coordinates when supported (ContextMenu module)
  * @property {Boolean} reorder Allows a column reordering functionality (DraggableHeaders module)
  * @property {Boolean} responsive Change display mode on small screens (ResponsiveGrid module)
@@ -300,6 +301,8 @@ import transformValue from "./utils/transformValue.js";
  * @property {String} pageRange
  * @property {String} pageStatus
  * @property {String} resultCount
+ * @property {String} loadMore - progressive pager button ("more" mode)
+ * @property {String} loadedCount - progressive pager status ("more" mode), with {count} and {total}
  * @property {String} selectedCount
  * @property {String} selectAll
  * @property {String} selectRow
@@ -403,6 +406,7 @@ const DEFAULT_OPTIONS = {
     snapColumns: false,
     autoheight: true,
     autohidePager: false,
+    pager: "pages",
     responsive: false,
     responsiveToggle: true,
     responsiveStartOpen: false,
@@ -465,6 +469,7 @@ const OPTION_ATTRIBUTES = {
     resizable: { type: "boolean" },
     autoheight: { type: "boolean" },
     "autohide-pager": { option: "autohidePager", type: "boolean" },
+    pager: { parse: (value) => parseEnumAttribute(value, ["pages", "more"], "pages") },
     "show-page-size": { option: "showPageSize", type: "boolean" },
     debug: { type: "boolean" },
     dir: { type: "string" },
@@ -581,6 +586,12 @@ class DataGrid extends BaseElement {
     #initialQuery;
     /** @type {QueryState} */
     #query;
+    /** Last transport page loaded in pager "more" mode (query.page stays 1).
+     * @type {Number} */
+    #loadedPage;
+    /** No more chunks to load: rows cover the total or a chunk came back empty.
+     * @type {Boolean} */
+    #exhausted;
     /** @type {SelectionState} */
     #selection;
     /** @type {Number} */
@@ -630,7 +641,7 @@ class DataGrid extends BaseElement {
          * Runtime query state, single source of truth
          * @type {QueryState}
          */
-        this.#query = normalizeQuery(this.#initialQuery);
+        this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
 
         /**
          * Selection state, single source of truth for row selection
@@ -640,6 +651,18 @@ class DataGrid extends BaseElement {
 
         /** @type {Number} */
         this.#requestSeq = 0;
+
+        /**
+         * Progressive transport state for pager "more": the last chunk page
+         * loaded (#loadedPage) and whether the list is exhausted (#exhausted).
+         * The public query always stays on page 1; only these two fields know
+         * how many chunks were appended.
+         */
+        /** @type {Number} */
+        this.#loadedPage = 1;
+
+        /** @type {Boolean} */
+        this.#exhausted = false;
 
         /** @type {?AbortController} */
         this.#controller = null;
@@ -717,6 +740,9 @@ class DataGrid extends BaseElement {
 
         /** @type {HTMLInputElement|null} */
         this.btnLast = null;
+
+        /** @type {HTMLButtonElement|null} */
+        this.btnMore = null;
 
         /** @type {HTMLSelectElement|null} */
         this.selectPerPage = null;
@@ -805,6 +831,7 @@ class DataGrid extends BaseElement {
                 </div>
                 </div>
                 <div class="dg-meta"></div>
+                <button type="button" class="dg-load-more" hidden></button>
             </div>
             </td>
         </tr>
@@ -917,6 +944,7 @@ class DataGrid extends BaseElement {
         this.#setNoData(this.tbody);
         this.updateMetaLabel();
         this.updatePageStatus();
+        this.#updateMoreButton();
         if (this.loading) {
             this.#updateStatus(this.labels.loading);
         } else if (this.hasDataError) {
@@ -932,6 +960,13 @@ class DataGrid extends BaseElement {
     updateMetaLabel() {
         const meta = this.querySelector(".dg-meta");
         if (!meta) {
+            return;
+        }
+        if (this.options.pager === "more") {
+            meta.textContent = this.formatLabel(this.labels.loadedCount, {
+                count: this.rows.length,
+                total: this.total,
+            });
             return;
         }
         const total = this.total;
@@ -1257,6 +1292,35 @@ class DataGrid extends BaseElement {
                 this.#initialQuery.page = page;
             }
         }
+        // Attribute-seeded state goes through the same invariant as every
+        // other runtime query assignment (e.g. page forced to 1 in "more").
+        this.#query = this.#normalizeRuntimeQuery(this.#query);
+    }
+
+    /**
+     * Normalize a runtime query and enforce the progressive-pager invariant:
+     * in pager "more" mode the public query always stays on page 1, no matter
+     * whether the page arrived through setQuery(), initialQuery, the `page`
+     * attribute or a restored state. The loaded chunks live in #loadedPage.
+     * @param {?QueryState} query
+     * @returns {QueryState}
+     */
+    #normalizeRuntimeQuery(query) {
+        const next = normalizeQuery(query);
+        if (this.options.pager === "more") {
+            next.page = 1;
+        }
+        return next;
+    }
+
+    /**
+     * Restart the progressive list from its first chunk. Called whenever the
+     * population, the chunk size, or the data source changes; the following
+     * refresh then replaces the rows instead of appending to them.
+     */
+    #resetProgressiveState() {
+        this.#loadedPage = 1;
+        this.#exhausted = false;
     }
 
     /**
@@ -1267,7 +1331,9 @@ class DataGrid extends BaseElement {
      * selection only means something for the population it was created on.
      * Emits `querychange` with a normalized snapshot once the state is
      * assigned, before the reload (including in lazy mode, where no load runs
-     * yet). Mutating `event.detail.query` never affects the grid.
+     * yet). Mutating `event.detail.query` never affects the grid. In pager
+     * "more" mode the page is always coerced back to 1: chunks accumulate
+     * through loadMore(), never through the query.
      * @public
      * @param {Partial<QueryState>} patch
      * @returns {Promise<void>}
@@ -1286,10 +1352,15 @@ class DataGrid extends BaseElement {
         if (patch.filters !== undefined) next.filters = patch.filters;
         if (resetsPage && patch.page === undefined) next.page = 1;
         if (patch.page !== undefined) next.page = patch.page;
-        this.#query = normalizeQuery(next);
+        this.#query = this.#normalizeRuntimeQuery(next);
         dispatch(this, "querychange", { query: this.query });
         if (changesPopulation) {
             this.#clearSelectionIfNeeded();
+        }
+        if (resetsPage) {
+            // A new population or chunk size restarts the progressive list:
+            // the refresh below replaces the rows from the first chunk.
+            this.#resetProgressiveState();
         }
         // While lazy and not yet first-loaded, only accumulate the query
         // state. The first load (when the grid becomes visible) uses it.
@@ -1307,7 +1378,7 @@ class DataGrid extends BaseElement {
      * @param {?QueryState} query
      */
     restoreQuery(query) {
-        this.#query = normalizeQuery(query);
+        this.#query = this.#normalizeRuntimeQuery(query);
     }
 
     /**
@@ -1318,7 +1389,8 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     resetQuery() {
-        this.#query = normalizeQuery(this.#initialQuery);
+        this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
+        this.#resetProgressiveState();
         dispatch(this, "querychange", { query: this.query });
         this.#clearSelectionIfNeeded();
         return this.refresh();
@@ -1331,6 +1403,23 @@ class DataGrid extends BaseElement {
      */
     refresh() {
         return this.load();
+    }
+
+    /**
+     * Fetch one query page from the data source. Sequence, abort, stale and
+     * loading guards stay with the caller — load() and loadMore() mirror the
+     * same guard shape around their different result handling (replace vs
+     * append). Only the data-source access is shared.
+     * @param {QueryState} query
+     * @param {AbortController} controller
+     * @returns {Promise<PageResult>}
+     */
+    async #fetchPage(query, controller) {
+        const ds = this.dataSource;
+        if (!ds) {
+            throw new Error("No data source");
+        }
+        return ds.load(query, { signal: controller.signal });
     }
 
     /**
@@ -1364,11 +1453,7 @@ class DataGrid extends BaseElement {
                 result = this.#initialResult;
                 this.#initialResult = null;
             } else {
-                const ds = this.dataSource;
-                if (!ds) {
-                    throw new Error("No data source");
-                }
-                result = await ds.load(this.query, { signal: controller.signal });
+                result = await this.#fetchPage(this.query, controller);
             }
             if (requestId !== this.#requestSeq) return;
             if (this.applyResult(result)) {
@@ -1395,8 +1480,121 @@ class DataGrid extends BaseElement {
             if (requestId === this.#requestSeq) {
                 this.loading = false;
                 this.removeAttribute("data-loading");
+                // renderBody() above refreshed the button while still busy.
+                this.#updateMoreButton();
             }
         }
+    }
+
+    /**
+     * Append the next transport chunk in pager "more" mode, then render the
+     * grown list. No-op unless the pager is "more", no load is running, and
+     * the list is not exhausted yet. A concurrent setQuery() supersedes the
+     * flight: its late response is dropped and its cleanup never touches the
+     * newer load. Errors keep the loaded rows and leave the button available
+     * for a retry. Progress is already observable through rows.length, total
+     * and loading — no boolean needed.
+     * @public
+     * @returns {Promise<void>}
+     */
+    async loadMore() {
+        if (this.options.pager !== "more" || this.loading) {
+            return;
+        }
+        if (this.#exhausted || this.rows.length >= this.total) {
+            return;
+        }
+        // An explicit request for data now: bypass a pending lazy deferral
+        // like load() does, so the observer is disarmed and the fetch runs.
+        if (this.#lazyPending) {
+            this.#lazyPending = false;
+            this.#loadObserver?.disconnect();
+            this.#loadObserver = null;
+        }
+        const requestId = ++this.#requestSeq;
+        this.#controller?.abort();
+        const controller = new AbortController();
+        this.#controller = controller;
+        this.loading = true;
+        this.error = null;
+        this.setAttribute("data-loading", "");
+        this.removeAttribute("data-error");
+        this.#updateStatus(this.labels.loading);
+        this.#updateMoreButton();
+
+        try {
+            const result = await this.#fetchPage({ ...this.query, page: this.#loadedPage + 1 }, controller);
+            if (requestId !== this.#requestSeq || controller.signal.aborted) return;
+            this.#appendResult(result);
+            this.#updateStatus(
+                this.rows.length
+                    ? this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total })
+                    : this.noData,
+            );
+        } catch (err) {
+            if (requestId !== this.#requestSeq) return;
+            const e = /** @type {any} */ (err);
+            if (e?.name === "AbortError" || controller.signal.aborted) return;
+            const message =
+                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
+            this.error = e;
+            this.setAttribute("data-error", "");
+            this.tbody?.setAttribute("data-empty-message", message);
+            this.#updateStatus(message);
+            dispatch(this, "loadError", e);
+        } finally {
+            // Exactly load()'s guard: a superseded flight must not clear the
+            // newer load's flags, attributes or button state.
+            if (requestId === this.#requestSeq) {
+                this.loading = false;
+                this.removeAttribute("data-loading");
+                this.#updateMoreButton();
+            }
+        }
+    }
+
+    /**
+     * Append one progressive chunk ("more" mode): rows only grow, the query
+     * stays on page 1, columns are never re-inferred and the page is never
+     * re-clamped. An empty chunk also terminates the list, for backends whose
+     * total lags behind the actually available rows.
+     * @param {PageResult} result
+     */
+    #appendResult(result) {
+        const appended = Array.isArray(result?.rows) ? result.rows : [];
+        this.rows = [...this.rows, ...appended];
+        this.total = result?.total ?? this.total;
+        this.meta = result?.meta || {};
+        this.#loadedPage += 1;
+        if (!appended.length) {
+            this.#exhausted = true;
+        }
+        this.renderBody();
+    }
+
+    /**
+     * Reflect the progressive state on the footer button: hidden once the
+     * list is exhausted, busy while a chunk loads, actionable otherwise.
+     */
+    #updateMoreButton() {
+        const button = this.btnMore;
+        if (!button) {
+            return;
+        }
+        if (this.options.pager !== "more") {
+            button.hidden = true;
+            return;
+        }
+        button.hidden = this.#exhausted || this.rows.length >= this.total;
+        const busy = this.loading && this.options.pager === "more";
+        button.disabled = busy;
+        if (busy) {
+            button.setAttribute("aria-busy", "true");
+        } else {
+            button.removeAttribute("aria-busy");
+        }
+        button.textContent = busy ? this.labels.loading : this.labels.loadMore;
+        button.setAttribute("aria-label", busy ? this.labels.loading : this.labels.loadMore);
     }
 
     /**
@@ -1507,6 +1705,13 @@ class DataGrid extends BaseElement {
             case "page-sizes":
                 this.populatePageSizes();
                 break;
+            case "pager":
+                // Switching navigation mode restarts from the first chunk so
+                // the rows always match the freshly normalized query.
+                this.#resetProgressiveState();
+                this.#query = this.#normalizeRuntimeQuery(this.#query);
+                this.renderTable();
+                return this.refresh();
             case "snap-columns":
                 this.snapColumnsChanged();
                 break;
@@ -1521,6 +1726,7 @@ class DataGrid extends BaseElement {
      */
     srcChanged() {
         this.setupDataSource();
+        this.#resetProgressiveState();
         this.#clearSelectionIfNeeded();
         return this.refresh();
     }
@@ -1793,6 +1999,7 @@ class DataGrid extends BaseElement {
         this.btnPrev = this.querySelector(".dg-btn-prev");
         this.btnNext = this.querySelector(".dg-btn-next");
         this.btnLast = this.querySelector(".dg-btn-last");
+        this.btnMore = this.querySelector(".dg-load-more");
         this.selectPerPage = this.querySelector(".dg-select-per-page");
         this.inputPage = this.querySelector(".dg-input-page");
 
@@ -1952,6 +2159,11 @@ class DataGrid extends BaseElement {
             if (pager.classList.contains("dg-btn-next")) return this.getNext();
             if (pager.classList.contains("dg-btn-last")) return this.getLast();
             return;
+        }
+
+        const more = target.closest(".dg-load-more");
+        if (more && this.ownsControl(more)) {
+            return this.loadMore();
         }
 
         // Only the sort button itself delegates sorting, so a click on any other
@@ -3161,7 +3373,13 @@ class DataGrid extends BaseElement {
         if (!tfoot) return;
         const td = tfoot.querySelector("td");
         if (!td) return;
-        tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
+        // In "more" mode the footer is a status line: autohidePager only hides
+        // it when there is nothing to count.
+        const hide =
+            this.options.pager === "more"
+                ? this.options.autohidePager && this.total === 0
+                : this.options.autohidePager && this.totalPages() <= 1;
+        tfoot.toggleAttribute("hidden", hide);
         // Never emit a colspan of 0 (invalid, collapses to one column)
         td.colSpan = Math.max(1, this.columnsLength(true));
         tfoot.style.display = "";
@@ -3860,6 +4078,19 @@ class DataGrid extends BaseElement {
 
         const tfoot = this.tfoot;
         if (!tfoot) return;
+
+        this.classList.toggle("dg-pager-more", this.options.pager === "more");
+        if (this.options.pager === "more") {
+            // Cumulative presentation: no page buttons, no per-page select,
+            // just the loaded count and the progressive button.
+            this.pages = this.totalPages();
+            this.updateMetaLabel();
+            this.#updateMoreButton();
+            // autohidePager concerns classic navigation; in "more" mode the
+            // footer is a status line that stays while rows exist.
+            tfoot.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
+            return;
+        }
 
         // Refresh page count in case we added/removed a page
         this.pages = this.totalPages();

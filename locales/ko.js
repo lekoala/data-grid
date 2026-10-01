@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "{page} / {pages} 페이지",
     resultCount: "항목: {count}",
+    loadMore: "더 불러오기",
+    loadedCount: "{count} / {total}개",
     selectedCount: "선택됨: {count}",
     selectAll: "모든 행 선택",
     selectRow: "{row} 선택",

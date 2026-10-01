@@ -229,6 +229,7 @@ Some options only work if the proper plugin is loaded.
 | `enterMovesDown`      | `Boolean`            | `false`              | Enter commits and moves the edit focus one row down          |
 | `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
 | `autohidePager`       | `Boolean`            | `false`              | Hide the pager when everything fits                          |
+| `pager`               | `String`             | `"pages"`            | Result navigation: `"pages"` replaces rows, `"more"` appends chunks via `loadMore()` |
 | `wrap`                | `Boolean`            | `false`              | Allow data cells to wrap over multiple lines                 |
 | `snapColumns`         | `Boolean`            | `false`              | Snap horizontal scrolling near column starts                 |
 | `pageSizes`           | `Number[]`           | `[10,25,50,100,250]` | Available page size options                                  |
@@ -265,7 +266,7 @@ The main attributes are `src`, `loading`, `page`, `page-size`, `sortable`, `filt
 `select-visible-only`, `row-click`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`, `row-actions`,
 `reorder`, `menu`, `wrap`, `snap-columns`, `autosize`, `enter-moves-down`, `resizable`, `autoheight`,
-`autohide-pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
+`autohide-pager`, `pager`, `show-page-size`, `debug`, `dir`, `density`. Example:
 
 ```html
 <data-grid
@@ -284,7 +285,11 @@ The main attributes are `src`, `loading`, `page`, `page-size`, `sortable`, `filt
 
 `loading`, `page` and `page-size` are initial-only: they seed the first load and
 later attribute mutations are intentionally ignored. Runtime pagination uses
-`setQuery()` and the pager methods.
+`setQuery()` and the pager methods. With `pager="more"` the footer counts the
+loaded rows and a *Load more* button appends the next chunk through
+`loadMore()` instead of replacing the page; the query stays on page 1, and any
+search, filter, sort, page-size or data-source change restarts from the first
+chunk. See `demo/logs.html`.
 
 ## Scrollable grid
 

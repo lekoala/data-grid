@@ -412,6 +412,10 @@ export type Options = {
      */
     autohidePager: boolean;
     /**
+     * Result navigation mode: "pages" replaces rows on page change, "more" appends transport chunks through loadMore() while query.page stays 1
+     */
+    pager?: "pages" | "more";
+    /**
      * Native Popover menu positioned at header context-menu coordinates when supported (ContextMenu module)
      */
     menu: boolean;
@@ -498,6 +502,14 @@ export type Labels = {
     pageRange: string;
     pageStatus: string;
     resultCount: string;
+    /**
+     * - progressive pager button ("more" mode)
+     */
+    loadMore: string;
+    /**
+     * - progressive pager status ("more" mode), with {count} and {total}
+     */
+    loadedCount: string;
     selectedCount: string;
     selectAll: string;
     selectRow: string;
@@ -586,6 +598,8 @@ declare class DataGrid extends BaseElement {
     btnNext: HTMLInputElement | null;
     /** @type {HTMLInputElement|null} */
     btnLast: HTMLInputElement | null;
+    /** @type {HTMLButtonElement|null} */
+    btnMore: HTMLButtonElement | null;
     /** @type {HTMLSelectElement|null} */
     selectPerPage: HTMLSelectElement | null;
     /** @type {HTMLInputElement|null} */
@@ -759,7 +773,9 @@ declare class DataGrid extends BaseElement {
      * selection only means something for the population it was created on.
      * Emits `querychange` with a normalized snapshot once the state is
      * assigned, before the reload (including in lazy mode, where no load runs
-     * yet). Mutating `event.detail.query` never affects the grid.
+     * yet). Mutating `event.detail.query` never affects the grid. In pager
+     * "more" mode the page is always coerced back to 1: chunks accumulate
+     * through loadMore(), never through the query.
      * @public
      * @param {Partial<QueryState>} patch
      * @returns {Promise<void>}
@@ -794,6 +810,18 @@ declare class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     load(): Promise<void>;
+    /**
+     * Append the next transport chunk in pager "more" mode, then render the
+     * grown list. No-op unless the pager is "more", no load is running, and
+     * the list is not exhausted yet. A concurrent setQuery() supersedes the
+     * flight: its late response is dropped and its cleanup never touches the
+     * newer load. Errors keep the loaded rows and leave the button available
+     * for a retry. Progress is already observable through rows.length, total
+     * and loading — no boolean needed.
+     * @public
+     * @returns {Promise<void>}
+     */
+    loadMore(): Promise<void>;
     /**
      * Apply a PageResult and render.
      * @param {PageResult} result

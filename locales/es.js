@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "Página {page} de {pages}",
     resultCount: "Elementos: {count}",
+    loadMore: "Cargar más",
+    loadedCount: "{count} de {total}",
     selectedCount: "Seleccionados: {count}",
     selectAll: "Seleccionar todas las filas",
     selectRow: "Seleccionar {row}",

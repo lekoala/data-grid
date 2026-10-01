@@ -79,19 +79,19 @@ The core creates the `<th>`/`<td>` and their structural attributes
 
 ## Built-in plugins
 
-| Plugin             | Option                        | What it does                                                    |
-|--------------------|-------------------------------|-----------------------------------------------------------------|
-| `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column                                 |
-| `BulkActions`      | `bulkActions`                 | bulk action bar for the selection                               |
-| `RowActions`       | `actions`                     | inline actions; native popover menu when supported            |
-| `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room    |
-| `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row             |
-| `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers                                  |
-| `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering                                 |
-| `ContextMenu`      | `menu`                        | pointer Popover to toggle columns; native context-menu fallback |
-| `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                          |
-| `FixedHeight`      | `autoheight`                  | fills the table height on the last page                         |
-| `AutosizeColumn`   | `autosize`                    | sizes widthless columns to the widest cell of the loaded page   |
+| Plugin             | Option                        | What it does                                                               |
+|--------------------|-------------------------------|----------------------------------------------------------------------------|
+| `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column                                            |
+| `BulkActions`      | `bulkActions`                 | bulk action bar for the selection                                          |
+| `RowActions`       | `actions`                     | inline actions; native popover menu when supported                         |
+| `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room               |
+| `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row                        |
+| `ColumnResizer`    | `resizable`                   | drag-to-resize column handlers                                             |
+| `DraggableHeaders` | `reorder`                     | drag-and-drop column reordering                                            |
+| `ContextMenu`      | `menu`                        | pointer Popover to toggle columns; native context-menu fallback            |
+| `EditableColumn`   | `editable` columns            | inline editing (see `docs/editing.md`)                                     |
+| `FixedHeight`      | `autoheight`                  | fills the table height on the last page                                    |
+| `AutosizeColumn`   | `autosize`                    | sizes widthless columns to the widest cell of the loaded page              |
 | `SaveState`        | `saveState`                   | persists query + column order, explicit visibility and user-resized widths |
 
 `SaveState` requires an explicit, stable `id` on the `<data-grid>` element (or

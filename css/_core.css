@@ -948,6 +948,14 @@ data-grid tfoot.dg-footer-compact .dg-input-page {
   display: none;
 }
 
+/* Progressive pager ("more"): the page navigation hides, the explicit Load
+   more button takes its place next to the loaded count. Visibility only, no
+   direction involved. */
+data-grid.dg-pager-more tfoot .dg-pagination,
+data-grid.dg-pager-more tfoot .dg-page-nav {
+  display: none;
+}
+
 data-grid th.dg-sortable {
   cursor: pointer;
   /* Let the button own the padding so the whole cell is interactive */

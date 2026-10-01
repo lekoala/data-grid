@@ -900,7 +900,7 @@ data-grid tfoot .dg-meta {
   font-size: .875em;
 }
 
-data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .dg-input-page {
+data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .dg-input-page, data-grid.dg-pager-more tfoot .dg-pagination, data-grid.dg-pager-more tfoot .dg-page-nav {
   display: none;
 }
 

@@ -1075,6 +1075,8 @@ var DEFAULT_LABELS = {
   pageRange: "{from}–{to} / {total}",
   pageStatus: "Page {page} of {pages}",
   resultCount: "{count} items",
+  loadMore: "Load more",
+  loadedCount: "{count} of {total}",
   selectedCount: "{count} selected",
   selectAll: "Select all rows",
   selectRow: "Select {row}",
@@ -1869,6 +1871,7 @@ var DEFAULT_OPTIONS = {
   snapColumns: false,
   autoheight: true,
   autohidePager: false,
+  pager: "pages",
   responsive: false,
   responsiveToggle: true,
   responsiveStartOpen: false,
@@ -1925,6 +1928,7 @@ var OPTION_ATTRIBUTES = {
   resizable: { type: "boolean" },
   autoheight: { type: "boolean" },
   "autohide-pager": { option: "autohidePager", type: "boolean" },
+  pager: { parse: (value) => parseEnumAttribute(value, ["pages", "more"], "pages") },
   "show-page-size": { option: "showPageSize", type: "boolean" },
   debug: { type: "boolean" },
   dir: { type: "string" },
@@ -1995,6 +1999,8 @@ class DataGrid extends base_element_default {
   #plugins;
   #initialQuery;
   #query;
+  #loadedPage;
+  #exhausted;
   #selection;
   #requestSeq;
   #controller;
@@ -2011,9 +2017,11 @@ class DataGrid extends base_element_default {
     this.#excludedRowElementSelector = "a,button,input,select,textarea,[contenteditable]:not([contenteditable='false']),[data-row-click-ignore]";
     this.#plugins = this.#initPlugins();
     this.#initialQuery = normalizeQuery(this.options.initialQuery);
-    this.#query = normalizeQuery(this.#initialQuery);
+    this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
     this.#selection = { mode: "explicit", ids: new Set, except: new Set };
     this.#requestSeq = 0;
+    this.#loadedPage = 1;
+    this.#exhausted = false;
     this.#controller = null;
     this.initialResult = null;
     this.#initialResult = this.options.initialResult || this.initialResult || null;
@@ -2031,6 +2039,7 @@ class DataGrid extends base_element_default {
     this.btnPrev = null;
     this.btnNext = null;
     this.btnLast = null;
+    this.btnMore = null;
     this.selectPerPage = null;
     this.inputPage = null;
     this.searchInput = null;
@@ -2093,6 +2102,7 @@ class DataGrid extends base_element_default {
                 </div>
                 </div>
                 <div class="dg-meta"></div>
+                <button type="button" class="dg-load-more" hidden></button>
             </div>
             </td>
         </tr>
@@ -2163,6 +2173,7 @@ class DataGrid extends base_element_default {
     this.#setNoData(this.tbody);
     this.updateMetaLabel();
     this.updatePageStatus();
+    this.#updateMoreButton();
     if (this.loading) {
       this.#updateStatus(this.labels.loading);
     } else if (this.hasDataError) {
@@ -2175,6 +2186,13 @@ class DataGrid extends base_element_default {
   updateMetaLabel() {
     const meta = this.querySelector(".dg-meta");
     if (!meta) {
+      return;
+    }
+    if (this.options.pager === "more") {
+      meta.textContent = this.formatLabel(this.labels.loadedCount, {
+        count: this.rows.length,
+        total: this.total
+      });
       return;
     }
     const total = this.total;
@@ -2367,6 +2385,18 @@ class DataGrid extends base_element_default {
         this.#initialQuery.page = page;
       }
     }
+    this.#query = this.#normalizeRuntimeQuery(this.#query);
+  }
+  #normalizeRuntimeQuery(query) {
+    const next = normalizeQuery(query);
+    if (this.options.pager === "more") {
+      next.page = 1;
+    }
+    return next;
+  }
+  #resetProgressiveState() {
+    this.#loadedPage = 1;
+    this.#exhausted = false;
   }
   setQuery(patch) {
     const next = normalizeQuery(this.#query);
@@ -2384,10 +2414,13 @@ class DataGrid extends base_element_default {
       next.page = 1;
     if (patch.page !== undefined)
       next.page = patch.page;
-    this.#query = normalizeQuery(next);
+    this.#query = this.#normalizeRuntimeQuery(next);
     dispatch(this, "querychange", { query: this.query });
     if (changesPopulation) {
       this.#clearSelectionIfNeeded();
+    }
+    if (resetsPage) {
+      this.#resetProgressiveState();
     }
     if (this.#lazyPending) {
       return Promise.resolve();
@@ -2395,16 +2428,24 @@ class DataGrid extends base_element_default {
     return this.refresh();
   }
   restoreQuery(query) {
-    this.#query = normalizeQuery(query);
+    this.#query = this.#normalizeRuntimeQuery(query);
   }
   resetQuery() {
-    this.#query = normalizeQuery(this.#initialQuery);
+    this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
+    this.#resetProgressiveState();
     dispatch(this, "querychange", { query: this.query });
     this.#clearSelectionIfNeeded();
     return this.refresh();
   }
   refresh() {
     return this.load();
+  }
+  async#fetchPage(query, controller) {
+    const ds = this.dataSource;
+    if (!ds) {
+      throw new Error("No data source");
+    }
+    return ds.load(query, { signal: controller.signal });
   }
   async load() {
     if (this.#lazyPending) {
@@ -2427,11 +2468,7 @@ class DataGrid extends base_element_default {
         result = this.#initialResult;
         this.#initialResult = null;
       } else {
-        const ds = this.dataSource;
-        if (!ds) {
-          throw new Error("No data source");
-        }
-        result = await ds.load(this.query, { signal: controller.signal });
+        result = await this.#fetchPage(this.query, controller);
       }
       if (requestId !== this.#requestSeq)
         return;
@@ -2456,8 +2493,88 @@ class DataGrid extends base_element_default {
       if (requestId === this.#requestSeq) {
         this.loading = false;
         this.removeAttribute("data-loading");
+        this.#updateMoreButton();
       }
     }
+  }
+  async loadMore() {
+    if (this.options.pager !== "more" || this.loading) {
+      return;
+    }
+    if (this.#exhausted || this.rows.length >= this.total) {
+      return;
+    }
+    if (this.#lazyPending) {
+      this.#lazyPending = false;
+      this.#loadObserver?.disconnect();
+      this.#loadObserver = null;
+    }
+    const requestId = ++this.#requestSeq;
+    this.#controller?.abort();
+    const controller = new AbortController;
+    this.#controller = controller;
+    this.loading = true;
+    this.error = null;
+    this.setAttribute("data-loading", "");
+    this.removeAttribute("data-error");
+    this.#updateStatus(this.labels.loading);
+    this.#updateMoreButton();
+    try {
+      const result = await this.#fetchPage({ ...this.query, page: this.#loadedPage + 1 }, controller);
+      if (requestId !== this.#requestSeq || controller.signal.aborted)
+        return;
+      this.#appendResult(result);
+      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total }) : this.noData);
+    } catch (err) {
+      if (requestId !== this.#requestSeq)
+        return;
+      const e = err;
+      if (e?.name === "AbortError" || controller.signal.aborted)
+        return;
+      const message = this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
+      this.error = e;
+      this.setAttribute("data-error", "");
+      this.tbody?.setAttribute("data-empty-message", message);
+      this.#updateStatus(message);
+      dispatch(this, "loadError", e);
+    } finally {
+      if (requestId === this.#requestSeq) {
+        this.loading = false;
+        this.removeAttribute("data-loading");
+        this.#updateMoreButton();
+      }
+    }
+  }
+  #appendResult(result) {
+    const appended = Array.isArray(result?.rows) ? result.rows : [];
+    this.rows = [...this.rows, ...appended];
+    this.total = result?.total ?? this.total;
+    this.meta = result?.meta || {};
+    this.#loadedPage += 1;
+    if (!appended.length) {
+      this.#exhausted = true;
+    }
+    this.renderBody();
+  }
+  #updateMoreButton() {
+    const button = this.btnMore;
+    if (!button) {
+      return;
+    }
+    if (this.options.pager !== "more") {
+      button.hidden = true;
+      return;
+    }
+    button.hidden = this.#exhausted || this.rows.length >= this.total;
+    const busy = this.loading && this.options.pager === "more";
+    button.disabled = busy;
+    if (busy) {
+      button.setAttribute("aria-busy", "true");
+    } else {
+      button.removeAttribute("aria-busy");
+    }
+    button.textContent = busy ? this.labels.loading : this.labels.loadMore;
+    button.setAttribute("aria-label", busy ? this.labels.loading : this.labels.loadMore);
   }
   applyResult(result) {
     this.rows = result.rows || [];
@@ -2549,6 +2666,11 @@ class DataGrid extends base_element_default {
       case "page-sizes":
         this.populatePageSizes();
         break;
+      case "pager":
+        this.#resetProgressiveState();
+        this.#query = this.#normalizeRuntimeQuery(this.#query);
+        this.renderTable();
+        return this.refresh();
       case "snap-columns":
         this.snapColumnsChanged();
         break;
@@ -2559,6 +2681,7 @@ class DataGrid extends base_element_default {
   }
   srcChanged() {
     this.setupDataSource();
+    this.#resetProgressiveState();
     this.#clearSelectionIfNeeded();
     return this.refresh();
   }
@@ -2743,6 +2866,7 @@ class DataGrid extends base_element_default {
     this.btnPrev = this.querySelector(".dg-btn-prev");
     this.btnNext = this.querySelector(".dg-btn-next");
     this.btnLast = this.querySelector(".dg-btn-last");
+    this.btnMore = this.querySelector(".dg-load-more");
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
     this.#syncSelectionOptions();
@@ -2848,6 +2972,10 @@ class DataGrid extends base_element_default {
       if (pager.classList.contains("dg-btn-last"))
         return this.getLast();
       return;
+    }
+    const more = target.closest(".dg-load-more");
+    if (more && this.ownsControl(more)) {
+      return this.loadMore();
     }
     const sortButton = target.closest(".dg-sort");
     if (sortButton && this.ownsControl(sortButton)) {
@@ -3599,7 +3727,8 @@ class DataGrid extends base_element_default {
     const td = tfoot.querySelector("td");
     if (!td)
       return;
-    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
+    const hide = this.options.pager === "more" ? this.options.autohidePager && this.total === 0 : this.options.autohidePager && this.totalPages() <= 1;
+    tfoot.toggleAttribute("hidden", hide);
     td.colSpan = Math.max(1, this.columnsLength(true));
     tfoot.style.display = "";
   }
@@ -4060,6 +4189,14 @@ class DataGrid extends base_element_default {
     const tfoot = this.tfoot;
     if (!tfoot)
       return;
+    this.classList.toggle("dg-pager-more", this.options.pager === "more");
+    if (this.options.pager === "more") {
+      this.pages = this.totalPages();
+      this.updateMetaLabel();
+      this.#updateMoreButton();
+      tfoot.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
+      return;
+    }
     this.pages = this.totalPages();
     if (this.btnFirst)
       this.btnFirst.disabled = this.#query.page <= 1;

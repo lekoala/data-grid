@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "第 {page} 页，共 {pages} 页",
     resultCount: "共 {count} 条",
+    loadMore: "加载更多",
+    loadedCount: "已显示 {count}，共 {total} 条",
     selectedCount: "已选 {count} 项",
     selectAll: "全选所有行",
     selectRow: "选择 {row}",

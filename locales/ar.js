@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "صفحة {page} من {pages}",
     resultCount: "العناصر: {count}",
+    loadMore: "تحميل المزيد",
+    loadedCount: "{count} من {total}",
     selectedCount: "المحدد: {count}",
     selectAll: "تحديد كل الصفوف",
     selectRow: "تحديد {row}",

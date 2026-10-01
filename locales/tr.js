@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "Sayfa {page} / {pages}",
     resultCount: "Öğeler: {count}",
+    loadMore: "Daha fazla yükle",
+    loadedCount: "{count} / {total}",
     selectedCount: "Seçilen: {count}",
     selectAll: "Tüm satırları seç",
     selectRow: "{row} seç",

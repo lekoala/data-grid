@@ -115,6 +115,9 @@
               "name": "autohide-pager"
             },
             {
+              "name": "pager"
+            },
+            {
               "name": "show-page-size"
             },
             {
@@ -201,7 +204,7 @@
             {
               "kind": "method",
               "name": "setQuery",
-              "description": "Merge a patch into the query state and reload. Changing search, filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch. Changing search or filters (population changes) also clears the selection, since a `mode: \"all\"` selection only means something for the population it was created on. Emits `querychange` with a normalized snapshot once the state is assigned, before the reload (including in lazy mode, where no load runs yet). Mutating `event.detail.query` never affects the grid."
+              "description": "Merge a patch into the query state and reload. Changing search, filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch. Changing search or filters (population changes) also clears the selection, since a `mode: \"all\"` selection only means something for the population it was created on. Emits `querychange` with a normalized snapshot once the state is assigned, before the reload (including in lazy mode, where no load runs yet). Mutating `event.detail.query` never affects the grid. In pager \"more\" mode the page is always coerced back to 1: chunks accumulate through loadMore(), never through the query."
             },
             {
               "kind": "method",
@@ -222,6 +225,11 @@
               "kind": "method",
               "name": "load",
               "description": "Single load path: abort previous request, load the current query, protect against stale responses, then render."
+            },
+            {
+              "kind": "method",
+              "name": "loadMore",
+              "description": "Append the next transport chunk in pager \"more\" mode, then render the grown list. No-op unless the pager is \"more\", no load is running, and the list is not exhausted yet. A concurrent setQuery() supersedes the flight: its late response is dropped and its cleanup never touches the newer load. Errors keep the loaded rows and leave the button available for a retry. Progress is already observable through rows.length, total and loading — no boolean needed."
             },
             {
               "kind": "method",

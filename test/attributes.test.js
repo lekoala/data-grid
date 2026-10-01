@@ -69,6 +69,7 @@ test("DataGrid observed attributes are the declarative option surface", () => {
         "resizable",
         "autoheight",
         "autohide-pager",
+        "pager",
         "show-page-size",
         "debug",
         "dir",

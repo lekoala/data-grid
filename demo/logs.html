@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid Demo - Event logs</title>
+
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+    <style>
+      .log-level { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; }
+      .log-dot { inline-size: 0.55rem; block-size: 0.55rem; border-radius: 50%; background: currentColor; flex: none; }
+      .log-level-info { color: #1570ef; }
+      .log-level-warn { color: #dc6803; }
+      .log-level-error { color: #d92d20; }
+      .log-level-debug { color: #98a2b3; }
+      .log-request { display: inline-flex; align-items: baseline; gap: 0.5rem; }
+      .log-status { font-weight: 700; font-variant-numeric: tabular-nums; }
+      .log-status-ok { color: #067647; }
+      .log-status-warn { color: #dc6803; }
+      .log-status-error { color: #d92d20; }
+      .log-path { color: var(--dg-muted-color); }
+      tr.dg-data-row.is-error { background: rgb(217 45 32 / 6%); }
+      .log-details { display: grid; grid-template-columns: auto 1fr; gap: 0.25rem 1rem; margin: 0; font-size: 0.9rem; }
+      .log-details dt { color: var(--dg-muted-color); }
+      .log-details dd { margin: 0; font-variant-numeric: tabular-nums; }
+    </style>
+
+    <script type="module">
+      import { ArrayDataSource, DataGrid } from "../data-grid.js";
+
+      DataGrid.setLabels({ loadMore: "Load older events", loadedCount: "Showing {count} of {total}" });
+
+      // Deterministic event stream: the same 240 events on every load.
+      function mulberry32(seed) {        let state = seed;
+        return () => {
+          state |= 0;
+          state = (state + 0x6d2b79f5) | 0;
+          let t = Math.imul(state ^ (state >>> 15), 1 | state);
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      const SERVICES = ["billing", "auth", "edge", "worker", "api"];
+      const PATHS = {
+        billing: ["/billing/invoices", "/billing/webhooks", "/billing/subscriptions"],
+        auth: ["/auth/refresh", "/auth/login", "/auth/logout"],
+        edge: ["/pricing", "/", "/assets/app.js"],
+        worker: ["/jobs/thumbnail", "/jobs/report", "/jobs/cleanup"],
+        api: ["/v1/projects", "/v1/projects/:id", "/v1/keys"],
+      };
+      const MESSAGES = [
+        "User signed in",
+        "Request completed",
+        "Cache hit",
+        "Job finished",
+        "Invoice generated",
+        "Rate limit reached for token",
+        "Validation failed: name is required",
+        "Invalid refresh token",
+        "Slow query: 1843ms on projects_by_owner",
+        "Connection pool exhausted (max=25)",
+        "Upstream timed out after 10000ms",
+        "Stripe webhook signature mismatch",
+        "Feature flag new-pricing evaluated",
+      ];
+      const REGIONS = ["eu-west", "eu-central", "us-east"];
+      const USERS = ["alice", "bob", "carol", "dave", null];
+      const STATUS_BY_LEVEL = {
+        info: [200, 200, 201, 304],
+        warn: [401, 422, 429],
+        error: [500, 502, 504],
+        debug: [200, 201],
+      };
+      const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+      function pad2(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function buildEvents(count = 240, seed = 20260924) {
+        const random = mulberry32(seed);
+        const pick = (list) => list[Math.floor(random() * list.length)];
+        let at = Date.UTC(2026, 8, 23, 13, 59, 58);
+        const events = [];
+        for (let i = 0; i < count; i++) {
+          at -= Math.floor(random() * 42 + 3) * 60 * 1000;
+          const roll = random();
+          const level = roll < 0.55 ? "info" : roll < 0.75 ? "warn" : roll < 0.87 ? "error" : "debug";
+          const service = pick(SERVICES);
+          const date = new Date(at);
+          events.push({
+            id: `evt-${count - i}`,
+            timestamp: date.toISOString(),
+            level,
+            service,
+            status: pick(STATUS_BY_LEVEL[level]),
+            method: pick(["GET", "GET", "POST", "POST", "DELETE"]),
+            path: pick(PATHS[service]),
+            message: pick(MESSAGES),
+            requestId: Math.floor(random() * 0xffffffff).toString(16).padStart(8, "0"),
+            durationMs: Math.floor(random() * 1800) + 4,
+            region: pick(REGIONS),
+            user: pick(USERS),
+            _rowcls: level === "error" ? "is-error" : "",
+          });
+        }
+        return events;
+      }
+
+      function formatTime(iso) {
+        const date = new Date(iso);
+        return `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())}`;
+      }
+
+      function levelCell({ value }) {
+        const name = `${value[0].toUpperCase()}${value.slice(1)}`;
+        const wrap = document.createElement("span");
+        wrap.className = "log-level";
+        const dot = document.createElement("span");
+        dot.className = "log-dot";
+        dot.setAttribute("aria-hidden", "true");
+        wrap.append(dot, document.createTextNode(name));
+        return wrap;
+      }
+
+      function requestCell({ row }) {
+        const kind = row.status >= 500 ? "error" : row.status >= 400 ? "warn" : "ok";
+        const wrap = document.createElement("span");
+        wrap.className = "log-request";
+        const status = document.createElement("span");
+        status.className = `log-status log-status-${kind}`;
+        status.textContent = `${row.status}`;
+        const target = document.createElement("span");
+        target.className = "log-path";
+        target.textContent = `${row.method} ${row.path}`;
+        wrap.append(status, target);
+        return wrap;
+      }
+
+      const grid = new DataGrid({
+        pager: "more",
+        searchable: true,
+        searchPlaceholder: "Message, path, request id…",
+        sortable: true,
+        filterable: true,
+        rowLabel: "message",
+        initialQuery: { pageSize: 20, sort: [{ field: "timestamp", direction: "desc" }] },
+        columns: [
+          { field: "_rowcls", attr: "class" },
+          {
+            field: "timestamp",
+            title: "Time (UTC)",
+            // Plain text filter: datetimes have no defined date-filter
+            // semantics, but the ISO prefix stays substring-matchable.
+            renderCell: ({ value }) => formatTime(value),
+          },
+          {
+            field: "level",
+            title: "Level",
+            filterType: "select",
+            filterList: [
+              { value: "info", text: "Info" },
+              { value: "warn", text: "Warn" },
+              { value: "error", text: "Error" },
+              { value: "debug", text: "Debug" },
+            ],
+            cellClass: ({ value }) => `log-level-${value}`,
+            renderCell: levelCell,
+          },
+          {
+            field: "service",
+            title: "Service",
+            filterType: "select",
+            filterList: SERVICES.map((service) => ({ value: service, text: service })),
+          },
+          {
+            field: "status",
+            title: "Request",
+            filterType: "select",
+            filterList: [200, 201, 304, 401, 422, 429, 500, 502, 504].map((status) => ({
+              value: status,
+              text: `${status}`,
+            })),
+            renderCell: requestCell,
+          },
+          { field: "message", title: "Message", wrap: true },
+        ],
+        rowDetails: ({ row }) => {
+          const list = document.createElement("dl");
+          list.className = "log-details";
+          const entries = [
+            ["Request id", row.requestId],
+            ["Duration", `${row.durationMs} ms`],
+            ["Region", row.region],
+            ["User", row.user ?? "—"],
+            ["Method", `${row.method} ${row.path}`],
+          ];
+          for (const [term, value] of entries) {
+            const dt = document.createElement("dt");
+            dt.textContent = term;
+            const dd = document.createElement("dd");
+            dd.textContent = value;
+            list.append(dt, dd);
+          }
+          return list;
+        },
+        dataSource: new ArrayDataSource(buildEvents()),
+      });
+      const host = document.getElementById("logs-grid");
+      host.replaceChildren(grid);
+      grid.style.maxHeight = "70vh";
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Standalone data grid web component</em></p>
+    </header>
+    <main>
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Default</a></li>
+        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link" href="lazy.html">Lazy</a></li>
+        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+        <li><a class="demo-nav-link" href="api.html">API</a></li>
+        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
+        <li><a class="demo-nav-link" href="declarative.html">Declarative</a></li>
+        <li><a class="demo-nav-link" href="formatters.html">Formatters</a></li>
+        <li><a class="demo-nav-link" href="advanced-search.html">Advanced search</a></li>
+        <li><a class="demo-nav-link" href="url-state.html">Shareable URLs</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="#">Event logs</a></li>
+      </ul>
+
+      <h2>Event logs</h2>
+
+      <p>A progressive list instead of pages: the footer counts the loaded events and <em>Load older events</em> appends the next chunk. Search, filters and sorting restart from the first chunk; expanding a row shows the request context. Newest events first.</p>
+
+      <div class="demo-grid">
+        <div id="logs-grid"></div>
+      </div>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>

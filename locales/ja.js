@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "{page} / {pages} ページ",
     resultCount: "{count} 件",
+    loadMore: "さらに読み込む",
+    loadedCount: "{count} / {total} 件",
     selectedCount: "選択中: {count} 件",
     selectAll: "すべての行を選択",
     selectRow: "{row} を選択",

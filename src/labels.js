@@ -18,6 +18,8 @@ export const DEFAULT_LABELS = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "Page {page} of {pages}",
     resultCount: "{count} items",
+    loadMore: "Load more",
+    loadedCount: "{count} of {total}",
     selectedCount: "{count} selected",
     selectAll: "Select all rows",
     selectRow: "Select {row}",

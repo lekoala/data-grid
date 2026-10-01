@@ -10,6 +10,8 @@ const labels = {
     pageRange: "{from}–{to} / {total}",
     pageStatus: "Halaman {page} dari {pages}",
     resultCount: "Item: {count}",
+    loadMore: "Muat lebih banyak",
+    loadedCount: "{count} dari {total}",
     selectedCount: "Dipilih: {count}",
     selectAll: "Pilih semua baris",
     selectRow: "Pilih {row}",
