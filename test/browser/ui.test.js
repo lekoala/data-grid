@@ -572,8 +572,13 @@ test.skipIf(IS_WINDOWS || !IS_CHROME_BACKEND)(
         );
         expect(state.event.trusted).toBe(true);
         expect(state.event.defaultPrevented).toBe(true);
-        expect(state.menu.left).toBe(Math.min(state.event.clientX, state.viewport.width - state.menu.width));
-        expect(state.menu.top).toBe(Math.min(state.event.clientY, state.viewport.height - state.menu.height));
+        // Portable to font-dependent fractional geometry: the menu opens at
+        // the pointer, clamped inside the viewport (same 1px tolerance as the
+        // row-actions alignment above, never exact sub-pixel equality).
+        const expectedLeft = Math.min(state.event.clientX, state.viewport.width - state.menu.width);
+        const expectedTop = Math.min(state.event.clientY, state.viewport.height - state.menu.height);
+        expect(Math.abs(state.menu.left - expectedLeft)).toBeLessThanOrEqual(1);
+        expect(Math.abs(state.menu.top - expectedTop)).toBeLessThanOrEqual(1);
     },
     TIMEOUT,
 );
