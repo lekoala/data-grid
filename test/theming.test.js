@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+// Side-effect import: registers the element. This file must not rely on
+// another test file having imported the grid first (test files share one
+// custom element registry).
+import "../data-grid.js";
 
 const coreCss = readFileSync(new URL("../dist/data-grid.css", import.meta.url), "utf8");
 const themeCss = readFileSync(new URL("../themes/bootstrap.css", import.meta.url), "utf8");
