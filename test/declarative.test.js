@@ -67,16 +67,16 @@ test("thead declares columns and the tbody becomes the local dataset", async () 
 test("the adopted table keeps its markup and the grid installs its structure", async () => {
     const inst = await makeDeclarativeGrid(DEMO_TABLE, { sortable: true });
 
-    // Exactly one direct table under the .dg-scroll viewport: the supplied one,
-    // enhanced.
-    expect(inst.querySelectorAll(":scope > .dg-scroll > table").length).toBe(1);
+    // Exactly one table in the frame viewport: the supplied one, enhanced.
+    expect(inst.querySelectorAll(":scope > .dg-frame > .dg-scroll > table").length).toBe(1);
     const table = inst.querySelector("table");
     expect(table.classList.contains("table-striped")).toBe(true);
     expect(table.querySelector("caption").textContent).toBe("Records");
     expect(table.querySelector("colgroup")).toBeTruthy();
 
     // Grid-owned structure.
-    expect(table.querySelector("tfoot .dg-footer")).toBeTruthy();
+    expect(table.querySelector("tfoot")).toBeNull();
+    expect(inst.querySelector(".dg-frame > .dg-footer")).toBeTruthy();
     expect(inst.querySelector("tbody tr").querySelectorAll("td").length).toBe(3);
     expect(inst.querySelector('thead tr.dg-head-columns th[data-column-id="name"]').getAttribute("aria-sort")).toBe(
         "ascending",
@@ -208,7 +208,7 @@ test("without data-field the table is adopted and JS columns stay", async () => 
     );
 
     expect(inst.options.columns.map((c) => c.field)).toEqual(["name"]);
-    expect(inst.querySelectorAll(":scope > .dg-scroll > table").length).toBe(1);
+    expect(inst.querySelectorAll(":scope > .dg-frame > .dg-scroll > table").length).toBe(1);
     expect(inst.dataSource).toBeInstanceOf(ArrayDataSource);
     expect(inst.dataSource.rows).toEqual([{ name: "User One" }]);
     removeGrid(inst);
@@ -235,9 +235,9 @@ test("a user tbody/tfoot is replaced, never duplicated", async () => {
     );
 
     expect(inst.querySelectorAll("tbody").length).toBe(1);
-    expect(inst.querySelectorAll("tfoot").length).toBe(1);
-    expect(inst.querySelector("tfoot .dg-footer")).toBeTruthy();
-    expect(inst.querySelector("tfoot").textContent).not.toContain("custom footer");
+    expect(inst.querySelectorAll("tfoot").length).toBe(0);
+    expect(inst.querySelector(".dg-frame > .dg-footer")).toBeTruthy();
+    expect(inst.querySelector(".dg-frame").textContent).not.toContain("custom footer");
     expect(inst.dataSource.rows).toHaveLength(2);
     removeGrid(inst);
 });
@@ -305,7 +305,7 @@ test("reconnect is idempotent: one table, same data source, no re-seed", async (
         setTimeout(resolve, 2000);
     });
 
-    expect(inst.querySelectorAll(":scope > .dg-scroll > table").length).toBe(1);
+    expect(inst.querySelectorAll(":scope > .dg-frame > .dg-scroll > table").length).toBe(1);
     expect(inst.dataSource).toBe(ds);
     expect(inst.options.columns.map((c) => c.field)).toEqual(["name", "email", "age"]);
     expect(inst.rows).toHaveLength(2);

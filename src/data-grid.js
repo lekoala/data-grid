@@ -725,9 +725,9 @@ class DataGrid extends BaseElement {
         this.table = null;
 
         /**
-         * The table viewport: a wrapper that owns the scroll, the outer border and
-         * radius, and is the sticky containing block for thead/tfoot. Guaranteed to
-         * exist as a direct child of the host after `_connected()`.
+         * The table viewport: the scrollable pane inside `.dg-frame` that owns
+         * the scroll and is the sticky containing block for thead. Guaranteed
+         * to exist as `.dg-frame > .dg-scroll` after `_connected()`.
          * @type {HTMLDivElement}
          */
         this.scrollEl = /** @type {HTMLDivElement} */ (document.createElement("div"));
@@ -801,45 +801,41 @@ class DataGrid extends BaseElement {
 
     static template() {
         return `
+<div class="dg-frame">
 <table data-dg-generated-table>
     <thead>
         <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
         <tr class="dg-head-filters"></tr>
     </thead>
     <tbody data-empty-message=""></tbody>
-    <tfoot hidden>
-        <tr>
-            <td>
-            <div class="dg-footer">
-                <div class="dg-footer-controls">
-                <div class="dg-page-nav">
-                  <span class="dg-select-field">
-                    <select class="dg-select-per-page"></select>
-                  </span>
-                </div>
-                <div class="dg-pagination" role="group">
-                  <button type="button" class="dg-btn-first dg-rotate" disabled>
-                    <i class="dg-skip-icon"></i>
-                  </button>
-                  <button type="button" class="dg-btn-prev dg-rotate" disabled>
-                    <i class="dg-nav-icon"></i>
-                  </button>
-                  <input type="number" class="dg-input-page" min="1" step="1" value="1">
-                  <button type="button" class="dg-btn-next" disabled>
-                    <i class="dg-nav-icon"></i>
-                  </button>
-                  <button type="button" class="dg-btn-last" disabled>
-                    <i class="dg-skip-icon"></i>
-                  </button>
-                </div>
-                </div>
-                <div class="dg-meta"></div>
-                <button type="button" class="dg-load-more" hidden></button>
-            </div>
-            </td>
-        </tr>
-</tfoot>
 </table>
+<div class="dg-footer" hidden>
+    <div class="dg-footer-controls">
+    <div class="dg-page-nav">
+      <span class="dg-select-field">
+        <select class="dg-select-per-page"></select>
+      </span>
+    </div>
+    <div class="dg-pagination" role="group">
+      <button type="button" class="dg-btn-first dg-rotate" disabled>
+        <i class="dg-skip-icon"></i>
+      </button>
+      <button type="button" class="dg-btn-prev dg-rotate" disabled>
+        <i class="dg-nav-icon"></i>
+      </button>
+      <input type="number" class="dg-input-page" min="1" step="1" value="1">
+      <button type="button" class="dg-btn-next" disabled>
+        <i class="dg-nav-icon"></i>
+      </button>
+      <button type="button" class="dg-btn-last" disabled>
+        <i class="dg-skip-icon"></i>
+      </button>
+    </div>
+    </div>
+    <div class="dg-meta"></div>
+    <button type="button" class="dg-load-more" hidden></button>
+</div>
+</div>
 <div class="dg-status" role="status" aria-atomic="true"></div>
 `;
     }
@@ -1268,9 +1264,9 @@ class DataGrid extends BaseElement {
         return /** @type {HTMLTableSectionElement} */ (this.querySelector("tbody"));
     }
 
-    /** @returns {HTMLTableSectionElement} */
-    get tfoot() {
-        return /** @type {HTMLTableSectionElement} */ (this.querySelector("tfoot"));
+    /** @returns {HTMLDivElement|null} */
+    get footerEl() {
+        return /** @type {HTMLDivElement|null} */ (this.querySelector(".dg-footer"));
     }
 
     /**
@@ -1859,8 +1855,9 @@ class DataGrid extends BaseElement {
             const end = document.createElement("div");
             end.className = "dg-topbar-end";
             topbar.append(start, end);
-            // The topbar lives outside the scroll viewport, above .dg-scroll.
-            this.insertBefore(topbar, this.scrollEl);
+            // The topbar lives outside the frame, above .dg-frame.
+            const frame = this.querySelector(":scope > .dg-frame");
+            this.insertBefore(topbar, frame ?? this.scrollEl);
         }
         return topbar;
     }
@@ -1934,18 +1931,17 @@ class DataGrid extends BaseElement {
     /**
      * Adopt a supplied `<table>` (a direct child that is not the generated
      * template table). The supplied table keeps its own attributes, caption
-     * and colgroup; the grid installs its generated header rows, tbody and
-     * tfoot. A declarative `<th data-field>` row defines the columns (it wins
-     * over `options.columns`); when no explicit data source exists, the
+     * and colgroup; the grid installs its generated tbody. A declarative
+     * `<th data-field>` row defines the columns (it wins over
+     * `options.columns`); when no explicit data source exists, the
      * declarative `<tbody>` becomes the local ArrayDataSource dataset.
-     * Idempotent: the adopted table is marked `data-dg-table` and is never
-     * re-parsed or re-seeded.
+     * Any author-provided `<tfoot>` is discarded: the pager footer lives in
+     * `.dg-frame > .dg-footer`, outside the table. Idempotent: the adopted
+     * table is marked `data-dg-table` and is never re-parsed or re-seeded.
      */
     #adoptDeclarativeTable() {
-        const adopted = /** @type {HTMLTableElement|null} */ (this.querySelector(":scope > table[data-dg-table]"));
-        const generated = /** @type {HTMLTableElement|null} */ (
-            this.querySelector(":scope > table[data-dg-generated-table]")
-        );
+        const adopted = /** @type {HTMLTableElement|null} */ (this.querySelector("table[data-dg-table]"));
+        const generated = /** @type {HTMLTableElement|null} */ (this.querySelector("table[data-dg-generated-table]"));
         if (adopted) {
             // Already adopted on a previous connect: a re-injected generated
             // table is redundant.
@@ -1956,7 +1952,7 @@ class DataGrid extends BaseElement {
             return;
         }
         const supplied = /** @type {HTMLTableElement|undefined} */ (
-            Array.from(this.querySelectorAll(":scope > table")).find((table) => table !== generated)
+            Array.from(this.querySelectorAll("table")).find((table) => table !== generated)
         );
         if (!supplied) {
             return;
@@ -1992,18 +1988,15 @@ class DataGrid extends BaseElement {
         }
 
         // Ownership: the declarative header row is consumed once, the grid
-        // installs its own tbody and tfoot (replacing any user-provided ones).
+        // installs its own tbody (replacing any user-provided one). An author
+        // tfoot is always discarded: the footer lives outside the table.
         supplied.querySelector("thead > tr:first-child")?.remove();
         if (generated) {
             const tbody = generated.querySelector("tbody");
-            const tfoot = generated.querySelector("tfoot");
             supplied.querySelector("tbody")?.remove();
             supplied.querySelector("tfoot")?.remove();
             if (tbody) {
                 supplied.appendChild(tbody);
-            }
-            if (tfoot) {
-                supplied.appendChild(tfoot);
             }
             generated.remove();
         }
@@ -2011,33 +2004,60 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Make the table viewport an explicit structural invariant: a direct
-     * `.dg-scroll` child of the host that owns the scroll, the outer border and
-     * radius, and is the sticky containing block. Idempotent and reconnect-safe
-     * (a `.dg-scroll` from a previous connect is reused, its table re-located).
+     * Make the frame an explicit structural invariant: a direct `.dg-frame`
+     * child of the host owning the outer border and radius, with a `.dg-scroll`
+     * viewport for the table and a `.dg-footer` pager bar after it. Idempotent
+     * and reconnect-safe.
      */
     #wrapScroll() {
-        const existing = /** @type {HTMLDivElement|null} */ (this.querySelector(":scope > .dg-scroll"));
-        if (existing) {
-            existing.className = "dg-scroll";
-            existing.tabIndex = 0;
-            this.scrollEl = existing;
-            const table = /** @type {HTMLTableElement|null} */ (existing.querySelector(":scope > table"));
+        let frame = /** @type {HTMLDivElement|null} */ (this.querySelector(":scope > .dg-frame"));
+        if (!frame) {
+            frame = document.createElement("div");
+            frame.className = "dg-frame";
+            // Move the generated table and footer (or a supplied table) in.
+            const table = /** @type {HTMLTableElement|null} */ (this.querySelector(":scope > table"));
+            const footer = /** @type {HTMLDivElement|null} */ (this.querySelector(":scope > .dg-footer"));
+            this.insertBefore(frame, table ?? footer ?? null);
             if (table) {
-                this.table = table;
+                frame.appendChild(table);
             }
-            return;
+            if (footer) {
+                frame.appendChild(footer);
+            } else {
+                const fallback = document.createElement("div");
+                fallback.className = "dg-footer";
+                fallback.setAttribute("hidden", "");
+                frame.appendChild(fallback);
+            }
         }
-        const scroll = document.createElement("div");
-        scroll.className = "dg-scroll";
-        scroll.tabIndex = 0;
-        if (this.table) {
-            this.insertBefore(scroll, this.table);
-            scroll.appendChild(this.table);
+        let scroll = /** @type {HTMLDivElement|null} */ (frame.querySelector(":scope > .dg-scroll"));
+        if (!scroll) {
+            scroll = document.createElement("div");
+            scroll.className = "dg-scroll";
+            scroll.tabIndex = 0;
+            // After adoption the supplied table is still a direct host child.
+            const table = /** @type {HTMLTableElement|null} */ (
+                frame.querySelector(":scope > table") ?? this.querySelector(":scope > table")
+            );
+            const footer = /** @type {HTMLDivElement|null} */ (frame.querySelector(":scope > .dg-footer"));
+            frame.insertBefore(scroll, footer ?? frame.firstChild);
+            if (table) {
+                scroll.appendChild(table);
+            }
         } else {
-            this.appendChild(scroll);
+            scroll.className = "dg-scroll";
+            scroll.tabIndex = 0;
+        }
+        // The footer always sits after the viewport, never inside the table.
+        const footer = /** @type {HTMLDivElement|null} */ (frame.querySelector(":scope > .dg-footer"));
+        if (footer && footer.previousElementSibling !== scroll) {
+            frame.appendChild(footer);
         }
         this.scrollEl = scroll;
+        const table = /** @type {HTMLTableElement|null} */ (scroll.querySelector(":scope > table"));
+        if (table) {
+            this.table = table;
+        }
     }
 
     async _connected() {
@@ -3436,20 +3456,15 @@ class DataGrid extends BaseElement {
     renderFooter() {
         this.log("render footer");
 
-        const tfoot = this.tfoot;
-        if (!tfoot) return;
-        const td = tfoot.querySelector("td");
-        if (!td) return;
+        const footer = this.footerEl;
+        if (!footer) return;
         // In "more" mode the footer is a status line: autohidePager only hides
         // it when there is nothing to count.
         const hide =
             this.options.pager === "more"
                 ? this.options.autohidePager && this.total === 0
                 : this.options.autohidePager && this.totalPages() <= 1;
-        tfoot.toggleAttribute("hidden", hide);
-        // Never emit a colspan of 0 (invalid, collapses to one column)
-        td.colSpan = Math.max(1, this.columnsLength(true));
-        tfoot.style.display = "";
+        footer.toggleAttribute("hidden", hide);
     }
 
     /**
@@ -4143,8 +4158,8 @@ class DataGrid extends BaseElement {
     paginate() {
         this.log("paginate");
 
-        const tfoot = this.tfoot;
-        if (!tfoot) return;
+        const footer = this.footerEl;
+        if (!footer) return;
 
         this.classList.toggle("dg-pager-more", this.options.pager === "more");
         if (this.options.pager === "more") {
@@ -4155,7 +4170,7 @@ class DataGrid extends BaseElement {
             this.#updateMoreButton();
             // autohidePager concerns classic navigation; in "more" mode the
             // footer is a status line that stays while rows exist.
-            tfoot.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
+            footer.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
             return;
         }
 
@@ -4169,7 +4184,7 @@ class DataGrid extends BaseElement {
         if (this.btnLast) this.btnLast.disabled = this.#query.page >= this.pages;
         this.updateMetaLabel();
         this.updatePageStatus();
-        tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
+        footer.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
     }
 
     /**

@@ -98,37 +98,37 @@ data-grid {
   --dg-scroller-background: transparent;
 }
 
-data-grid > .dg-scroll {
+data-grid > .dg-frame > .dg-scroll {
   scrollbar-color: var(--dg-scroller-thumb) var(--dg-scroller-background);
   scrollbar-width: thin;
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar {
+data-grid .dg-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar-track {
+data-grid .dg-scroll::-webkit-scrollbar-track {
   background: none;
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar-thumb {
+data-grid .dg-scroll::-webkit-scrollbar-thumb {
   background: var(--dg-scroller-thumb);
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar-thumb:hover {
+data-grid .dg-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--dg-scroller-thumb-hover);
 }
 
-data-grid > .dg-scroll > table tr.dg-head-columns:-webkit-any(:empty, :has( > :first-child:not([scope="col"]))) {
+data-grid > .dg-frame > .dg-scroll > table tr.dg-head-columns:-webkit-any(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
 
-data-grid > .dg-scroll > table tr.dg-head-columns:-moz-any(:empty, :has( > :first-child:not([scope="col"]))) {
+data-grid > .dg-frame > .dg-scroll > table tr.dg-head-columns:-moz-any(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
 
-data-grid > .dg-scroll > table tr.dg-head-columns:is(:empty, :has( > :first-child:not([scope="col"]))) {
+data-grid > .dg-frame > .dg-scroll > table tr.dg-head-columns:is(:empty, :has( > :first-child:not([scope="col"]))) {
   display: none;
 }
 
@@ -143,21 +143,33 @@ data-grid [hidden] {
   display: none;
 }
 
-data-grid > .dg-scroll {
-  overflow: auto;
+data-grid > .dg-frame {
+  display: flex;
+  overflow: hidden;
   background: var(--dg-bg);
   border: 1px solid var(--dg-border-color);
   border-radius: var(--dg-radius);
+  flex-direction: column;
+  flex: auto;
+  min-width: 280px;
+  min-height: 0;
+}
+
+data-grid > .dg-frame > .dg-scroll {
+  overflow: auto;
+  background: var(--dg-bg);
+  border: 0;
+  border-radius: 0;
   flex: auto;
   min-height: 0;
 }
 
-data-grid > .dg-scroll:focus-visible {
+data-grid > .dg-frame > .dg-scroll:focus-visible {
   outline: 2px solid var(--dg-accent);
   outline-offset: 2px;
 }
 
-data-grid.dg-snap-columns > .dg-scroll {
+data-grid.dg-snap-columns .dg-scroll {
   scroll-padding-inline-start: var(--dg-frozen-start-width, 0px);
   scroll-padding-inline-end: var(--dg-frozen-end-width, 0px);
   scroll-snap-type: inline proximity;
@@ -167,7 +179,7 @@ data-grid.dg-snap-columns .dg-head-columns > th:not([hidden]) {
   scroll-snap-align: start;
 }
 
-data-grid > .dg-scroll > table {
+data-grid .dg-scroll > table {
   display: table;
   table-layout: fixed;
   white-space: normal;
@@ -189,12 +201,12 @@ data-grid caption {
   font-weight: 600;
 }
 
-data-grid thead, data-grid tfoot {
+data-grid thead, data-grid .dg-footer {
   background-color: var(--dg-header-bg);
   color: var(--dg-header-color);
 }
 
-data-grid[data-loading]:not(.dg-initialized) thead, data-grid[data-loading]:not(.dg-initialized) tfoot {
+data-grid[data-loading]:not(.dg-initialized) thead, data-grid[data-loading]:not(.dg-initialized) .dg-footer {
   background: none;
 }
 
@@ -206,7 +218,7 @@ data-grid[data-loading] tbody {
   pointer-events: none;
 }
 
-data-grid[data-loading]:not(:has(th)) tfoot {
+data-grid[data-loading]:not(:has(th)) .dg-footer {
   display: none;
 }
 
@@ -375,19 +387,12 @@ data-grid button, data-grid input, data-grid select {
   font: inherit;
 }
 
-data-grid > .dg-scroll > table > thead, data-grid > .dg-scroll > table > tfoot {
+data-grid .dg-scroll > table > thead {
   z-index: 2;
   position: sticky;
   border: 0;
   margin: 0;
-}
-
-data-grid > .dg-scroll > table > thead {
   top: 0;
-}
-
-data-grid > .dg-scroll > table > tfoot {
-  bottom: 0;
 }
 
 data-grid .dg-nav-icon, data-grid .dg-skip-icon {
@@ -773,11 +778,11 @@ data-grid tbody tr {
   transition: background-color .12s;
 }
 
-data-grid > .dg-scroll > table > tbody > tr > td {
+data-grid .dg-scroll > table > tbody > tr > td {
   border-bottom: 1px solid var(--dg-row-border-color);
 }
 
-data-grid > .dg-scroll > table > tbody > tr:last-child > td {
+data-grid .dg-scroll > table > tbody > tr:last-child > td {
   border-bottom: 0;
 }
 
@@ -831,65 +836,47 @@ data-grid [data-frozen="end"][data-frozen-edge] {
   border-left: 1px solid var(--dg-border-color);
 }
 
-data-grid tfoot {
-  min-width: 280px;
-}
-
-data-grid tfoot td {
+data-grid .dg-footer {
+  display: flex;
+  align-items:  center;
+  gap: var(--dg-space-3);
   border-top: 1px solid var(--dg-border-color);
   padding: var(--dg-space-2) var(--dg-padding-x);
-  overflow: visible;
+  flex-flow: wrap;
+  flex: none;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
-data-grid tfoot .dg-page-nav {
+data-grid .dg-footer .dg-page-nav {
   display: flex;
   align-items:  center;
   gap: var(--dg-space-2);
 }
 
-data-grid tfoot .dg-input-page {
+data-grid .dg-footer .dg-input-page {
   text-align: center;
   width: 4.5rem;
 }
 
-data-grid tfoot .dg-select-per-page, data-grid tfoot .dg-input-page {
+data-grid .dg-footer .dg-select-per-page, data-grid .dg-footer .dg-input-page {
   block-size: 2em;
 }
 
-data-grid tfoot .dg-footer {
-  display: flex;
-  align-items:  center;
-  gap: var(--dg-space-3);
-  flex-flow: wrap;
-  justify-content: flex-end;
-}
-
-data-grid tfoot .dg-footer-controls {
+data-grid .dg-footer .dg-footer-controls {
   display: flex;
   align-items:  center;
   gap: 1em;
 }
 
-data-grid tfoot .dg-meta {
-  position: sticky;
-  left: var(--dg-padding-x);
-  background-color: var(--dg-header-bg);
-}
-
-data-grid tfoot .dg-footer-controls {
-  position: sticky;
-  right: var(--dg-padding-x);
-  background-color: var(--dg-header-bg);
-}
-
-data-grid tfoot .dg-pagination {
+data-grid .dg-footer .dg-pagination {
   display: flex;
   text-align: center;
   align-items:  center;
   gap: .25em;
 }
 
-data-grid tfoot .dg-pagination button {
+data-grid .dg-footer .dg-pagination button {
   background-color: var(--dg-control-bg);
   border: 1px solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
@@ -904,17 +891,17 @@ data-grid tfoot .dg-pagination button {
   line-height: 1;
 }
 
-data-grid tfoot .dg-pagination button:hover:not(:disabled) {
+data-grid .dg-footer .dg-pagination button:hover:not(:disabled) {
   background-color: var(--dg-bg);
   border-color: var(--dg-accent);
   color: var(--dg-color);
 }
 
-data-grid tfoot .dg-pagination button:disabled {
+data-grid .dg-footer .dg-pagination button:disabled {
   opacity: .4;
 }
 
-data-grid tfoot .dg-meta {
+data-grid .dg-footer .dg-meta {
   color: var(--dg-muted-color);
   font-variant-numeric: tabular-nums;
   text-align: left;
@@ -924,7 +911,7 @@ data-grid tfoot .dg-meta {
   font-size: .875em;
 }
 
-data-grid tfoot.dg-footer-compact .dg-meta, data-grid tfoot.dg-footer-compact .dg-input-page, data-grid.dg-pager-more tfoot .dg-pagination, data-grid.dg-pager-more tfoot .dg-page-nav {
+data-grid .dg-footer.dg-footer-compact .dg-meta, data-grid .dg-footer.dg-footer-compact .dg-input-page, data-grid.dg-pager-more .dg-footer .dg-pagination, data-grid.dg-pager-more .dg-footer .dg-page-nav {
   display: none;
 }
 
@@ -1052,17 +1039,10 @@ data-grid .dg-boolean[data-value="false"]:after {
 }
 
 /* css/_rtl.css */
-data-grid[dir="rtl"] tfoot .dg-meta {
+data-grid[dir="rtl"] .dg-footer .dg-meta {
   text-align: right;
-  left: auto;
-  right: var(--dg-padding-x);
   margin-left: auto;
   margin-right: 0;
-}
-
-data-grid[dir="rtl"] tfoot .dg-footer-controls {
-  right: auto;
-  left: var(--dg-padding-x);
 }
 
 data-grid[dir="rtl"] .dg-resizer {

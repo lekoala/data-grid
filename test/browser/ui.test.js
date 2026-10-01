@@ -738,7 +738,7 @@ test.skipIf(IS_WINDOWS)(
         await waitFor(v, "window.grid && window.grid.rows.length > 0");
 
         // Constrain the host so the .dg-scroll viewport (the table's scroll
-        // area) is the vertical stick container for thead/tfoot.
+        // area) is the vertical stick container for thead.
         await v.evaluate("window.grid.style.maxHeight = '200px'");
         await new Promise((resolve) => setTimeout(resolve, 150));
 

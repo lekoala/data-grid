@@ -414,24 +414,23 @@ class ResponsiveGrid extends BasePlugin {
 
     /** @param {Number} size */
     #syncFooter(size) {
-        // Footer compact state is independent of column changes.
-        const table = this.grid.table;
-        if (!table) {
+        // Footer compact state is independent of column changes. The footer is
+        // grid chrome outside the table: measure it against the grid width.
+        const footer = this.grid.footerEl;
+        if (!footer) {
             return;
         }
-        const footer = table.querySelector("tfoot");
-        if (footer) {
-            const realFooterWidth = /** @type {HTMLElement[]} */ ([
-                ...footer.querySelectorAll(".dg-footer > div"),
-            ]).reduce((result, div) => {
+        const realFooterWidth = /** @type {HTMLElement[]} */ ([...footer.querySelectorAll(":scope > div")]).reduce(
+            (result, div) => {
                 return result + div.offsetWidth;
-            }, 0);
-            const availableFooterWidth = footer.offsetWidth - realFooterWidth;
-            if (realFooterWidth > size) {
-                footer.classList.add("dg-footer-compact");
-            } else if (availableFooterWidth > 250) {
-                footer.classList.remove("dg-footer-compact");
-            }
+            },
+            0,
+        );
+        const availableFooterWidth = footer.offsetWidth - realFooterWidth;
+        if (realFooterWidth > size) {
+            footer.classList.add("dg-footer-compact");
+        } else if (availableFooterWidth > 250) {
+            footer.classList.remove("dg-footer-compact");
         }
     }
 

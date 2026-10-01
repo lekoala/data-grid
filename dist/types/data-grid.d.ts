@@ -589,9 +589,9 @@ declare class DataGrid extends BaseElement {
      */
     table: HTMLTableElement | null;
     /**
-     * The table viewport: a wrapper that owns the scroll, the outer border and
-     * radius, and is the sticky containing block for thead/tfoot. Guaranteed to
-     * exist as a direct child of the host after `_connected()`.
+     * The table viewport: the scrollable pane inside `.dg-frame` that owns
+     * the scroll and is the sticky containing block for thead. Guaranteed
+     * to exist as `.dg-frame > .dg-scroll` after `_connected()`.
      * @type {HTMLDivElement}
      */
     scrollEl: HTMLDivElement;
@@ -760,8 +760,8 @@ declare class DataGrid extends BaseElement {
     get thead(): HTMLTableSectionElement;
     /** @returns {HTMLTableSectionElement} */
     get tbody(): HTMLTableSectionElement;
-    /** @returns {HTMLTableSectionElement} */
-    get tfoot(): HTMLTableSectionElement;
+    /** @returns {HTMLDivElement|null} */
+    get footerEl(): HTMLDivElement | null;
     /**
      * Pick the data source based on configuration.
      */

@@ -2076,45 +2076,41 @@ class DataGrid extends base_element_default {
   }
   static template() {
     return `
+<div class="dg-frame">
 <table data-dg-generated-table>
     <thead>
         <tr class="dg-head-columns"><th><!-- keep for getTextWidth --></th></tr>
         <tr class="dg-head-filters"></tr>
     </thead>
     <tbody data-empty-message=""></tbody>
-    <tfoot hidden>
-        <tr>
-            <td>
-            <div class="dg-footer">
-                <div class="dg-footer-controls">
-                <div class="dg-page-nav">
-                  <span class="dg-select-field">
-                    <select class="dg-select-per-page"></select>
-                  </span>
-                </div>
-                <div class="dg-pagination" role="group">
-                  <button type="button" class="dg-btn-first dg-rotate" disabled>
-                    <i class="dg-skip-icon"></i>
-                  </button>
-                  <button type="button" class="dg-btn-prev dg-rotate" disabled>
-                    <i class="dg-nav-icon"></i>
-                  </button>
-                  <input type="number" class="dg-input-page" min="1" step="1" value="1">
-                  <button type="button" class="dg-btn-next" disabled>
-                    <i class="dg-nav-icon"></i>
-                  </button>
-                  <button type="button" class="dg-btn-last" disabled>
-                    <i class="dg-skip-icon"></i>
-                  </button>
-                </div>
-                </div>
-                <div class="dg-meta"></div>
-                <button type="button" class="dg-load-more" hidden></button>
-            </div>
-            </td>
-        </tr>
-</tfoot>
 </table>
+<div class="dg-footer" hidden>
+    <div class="dg-footer-controls">
+    <div class="dg-page-nav">
+      <span class="dg-select-field">
+        <select class="dg-select-per-page"></select>
+      </span>
+    </div>
+    <div class="dg-pagination" role="group">
+      <button type="button" class="dg-btn-first dg-rotate" disabled>
+        <i class="dg-skip-icon"></i>
+      </button>
+      <button type="button" class="dg-btn-prev dg-rotate" disabled>
+        <i class="dg-nav-icon"></i>
+      </button>
+      <input type="number" class="dg-input-page" min="1" step="1" value="1">
+      <button type="button" class="dg-btn-next" disabled>
+        <i class="dg-nav-icon"></i>
+      </button>
+      <button type="button" class="dg-btn-last" disabled>
+        <i class="dg-skip-icon"></i>
+      </button>
+    </div>
+    </div>
+    <div class="dg-meta"></div>
+    <button type="button" class="dg-load-more" hidden></button>
+</div>
+</div>
 <div class="dg-status" role="status" aria-atomic="true"></div>
 `;
   }
@@ -2364,8 +2360,8 @@ class DataGrid extends base_element_default {
   get tbody() {
     return this.querySelector("tbody");
   }
-  get tfoot() {
-    return this.querySelector("tfoot");
+  get footerEl() {
+    return this.querySelector(".dg-footer");
   }
   setupDataSource() {
     if (this.options.dataSource) {
@@ -2761,7 +2757,8 @@ class DataGrid extends base_element_default {
       const end = document.createElement("div");
       end.className = "dg-topbar-end";
       topbar.append(start, end);
-      this.insertBefore(topbar, this.scrollEl);
+      const frame = this.querySelector(":scope > .dg-frame");
+      this.insertBefore(topbar, frame ?? this.scrollEl);
     }
     return topbar;
   }
@@ -2811,8 +2808,8 @@ class DataGrid extends base_element_default {
     return this.setQuery({ search: value });
   }
   #adoptDeclarativeTable() {
-    const adopted = this.querySelector(":scope > table[data-dg-table]");
-    const generated = this.querySelector(":scope > table[data-dg-generated-table]");
+    const adopted = this.querySelector("table[data-dg-table]");
+    const generated = this.querySelector("table[data-dg-generated-table]");
     if (adopted) {
       generated?.remove();
       return;
@@ -2820,7 +2817,7 @@ class DataGrid extends base_element_default {
     if (!generated) {
       return;
     }
-    const supplied = Array.from(this.querySelectorAll(":scope > table")).find((table) => table !== generated);
+    const supplied = Array.from(this.querySelectorAll("table")).find((table) => table !== generated);
     if (!supplied) {
       return;
     }
@@ -2846,41 +2843,59 @@ class DataGrid extends base_element_default {
     supplied.querySelector("thead > tr:first-child")?.remove();
     if (generated) {
       const tbody = generated.querySelector("tbody");
-      const tfoot = generated.querySelector("tfoot");
       supplied.querySelector("tbody")?.remove();
       supplied.querySelector("tfoot")?.remove();
       if (tbody) {
         supplied.appendChild(tbody);
-      }
-      if (tfoot) {
-        supplied.appendChild(tfoot);
       }
       generated.remove();
     }
     supplied.setAttribute("data-dg-table", "");
   }
   #wrapScroll() {
-    const existing = this.querySelector(":scope > .dg-scroll");
-    if (existing) {
-      existing.className = "dg-scroll";
-      existing.tabIndex = 0;
-      this.scrollEl = existing;
-      const table = existing.querySelector(":scope > table");
+    let frame = this.querySelector(":scope > .dg-frame");
+    if (!frame) {
+      frame = document.createElement("div");
+      frame.className = "dg-frame";
+      const table = this.querySelector(":scope > table");
+      const footer = this.querySelector(":scope > .dg-footer");
+      this.insertBefore(frame, table ?? footer ?? null);
       if (table) {
-        this.table = table;
+        frame.appendChild(table);
       }
-      return;
+      if (footer) {
+        frame.appendChild(footer);
+      } else {
+        const fallback = document.createElement("div");
+        fallback.className = "dg-footer";
+        fallback.setAttribute("hidden", "");
+        frame.appendChild(fallback);
+      }
     }
-    const scroll = document.createElement("div");
-    scroll.className = "dg-scroll";
-    scroll.tabIndex = 0;
-    if (this.table) {
-      this.insertBefore(scroll, this.table);
-      scroll.appendChild(this.table);
+    let scroll = frame.querySelector(":scope > .dg-scroll");
+    if (!scroll) {
+      scroll = document.createElement("div");
+      scroll.className = "dg-scroll";
+      scroll.tabIndex = 0;
+      const table = frame.querySelector(":scope > table") ?? this.querySelector(":scope > table");
+      const footer = frame.querySelector(":scope > .dg-footer");
+      frame.insertBefore(scroll, footer ?? frame.firstChild);
+      if (table) {
+        scroll.appendChild(table);
+      }
     } else {
-      this.appendChild(scroll);
+      scroll.className = "dg-scroll";
+      scroll.tabIndex = 0;
+    }
+    const footer = frame.querySelector(":scope > .dg-footer");
+    if (footer && footer.previousElementSibling !== scroll) {
+      frame.appendChild(footer);
     }
     this.scrollEl = scroll;
+    const table = scroll.querySelector(":scope > table");
+    if (table) {
+      this.table = table;
+    }
   }
   async _connected() {
     this.#adoptDeclarativeTable();
@@ -3750,16 +3765,11 @@ class DataGrid extends base_element_default {
   }
   renderFooter() {
     this.log("render footer");
-    const tfoot = this.tfoot;
-    if (!tfoot)
-      return;
-    const td = tfoot.querySelector("td");
-    if (!td)
+    const footer = this.footerEl;
+    if (!footer)
       return;
     const hide = this.options.pager === "more" ? this.options.autohidePager && this.total === 0 : this.options.autohidePager && this.totalPages() <= 1;
-    tfoot.toggleAttribute("hidden", hide);
-    td.colSpan = Math.max(1, this.columnsLength(true));
-    tfoot.style.display = "";
+    footer.toggleAttribute("hidden", hide);
   }
   createColumnHeaders(thead) {
     const availableWidth = this.scrollEl.clientWidth;
@@ -4215,15 +4225,15 @@ class DataGrid extends base_element_default {
   }
   paginate() {
     this.log("paginate");
-    const tfoot = this.tfoot;
-    if (!tfoot)
+    const footer = this.footerEl;
+    if (!footer)
       return;
     this.classList.toggle("dg-pager-more", this.options.pager === "more");
     if (this.options.pager === "more") {
       this.pages = this.totalPages();
       this.updateMetaLabel();
       this.#updateMoreButton();
-      tfoot.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
+      footer.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
       return;
     }
     this.pages = this.totalPages();
@@ -4237,7 +4247,7 @@ class DataGrid extends base_element_default {
       this.btnLast.disabled = this.#query.page >= this.pages;
     this.updateMetaLabel();
     this.updatePageStatus();
-    tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
+    footer.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
   }
   totalPages() {
     if (this.total == null) {
@@ -5329,23 +5339,18 @@ class ResponsiveGrid extends base_plugin_default {
     return changed;
   }
   #syncFooter(size) {
-    const table = this.grid.table;
-    if (!table) {
+    const footer = this.grid.footerEl;
+    if (!footer) {
       return;
     }
-    const footer = table.querySelector("tfoot");
-    if (footer) {
-      const realFooterWidth = [
-        ...footer.querySelectorAll(".dg-footer > div")
-      ].reduce((result, div) => {
-        return result + div.offsetWidth;
-      }, 0);
-      const availableFooterWidth = footer.offsetWidth - realFooterWidth;
-      if (realFooterWidth > size) {
-        footer.classList.add("dg-footer-compact");
-      } else if (availableFooterWidth > 250) {
-        footer.classList.remove("dg-footer-compact");
-      }
+    const realFooterWidth = [...footer.querySelectorAll(":scope > div")].reduce((result, div) => {
+      return result + div.offsetWidth;
+    }, 0);
+    const availableFooterWidth = footer.offsetWidth - realFooterWidth;
+    if (realFooterWidth > size) {
+      footer.classList.add("dg-footer-compact");
+    } else if (availableFooterWidth > 250) {
+      footer.classList.remove("dg-footer-compact");
     }
   }
   #rebuildDetailsSafely() {

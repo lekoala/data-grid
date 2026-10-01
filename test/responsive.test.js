@@ -166,7 +166,7 @@ test("fixed virtual columns consume width", async () => {
 
 test("responsive works without a footer", async () => {
     const inst = await makeReadyGrid({ columns: COLS });
-    inst.querySelector("tfoot")?.remove();
+    inst.querySelector(".dg-footer")?.remove();
     expect(() => forceResize(inst, 100)).not.toThrow();
     expect(hiddenFields(inst)).toEqual(["b", "c", "d"]);
     document.body.removeChild(inst);

@@ -53,10 +53,11 @@ tokens (`--dg-cell-padding-*`, `--dg-header-padding-y`, `--dg-control-height`).
 
 ## Scrollable grid
 
-The header (columns + filter row) stays pinned to the top and the footer to the
-bottom of the grid's own scroll viewport. This is the **default** — no option
-is needed. Give the grid a constrained height and it becomes its own scroll
-container, keeping its chrome visible while the rows scroll:
+The header (columns + filter row) stays pinned to the top of the grid's own
+scroll viewport, and the footer pager bar sits below that viewport in the
+frame. This is the **default** — no option is needed. Give the grid a
+constrained height and it becomes its own scroll container, keeping its chrome
+visible while the rows scroll:
 
 ```css
 .results-grid {

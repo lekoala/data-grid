@@ -496,7 +496,7 @@ test("autohidePager keeps the status line while more may follow", async () => {
         dataSource: ds,
     });
 
-    expect(inst.tfoot.hasAttribute("hidden")).toBe(false);
+    expect(inst.footerEl.hasAttribute("hidden")).toBe(false);
     expect(metaText(inst)).toBe("20");
     document.body.removeChild(inst);
 });

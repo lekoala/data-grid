@@ -25,6 +25,19 @@ function removeGrid(inst) {
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 20));
 
+test("the footer is grid chrome outside the table scroller", async () => {
+    const inst = await makeReadyGrid({ pageSize: 10 });
+    const footer = inst.footerEl;
+    expect(footer).toBeTruthy();
+    // No tfoot: the footer never scrolls horizontally with the table.
+    expect(inst.querySelector("tfoot")).toBeNull();
+    expect(footer.closest(".dg-frame")).toBe(inst.querySelector(":scope > .dg-frame"));
+    expect(footer.parentElement).toBe(inst.querySelector(":scope > .dg-frame"));
+    expect(footer.previousElementSibling).toBe(inst.scrollEl);
+    expect(inst.table.contains(footer)).toBe(false);
+    removeGrid(inst);
+});
+
 test("the page-size select and its caret wrapper toggle together", async () => {
     const inst = await makeReadyGrid({ showPageSize: false });
     const select = inst.querySelector(".dg-select-per-page");
@@ -126,7 +139,7 @@ test("autohide-pager hides the footer only when there is one logical page", asyn
         const data = Array.from({ length: count }, (_, i) => ({ id: i }));
         const inst = await makeReadyGrid({ autohidePager: true, pageSize: 10 }, data);
         expect(inst.totalPages()).toBe(hidden ? 1 : 2);
-        expect(inst.tfoot.hidden).toBe(hidden);
+        expect(inst.footerEl.hidden).toBe(hidden);
         removeGrid(inst);
     }
 });

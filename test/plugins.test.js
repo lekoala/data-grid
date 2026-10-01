@@ -129,12 +129,15 @@ test("hideColumn and showColumn sync header, body and footer", async () => {
     inst.hideColumn("age");
     expect(inst.querySelector('thead th[data-column-id="age"]').hasAttribute("hidden")).toBe(true);
     expect(inst.querySelector('tbody td[data-column-id="age"]').hasAttribute("hidden")).toBe(true);
-    expect(inst.tfoot?.querySelector("td").colSpan).toBe(1);
+    // The footer lives outside the table: no colspan to resync, it just stays.
+    expect(inst.querySelector("tfoot")).toBeNull();
+    expect(inst.footerEl?.hidden).toBe(false);
 
     inst.showColumn("age");
     expect(inst.querySelector('thead th[data-column-id="age"]').hasAttribute("hidden")).toBe(false);
     expect(inst.querySelector('tbody td[data-column-id="age"]').hasAttribute("hidden")).toBe(false);
-    expect(inst.tfoot?.querySelector("td").colSpan).toBe(2);
+    expect(inst.querySelector("tfoot")).toBeNull();
+    expect(inst.footerEl?.hidden).toBe(false);
     document.body.removeChild(inst);
 });
 

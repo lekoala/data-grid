@@ -73,7 +73,7 @@ test("a truncated cell exposes its full text as a native tooltip", async () => {
 test("reconnecting the element does not duplicate the template", async () => {
     const inst = await makeReadyGrid({}, []);
     expect(inst.querySelectorAll("table").length).toBe(1);
-    expect(inst.querySelectorAll(":scope > .dg-scroll").length).toBe(1);
+    expect(inst.querySelectorAll(":scope > .dg-frame").length).toBe(1);
 
     // Disconnect and wait for the disconnected callback to complete
     removeGrid(inst);
@@ -87,9 +87,9 @@ test("reconnecting the element does not duplicate the template", async () => {
     });
 
     expect(inst.querySelectorAll("table").length).toBe(1);
-    // The .dg-scroll viewport stays a single, stable invariant across reconnect
-    expect(inst.querySelectorAll(":scope > .dg-scroll").length).toBe(1);
-    expect(inst.scrollEl).toBe(inst.querySelector(":scope > .dg-scroll"));
+    // The .dg-frame stays a single, stable invariant across reconnect
+    expect(inst.querySelectorAll(":scope > .dg-frame").length).toBe(1);
+    expect(inst.scrollEl).toBe(inst.querySelector(":scope > .dg-frame > .dg-scroll"));
     expect(inst.scrollEl.querySelector(":scope > table")).toBe(inst.table);
     removeGrid(inst);
 });
@@ -326,9 +326,10 @@ test("setQuery resets page to 1 on population change unless page is provided", a
 test("inferring columns from the first load rebuilds the table structure", async () => {
     const inst = await makeReadyGrid({}, []);
 
-    // Initial empty state: no columns, but never an invalid colspan
+    // Initial empty state: no columns, footer outside the table
     expect(inst.options.columns).toHaveLength(0);
-    expect(inst.tfoot?.querySelector("td")?.colSpan).toBeGreaterThanOrEqual(1);
+    expect(inst.querySelector("tfoot")).toBeNull();
+    expect(inst.footerEl).toBeTruthy();
 
     // First load infers the schema and rebuilds header + footer
     inst.dataSource = new ArrayDataSource([
@@ -340,7 +341,8 @@ test("inferring columns from the first load rebuilds the table structure", async
     expect(inst.options.columns.map((c) => c.field)).toEqual(["id", "name"]);
     expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(2);
     expect(inst.querySelector("tbody tr").querySelectorAll("td")).toHaveLength(2);
-    expect(inst.tfoot?.querySelector("td")?.colSpan).toBe(2);
+    expect(inst.querySelector("tfoot")).toBeNull();
+    expect(inst.footerEl).toBeTruthy();
 
     // Clearing the data keeps the schema and the structure
     inst.dataSource = new ArrayDataSource([]);

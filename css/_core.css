@@ -70,7 +70,7 @@ data-grid {
   color: var(--dg-color);
   font: inherit;
   line-height: inherit;
-  /* Vertical layout: optional topbar above, .dg-scroll below. */
+  /* Vertical layout: optional topbar above, .dg-frame (.dg-scroll + footer). */
   display: flex;
   flex-direction: column;
   min-height: 6rem;
@@ -134,29 +134,29 @@ data-grid {
   --dg-scroller-background: transparent;
 }
 
-data-grid > .dg-scroll {
+data-grid > .dg-frame > .dg-scroll {
   scrollbar-color: var(--dg-scroller-thumb) var(--dg-scroller-background);
   scrollbar-width: thin;
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar {
+data-grid .dg-scroll::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar-track {
+data-grid .dg-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar-thumb {
+data-grid .dg-scroll::-webkit-scrollbar-thumb {
   background: var(--dg-scroller-thumb);
 }
 
-data-grid > .dg-scroll::-webkit-scrollbar-thumb:hover {
+data-grid .dg-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--dg-scroller-thumb-hover);
 }
 
-data-grid > .dg-scroll > table tr.dg-head-columns:is(:empty, :has(> :first-child:not([scope="col"]))) {
+data-grid > .dg-frame > .dg-scroll > table tr.dg-head-columns:is(:empty, :has(> :first-child:not([scope="col"]))) {
   display: none;
 }
 
@@ -171,24 +171,38 @@ data-grid [hidden] {
   display: none;
 }
 
-data-grid > .dg-scroll {
-  /* The table viewport. Owns the scroll, the outer border and radius, and acts
-     as the sticky containing block, so thead/tfoot stick at top:0/bottom:0
-     without any border-offset compensation. */
+/* The frame owns the outer border, radius and clipping. The scroll viewport
+   owns the scroll only; the footer pager bar sits after it and never scrolls
+   horizontally with the table. */
+data-grid > .dg-frame {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--dg-bg);
+  border: 1px solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  min-width: 280px;
+}
+
+data-grid > .dg-frame > .dg-scroll {
+  /* The table viewport. Owns the scroll and acts as the sticky containing
+     block, so thead sticks at top:0 without any border-offset compensation. */
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   background: var(--dg-bg);
-  border: 1px solid var(--dg-border-color);
-  border-radius: var(--dg-radius);
+  border: 0;
+  border-radius: 0;
 }
 
-data-grid > .dg-scroll:focus-visible {
+data-grid > .dg-frame > .dg-scroll:focus-visible {
   outline: 2px solid var(--dg-accent);
   outline-offset: 2px;
 }
 
-data-grid.dg-snap-columns > .dg-scroll {
+data-grid.dg-snap-columns .dg-scroll {
   scroll-padding-inline-start: var(--dg-frozen-start-width, 0px);
   scroll-padding-inline-end: var(--dg-frozen-end-width, 0px);
   scroll-snap-type: inline proximity;
@@ -198,7 +212,7 @@ data-grid.dg-snap-columns .dg-head-columns > th:not([hidden]) {
   scroll-snap-align: start;
 }
 
-data-grid > .dg-scroll > table {
+data-grid .dg-scroll > table {
   display: table;
   table-layout: fixed;
   width: 100%;
@@ -224,13 +238,13 @@ data-grid caption {
 }
 
 data-grid thead,
-data-grid tfoot {
+data-grid .dg-footer {
   background-color: var(--dg-header-bg);
   color: var(--dg-header-color);
 }
 
 data-grid[data-loading]:not(.dg-initialized) thead,
-data-grid[data-loading]:not(.dg-initialized) tfoot {
+data-grid[data-loading]:not(.dg-initialized) .dg-footer {
   background: none;
 }
 
@@ -242,7 +256,7 @@ data-grid[data-loading] tbody {
   pointer-events: none;
 }
 
-data-grid[data-loading]:not(:has(th)) tfoot {
+data-grid[data-loading]:not(:has(th)) .dg-footer {
   display: none;
 }
 
@@ -426,20 +440,12 @@ data-grid select {
   font: inherit;
 }
 
-data-grid > .dg-scroll > table > thead,
-data-grid > .dg-scroll > table > tfoot {
+data-grid .dg-scroll > table > thead {
   z-index: 2;
   position: sticky;
+  inset-block-start: 0;
   margin: 0;
   border: 0;
-}
-
-data-grid > .dg-scroll > table > thead {
-  inset-block-start: 0;
-}
-
-data-grid > .dg-scroll > table > tfoot {
-  inset-block-end: 0;
 }
 
 /* Pagination icons: small CSS arrows (chevron + bar for first/last), sized in
@@ -799,11 +805,11 @@ data-grid tbody tr {
 
 /* Horizontal row dividers live on the cells: Chrome does not paint borders on
    <tr>. Direct cells only, so the nested responsive table stays untouched. */
-data-grid > .dg-scroll > table > tbody > tr > td {
+data-grid .dg-scroll > table > tbody > tr > td {
   border-bottom: 1px solid var(--dg-row-border-color);
 }
 
-data-grid > .dg-scroll > table > tbody > tr:last-child > td {
+data-grid .dg-scroll > table > tbody > tr:last-child > td {
   border-bottom: 0;
 }
 
@@ -865,26 +871,28 @@ data-grid [data-frozen="end"][data-frozen-edge] {
   border-left: 1px solid var(--dg-border-color);
 }
 
-data-grid tfoot {
-  min-width: 280px;
-}
-
-data-grid tfoot td {
+/* Footer pager bar: grid chrome below the scroll viewport. It spans the
+   visible frame width and never scrolls horizontally with the table. */
+data-grid .dg-footer {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: var(--dg-space-3);
+  justify-content: flex-end;
+  flex: none;
   border-top: 1px solid var(--dg-border-color);
   padding: var(--dg-space-2) var(--dg-padding-x);
-  /* Visible overflow so the sticky footer ends below anchor to the scroll
-     viewport instead of this cell: any non-visible overflow would make the
-     cell itself their scrollport and the sticky offsets would never engage. */
-  overflow: visible;
+  min-width: 0;
 }
 
-data-grid tfoot .dg-page-nav {
+data-grid .dg-footer .dg-page-nav {
   display: flex;
   align-items: center;
   gap: var(--dg-space-2);
 }
 
-data-grid tfoot .dg-input-page {
+data-grid .dg-footer .dg-input-page {
   text-align: center;
   width: 4.5rem;
 }
@@ -892,54 +900,27 @@ data-grid tfoot .dg-input-page {
 /* The page-size select and page input share the pager button rhythm: a 2em
    square-ish control that scales with the type, so a large host font grows
    them instead of cranking a fixed 32px height. */
-data-grid tfoot .dg-select-per-page,
-data-grid tfoot .dg-input-page {
+data-grid .dg-footer .dg-select-per-page,
+data-grid .dg-footer .dg-input-page {
   block-size: 2em;
-}
-
-data-grid tfoot .dg-footer {
-  display: flex;
-  align-items: center;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--dg-space-3);
-  justify-content: flex-end;
 }
 
 /* Right-hand block: page-size selector + navigation group, geometrically
    centered as peers. */
-data-grid tfoot .dg-footer-controls {
+data-grid .dg-footer .dg-footer-controls {
   display: flex;
   align-items: center;
   gap: 1em;
 }
 
-/* Sticky footer ends: the count stays readable at the inline-start edge and
-   the pager controls at the inline-end edge while the table scrolls
-   horizontally. Opaque like frozen cells, so scrolled content never shows
-   through the pinned blocks; the padding offset keeps the stuck position
-   aligned with the resting one. Physical LTR here, mirrored for
-   [dir="rtl"] in _rtl.css. */
-data-grid tfoot .dg-meta {
-  position: sticky;
-  left: var(--dg-padding-x);
-  background-color: var(--dg-header-bg);
-}
-
-data-grid tfoot .dg-footer-controls {
-  position: sticky;
-  right: var(--dg-padding-x);
-  background-color: var(--dg-header-bg);
-}
-
-data-grid tfoot .dg-pagination {
+data-grid .dg-footer .dg-pagination {
   display: flex;
   align-items: center;
   gap: 0.25em;
   text-align: center;
 }
 
-data-grid tfoot .dg-pagination button {
+data-grid .dg-footer .dg-pagination button {
   background-color: var(--dg-control-bg);
   border: 1px solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
@@ -954,18 +935,18 @@ data-grid tfoot .dg-pagination button {
   height: 2em;
 }
 
-data-grid tfoot .dg-pagination button:hover:not(:disabled) {
+data-grid .dg-footer .dg-pagination button:hover:not(:disabled) {
   background-color: var(--dg-bg);
   border-color: var(--dg-accent);
   color: var(--dg-color);
 }
 
 /* Disabled pager buttons stay recognizably present: clearly off, not artifacts. */
-data-grid tfoot .dg-pagination button:disabled {
+data-grid .dg-footer .dg-pagination button:disabled {
   opacity: 0.4;
 }
 
-data-grid tfoot .dg-meta {
+data-grid .dg-footer .dg-meta {
   color: var(--dg-muted-color);
   font-size: 0.875em;
   font-variant-numeric: tabular-nums;
@@ -975,19 +956,19 @@ data-grid tfoot .dg-meta {
   white-space: nowrap;
 }
 
-data-grid tfoot.dg-footer-compact .dg-meta {
+data-grid .dg-footer.dg-footer-compact .dg-meta {
   display: none;
 }
 
-data-grid tfoot.dg-footer-compact .dg-input-page {
+data-grid .dg-footer.dg-footer-compact .dg-input-page {
   display: none;
 }
 
 /* Progressive pager ("more"): the page navigation hides, the explicit Load
    more button takes its place next to the loaded count. Visibility only, no
    direction involved. */
-data-grid.dg-pager-more tfoot .dg-pagination,
-data-grid.dg-pager-more tfoot .dg-page-nav {
+data-grid.dg-pager-more .dg-footer .dg-pagination,
+data-grid.dg-pager-more .dg-footer .dg-page-nav {
   display: none;
 }
 
