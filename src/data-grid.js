@@ -87,7 +87,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {String} [id] - stable identifier (defaults to field). Plugin columns use "$..." ids.
  * @property {Boolean} [virtual] - injected by a plugin
  * @property {"start"|"end"} [position] - order group for plugin columns
- * @property {"start"|null} [frozen] - keep the column pinned to the inline start edge while scrolling
+ * @property {"start"|"end"|null} [frozen] - keep the column pinned to the inline start or end edge while scrolling (pair with position "start"/"end")
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
  * @property {Number} [width] - the preferred width of the column (auto otherwise); a user resize commits back into this value at runtime (SaveState module)
  * @property {Number} [minWidth] - the column is never compressed below this width
@@ -2633,12 +2633,27 @@ class DataGrid extends BaseElement {
         for (const cell of this.querySelectorAll("[data-frozen-edge]")) {
             cell.removeAttribute("data-frozen-edge");
         }
+        this.#syncFrozenSide("start");
+        this.#syncFrozenSide("end");
+    }
+
+    /**
+     * Measure one frozen side and assign its sticky offsets. The start pass
+     * walks columns in display order, the end pass in reverse; in both cases
+     * the last visited group column owns the boundary separator, so adjacent
+     * frozen columns never draw dividers between them.
+     * @param {"start"|"end"} side
+     */
+    #syncFrozenSide(side) {
+        const ordered = this.getColumns().filter(
+            (column) => column.frozen === side && !isColumnHidden(column) && !column.attr,
+        );
+        if (side === "end") {
+            ordered.reverse();
+        }
         let offset = 0;
         let edgeCells = /** @type {HTMLElement[]} */ ([]);
-        for (const column of this.getColumns()) {
-            if (column.frozen !== "start" || isColumnHidden(column) || column.attr) {
-                continue;
-            }
+        for (const column of ordered) {
             const id = this.getColumnId(column);
             const cells = /** @type {HTMLElement[]} */ ([...this.querySelectorAll(`[data-column-id="${id}"]`)]).filter(
                 (cell) => cell.closest("data-grid") === this,
@@ -2658,7 +2673,10 @@ class DataGrid extends BaseElement {
         for (const cell of edgeCells) {
             cell.setAttribute("data-frozen-edge", "");
         }
-        this.scrollEl.style.setProperty("--dg-frozen-start-width", `${offset}px`);
+        this.scrollEl.style.setProperty(
+            side === "start" ? "--dg-frozen-start-width" : "--dg-frozen-end-width",
+            `${offset}px`,
+        );
     }
 
     oncolumnResized() {

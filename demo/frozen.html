@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid Demo - Frozen columns</title>
+
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+
+    <script type="module">
+      import { ArrayDataSource, DataGrid } from "../data-grid.js";
+
+      const firstNames = ["Ada", "Grace", "Alan", "Edsger", "Barbara", "Donald", "Frances", "John"];
+      const lastNames = ["Lovelace", "Hopper", "Turing", "Dijkstra", "Liskov", "Knuth", "Allen", "McCarthy"];
+      const countries = ["BE", "FR", "DE", "NL", "US"];
+      const statuses = ["active", "pending", "archived"];
+      const rows = Array.from({ length: 40 }, (_, i) => ({
+        id: i + 1,
+        code: `C-${1000 + i}`,
+        first_name: firstNames[i % firstNames.length],
+        last_name: lastNames[(i * 3) % lastNames.length],
+        email: `user-${i + 1}-with-a-rather-long-mailbox@example.com`,
+        country: countries[i % countries.length],
+        plan: ["Starter", "Pro", "Business"][i % 3],
+        verified: i % 2 === 0,
+        income: 30000 + ((i * 7919) % 50000),
+        status: statuses[i % statuses.length],
+      }));
+
+      const grid = new DataGrid({
+        sortable: true,
+        columns: [
+          { field: "id", title: "#", width: 64, frozen: "start" },
+          { field: "code", title: "Code", width: 130, minWidth: 100 },
+          { field: "first_name", title: "First Name", width: 170, minWidth: 140 },
+          { field: "last_name", title: "Last Name", width: 170, minWidth: 140 },
+          { field: "email", title: "Email", width: 340, minWidth: 240 },
+          { field: "country", title: "Country", width: 130, minWidth: 100 },
+          { field: "plan", title: "Plan", width: 150, minWidth: 130 },
+          { field: "income", title: "Income", width: 160, minWidth: 130, format: "number" },
+          { field: "status", title: "Status", width: 150, minWidth: 110, position: "end", frozen: "end" },
+        ],
+        dataSource: new ArrayDataSource(rows),
+      });
+      const host = document.getElementById("frozen-grid");
+      host.replaceChildren(grid);
+      host.style.maxWidth = "860px";
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Standalone data grid web component</em></p>
+    </header>
+    <main>
+      <div data-demo-nav></div>
+      <script type="module">
+        import { renderDemoNav } from "./nav.js";
+        renderDemoNav();
+      </script>
+
+      <h2>Frozen columns</h2>
+
+      <p>The <code>#</code> column sticks to the inline-start edge and <code>Status</code> to the inline-end edge. Scroll horizontally: each frozen block draws its divider only on its outer boundary, never between adjacent frozen columns.</p>
+
+      <div class="demo-grid">
+        <div id="frozen-grid"></div>
+      </div>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>

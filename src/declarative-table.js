@@ -112,8 +112,8 @@ export function parseDeclarativeTable(table) {
                 column.responsive = responsive;
             }
         }
-        if (th.dataset.frozen === "start") {
-            column.frozen = "start";
+        if (th.dataset.frozen === "start" || th.dataset.frozen === "end") {
+            column.frozen = th.dataset.frozen;
         }
         if (th.dataset.hidden !== undefined) {
             column.hidden = parseBooleanAttribute(th.dataset.hidden);

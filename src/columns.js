@@ -89,8 +89,8 @@ export function applyColumnDefinition(el, column) {
     if (column.class) {
         el.classList.add(...column.class.trim().split(/\s+/));
     }
-    if (column.frozen === "start") {
-        el.dataset.frozen = "start";
+    if (column.frozen === "start" || column.frozen === "end") {
+        el.dataset.frozen = column.frozen;
     } else {
         delete el.dataset.frozen;
     }

@@ -2,6 +2,13 @@ data-grid[dir="rtl"] tfoot .dg-meta {
   margin-left: auto;
   margin-right: 0;
   text-align: right;
+  left: auto;
+  right: var(--dg-padding-x);
+}
+
+data-grid[dir="rtl"] tfoot .dg-footer-controls {
+  right: auto;
+  left: var(--dg-padding-x);
 }
 
 data-grid[dir="rtl"] .dg-resizer {
@@ -51,7 +58,17 @@ data-grid[dir="rtl"] [data-frozen="start"] {
   right: var(--dg-frozen-offset, 0px);
 }
 
-data-grid[dir="rtl"] [data-frozen-edge] {
+data-grid[dir="rtl"] [data-frozen="end"] {
+  right: auto;
+  left: var(--dg-frozen-offset, 0px);
+}
+
+data-grid[dir="rtl"] [data-frozen="start"][data-frozen-edge] {
   border-right: 0;
   border-left: 1px solid var(--dg-border-color);
+}
+
+data-grid[dir="rtl"] [data-frozen="end"][data-frozen-edge] {
+  border-left: 0;
+  border-right: 1px solid var(--dg-border-color);
 }

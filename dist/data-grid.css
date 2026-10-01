@@ -159,6 +159,7 @@ data-grid > .dg-scroll:focus-visible {
 
 data-grid.dg-snap-columns > .dg-scroll {
   scroll-padding-inline-start: var(--dg-frozen-start-width, 0px);
+  scroll-padding-inline-end: var(--dg-frozen-end-width, 0px);
   scroll-snap-type: inline proximity;
 }
 
@@ -807,17 +808,27 @@ data-grid [data-frozen="start"] {
   z-index: 1;
 }
 
-data-grid tbody [data-frozen="start"] {
+data-grid [data-frozen="end"] {
+  position: sticky;
+  right: var(--dg-frozen-offset, 0px);
+  z-index: 1;
+}
+
+data-grid tbody [data-frozen="start"], data-grid tbody [data-frozen="end"] {
   background-color: var(--dg-bg);
   background-image: linear-gradient(var(--dg-row-current-bg), var(--dg-row-current-bg));
 }
 
-data-grid thead [data-frozen="start"] {
+data-grid thead [data-frozen="start"], data-grid thead [data-frozen="end"] {
   z-index: 4;
 }
 
-data-grid [data-frozen-edge] {
+data-grid [data-frozen="start"][data-frozen-edge] {
   border-right: 1px solid var(--dg-border-color);
+}
+
+data-grid [data-frozen="end"][data-frozen-edge] {
+  border-left: 1px solid var(--dg-border-color);
 }
 
 data-grid tfoot {
@@ -827,6 +838,7 @@ data-grid tfoot {
 data-grid tfoot td {
   border-top: 1px solid var(--dg-border-color);
   padding: var(--dg-space-2) var(--dg-padding-x);
+  overflow: visible;
 }
 
 data-grid tfoot .dg-page-nav {
@@ -856,6 +868,18 @@ data-grid tfoot .dg-footer-controls {
   display: flex;
   align-items:  center;
   gap: 1em;
+}
+
+data-grid tfoot .dg-meta {
+  position: sticky;
+  left: var(--dg-padding-x);
+  background-color: var(--dg-header-bg);
+}
+
+data-grid tfoot .dg-footer-controls {
+  position: sticky;
+  right: var(--dg-padding-x);
+  background-color: var(--dg-header-bg);
 }
 
 data-grid tfoot .dg-pagination {
@@ -1030,8 +1054,15 @@ data-grid .dg-boolean[data-value="false"]:after {
 /* css/_rtl.css */
 data-grid[dir="rtl"] tfoot .dg-meta {
   text-align: right;
+  left: auto;
+  right: var(--dg-padding-x);
   margin-left: auto;
   margin-right: 0;
+}
+
+data-grid[dir="rtl"] tfoot .dg-footer-controls {
+  right: auto;
+  left: var(--dg-padding-x);
 }
 
 data-grid[dir="rtl"] .dg-resizer {
@@ -1078,9 +1109,19 @@ data-grid[dir="rtl"] [data-frozen="start"] {
   right: var(--dg-frozen-offset, 0px);
 }
 
-data-grid[dir="rtl"] [data-frozen-edge] {
+data-grid[dir="rtl"] [data-frozen="end"] {
+  right: auto;
+  left: var(--dg-frozen-offset, 0px);
+}
+
+data-grid[dir="rtl"] [data-frozen="start"][data-frozen-edge] {
   border-right: 0;
   border-left: 1px solid var(--dg-border-color);
+}
+
+data-grid[dir="rtl"] [data-frozen="end"][data-frozen-edge] {
+  border-left: 0;
+  border-right: 1px solid var(--dg-border-color);
 }
 
 /* css/_menu.css */

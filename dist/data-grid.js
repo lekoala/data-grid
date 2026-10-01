@@ -236,8 +236,8 @@ function applyColumnDefinition(el, column) {
   if (column.class) {
     el.classList.add(...column.class.trim().split(/\s+/));
   }
-  if (column.frozen === "start") {
-    el.dataset.frozen = "start";
+  if (column.frozen === "start" || column.frozen === "end") {
+    el.dataset.frozen = column.frozen;
   } else {
     delete el.dataset.frozen;
   }
@@ -695,8 +695,8 @@ function parseDeclarativeTable(table) {
         column.responsive = responsive;
       }
     }
-    if (th.dataset.frozen === "start") {
-      column.frozen = "start";
+    if (th.dataset.frozen === "start" || th.dataset.frozen === "end") {
+      column.frozen = th.dataset.frozen;
     }
     if (th.dataset.hidden !== undefined) {
       column.hidden = parseBooleanAttribute(th.dataset.hidden);
@@ -3252,12 +3252,17 @@ class DataGrid extends base_element_default {
     for (const cell of this.querySelectorAll("[data-frozen-edge]")) {
       cell.removeAttribute("data-frozen-edge");
     }
+    this.#syncFrozenSide("start");
+    this.#syncFrozenSide("end");
+  }
+  #syncFrozenSide(side) {
+    const ordered = this.getColumns().filter((column) => column.frozen === side && !isColumnHidden(column) && !column.attr);
+    if (side === "end") {
+      ordered.reverse();
+    }
     let offset = 0;
     let edgeCells = [];
-    for (const column of this.getColumns()) {
-      if (column.frozen !== "start" || isColumnHidden(column) || column.attr) {
-        continue;
-      }
+    for (const column of ordered) {
       const id = this.getColumnId(column);
       const cells = [...this.querySelectorAll(`[data-column-id="${id}"]`)].filter((cell) => cell.closest("data-grid") === this);
       const header = cells.find((cell) => cell.parentElement?.classList.contains("dg-head-columns"));
@@ -3273,7 +3278,7 @@ class DataGrid extends base_element_default {
     for (const cell of edgeCells) {
       cell.setAttribute("data-frozen-edge", "");
     }
-    this.scrollEl.style.setProperty("--dg-frozen-start-width", `${offset}px`);
+    this.scrollEl.style.setProperty(side === "start" ? "--dg-frozen-start-width" : "--dg-frozen-end-width", `${offset}px`);
   }
   oncolumnResized() {
     this.queueFrozenSync();
@@ -5366,7 +5371,7 @@ class ResponsiveGrid extends base_plugin_default {
     if (!column?.field) {
       return false;
     }
-    if (column.responsive === 0 || column.hidden || column.frozen === "start") {
+    if (column.responsive === 0 || column.hidden || column.frozen != null) {
       return true;
     }
     if (this.grid.getColumnSortDirection(column.field)) {

@@ -251,21 +251,25 @@ declarative tables, use `data-wrap` or `data-wrap="false"` on the corresponding
 
 ## Frozen columns and scroll snap
 
-A column with `frozen: "start"` stays pinned to the logical inline-start edge.
-Only `start` is supported. Plugin control columns at the start are stacked
+A column with `frozen: "start"` stays pinned to the logical inline-start edge,
+`frozen: "end"` to the inline-end edge. Pair the freeze with the matching
+placement (`position: "start"` / `"end"`), as the plugin control columns do.
+Each frozen block draws its divider only on its outer boundary, never between
+adjacent frozen columns. Plugin control columns at the start are stacked
 automatically, and frozen columns are never hidden by `ResponsiveGrid`.
 
 ```js
 columns: [
     { field: "customer", width: 240, frozen: "start" },
     { field: "email", width: 280 },
+    { field: "status", width: 140, position: "end", frozen: "end" },
 ]
 ```
 
-Declarative tables use `data-frozen="start"`. Enable proximity-based horizontal
+Declarative tables use `data-frozen="start"` or `data-frozen="end"`. Enable proximity-based horizontal
 snapping with `snapColumns: true` or the `snap-columns` attribute. The scroll
 viewport remains native and keyboard-scrollable; the grid does not intercept
-arrow keys.
+arrow keys. See `demo/frozen.html`.
 
 ## Cell annotations and popovers
 

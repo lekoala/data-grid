@@ -190,6 +190,7 @@ data-grid > .dg-scroll:focus-visible {
 
 data-grid.dg-snap-columns > .dg-scroll {
   scroll-padding-inline-start: var(--dg-frozen-start-width, 0px);
+  scroll-padding-inline-end: var(--dg-frozen-end-width, 0px);
   scroll-snap-type: inline proximity;
 }
 
@@ -836,7 +837,14 @@ data-grid [data-frozen="start"] {
   z-index: 1;
 }
 
-data-grid tbody [data-frozen="start"] {
+data-grid [data-frozen="end"] {
+  position: sticky;
+  right: var(--dg-frozen-offset, 0px);
+  z-index: 1;
+}
+
+data-grid tbody [data-frozen="start"],
+data-grid tbody [data-frozen="end"] {
   /* Paint the row state over an opaque grid surface. This preserves themes
      whose "no stripe" token is transparent without letting scrolled cells
      show through a sticky cell. */
@@ -844,12 +852,17 @@ data-grid tbody [data-frozen="start"] {
   background-image: linear-gradient(var(--dg-row-current-bg), var(--dg-row-current-bg));
 }
 
-data-grid thead [data-frozen="start"] {
+data-grid thead [data-frozen="start"],
+data-grid thead [data-frozen="end"] {
   z-index: 4;
 }
 
-data-grid [data-frozen-edge] {
+data-grid [data-frozen="start"][data-frozen-edge] {
   border-right: 1px solid var(--dg-border-color);
+}
+
+data-grid [data-frozen="end"][data-frozen-edge] {
+  border-left: 1px solid var(--dg-border-color);
 }
 
 data-grid tfoot {
@@ -859,6 +872,10 @@ data-grid tfoot {
 data-grid tfoot td {
   border-top: 1px solid var(--dg-border-color);
   padding: var(--dg-space-2) var(--dg-padding-x);
+  /* Visible overflow so the sticky footer ends below anchor to the scroll
+     viewport instead of this cell: any non-visible overflow would make the
+     cell itself their scrollport and the sticky offsets would never engage. */
+  overflow: visible;
 }
 
 data-grid tfoot .dg-page-nav {
@@ -895,6 +912,24 @@ data-grid tfoot .dg-footer-controls {
   display: flex;
   align-items: center;
   gap: 1em;
+}
+
+/* Sticky footer ends: the count stays readable at the inline-start edge and
+   the pager controls at the inline-end edge while the table scrolls
+   horizontally. Opaque like frozen cells, so scrolled content never shows
+   through the pinned blocks; the padding offset keeps the stuck position
+   aligned with the resting one. Physical LTR here, mirrored for
+   [dir="rtl"] in _rtl.css. */
+data-grid tfoot .dg-meta {
+  position: sticky;
+  left: var(--dg-padding-x);
+  background-color: var(--dg-header-bg);
+}
+
+data-grid tfoot .dg-footer-controls {
+  position: sticky;
+  right: var(--dg-padding-x);
+  background-color: var(--dg-header-bg);
 }
 
 data-grid tfoot .dg-pagination {

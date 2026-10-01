@@ -474,7 +474,7 @@ class ResponsiveGrid extends BasePlugin {
         if (!column?.field) {
             return false;
         }
-        if (column.responsive === 0 || column.hidden || column.frozen === "start") {
+        if (column.responsive === 0 || column.hidden || column.frozen != null) {
             return true;
         }
         if (this.grid.getColumnSortDirection(column.field)) {

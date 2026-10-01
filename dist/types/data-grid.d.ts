@@ -34,9 +34,9 @@ export type Column = {
      */
     position?: "start" | "end";
     /**
-     * - keep the column pinned to the inline start edge while scrolling
+     * - keep the column pinned to the inline start or end edge while scrolling (pair with position "start"/"end")
      */
-    frozen?: "start" | null;
+    frozen?: "start" | "end" | null;
     /**
      * - the title to display in the header (defaults to "field" if not set)
      */
