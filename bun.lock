@@ -5,7 +5,7 @@
     "": {
       "name": "data-grid-component",
       "dependencies": {
-        "@lekoala/floating": "^0.1.1",
+        "@lekoala/floating": "^0.2.0",
       },
       "devDependencies": {
         "@biomejs/biome": "^2.5.12",
@@ -35,7 +35,7 @@
 
     "@happy-dom/global-registrator": ["@happy-dom/global-registrator@20.14.0", "", { "dependencies": { "@types/node": ">=20.0.0", "happy-dom": "^20.14.0" } }, "sha512-Xn0kdkaA1eHOaFFopr+YQ37sPNTZ3JScpUMz3j4rIsn1Nneqoh94z79iW23Ej0Ytt99+LlFr4JrSDd6ow9c7MQ=="],
 
-    "@lekoala/floating": ["@lekoala/floating@0.1.1", "", {}, "sha512-V9bm4RzWWNzjvO16reAY5OTmKkxAtnKwtyafym6S2wcWni3n20MYY4PuwiCcI7xf7/8A332VEwA+xkgi7qRMgg=="],
+    "@lekoala/floating": ["@lekoala/floating@0.2.0", "", {}, "sha512-K1O+ZWexniv1hWe34wwrrPTntt37k3rCVp2luygoy9t+SaspJEKm/SyzBzUxBtkA4SLp9bNhIPd3ch3Ca0x+2g=="],
 
     "@types/node": ["@types/node@26.2.0", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-5IviulTZeRNp2vAJ514cc/HUlY5nZ9fCbq9DMyC52BrhFZACo3nI0R7qBxhQmo/d27NFe96ur/b7Wwxklda+kg=="],
 

@@ -1574,8 +1574,11 @@ function positionOnce(reference, floating, options) {
   const availableHeight = `${getAvailableHeight(referenceRect, side, boundary, distance, shiftPadding)}px`;
   const { style } = floating;
   const roomChanged = style.getPropertyValue("--available-height") !== availableHeight;
-  style.left = `${coords.x}px`;
-  style.top = `${coords.y}px`;
+  const win = options.coordinateSpace === "document" ? reference.ownerDocument.defaultView : null;
+  const originX = win ? win.scrollX : 0;
+  const originY = win ? win.scrollY : 0;
+  style.left = `${coords.x + originX}px`;
+  style.top = `${coords.y + originY}px`;
   style.setProperty("--arrow-x", `${arrowX}%`);
   style.setProperty("--arrow-y", `${arrowY}%`);
   style.setProperty("--available-height", availableHeight);

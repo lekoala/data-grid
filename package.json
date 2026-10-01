@@ -85,6 +85,6 @@
   "author": "LeKoala",
   "license": "MIT",
   "dependencies": {
-    "@lekoala/floating": "^0.1.1"
+    "@lekoala/floating": "^0.2.0"
   }
 }
