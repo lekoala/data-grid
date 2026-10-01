@@ -267,15 +267,24 @@
         valueEl.append(control);
       }
 
-      function hydrateDialog(field) {
+      function buildColumnOptions() {
         const columns = filterableColumns();
         columnEl.replaceChildren();
         for (const column of columns) {
           columnEl.append(new Option(column.title ?? column.field, column.field));
         }
+        return columns;
+      }
+
+      function hydrateDialog(field) {
+        const columns = buildColumnOptions();
         columnEl.value = field ?? columns[0]?.field ?? "";
-        operatorEl.replaceChildren();
+        syncOperatorsAndEditor(field);
+      }
+
+      function syncOperatorsAndEditor(field) {
         const column = columnByField(columnEl.value);
+        operatorEl.replaceChildren();
         const operators = OPERATORS[filterTypeOf(column)] ?? OPERATORS.text;
         for (const operator of operators) {
           operatorEl.append(new Option(OPERATOR_LABELS[operator] ?? operator, operator));
@@ -353,7 +362,9 @@
         dialog.showModal();
       }
 
-      columnEl.addEventListener("change", () => hydrateDialog(null));
+      // A column change only refreshes the operators and the value editor:
+      // the chosen column itself is never rewritten here.
+      columnEl.addEventListener("change", () => syncOperatorsAndEditor(null));
       operatorEl.addEventListener("change", renderValueEditor);
       document.getElementById("qb-add").addEventListener("click", () => openDialog(null));
       document.getElementById("qb-cancel").addEventListener("click", () => dialog.close());
@@ -363,7 +374,11 @@
         if (!result) {
           return;
         }
-        grid.setQuery({ filters: { ...grid.query.filters, [result.field]: result.filter } });
+        const next = { ...grid.query.filters, [result.field]: result.filter };
+        if (editedField && editedField !== result.field) {
+          delete next[editedField];
+        }
+        grid.setQuery({ filters: next });
         dialog.close();
       });
 
