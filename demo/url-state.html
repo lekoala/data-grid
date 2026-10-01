@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid Demo - Shareable URLs</title>
+
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+    <style>
+      .url-bar {
+        margin-block-end: 1rem;
+        padding: 0.75rem;
+        border: 1px solid var(--dg-border-color, #dfe3e8);
+        border-radius: 0.55rem;
+        background: var(--dg-bg, #fff);
+        font-size: 0.9rem;
+      }
+      .url-bar code { overflow-wrap: anywhere; }
+    </style>
+
+    <script type="module">
+      import { ArrayDataSource, DataGrid } from "../data-grid.js";
+      import { paramsToQuery, replaceQueryParams } from "./url-state.js";
+
+      const DEFAULT_QUERY = { page: 1, pageSize: 25, search: "", sort: [], filters: {} };
+
+      const rows = (await (await fetch("demo-simple.json")).json()).data ?? [];
+      const grid = new DataGrid({
+        filterable: true,
+        sortable: true,
+        searchable: true,
+        initialQuery: paramsToQuery(new URLSearchParams(location.search), DEFAULT_QUERY),
+        columns: [
+          { field: "id", title: "#", width: 64 },
+          { field: "first_name", title: "First Name", filterType: "text" },
+          { field: "last_name", title: "Last Name", filterType: "text" },
+          {
+            field: "country", title: "Country", filterType: "select",
+            filterList: [
+              { value: "BE", text: "Belgium" },
+              { value: "DE", text: "Germany" },
+              { value: "FR", text: "France" },
+              { value: "NL", text: "Netherlands" },
+              { value: "US", text: "United States" },
+            ],
+          },
+          { field: "verified", title: "Verified", filterType: "boolean" },
+          { field: "income", title: "Income", filterType: "number", format: "number", formatOptions: { style: "currency", currency: "EUR", maximumFractionDigits: 0 } },
+        ],
+        dataSource: new ArrayDataSource(rows),
+      });
+      document.getElementById("url-grid").replaceChildren(grid);
+
+      const linkEl = document.getElementById("share-link");
+
+      function renderLink() {
+        linkEl.textContent = location.href;
+        linkEl.href = location.href;
+      }
+
+      // Back/forward restores a COMPLETE state: absence in the URL resets to
+      // the default instead of preserving the stale search/filters/sort.
+      window.addEventListener("popstate", () => {
+        grid.setQuery(paramsToQuery(new URLSearchParams(location.search), DEFAULT_QUERY));
+      });
+
+      // querychange is the only sync wire. replaceState keeps history clean:
+      // typing "martin" must not create six history entries, so Back returns
+      // to a real previous navigation, not to each keystroke.
+      grid.addEventListener("querychange", (event) => {
+        history.replaceState(null, "", replaceQueryParams(new URL(location.href), event.detail.query));
+        renderLink();
+      });
+      renderLink();
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Standalone data grid web component</em></p>
+    </header>
+    <main>
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Default</a></li>
+        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link" href="lazy.html">Lazy</a></li>
+        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+        <li><a class="demo-nav-link" href="api.html">API</a></li>
+        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
+        <li><a class="demo-nav-link" href="declarative.html">Declarative</a></li>
+        <li><a class="demo-nav-link" href="formatters.html">Formatters</a></li>
+        <li><a class="demo-nav-link" href="advanced-search.html">Advanced search</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="#">Shareable URLs</a></li>
+      </ul>
+
+      <h2>Shareable URLs</h2>
+
+      <p>Every search, sort, filter, and page change is reflected in the address bar using the same bracket notation as <code>FetchDataSource</code>. Copy the link, reload, or use Back/forward: the grid restores its full state. Only grid-owned params are rewritten — foreign params, the pathname, and the hash survive.</p>
+
+      <div class="demo-grid">
+        <p class="url-bar">Shareable link: <a id="share-link" href="#">…</a></p>
+
+        <div id="url-grid"></div>
+      </div>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>

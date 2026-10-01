@@ -22,14 +22,20 @@ let userListRequests = 0;
 
 /**
  * Decode the bracket-notation query string produced by encodeSearchParams
- * back into a nested structure (arrays and objects).
+ * back into a nested structure (arrays and objects). Prototype-chain segments
+ * are rejected: the query string is untrusted input.
  * @param {URLSearchParams} params
  * @returns {Object}
  */
+const FORBIDDEN_KEY_PARTS = new Set(["__proto__", "prototype", "constructor"]);
+
 function decodeSearchParams(params) {
     const out = {};
     for (const [key, raw] of params) {
         const parts = key.split(/[\[\]]+/).filter(Boolean);
+        if (parts.some((part) => FORBIDDEN_KEY_PARTS.has(part))) {
+            continue;
+        }
         let node = out;
         for (let i = 0; i < parts.length; i++) {
             const part = parts[i];
@@ -41,7 +47,7 @@ function decodeSearchParams(params) {
                 }
             } else {
                 const next = parts[i + 1];
-                if (node[part] === undefined) {
+                if (!Object.hasOwn(node, part)) {
                     node[part] = /^\d+$/.test(next) ? [] : {};
                 }
                 node = node[part];

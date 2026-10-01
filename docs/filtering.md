@@ -300,3 +300,44 @@ grid.addEventListener("querychange", (ev) => renderChips(ev.detail.query));
 
 The internal filter row stays independent: both interfaces converge on the same
 `QueryState`, one field → one `FilterState`.
+
+## Shareable URLs
+
+`querychange` also feeds a URL adapter that stays entirely application-owned:
+the grid never touches the router. See `demo/url-state.js` and
+`demo/url-state.html`:
+
+```js
+import { paramsToQuery, replaceQueryParams } from "./url-state.js";
+
+const DEFAULT_QUERY = { page: 1, pageSize: 25, search: "", sort: [], filters: {} };
+
+// Restore once, as the initial query: absence in the URL resets to the
+// default instead of preserving a stale state.
+const grid = new DataGrid({
+    initialQuery: paramsToQuery(new URLSearchParams(location.search), DEFAULT_QUERY),
+    dataSource,
+});
+
+// Every mutation rewrites the address bar with the same bracket notation as
+// FetchDataSource, so the URL stays readable by the server protocol.
+grid.addEventListener("querychange", (ev) => {
+    history.replaceState(null, "", replaceQueryParams(new URL(location.href), ev.detail.query));
+});
+
+// Back/forward restores a complete state through the same reader.
+window.addEventListener("popstate", () => {
+    grid.setQuery(paramsToQuery(new URLSearchParams(location.search), DEFAULT_QUERY));
+});
+```
+
+Conventions of the recipe:
+
+- Values travel as strings: the query string is a textual transport
+  compatible with the server protocol, not a type-preserving serialization.
+- `replaceState`, not `pushState`: typing a search must not create one
+  history entry per keystroke. Back returns to a real previous navigation.
+- Only grid-owned params (`page`, `pageSize`, `search`, `sort`, `filters`)
+  are rewritten; foreign params, the pathname, and the hash survive.
+- The bracket decoder rejects prototype-chain segments and foreign roots:
+  the URL is untrusted input.
