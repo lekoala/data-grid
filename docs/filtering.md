@@ -251,6 +251,12 @@ search input is shown with `searchable: true` and gated by `minSearchLength`
 (an empty value clears the search, a non-empty value below the minimum keeps the
 current results).
 
+For `ArrayDataSource` the search has one convention, not a query language:
+`|` separates OR alternatives (`info|warn` matches rows with "info" or
+"warn"), each alternative a literal substring — spaces have no syntactic role.
+Matching stays case- and accent-insensitive; `FetchDataSource` sends the raw
+string and the server applies its own convention.
+
 Clearing works precisely:
 
 - `clearSearch()` - global search only.

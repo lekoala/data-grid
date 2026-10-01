@@ -499,10 +499,17 @@ function applySearch(rows, search) {
   if (!search) {
     return rows;
   }
-  const needle = normalizeText(search);
+  const alternatives = search.split("|").map((alternative) => normalizeText(alternative.trim())).filter(Boolean);
+  if (!alternatives.length) {
+    return rows;
+  }
   return rows.filter((row) => {
     for (const value of Object.values(row)) {
-      if (value !== null && value !== undefined && normalizeText(value).includes(needle)) {
+      if (value === null || value === undefined) {
+        continue;
+      }
+      const cell = normalizeText(value);
+      if (alternatives.some((alternative) => cell.includes(alternative))) {
         return true;
       }
     }

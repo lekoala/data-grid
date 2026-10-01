@@ -347,16 +347,20 @@ data-grid .dg-topbar-end {
 
 data-grid .dg-topbar-end {
   margin-left: auto;
+  flex: 1 1 auto;
+  justify-content: flex-end;
 }
 
 data-grid .dg-search-field {
   display: inline-flex;
-  max-inline-size: 100%;
+  flex: 1 1 18rem;
+  max-inline-size: 24rem;
   position: relative;
 }
 
 data-grid .dg-search {
-  min-inline-size: 14rem;
+  inline-size: 100%;
+  min-inline-size: 0;
   max-inline-size: 100%;
 }
 

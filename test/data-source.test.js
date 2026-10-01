@@ -96,6 +96,26 @@ test("applySearch matches any scalar value case- and accent-insensitively", () =
     expect(applySearch(rows, "zzz")).toEqual([]);
 });
 
+test("applySearch splits OR alternatives on |, spaces stay literal", () => {
+    const rows = [
+        { service: "billing", status: 401, level: "warn" },
+        { service: "auth", status: 403, level: "warn" },
+        { service: "billing", status: 200, level: "info" },
+    ];
+    const services = (result) => result.map((row) => `${row.service}:${row.status}`);
+    expect(services(applySearch(rows, "warn"))).toEqual(["billing:401", "auth:403"]);
+    expect(services(applySearch(rows, "info|warn"))).toEqual(["billing:401", "auth:403", "billing:200"]);
+    expect(services(applySearch(rows, "BILLING | auth"))).toEqual(["billing:401", "auth:403", "billing:200"]);
+    // Each alternative is a literal substring: no cross-field AND.
+    expect(services(applySearch(rows, "billing 401"))).toEqual([]);
+    expect(services(applySearch(rows, "401|200"))).toEqual(["billing:401", "billing:200"]);
+    expect(services(applySearch(rows, "zzz|yyy"))).toEqual([]);
+    // No usable alternative matches everything, like an empty search.
+    expect(applySearch(rows, "|")).toEqual(rows);
+    expect(applySearch(rows, "  |  ")).toEqual(rows);
+    expect(applySearch(rows, "   ")).toEqual(rows);
+});
+
 test("applySort sorts asc and desc", () => {
     const rows = [{ n: 2 }, { n: 1 }, { n: 3 }];
     expect(applySort(rows, [{ field: "n", direction: "asc" }]).map((r) => r.n)).toEqual([1, 2, 3]);

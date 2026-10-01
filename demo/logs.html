@@ -180,7 +180,7 @@
       const grid = new DataGrid({
         pager: "more",
         searchable: true,
-        searchPlaceholder: "Message, path, request id…",
+        searchPlaceholder: "Message, path, request id… (use |)",
         // No sortable: logs are a chronological stream, newest first. Search,
         // column filters and row details are the exploration tools; the
         // timestamp DESC order below is imposed, not user-switchable, so
@@ -269,7 +269,7 @@
 
       <h2>Event logs</h2>
 
-      <p>A progressive list instead of pages: the footer counts the loaded events and <em>Load older events</em> appends the next chunk. Search and filters restart from the first chunk; expanding a row shows the request context. Newest events first, always.</p>
+      <p>A progressive list instead of pages: the footer counts the loaded events and <em>Load older events</em> appends the next chunk. Search and filters restart from the first chunk; expanding a row shows the request context. Newest events first, always. The search takes <code>|</code> as OR, e.g. <code>stripe|timeout</code>.</p>
 
       <div class="demo-grid">
         <div id="logs-grid"></div>
