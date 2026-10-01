@@ -566,19 +566,34 @@ test.skipIf(IS_WINDOWS || !IS_CHROME_BACKEND)(
             v,
             `({
                 event: window.contextMenuEvent,
-                menu: document.querySelector('#local-grid .dg-context-menu').getBoundingClientRect(),
-                viewport: { width: innerWidth, height: innerHeight },
+                // DOMRect does not cross the WebView bridge as numbers: serialize it.
+                menu: document.querySelector('#local-grid .dg-context-menu').getBoundingClientRect().toJSON(),
+                viewport: {
+                    width: visualViewport?.width ?? document.documentElement.clientWidth,
+                    height: visualViewport?.height ?? document.documentElement.clientHeight,
+                },
             })`,
         );
         expect(state.event.trusted).toBe(true);
         expect(state.event.defaultPrevented).toBe(true);
-        // Portable to font-dependent fractional geometry: the menu opens at
-        // the pointer, clamped inside the viewport (same 1px tolerance as the
-        // row-actions alignment above, never exact sub-pixel equality).
-        const expectedLeft = Math.min(state.event.clientX, state.viewport.width - state.menu.width);
-        const expectedTop = Math.min(state.event.clientY, state.viewport.height - state.menu.height);
-        expect(Math.abs(state.menu.left - expectedLeft)).toBeLessThanOrEqual(1);
-        expect(Math.abs(state.menu.top - expectedTop)).toBeLessThanOrEqual(1);
+        // The positioning engine owns the exact placement: it may switch to
+        // end alignment, flip above, shift, or cap the height depending on the
+        // viewport. Assert its portable contract instead of one formula: the
+        // menu stays inside the viewport and opens at the pointer (the pointer
+        // lies on the menu box, 1px tolerance for fractional geometry).
+        const { menu, event, viewport } = state;
+        expect(menu.left).toBeGreaterThanOrEqual(-1);
+        expect(menu.top).toBeGreaterThanOrEqual(-1);
+        expect(menu.right).toBeLessThanOrEqual(viewport.width + 1);
+        expect(menu.bottom).toBeLessThanOrEqual(viewport.height + 1);
+        expect(event.clientX).toBeGreaterThanOrEqual(menu.left - 1);
+        expect(event.clientX).toBeLessThanOrEqual(menu.right + 1);
+        expect(event.clientY).toBeGreaterThanOrEqual(menu.top - 1);
+        expect(event.clientY).toBeLessThanOrEqual(menu.bottom + 1);
+        // Vertically the menu opens below or flips above: an edge sits on it.
+        expect(Math.min(Math.abs(menu.top - event.clientY), Math.abs(menu.bottom - event.clientY))).toBeLessThanOrEqual(
+            1,
+        );
     },
     TIMEOUT,
 );
