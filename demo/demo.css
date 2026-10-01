@@ -138,6 +138,34 @@ footer hr {
   padding: 0;
 }
 
+.demo-nav-wrap {
+  display: grid;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.demo-nav-group {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+.demo-nav-group-label {
+  flex: none;
+  min-inline-size: 4.5rem;
+  color: #667085;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.demo-nav-group .demo-nav {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
 .demo-nav .demo-nav-link {
   border: 1px solid rgb(17 32 51 / 8%);
   border-radius: 999px;

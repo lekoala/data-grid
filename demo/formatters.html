@@ -18,19 +18,11 @@
 
 <body>
   <header>
-    <nav aria-label="Demo navigation">
-      <ul class="demo-nav">
-        <li><a class="demo-nav-link" href="index.html">Default</a></li>
-        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
-        <li><a class="demo-nav-link" href="server.html">Server</a></li>
-        <li><a class="demo-nav-link" href="lazy.html">Lazy</a></li>
-        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
-        <li><a class="demo-nav-link" href="api.html">API</a></li>
-        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
-        <li><a class="demo-nav-link" href="declarative.html">Declarative</a></li>
-        <li><a class="demo-nav-link active" aria-current="page" href="#">Formatters</a></li>
-      </ul>
-    </nav>
+        <div data-demo-nav></div>
+        <script type="module">
+          import { renderDemoNav } from "./nav.js";
+          renderDemoNav();
+        </script>
     <h1>Built-in formatters</h1>
     <p>Four built-in formatters turn raw values into semantic HTML: <code>boolean</code>, <code>date</code>,
       <code>datetime</code> and <code>number</code>. DataGrid provides the kind of representation, <code>Intl</code>

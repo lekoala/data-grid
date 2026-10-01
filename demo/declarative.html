@@ -22,19 +22,11 @@
 
 <body>
   <header>
-    <nav aria-label="Demo navigation">
-      <ul class="demo-nav">
-        <li><a class="demo-nav-link" href="index.html">Default</a></li>
-        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
-        <li><a class="demo-nav-link" href="server.html">Server</a></li>
-        <li><a class="demo-nav-link" href="lazy.html">Lazy</a></li>
-        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
-        <li><a class="demo-nav-link" href="api.html">API</a></li>
-        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
-        <li><a class="demo-nav-link active" aria-current="page" href="#">Declarative</a></li>
-        <li><a class="demo-nav-link" href="formatters.html">Formatters</a></li>
-      </ul>
-    </nav>
+      <div data-demo-nav></div>
+      <script type="module">
+        import { renderDemoNav } from "./nav.js";
+        renderDemoNav();
+      </script>
     <h1>Declarative HTML facade</h1>
     <p>A native <code>&lt;table&gt;</code> inside <code>&lt;data-grid&gt;</code> is adopted as-is: columns come from
       <code>&lt;th data-field&gt;</code>, and when no <code>src</code> is configured, the <code>&lt;tbody&gt;</code> rows
