@@ -201,7 +201,7 @@
             {
               "kind": "method",
               "name": "setQuery",
-              "description": "Merge a patch into the query state and reload. Changing search, filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch. Changing search or filters (population changes) also clears the selection, since a `mode: \"all\"` selection only means something for the population it was created on."
+              "description": "Merge a patch into the query state and reload. Changing search, filters, sort or pageSize resets the page to 1 unless an explicit page is provided in the patch. Changing search or filters (population changes) also clears the selection, since a `mode: \"all\"` selection only means something for the population it was created on. Emits `querychange` with a normalized snapshot once the state is assigned, before the reload (including in lazy mode, where no load runs yet). Mutating `event.detail.query` never affects the grid."
             },
             {
               "kind": "method",
@@ -211,7 +211,7 @@
             {
               "kind": "method",
               "name": "resetQuery",
-              "description": "Reset the query to its initial state and reload."
+              "description": "Reset the query to its initial state and reload. Emits `querychange` like setQuery does. `restoreQuery()` (bootstrap rehydration) and `refresh()` / `load()` (no query mutation) never emit it."
             },
             {
               "kind": "method",
@@ -380,6 +380,9 @@
             },
             {
               "name": "loadError"
+            },
+            {
+              "name": "querychange"
             },
             {
               "name": "rowClick"

@@ -1265,6 +1265,9 @@ class DataGrid extends BaseElement {
      * explicit page is provided in the patch. Changing search or filters
      * (population changes) also clears the selection, since a `mode: "all"`
      * selection only means something for the population it was created on.
+     * Emits `querychange` with a normalized snapshot once the state is
+     * assigned, before the reload (including in lazy mode, where no load runs
+     * yet). Mutating `event.detail.query` never affects the grid.
      * @public
      * @param {Partial<QueryState>} patch
      * @returns {Promise<void>}
@@ -1284,6 +1287,7 @@ class DataGrid extends BaseElement {
         if (resetsPage && patch.page === undefined) next.page = 1;
         if (patch.page !== undefined) next.page = patch.page;
         this.#query = normalizeQuery(next);
+        dispatch(this, "querychange", { query: this.query });
         if (changesPopulation) {
             this.#clearSelectionIfNeeded();
         }
@@ -1307,12 +1311,15 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Reset the query to its initial state and reload.
+     * Reset the query to its initial state and reload. Emits `querychange`
+     * like setQuery does. `restoreQuery()` (bootstrap rehydration) and
+     * `refresh()` / `load()` (no query mutation) never emit it.
      * @public
      * @returns {Promise<void>}
      */
     resetQuery() {
         this.#query = normalizeQuery(this.#initialQuery);
+        dispatch(this, "querychange", { query: this.query });
         this.#clearSelectionIfNeeded();
         return this.refresh();
     }

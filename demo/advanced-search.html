@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid Demo - Advanced search</title>
+
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+    <style>
+      .qb-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem;
+        margin-block-end: 1rem;
+        padding: 0.75rem;
+        border: 1px solid var(--dg-border-color, #dfe3e8);
+        border-radius: 0.55rem;
+        background: var(--dg-bg, #fff);
+      }
+      .qb-chips { display: contents; }
+      .qb-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        max-inline-size: 22rem;
+        padding: 0.3rem 0.3rem 0.3rem 0.65rem;
+        border: 1px solid #d0d5dd;
+        border-radius: 999px;
+        background: #f2f4f7;
+        font-size: 0.9rem;
+        white-space: nowrap;
+      }
+      .qb-chip-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border: 0;
+        background: transparent;
+        font: inherit;
+        cursor: pointer;
+      }
+      .qb-chip-label:hover { text-decoration: underline; }
+      .qb-chip-remove {
+        display: inline-grid;
+        place-items: center;
+        inline-size: 1.6rem;
+        block-size: 1.6rem;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        color: #667085;
+        cursor: pointer;
+        font-size: 1rem;
+        line-height: 1;
+      }
+      .qb-chip-remove:hover { background: rgb(16 24 40 / 9%); color: #101828; }
+      .qb-state {
+        flex-basis: 100%;
+        margin: 0;
+        padding: 0.65rem 0.8rem;
+        border-radius: 0.4rem;
+        background: #101828;
+        color: #d1e9ff;
+        font: 0.8rem/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+      .qb-dialog { inline-size: min(26rem, calc(100vw - 2rem)); padding: 0; border: 1px solid #d0d5dd; border-radius: 0.7rem; }
+      .qb-dialog::backdrop { background: rgb(16 24 40 / 40%); }
+      .qb-dialog-body { display: grid; gap: 0.9rem; padding: 1.25rem; }
+      .qb-dialog h2 { margin: 0; font-size: 1.1rem; }
+      .qb-dialog label { display: grid; gap: 0.3rem; font-size: 0.9rem; }
+      .qb-dialog select, .qb-dialog input { padding: 0.55rem; border: 1px solid #98a2b3; border-radius: 0.4rem; font: inherit; }
+      .qb-dialog-actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+      .qb-value-between { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+      .qb-value-options { display: grid; gap: 0.3rem; max-block-size: 12rem; overflow: auto; }
+      .qb-value-options label { display: flex; align-items: center; gap: 0.5rem; }
+    </style>
+
+    <script type="module">
+      import { ArrayDataSource, DataGrid } from "../data-grid.js";
+      import { formatDateFilterQuery, formatTextFilterQuery } from "../src/filter-query.js";
+
+      // Operator registry: pure builder-side data, keyed by the column's
+      // explicit filterType. The grid never sees operators as UI, only as
+      // canonical FilterState through setQuery().
+      const OPERATORS = {
+        text: ["contains", "notContains", "eq", "neq", "startsWith", "endsWith", "empty", "notEmpty"],
+        number: ["eq", "neq", "gt", "gte", "lt", "lte", "between", "empty", "notEmpty"],
+        date: ["eq", "neq", "gt", "gte", "lt", "lte", "between", "empty", "notEmpty"],
+        select: ["eq", "neq", "in", "empty", "notEmpty"],
+        boolean: ["eq"],
+      };
+      const OPERATOR_LABELS = {
+        contains: "contains", notContains: "does not contain", eq: "is", neq: "is not",
+        startsWith: "starts with", endsWith: "ends with", notStartsWith: "does not start with",
+        notEndsWith: "does not end with", lt: "<", lte: "≤", gt: ">", gte: "≥",
+        between: "between", in: "is one of", empty: "is empty", notEmpty: "is not empty",
+      };
+      const NO_VALUE = new Set(["empty", "notEmpty"]);
+
+      const rows = (await (await fetch("demo-simple.json")).json()).data ?? [];
+      const grid = new DataGrid({
+        filterable: true,
+        sortable: true,
+        dataSource: new ArrayDataSource(rows),
+        columns: [
+          { field: "id", title: "#", width: 64 },
+          { field: "first_name", title: "First Name", filterType: "text" },
+          { field: "last_name", title: "Last Name", filterType: "text" },
+          {
+            field: "country", title: "Country", filterType: "select",
+            filterList: [
+              { value: "BE", text: "Belgium" },
+              { value: "DE", text: "Germany" },
+              { value: "FR", text: "France" },
+              { value: "NL", text: "Netherlands" },
+              { value: "US", text: "United States" },
+            ],
+          },
+          { field: "verified", title: "Verified", filterType: "boolean" },
+          { field: "income", title: "Income", filterType: "number", format: "number", formatOptions: { style: "currency", currency: "EUR", maximumFractionDigits: 0 } },
+        ],
+      });
+      document.getElementById("advanced-grid").replaceChildren(grid);
+
+      const chipsEl = document.getElementById("qb-chips");
+      const stateEl = document.getElementById("qb-state");
+      const clearEl = document.getElementById("qb-clear");
+      const dialog = document.getElementById("qb-dialog");
+      const columnEl = document.getElementById("qb-column");
+      const operatorEl = document.getElementById("qb-operator");
+      const valueEl = document.getElementById("qb-value");
+      const saveEl = document.getElementById("qb-save");
+      let editedField = null;
+
+      // Same rule as the internal filter row (grid.options.filterable and no
+      // column opt-out), read through public state only.
+      const filterableColumns = () =>
+        grid.getColumns().filter((column) => column.field && grid.options.filterable && column.filterable !== false);
+      const columnByField = (field) => filterableColumns().find((column) => column.field === field);
+      const filterTypeOf = (column) => column.filterType ?? "text";
+
+      function shortValue(column, filter) {
+        if (NO_VALUE.has(filter.operator) || filter.value === undefined) {
+          return "";
+        }
+        const type = filterTypeOf(column);
+        if (type === "text") {
+          return formatTextFilterQuery(filter);
+        }
+        if (type === "date") {
+          return formatDateFilterQuery(filter);
+        }
+        if (type === "boolean") {
+          return filter.value ? "Yes" : "No";
+        }
+        if (Array.isArray(filter.value)) {
+          return filter.value.join(", ");
+        }
+        if (type === "select") {
+          const option = grid.getFilterOptions(column).find((entry) => `${entry.value}` === `${filter.value}`);
+          return option ? option.text : `${filter.value}`;
+        }
+        return `${filter.value}`;
+      }
+
+      function render() {
+        const filters = grid.query.filters;
+        chipsEl.replaceChildren();
+        for (const [field, filter] of Object.entries(filters)) {
+          const column = columnByField(field);
+          if (!column) {
+            continue;
+          }
+          const chip = document.createElement("span");
+          chip.className = "qb-chip";
+          const label = document.createElement("button");
+          label.type = "button";
+          label.className = "qb-chip-label";
+          const value = shortValue(column, filter);
+          label.textContent = `${column.title ?? field} · ${OPERATOR_LABELS[filter.operator] ?? filter.operator}${value ? ` · ${value}` : ""}`;
+          label.setAttribute("aria-label", `Edit filter on ${column.title ?? field}`);
+          label.addEventListener("click", () => openDialog(field));
+          const remove = document.createElement("button");
+          remove.type = "button";
+          remove.className = "qb-chip-remove";
+          remove.textContent = "×";
+          remove.setAttribute("aria-label", `Remove filter on ${column.title ?? field}`);
+          remove.addEventListener("click", () => {
+            const next = { ...grid.query.filters };
+            delete next[field];
+            grid.setQuery({ filters: next });
+          });
+          chip.append(label, remove);
+          chipsEl.append(chip);
+        }
+        clearEl.hidden = Object.keys(filters).length === 0;
+        stateEl.textContent = JSON.stringify({ filters }, null, 2);
+      }
+
+      function renderValueEditor() {
+        const column = columnByField(columnEl.value);
+        const operator = operatorEl.value;
+        valueEl.replaceChildren();
+        if (!column || NO_VALUE.has(operator)) {
+          return;
+        }
+        const type = filterTypeOf(column);
+        if (operator === "between") {
+          const wrap = document.createElement("div");
+          wrap.className = "qb-value-between";
+          const min = document.createElement("input");
+          min.placeholder = "From";
+          min.name = "min";
+          const max = document.createElement("input");
+          max.placeholder = "To";
+          max.name = "max";
+          wrap.append(min, max);
+          valueEl.append(wrap);
+          return;
+        }
+        if ((type === "select" && operator === "in") || (type === "boolean" && operator === "in")) {
+          const wrap = document.createElement("div");
+          wrap.className = "qb-value-options";
+          const options = type === "boolean"
+            ? [{ value: "true", text: "Yes" }, { value: "false", text: "No" }]
+            : grid.getFilterOptions(column).filter((entry) => `${entry.value}` !== "");
+          for (const option of options) {
+            const label = document.createElement("label");
+            const box = document.createElement("input");
+            box.type = "checkbox";
+            box.value = `${option.value}`;
+            label.append(box, document.createTextNode(option.text));
+            wrap.append(label);
+          }
+          valueEl.append(wrap);
+          return;
+        }
+        let control;
+        if (type === "select") {
+          control = document.createElement("select");
+          for (const option of grid.getFilterOptions(column)) {
+            const entry = document.createElement("option");
+            entry.value = `${option.value}`;
+            entry.textContent = option.text || "(clears the filter)";
+            control.append(entry);
+          }
+        } else if (type === "boolean") {
+          control = document.createElement("select");
+          control.append(new Option("Yes", "true"), new Option("No", "false"));
+        } else {
+          control = document.createElement("input");
+          control.autocomplete = "off";
+          if (type === "number") {
+            control.inputMode = "numeric";
+          }
+        }
+        valueEl.append(control);
+      }
+
+      function hydrateDialog(field) {
+        const columns = filterableColumns();
+        columnEl.replaceChildren();
+        for (const column of columns) {
+          columnEl.append(new Option(column.title ?? column.field, column.field));
+        }
+        columnEl.value = field ?? columns[0]?.field ?? "";
+        operatorEl.replaceChildren();
+        const column = columnByField(columnEl.value);
+        const operators = OPERATORS[filterTypeOf(column)] ?? OPERATORS.text;
+        for (const operator of operators) {
+          operatorEl.append(new Option(OPERATOR_LABELS[operator] ?? operator, operator));
+        }
+        const existing = field ? grid.query.filters[field] : undefined;
+        if (existing) {
+          operatorEl.value = existing.operator;
+        }
+        renderValueEditor();
+        if (!existing) {
+          return;
+        }
+        const control = valueEl.querySelector("select, input");
+        if (!control) {
+          return;
+        }
+        if (existing.operator === "between" && Array.isArray(existing.value)) {
+          valueEl.querySelector('input[name="min"]').value = existing.value[0] ?? "";
+          valueEl.querySelector('input[name="max"]').value = existing.value[1] ?? "";
+        } else if (existing.operator === "in" && Array.isArray(existing.value)) {
+          for (const box of valueEl.querySelectorAll('input[type="checkbox"]')) {
+            box.checked = existing.value.some((item) => `${item}` === box.value);
+          }
+        } else if (control.tagName === "SELECT" && filterTypeOf(column) === "boolean") {
+          control.value = existing.value ? "true" : "false";
+        } else if (control.tagName === "SELECT" || control.tagName === "INPUT") {
+          control.value = existing.value ?? "";
+        }
+      }
+
+      function readDialogFilter() {
+        const column = columnByField(columnEl.value);
+        const operator = operatorEl.value;
+        if (!column) {
+          return null;
+        }
+        if (NO_VALUE.has(operator)) {
+          return { field: column.field, filter: { operator } };
+        }
+        const type = filterTypeOf(column);
+        if (operator === "between") {
+          const min = valueEl.querySelector('input[name="min"]').value;
+          const max = valueEl.querySelector('input[name="max"]').value;
+          if (min === "" || max === "") {
+            return null;
+          }
+          return { field: column.field, filter: { operator, value: [type === "number" ? Number(min) : min, type === "number" ? Number(max) : max] } };
+        }
+        if (operator === "in") {
+          const values = [...valueEl.querySelectorAll('input[type="checkbox"]:checked')].map((box) => box.value);
+          if (!values.length) {
+            return null;
+          }
+          return { field: column.field, filter: { operator, value: type === "boolean" ? values.map((item) => item === "true") : values } };
+        }
+        const control = valueEl.querySelector("select, input");
+        const raw = control ? control.value : "";
+        if (raw === "") {
+          return null;
+        }
+        if (type === "boolean") {
+          return { field: column.field, filter: { operator, value: raw === "true" } };
+        }
+        if (type === "number") {
+          const number = Number(raw);
+          return { field: column.field, filter: { operator, value: Number.isFinite(number) ? number : raw } };
+        }
+        return { field: column.field, filter: { operator, value: raw } };
+      }
+
+      function openDialog(field = null) {
+        editedField = field;
+        document.getElementById("qb-title").textContent = field ? "Edit filter" : "Add filter";
+        hydrateDialog(field);
+        dialog.showModal();
+      }
+
+      columnEl.addEventListener("change", () => hydrateDialog(null));
+      operatorEl.addEventListener("change", renderValueEditor);
+      document.getElementById("qb-add").addEventListener("click", () => openDialog(null));
+      document.getElementById("qb-cancel").addEventListener("click", () => dialog.close());
+      clearEl.addEventListener("click", () => grid.setQuery({ filters: {} }));
+      saveEl.addEventListener("click", () => {
+        const result = readDialogFilter();
+        if (!result) {
+          return;
+        }
+        grid.setQuery({ filters: { ...grid.query.filters, [result.field]: result.filter } });
+        dialog.close();
+      });
+
+      // The builder owns its chips; the grid owns the query. querychange is
+      // the only sync wire, so external filter-row edits converge here too.
+      // "connected" re-renders once columns exist (no querychange on connect).
+      grid.addEventListener("querychange", render);
+      grid.addEventListener("connected", render, { once: true });
+      render();
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Standalone data grid web component</em></p>
+    </header>
+    <main>
+      <ul class="demo-nav">
+        <li><a class="demo-nav-link" href="index.html">Default</a></li>
+        <li><a class="demo-nav-link" href="responsive.html">Responsive</a></li>
+        <li><a class="demo-nav-link" href="server.html">Server</a></li>
+        <li><a class="demo-nav-link" href="lazy.html">Lazy</a></li>
+        <li><a class="demo-nav-link" href="actions.html">Actions</a></li>
+        <li><a class="demo-nav-link" href="api.html">API</a></li>
+        <li><a class="demo-nav-link" href="i18n.html">i18n</a></li>
+        <li><a class="demo-nav-link" href="declarative.html">Declarative</a></li>
+        <li><a class="demo-nav-link" href="formatters.html">Formatters</a></li>
+        <li><a class="demo-nav-link active" aria-current="page" href="#">Advanced search</a></li>
+      </ul>
+
+      <h2>Advanced search</h2>
+
+      <p>An external query builder drives the grid through its public query contract only (<code>grid.query</code>, <code>setQuery()</code>, <code>getColumns()</code>, <code>getFilterOptions()</code>) and stays in sync through <code>querychange</code>. The builder lives outside <code>&lt;data-grid&gt;</code>; the filter row below the headers stays independent and both converge on the same <code>QueryState</code>.</p>
+
+      <div class="demo-grid">
+        <div class="data-grid-tools">
+          <div class="qb-toolbar" id="qb-toolbar">
+            <span class="qb-chips" id="qb-chips"></span>
+            <button type="button" class="demo-button" id="qb-add">Add filter</button>
+            <button type="button" class="demo-button" id="qb-clear" hidden>Clear all</button>
+            <pre class="qb-state" id="qb-state" aria-live="polite"></pre>
+          </div>
+        </div>
+
+        <div id="advanced-grid"></div>
+      </div>
+
+      <dialog class="qb-dialog" id="qb-dialog">
+        <div class="qb-dialog-body">
+          <h2 id="qb-title">Add filter</h2>
+          <label>Column
+            <select id="qb-column"></select>
+          </label>
+          <label>Operator
+            <select id="qb-operator"></select>
+          </label>
+          <label>Value
+            <span id="qb-value"></span>
+          </label>
+          <div class="qb-dialog-actions">
+            <button type="button" class="demo-button" id="qb-cancel">Cancel</button>
+            <button type="button" class="demo-button" id="qb-save">Apply</button>
+          </div>
+        </div>
+      </dialog>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>

@@ -2385,6 +2385,7 @@ class DataGrid extends base_element_default {
     if (patch.page !== undefined)
       next.page = patch.page;
     this.#query = normalizeQuery(next);
+    dispatch(this, "querychange", { query: this.query });
     if (changesPopulation) {
       this.#clearSelectionIfNeeded();
     }
@@ -2398,6 +2399,7 @@ class DataGrid extends base_element_default {
   }
   resetQuery() {
     this.#query = normalizeQuery(this.#initialQuery);
+    dispatch(this, "querychange", { query: this.query });
     this.#clearSelectionIfNeeded();
     return this.refresh();
   }

@@ -263,3 +263,40 @@ Clearing works precisely:
 - `filterData()` - collects the current filter inputs into the query and reloads.
 - `setSearch(value)` / `clearSearch()` - set / clear the global search.
 - `resetQuery()` - restores the initial query state.
+
+## Events
+
+```js
+grid.addEventListener("querychange", (ev) => {
+    console.log(ev.detail.query);
+});
+```
+
+`setQuery()` and `resetQuery()` emit `querychange` with a normalized snapshot
+once the state is assigned, before the reload - including in lazy mode, where
+no load runs yet. Mutating `event.detail.query` never affects the grid.
+`restoreQuery()` (bootstrap rehydration for stateful plugins), `refresh()`, and
+`load()` never emit it: the event means the query changed, not that data was
+reloaded.
+
+## External query builder
+
+An advanced filter UI (chips, column → operator → value) lives outside
+`<data-grid>` and drives it through the public query contract only. See
+`demo/advanced-search.html`:
+
+```js
+// Read: canonical state plus column metadata and select options.
+const filters = grid.query.filters;
+const columns = grid.getColumns();
+const options = grid.getFilterOptions(column);
+
+// Write: structured filters through the single funnel.
+grid.setQuery({ filters: { ...grid.query.filters, status: { operator: "eq", value: "active" } } });
+
+// Sync: chips, URL adapters, and anything else listen to querychange.
+grid.addEventListener("querychange", (ev) => renderChips(ev.detail.query));
+```
+
+The internal filter row stays independent: both interfaces converge on the same
+`QueryState`, one field → one `FilterState`.
