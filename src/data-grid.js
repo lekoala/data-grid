@@ -303,6 +303,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {String} resultCount
  * @property {String} loadMore - progressive pager button ("more" mode)
  * @property {String} loadedCount - progressive pager status ("more" mode), with {count} and {total}
+ * @property {String} loadedCountUnknown - progressive pager status without COUNT(*) ("more" mode), with {count}
  * @property {String} selectedCount
  * @property {String} selectAll
  * @property {String} selectRow
@@ -589,9 +590,10 @@ class DataGrid extends BaseElement {
     /** Last transport page loaded in pager "more" mode (query.page stays 1).
      * @type {Number} */
     #loadedPage;
-    /** No more chunks to load: rows cover the total or a chunk came back empty.
+    /** Whether another chunk may exist in pager "more" mode: the only
+     * exhaustion signal the footer and loadMore() read.
      * @type {Boolean} */
-    #exhausted;
+    #hasMore;
     /** @type {SelectionState} */
     #selection;
     /** @type {Number} */
@@ -654,7 +656,7 @@ class DataGrid extends BaseElement {
 
         /**
          * Progressive transport state for pager "more": the last chunk page
-         * loaded (#loadedPage) and whether the list is exhausted (#exhausted).
+         * loaded (#loadedPage) and whether a sequel may exist (#hasMore).
          * The public query always stays on page 1; only these two fields know
          * how many chunks were appended.
          */
@@ -662,7 +664,7 @@ class DataGrid extends BaseElement {
         this.#loadedPage = 1;
 
         /** @type {Boolean} */
-        this.#exhausted = false;
+        this.#hasMore = true;
 
         /** @type {?AbortController} */
         this.#controller = null;
@@ -683,8 +685,9 @@ class DataGrid extends BaseElement {
         this.rows = [];
 
         /**
-         * Total number of rows matching the current query
-         * @type {Number}
+         * Total number of rows matching the current query. Null in pager
+         * "more" mode when the backend skipped COUNT(*).
+         * @type {Number|null}
          */
         this.total = 0;
 
@@ -949,12 +952,28 @@ class DataGrid extends BaseElement {
             this.#updateStatus(this.labels.loading);
         } else if (this.hasDataError) {
             this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+        } else if (this.options.pager === "more") {
+            this.#updateStatus(this.#moreStatusText());
         } else {
             this.#updateStatus(
-                this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
+                this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total ?? 0 }) : this.noData,
             );
         }
         this.runPlugins("updateLabels");
+    }
+
+    /**
+     * Status text for a loaded progressive list: bare count when the backend
+     * skipped COUNT(*), count of total otherwise, noData when empty.
+     * @returns {String}
+     */
+    #moreStatusText() {
+        if (!this.rows.length) {
+            return this.noData;
+        }
+        return this.total == null
+            ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length })
+            : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
     }
 
     updateMetaLabel() {
@@ -963,13 +982,15 @@ class DataGrid extends BaseElement {
             return;
         }
         if (this.options.pager === "more") {
-            meta.textContent = this.formatLabel(this.labels.loadedCount, {
-                count: this.rows.length,
-                total: this.total,
-            });
+            meta.textContent =
+                this.total == null
+                    ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length })
+                    : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
             return;
         }
-        const total = this.total;
+        // Classic pagination always carries a finite total (see applyResult);
+        // the fallback only satisfies the type checker.
+        const total = this.total ?? 0;
         const page = this.#query.page || 1;
         let high = page * this.#query.pageSize;
         let low = high - this.#query.pageSize + 1;
@@ -1320,7 +1341,31 @@ class DataGrid extends BaseElement {
      */
     #resetProgressiveState() {
         this.#loadedPage = 1;
-        this.#exhausted = false;
+        this.#hasMore = true;
+    }
+
+    /**
+     * Resolve whether another chunk may exist after (re)placing rows. An
+     * empty chunk always terminates the list (defensively, even against a
+     * contradictory hasMore: true, so a buggy backend cannot offer Load more
+     * forever); an explicit hasMore wins otherwise; then the known total;
+     * then the chunk-size heuristic (a full chunk may continue, a short one
+     * ends the list, at the cost of one possibly empty extra click).
+     * @param {PageResult} result
+     * @param {Number} chunkLength Rows placed by this response
+     * @returns {Boolean}
+     */
+    #resolveHasMore(result, chunkLength) {
+        if (chunkLength === 0) {
+            return false;
+        }
+        if (typeof result?.hasMore === "boolean") {
+            return result.hasMore;
+        }
+        if (result?.total != null) {
+            return this.rows.length < result.total;
+        }
+        return chunkLength === this.#query.pageSize;
     }
 
     /**
@@ -1462,7 +1507,11 @@ class DataGrid extends BaseElement {
                 return this.refresh();
             }
             this.#updateStatus(
-                this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData,
+                this.options.pager === "more"
+                    ? this.#moreStatusText()
+                    : this.rows.length
+                      ? this.formatLabel(this.labels.resultCount, { count: this.total ?? 0 })
+                      : this.noData,
             );
         } catch (err) {
             if (requestId !== this.#requestSeq) return;
@@ -1501,7 +1550,7 @@ class DataGrid extends BaseElement {
         if (this.options.pager !== "more" || this.loading) {
             return;
         }
-        if (this.#exhausted || this.rows.length >= this.total) {
+        if (!this.#hasMore) {
             return;
         }
         // An explicit request for data now: bypass a pending lazy deferral
@@ -1526,11 +1575,7 @@ class DataGrid extends BaseElement {
             const result = await this.#fetchPage({ ...this.query, page: this.#loadedPage + 1 }, controller);
             if (requestId !== this.#requestSeq || controller.signal.aborted) return;
             this.#appendResult(result);
-            this.#updateStatus(
-                this.rows.length
-                    ? this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total })
-                    : this.noData,
-            );
+            this.#updateStatus(this.#moreStatusText());
         } catch (err) {
             if (requestId !== this.#requestSeq) return;
             const e = /** @type {any} */ (err);
@@ -1566,9 +1611,7 @@ class DataGrid extends BaseElement {
         this.total = result?.total ?? this.total;
         this.meta = result?.meta || {};
         this.#loadedPage += 1;
-        if (!appended.length) {
-            this.#exhausted = true;
-        }
+        this.#hasMore = this.#resolveHasMore(result, appended.length);
         this.renderBody();
     }
 
@@ -1585,8 +1628,8 @@ class DataGrid extends BaseElement {
             button.hidden = true;
             return;
         }
-        button.hidden = this.#exhausted || this.rows.length >= this.total;
-        const busy = this.loading && this.options.pager === "more";
+        button.hidden = !this.#hasMore;
+        const busy = this.loading;
         button.disabled = busy;
         if (busy) {
             button.setAttribute("aria-busy", "true");
@@ -1602,9 +1645,15 @@ class DataGrid extends BaseElement {
      * @param {PageResult} result
      */
     applyResult(result) {
+        // A replacement starts a new progressive sequence, even when it comes
+        // from a bare refresh(): the next loadMore() restarts at chunk 2.
+        this.#resetProgressiveState();
         this.rows = result.rows || [];
-        this.total = result.total ?? this.rows.length;
+        // Classic pagination keeps its historic default; pager "more" preserves
+        // the absence of a total so the chunk heuristic can apply.
+        this.total = result.total ?? (this.options.pager === "more" ? null : this.rows.length);
         this.meta = result.meta || {};
+        this.#hasMore = this.#resolveHasMore(result, this.rows.length);
 
         // When the grid was created without declared columns, the first loaded
         // row infers the schema. Rebuild the structural part (header, footer,
@@ -1620,7 +1669,7 @@ class DataGrid extends BaseElement {
 
         const requestedPage = this.#query.page;
         this.fixPage();
-        if (this.total > 0 && requestedPage > this.pages) {
+        if ((this.total ?? 0) > 0 && requestedPage > this.pages) {
             // The requested page does not exist anymore: the caller refetches
             // on the last valid page instead of showing an empty page.
             return true;
@@ -4111,6 +4160,11 @@ class DataGrid extends BaseElement {
      */
     totalPages() {
         // At least one page: zero results is the logical page 1/1, never 1/0.
+        // An unknown total (pager "more" without COUNT(*)) is the current
+        // chunk: still page 1/1, never NaN.
+        if (this.total == null) {
+            return 1;
+        }
         return Math.max(1, Math.ceil(this.total / (this.#query.pageSize || 1)));
     }
 

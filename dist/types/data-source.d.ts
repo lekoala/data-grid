@@ -29,9 +29,13 @@ export type QueryState = {
 export type PageResult = {
     rows: Array<Record<string, any>>;
     /**
-     * Number of rows matching the current query (used for pagination)
+     * Number of rows matching the current query (used for pagination). Null or absent in pager "more" mode when the backend skips COUNT(*)
      */
-    total: number;
+    total?: number | null;
+    /**
+     * Authoritative continuation signal for pager "more" mode (LIMIT+1 style). Wins over total when both are present
+     */
+    hasMore?: boolean;
     /**
      * Additional information (ex: total unfiltered)
      */
@@ -82,7 +86,8 @@ export type DataSource = {
  * Result of a data source load
  * @typedef {Object} PageResult
  * @property {Array<Record<string, any>>} rows
- * @property {Number} total Number of rows matching the current query (used for pagination)
+ * @property {Number|null} [total] Number of rows matching the current query (used for pagination). Null or absent in pager "more" mode when the backend skips COUNT(*)
+ * @property {Boolean} [hasMore] Authoritative continuation signal for pager "more" mode (LIMIT+1 style). Wins over total when both are present
  * @property {Record<string, any>} [meta] Additional information (ex: total unfiltered)
  */
 /**
@@ -155,7 +160,11 @@ export declare function paginate(rows: Array<Record<string, any>>, page: number,
  * { "rows": [...], "total": 142, "meta": { "unfilteredTotal": 998 } }
  * ```
  * `total` counts the rows matching the current query; `meta.unfilteredTotal`
- * (optional) counts the population before any search/filter.
+ * (optional) counts the population before any search/filter. A backend that
+ * skips COUNT(*) omits `total` (or sends `hasMore` instead): the absence of a
+ * total is preserved as null so pager "more" can fall back to its chunk
+ * heuristic instead of concluding from a fabricated count. Classic pagination
+ * keeps its historic default in applyResult().
  * @param {any} json
  * @returns {PageResult}
  */

@@ -273,15 +273,42 @@ test("FetchDataSource forwards fetch options and prioritizes the load signal", a
     delete globalThis.fetch;
 });
 
-test("parseResult keeps the canonical shape and falls back to rows.length", () => {
+test("parseResult keeps the canonical shape and preserves an absent total", () => {
     expect(parseResult({ rows: [{ id: 1 }], total: 7, meta: {} })).toEqual({
         rows: [{ id: 1 }],
         total: 7,
         meta: {},
     });
-    expect(parseResult({ rows: [{ id: 1 }, { id: 2 }] })).toEqual({ rows: [{ id: 1 }, { id: 2 }], total: 2, meta: {} });
-    expect(parseResult([{ id: 1 }])).toEqual({ rows: [{ id: 1 }], total: 1, meta: {} });
-    expect(parseResult({})).toEqual({ rows: [], total: 0, meta: {} });
+    expect(parseResult({ rows: [{ id: 1 }], total: 7, hasMore: true })).toEqual({
+        rows: [{ id: 1 }],
+        total: 7,
+        hasMore: true,
+        meta: {},
+    });
+    expect(parseResult({ rows: [{ id: 1 }, { id: 2 }] })).toEqual({
+        rows: [{ id: 1 }, { id: 2 }],
+        total: null,
+        meta: {},
+    });
+    expect(parseResult({ rows: [{ id: 1 }], hasMore: true })).toEqual({
+        rows: [{ id: 1 }],
+        total: null,
+        hasMore: true,
+        meta: {},
+    });
+    expect(parseResult([{ id: 1 }])).toEqual({ rows: [{ id: 1 }], total: 1, hasMore: false, meta: {} });
+    expect(parseResult({})).toEqual({ rows: [], total: null, meta: {} });
+});
+
+test("ArrayDataSource reports continuation alongside its known total", async () => {
+    const ds = new ArrayDataSource([{ id: 1 }, { id: 2 }, { id: 3 }]);
+    const first = await ds.load({ page: 1, pageSize: 2, search: "", sort: [], filters: {} });
+    expect(first.rows).toHaveLength(2);
+    expect(first.total).toBe(3);
+    expect(first.hasMore).toBe(true);
+    const last = await ds.load({ page: 2, pageSize: 2, search: "", sort: [], filters: {} });
+    expect(last.rows).toHaveLength(1);
+    expect(last.hasMore).toBe(false);
 });
 
 test("FetchDataSource throws on http error", async () => {

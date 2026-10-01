@@ -41,8 +41,9 @@ class FixedHeight extends BasePlugin {
         spacerRow.hidden = true;
         spacerRow.removeAttribute("height");
 
-        // A single-page result follows its natural content height.
-        if (grid.query.pageSize > grid.total) {
+        // A single-page result follows its natural content height. An unknown
+        // total (pager "more" without COUNT(*)) never takes this shortcut.
+        if (grid.total != null && grid.query.pageSize > grid.total) {
             return;
         }
         // We are not on last page

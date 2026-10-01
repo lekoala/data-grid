@@ -12,6 +12,7 @@ const labels = {
     resultCount: "항목: {count}",
     loadMore: "더 불러오기",
     loadedCount: "{count} / {total}개",
+    loadedCountUnknown: "{count}개",
     selectedCount: "선택됨: {count}",
     selectAll: "모든 행 선택",
     selectRow: "{row} 선택",

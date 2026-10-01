@@ -126,7 +126,8 @@ class BulkActions extends BasePlugin {
         }
         const grid = this.grid;
         const selection = grid.getSelectionState();
-        const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
+        const count =
+            selection.mode === "all" ? Math.max(0, (grid.total ?? 0) - selection.except.size) : selection.ids.size;
 
         this.countEl.hidden = count === 0;
         if (this.countVisible && this.countStatus) {

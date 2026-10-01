@@ -12,6 +12,7 @@ const labels = {
     resultCount: "العناصر: {count}",
     loadMore: "تحميل المزيد",
     loadedCount: "{count} من {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "المحدد: {count}",
     selectAll: "تحديد كل الصفوف",
     selectRow: "تحديد {row}",

@@ -12,6 +12,7 @@ const labels = {
     resultCount: "Items: {count}",
     loadMore: "Meer laden",
     loadedCount: "{count} van {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "Geselecteerd: {count}",
     selectAll: "Alle rijen selecteren",
     selectRow: "{row} selecteren",

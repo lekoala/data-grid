@@ -12,6 +12,7 @@ const labels = {
     resultCount: "Item: {count}",
     loadMore: "Muat lebih banyak",
     loadedCount: "{count} dari {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "Dipilih: {count}",
     selectAll: "Pilih semua baris",
     selectRow: "Pilih {row}",

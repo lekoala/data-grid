@@ -12,6 +12,7 @@ const labels = {
     resultCount: "Öğeler: {count}",
     loadMore: "Daha fazla yükle",
     loadedCount: "{count} / {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "Seçilen: {count}",
     selectAll: "Tüm satırları seç",
     selectRow: "{row} seç",

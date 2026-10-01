@@ -50,7 +50,8 @@ import { normalizeBoolean } from "./utils/formatValue.js";
  * Result of a data source load
  * @typedef {Object} PageResult
  * @property {Array<Record<string, any>>} rows
- * @property {Number} total Number of rows matching the current query (used for pagination)
+ * @property {Number|null} [total] Number of rows matching the current query (used for pagination). Null or absent in pager "more" mode when the backend skips COUNT(*)
+ * @property {Boolean} [hasMore] Authoritative continuation signal for pager "more" mode (LIMIT+1 style). Wins over total when both are present
  * @property {Record<string, any>} [meta] Additional information (ex: total unfiltered)
  */
 
@@ -310,18 +311,23 @@ export function paginate(rows, page, pageSize) {
  * { "rows": [...], "total": 142, "meta": { "unfilteredTotal": 998 } }
  * ```
  * `total` counts the rows matching the current query; `meta.unfilteredTotal`
- * (optional) counts the population before any search/filter.
+ * (optional) counts the population before any search/filter. A backend that
+ * skips COUNT(*) omits `total` (or sends `hasMore` instead): the absence of a
+ * total is preserved as null so pager "more" can fall back to its chunk
+ * heuristic instead of concluding from a fabricated count. Classic pagination
+ * keeps its historic default in applyResult().
  * @param {any} json
  * @returns {PageResult}
  */
 export function parseResult(json) {
     if (Array.isArray(json)) {
-        return { rows: json, total: json.length, meta: {} };
+        return { rows: json, total: json.length, hasMore: false, meta: {} };
     }
     const rows = Array.isArray(json?.rows) ? json.rows : [];
     return {
         rows,
-        total: Number.isFinite(json?.total) ? json.total : rows.length,
+        total: Number.isFinite(json?.total) ? json.total : null,
+        ...(typeof json?.hasMore === "boolean" ? { hasMore: json.hasMore } : {}),
         meta: json?.meta ?? {},
     };
 }
@@ -454,9 +460,14 @@ export class ArrayDataSource {
         rows = applySearch(rows, query.search);
         rows = applySort(rows, query.sort);
         const total = rows.length;
+        const page = query.page || 1;
+        const pageSize = query.pageSize || 10;
+        const start = (page - 1) * pageSize;
+        const chunk = paginate(rows, page, pageSize);
         return {
-            rows: paginate(rows, query.page || 1, query.pageSize || 10),
+            rows: chunk,
             total,
+            hasMore: start + chunk.length < total,
             meta: { unfilteredTotal: this.rows.length },
         };
     }

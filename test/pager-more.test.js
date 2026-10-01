@@ -378,3 +378,125 @@ test("classic pagination controls stay in the DOM in more mode", async () => {
     expect(moreButton(pages).hidden).toBe(true);
     document.body.removeChild(pages);
 });
+
+/** A backend without COUNT(*): chunks carry hasMore, never a total. */
+function noCountSource(data) {
+    const inner = new ArrayDataSource(data);
+    return {
+        queries: [],
+        async load(query, options) {
+            this.queries.push({ ...query });
+            const result = await inner.load(query, options);
+            return { rows: result.rows, hasMore: result.hasMore, meta: result.meta };
+        },
+    };
+}
+
+test("unknown total shows the bare count and follows hasMore", async () => {
+    const ds = noCountSource(rows);
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+
+    expect(inst.total).toBeNull();
+    expect(metaText(inst)).toBe("20");
+    expect(inst.querySelector(".dg-status").textContent).not.toContain("null");
+    expect(moreButton(inst).hidden).toBe(false);
+
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(40);
+    expect(metaText(inst)).toBe("40");
+
+    await inst.loadMore();
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(65);
+    expect(metaText(inst)).toBe("65");
+    expect(moreButton(inst).hidden).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("explicit hasMore wins over the total in both directions", async () => {
+    const ds = new ArrayDataSource(rows);
+    const original = ds.load.bind(ds);
+    ds.load = (query, options) => original(query, options).then((result) => ({ ...result, hasMore: query.page !== 1 }));
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+
+    // Total says 65 rows remain, hasMore says done: the button hides.
+    expect(inst.total).toBe(65);
+    expect(moreButton(inst).hidden).toBe(true);
+    document.body.removeChild(inst);
+
+    const ds2 = new ArrayDataSource(rows.slice(0, 20));
+    const original2 = ds2.load.bind(ds2);
+    ds2.load = (query, options) =>
+        original2(query, options).then((result) => ({ ...result, total: 20, hasMore: true }));
+    const inst2 = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds2 });
+
+    // Total says exhausted (20 of 20), hasMore says continue: it stays.
+    expect(moreButton(inst2).hidden).toBe(false);
+    document.body.removeChild(inst2);
+});
+
+test("without total or hasMore a full chunk assumes a sequel", async () => {
+    const bare = Array.from({ length: 45 }, (_, i) => ({ id: i + 1, name: `row${i}` }));
+    const ds = new ArrayDataSource(bare);
+    const original = ds.load.bind(ds);
+    ds.load = (query, options) => original(query, options).then(({ rows: chunk, meta }) => ({ rows: chunk, meta }));
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+
+    expect(inst.total).toBeNull();
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(40);
+    expect(moreButton(inst).hidden).toBe(false);
+
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(45);
+    expect(moreButton(inst).hidden).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("an exactly full final chunk costs one empty extra click", async () => {
+    const even = Array.from({ length: 40 }, (_, i) => ({ id: i + 1, name: `row${i}` }));
+    const ds = new ArrayDataSource(even);
+    const original = ds.load.bind(ds);
+    ds.load = (query, options) => original(query, options).then(({ rows: chunk, meta }) => ({ rows: chunk, meta }));
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(40);
+    // Indistinguishable from a sequel: one more click returns [] and ends it.
+    expect(moreButton(inst).hidden).toBe(false);
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(40);
+    expect(moreButton(inst).hidden).toBe(true);
+    document.body.removeChild(inst);
+});
+
+test("a filter change keeps the total unknown and restarts paging", async () => {
+    const ds = noCountSource(rows);
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+
+    await inst.loadMore();
+    expect(inst.rows).toHaveLength(40);
+
+    await inst.setQuery({ filters: { status: { operator: "eq", value: "active" } } });
+    expect(inst.total).toBeNull();
+    expect(inst.rows.length).toBeLessThanOrEqual(20);
+
+    await inst.loadMore();
+    expect(ds.queries.at(-1).page).toBe(2);
+    expect(inst.query.page).toBe(1);
+    document.body.removeChild(inst);
+});
+
+test("autohidePager keeps the status line while more may follow", async () => {
+    const ds = noCountSource(rows);
+    const inst = await makeReadyGrid({
+        pager: "more",
+        autohidePager: true,
+        initialQuery: { pageSize: 20 },
+        dataSource: ds,
+    });
+
+    expect(inst.tfoot.hasAttribute("hidden")).toBe(false);
+    expect(metaText(inst)).toBe("20");
+    document.body.removeChild(inst);
+});

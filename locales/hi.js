@@ -12,6 +12,7 @@ const labels = {
     resultCount: "आइटम: {count}",
     loadMore: "और लोड करें",
     loadedCount: "{count} / {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "चयनित: {count}",
     selectAll: "सभी पंक्तियाँ चुनें",
     selectRow: "{row} चुनें",

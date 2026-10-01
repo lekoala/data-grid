@@ -99,9 +99,39 @@ The server must return a `PageResult`:
 ```
 
 - `rows` - the rows of the requested page.
-- `total` - number of rows matching the current query (after search + filters, used for pagination).
+- `total` - number of rows matching the current query (after search + filters). Required for `pager="pages"`; optional in `pager="more"`, where a backend that skips `COUNT(*)` omits it (it arrives as `null`, never as a fabricated count).
+- `hasMore` - optional authoritative continuation signal for `pager="more"` (`true`/`false` wins over `total` when both are present; an empty chunk always ends the list).
 - `meta.unfilteredTotal` - optional, number of rows before any search/filter.
 - `meta` - optional extra information, e.g. `filters` to populate select filter options.
+
+Without `total` or `hasMore`, the grid falls back to a chunk-size heuristic in `pager="more"` mode: a full chunk assumes a sequel, a short one ends the list (at the cost of one possibly empty extra click when the last chunk is exactly full).
+
+## Progressive loading without COUNT(*)
+
+For log-like interfaces, counting the whole table per request is wasteful. Ask for one row more than the page size and trim:
+
+```sql
+SELECT ...
+FROM logs
+WHERE ...
+ORDER BY recorded_at DESC, id DESC
+LIMIT 21 OFFSET :offset   -- pageSize 20
+```
+
+```js
+hasMore = rows.length > 20;
+rows = rows.slice(0, 20);
+```
+
+The grid only needs `{ rows, hasMore }`. For very large volumes the same contract works with a keyset cursor instead of an offset:
+
+```sql
+WHERE (recorded_at, id) < (:lastDate, :lastId)
+ORDER BY recorded_at DESC, id DESC
+LIMIT 21
+```
+
+See `demo/logs.html`, which emulates this pattern locally through a `NoCountSource` wrapper.
 
 `parseResponse` lets you adapt a different response shape. `ArrayDataSource.fromUrl(url)` fetches a static JSON file once and applies the query locally.
 

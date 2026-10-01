@@ -12,6 +12,7 @@ const labels = {
     resultCount: "Éléments : {count}",
     loadMore: "Charger plus",
     loadedCount: "{count} sur {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "Sélection : {count}",
     selectAll: "Sélectionner toutes les lignes",
     selectRow: "Sélectionner {row}",

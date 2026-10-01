@@ -289,7 +289,9 @@ later attribute mutations are intentionally ignored. Runtime pagination uses
 loaded rows and a *Load more* button appends the next chunk through
 `loadMore()` instead of replacing the page; the query stays on page 1, and any
 search, filter, sort, page-size or data-source change restarts from the first
-chunk. See `demo/logs.html`.
+chunk. A backend may omit `total` and send `hasMore` instead (see
+`docs/server-data.md`); the footer then counts without a total. See
+`demo/logs.html`.
 
 ## Scrollable grid
 

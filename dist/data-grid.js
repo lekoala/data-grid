@@ -485,12 +485,13 @@ function paginate(rows, page, pageSize) {
 }
 function parseResult(json) {
   if (Array.isArray(json)) {
-    return { rows: json, total: json.length, meta: {} };
+    return { rows: json, total: json.length, hasMore: false, meta: {} };
   }
   const rows = Array.isArray(json?.rows) ? json.rows : [];
   return {
     rows,
-    total: Number.isFinite(json?.total) ? json.total : rows.length,
+    total: Number.isFinite(json?.total) ? json.total : null,
+    ...typeof json?.hasMore === "boolean" ? { hasMore: json.hasMore } : {},
     meta: json?.meta ?? {}
   };
 }
@@ -569,9 +570,14 @@ class ArrayDataSource {
     rows = applySearch(rows, query.search);
     rows = applySort(rows, query.sort);
     const total = rows.length;
+    const page = query.page || 1;
+    const pageSize = query.pageSize || 10;
+    const start = (page - 1) * pageSize;
+    const chunk = paginate(rows, page, pageSize);
     return {
-      rows: paginate(rows, query.page || 1, query.pageSize || 10),
+      rows: chunk,
       total,
+      hasMore: start + chunk.length < total,
       meta: { unfilteredTotal: this.rows.length }
     };
   }
@@ -1077,6 +1083,7 @@ var DEFAULT_LABELS = {
   resultCount: "{count} items",
   loadMore: "Load more",
   loadedCount: "{count} of {total}",
+  loadedCountUnknown: "{count}",
   selectedCount: "{count} selected",
   selectAll: "Select all rows",
   selectRow: "Select {row}",
@@ -2000,7 +2007,7 @@ class DataGrid extends base_element_default {
   #initialQuery;
   #query;
   #loadedPage;
-  #exhausted;
+  #hasMore;
   #selection;
   #requestSeq;
   #controller;
@@ -2021,7 +2028,7 @@ class DataGrid extends base_element_default {
     this.#selection = { mode: "explicit", ids: new Set, except: new Set };
     this.#requestSeq = 0;
     this.#loadedPage = 1;
-    this.#exhausted = false;
+    this.#hasMore = true;
     this.#controller = null;
     this.initialResult = null;
     this.#initialResult = this.options.initialResult || this.initialResult || null;
@@ -2178,10 +2185,18 @@ class DataGrid extends base_element_default {
       this.#updateStatus(this.labels.loading);
     } else if (this.hasDataError) {
       this.#updateStatus(this.tbody?.getAttribute("data-empty-message") || this.labels.networkError);
+    } else if (this.options.pager === "more") {
+      this.#updateStatus(this.#moreStatusText());
     } else {
-      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total ?? 0 }) : this.noData);
     }
     this.runPlugins("updateLabels");
+  }
+  #moreStatusText() {
+    if (!this.rows.length) {
+      return this.noData;
+    }
+    return this.total == null ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length }) : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
   }
   updateMetaLabel() {
     const meta = this.querySelector(".dg-meta");
@@ -2189,13 +2204,10 @@ class DataGrid extends base_element_default {
       return;
     }
     if (this.options.pager === "more") {
-      meta.textContent = this.formatLabel(this.labels.loadedCount, {
-        count: this.rows.length,
-        total: this.total
-      });
+      meta.textContent = this.total == null ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length }) : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
       return;
     }
-    const total = this.total;
+    const total = this.total ?? 0;
     const page = this.#query.page || 1;
     let high = page * this.#query.pageSize;
     let low = high - this.#query.pageSize + 1;
@@ -2396,7 +2408,19 @@ class DataGrid extends base_element_default {
   }
   #resetProgressiveState() {
     this.#loadedPage = 1;
-    this.#exhausted = false;
+    this.#hasMore = true;
+  }
+  #resolveHasMore(result, chunkLength) {
+    if (chunkLength === 0) {
+      return false;
+    }
+    if (typeof result?.hasMore === "boolean") {
+      return result.hasMore;
+    }
+    if (result?.total != null) {
+      return this.rows.length < result.total;
+    }
+    return chunkLength === this.#query.pageSize;
   }
   setQuery(patch) {
     const next = normalizeQuery(this.#query);
@@ -2475,7 +2499,7 @@ class DataGrid extends base_element_default {
       if (this.applyResult(result)) {
         return this.refresh();
       }
-      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total }) : this.noData);
+      this.#updateStatus(this.options.pager === "more" ? this.#moreStatusText() : this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total ?? 0 }) : this.noData);
     } catch (err) {
       if (requestId !== this.#requestSeq)
         return;
@@ -2501,7 +2525,7 @@ class DataGrid extends base_element_default {
     if (this.options.pager !== "more" || this.loading) {
       return;
     }
-    if (this.#exhausted || this.rows.length >= this.total) {
+    if (!this.#hasMore) {
       return;
     }
     if (this.#lazyPending) {
@@ -2524,7 +2548,7 @@ class DataGrid extends base_element_default {
       if (requestId !== this.#requestSeq || controller.signal.aborted)
         return;
       this.#appendResult(result);
-      this.#updateStatus(this.rows.length ? this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total }) : this.noData);
+      this.#updateStatus(this.#moreStatusText());
     } catch (err) {
       if (requestId !== this.#requestSeq)
         return;
@@ -2551,9 +2575,7 @@ class DataGrid extends base_element_default {
     this.total = result?.total ?? this.total;
     this.meta = result?.meta || {};
     this.#loadedPage += 1;
-    if (!appended.length) {
-      this.#exhausted = true;
-    }
+    this.#hasMore = this.#resolveHasMore(result, appended.length);
     this.renderBody();
   }
   #updateMoreButton() {
@@ -2565,8 +2587,8 @@ class DataGrid extends base_element_default {
       button.hidden = true;
       return;
     }
-    button.hidden = this.#exhausted || this.rows.length >= this.total;
-    const busy = this.loading && this.options.pager === "more";
+    button.hidden = !this.#hasMore;
+    const busy = this.loading;
     button.disabled = busy;
     if (busy) {
       button.setAttribute("aria-busy", "true");
@@ -2577,9 +2599,11 @@ class DataGrid extends base_element_default {
     button.setAttribute("aria-label", busy ? this.labels.loading : this.labels.loadMore);
   }
   applyResult(result) {
+    this.#resetProgressiveState();
     this.rows = result.rows || [];
-    this.total = result.total ?? this.rows.length;
+    this.total = result.total ?? (this.options.pager === "more" ? null : this.rows.length);
     this.meta = result.meta || {};
+    this.#hasMore = this.#resolveHasMore(result, this.rows.length);
     const inferredColumns = this.options.columns.length === 0 && this.rows.length > 0;
     if (inferredColumns) {
       const fields = Object.keys(this.rows[0]).filter((field) => field !== "$actions");
@@ -2589,7 +2613,7 @@ class DataGrid extends base_element_default {
     }
     const requestedPage = this.#query.page;
     this.fixPage();
-    if (this.total > 0 && requestedPage > this.pages) {
+    if ((this.total ?? 0) > 0 && requestedPage > this.pages) {
       return true;
     }
     if (inferredColumns) {
@@ -4211,6 +4235,9 @@ class DataGrid extends base_element_default {
     tfoot.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
   }
   totalPages() {
+    if (this.total == null) {
+      return 1;
+    }
     return Math.max(1, Math.ceil(this.total / (this.#query.pageSize || 1)));
   }
   fixPage() {
@@ -4904,7 +4931,7 @@ class BulkActions extends base_plugin_default {
     }
     const grid = this.grid;
     const selection = grid.getSelectionState();
-    const count = selection.mode === "all" ? Math.max(0, grid.total - selection.except.size) : selection.ids.size;
+    const count = selection.mode === "all" ? Math.max(0, (grid.total ?? 0) - selection.except.size) : selection.ids.size;
     this.countEl.hidden = count === 0;
     if (this.countVisible && this.countStatus) {
       this.countVisible.textContent = `${count}`;
@@ -4944,7 +4971,7 @@ class FixedHeight extends base_plugin_default {
     }
     spacerRow.hidden = true;
     spacerRow.removeAttribute("height");
-    if (grid.query.pageSize > grid.total) {
+    if (grid.total != null && grid.query.pageSize > grid.total) {
       return;
     }
     if (grid.query.page !== grid.totalPages()) {

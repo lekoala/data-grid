@@ -12,6 +12,7 @@ const labels = {
     resultCount: "共 {count} 条",
     loadMore: "加载更多",
     loadedCount: "已显示 {count}，共 {total} 条",
+    loadedCountUnknown: "已显示 {count} 条",
     selectedCount: "已选 {count} 项",
     selectAll: "全选所有行",
     selectRow: "选择 {row}",

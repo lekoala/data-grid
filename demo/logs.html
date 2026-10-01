@@ -35,9 +35,30 @@
     </style>
 
     <script type="module">
-      import { ArrayDataSource, DataGrid } from "../data-grid.js";
+      import { DataGrid } from "../data-grid.js";
+      import { applyFilters, applySearch, applySort } from "../src/data-source.js";
 
-      DataGrid.setLabels({ loadMore: "Load older events", loadedCount: "Showing {count} of {total}" });
+      DataGrid.setLabels({ loadMore: "Load older events", loadedCountUnknown: "{count} logs" });
+
+      /**
+       * No-COUNT(*) source: the honest server pattern (OFFSET + LIMIT size+1
+       * over the filtered/sorted population), so the grid never learns a
+       * total and the footer counts loaded events only.
+       */
+      class NoCountSource {
+        constructor(rows) {
+          this.rows = rows;
+        }
+
+        async load(query) {
+          let rows = applyFilters(this.rows, query.filters);
+          rows = applySearch(rows, query.search);
+          rows = applySort(rows, query.sort);
+          const size = query.pageSize || 20;
+          const chunk = rows.slice((query.page - 1) * size, (query.page - 1) * size + size + 1);
+          return { rows: chunk.slice(0, size), hasMore: chunk.length > size, meta: {} };
+        }
+      }
 
       // Deterministic event stream: the same 240 events on every load.
       function mulberry32(seed) {        let state = seed;
@@ -151,7 +172,10 @@
         pager: "more",
         searchable: true,
         searchPlaceholder: "Message, path, request id…",
-        sortable: true,
+        // No sortable: logs are a chronological stream, newest first. Search,
+        // column filters and row details are the exploration tools; the
+        // timestamp DESC order below is imposed, not user-switchable, so
+        // "Load older events" always means older events.
         filterable: true,
         rowLabel: "message",
         initialQuery: { pageSize: 20, sort: [{ field: "timestamp", direction: "desc" }] },
@@ -193,7 +217,7 @@
             })),
             renderCell: requestCell,
           },
-          { field: "message", title: "Message", wrap: true },
+          { field: "message", title: "Message" },
         ],
         rowDetails: ({ row }) => {
           const list = document.createElement("dl");
@@ -214,7 +238,7 @@
           }
           return list;
         },
-        dataSource: new ArrayDataSource(buildEvents()),
+        dataSource: new NoCountSource(buildEvents()),
       });
       const host = document.getElementById("logs-grid");
       host.replaceChildren(grid);
@@ -236,7 +260,7 @@
 
       <h2>Event logs</h2>
 
-      <p>A progressive list instead of pages: the footer counts the loaded events and <em>Load older events</em> appends the next chunk. Search, filters and sorting restart from the first chunk; expanding a row shows the request context. Newest events first.</p>
+      <p>A progressive list instead of pages: the footer counts the loaded events and <em>Load older events</em> appends the next chunk. Search and filters restart from the first chunk; expanding a row shows the request context. Newest events first, always.</p>
 
       <div class="demo-grid">
         <div id="logs-grid"></div>

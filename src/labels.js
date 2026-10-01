@@ -20,6 +20,7 @@ export const DEFAULT_LABELS = {
     resultCount: "{count} items",
     loadMore: "Load more",
     loadedCount: "{count} of {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "{count} selected",
     selectAll: "Select all rows",
     selectRow: "Select {row}",

@@ -510,6 +510,10 @@ export type Labels = {
      * - progressive pager status ("more" mode), with {count} and {total}
      */
     loadedCount: string;
+    /**
+     * - progressive pager status without COUNT(*) ("more" mode), with {count}
+     */
+    loadedCountUnknown: string;
     selectedCount: string;
     selectAll: string;
     selectRow: string;
@@ -558,10 +562,11 @@ declare class DataGrid extends BaseElement {
      */
     rows: Array<Record<string, any>>;
     /**
-     * Total number of rows matching the current query
-     * @type {Number}
+     * Total number of rows matching the current query. Null in pager
+     * "more" mode when the backend skipped COUNT(*).
+     * @type {Number|null}
      */
-    total: number;
+    total: number | null;
     /**
      * Meta information returned by the data source
      * @type {Record<string, any>}

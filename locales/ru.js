@@ -12,6 +12,7 @@ const labels = {
     resultCount: "Элементы: {count}",
     loadMore: "Загрузить ещё",
     loadedCount: "{count} из {total}",
+    loadedCountUnknown: "{count}",
     selectedCount: "Выбрано: {count}",
     selectAll: "Выбрать все строки",
     selectRow: "Выбрать {row}",
