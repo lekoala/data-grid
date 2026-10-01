@@ -20,7 +20,10 @@ class CountingSource {
 }
 
 // happy-dom ships IntersectionObserver but never fires a callback on its own,
-// so the tests stub it and trigger the intersection manually.
+// so the tests stub it and trigger the intersection manually. The stub is
+// restored (not deleted) afterwards: test files share one globalThis, so
+// deleting it would break grids initialized later in another file.
+const RealIntersectionObserver = globalThis.IntersectionObserver;
 let lastObserverCallback = null;
 
 class FakeIntersectionObserver {
@@ -53,7 +56,7 @@ beforeEach(() => {
 
 afterEach(() => {
     // @ts-expect-error
-    delete globalThis.IntersectionObserver;
+    globalThis.IntersectionObserver = RealIntersectionObserver;
     lastObserverCallback = null;
 });
 

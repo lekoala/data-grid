@@ -171,10 +171,15 @@ export declare function paginate(rows: Array<Record<string, any>>, page: number,
 export declare function parseResult(json: any): PageResult;
 /**
  * Apply a global search locally: case- and accent-insensitive `contains` over
- * the scalar values of each row. This is a convenient default for client-side
- * data, not a contract for server backends: `QueryState.search` only means
- * "the user asked for a global search", the server decides which fields it
- * covers.
+ * the scalar values of each row. The search stays a plain string with one
+ * convention: `|` separates OR alternatives (`info|warn` matches rows with
+ * "info" or "warn"), each alternative a literal substring — spaces have no
+ * syntactic role. Alternatives are trimmed, so `info | warn` works; `|` is
+ * reserved (no escaping in v1). A search with no usable alternative (empty,
+ * blank or `|` only) matches everything. This is a convenient default for
+ * client-side data, not a contract for server backends: `QueryState.search`
+ * only means "the user asked for a global search", the server decides which
+ * fields it covers.
  * @param {Array<Record<string, any>>} rows
  * @param {String} search
  * @returns {Array<Record<string, any>>}
