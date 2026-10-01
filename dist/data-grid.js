@@ -2412,6 +2412,13 @@ class DataGrid extends base_element_default {
     }
     return next;
   }
+  #assignQuery(query) {
+    const previous = JSON.stringify(this.#query);
+    this.#query = this.#normalizeRuntimeQuery(query);
+    if (JSON.stringify(this.#query) !== previous) {
+      dispatch(this, "querychange", { query: this.query });
+    }
+  }
   #resetProgressiveState() {
     this.#loadedPage = 1;
     this.#hasMore = true;
@@ -2444,8 +2451,7 @@ class DataGrid extends base_element_default {
       next.page = 1;
     if (patch.page !== undefined)
       next.page = patch.page;
-    this.#query = this.#normalizeRuntimeQuery(next);
-    dispatch(this, "querychange", { query: this.query });
+    this.#assignQuery(next);
     if (changesPopulation) {
       this.#clearSelectionIfNeeded();
     }
@@ -2461,9 +2467,8 @@ class DataGrid extends base_element_default {
     this.#query = this.#normalizeRuntimeQuery(query);
   }
   resetQuery() {
-    this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
+    this.#assignQuery(this.#initialQuery);
     this.#resetProgressiveState();
-    dispatch(this, "querychange", { query: this.query });
     this.#clearSelectionIfNeeded();
     return this.refresh();
   }
@@ -4501,7 +4506,6 @@ class ContextMenu extends base_plugin_default {
       }
       grid.hideColumn(field);
     }
-    grid.fixPage();
   }
   oncontextmenu(event) {
     const menu = this.menu;

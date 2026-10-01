@@ -114,3 +114,21 @@ test("restoreQuery, refresh and load never emit querychange", async () => {
     expect(inst.query.search).toBe("row1");
     document.body.removeChild(inst);
 });
+
+test("a mutation that leaves the normalized query identical stays silent", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }] });
+    const received = listen(inst);
+
+    await inst.setQuery({ search: "row1" });
+    // Same search, and a page already at 1: nothing changes.
+    await inst.setQuery({ search: "row1" });
+    await inst.setQuery({ page: 1 });
+    expect(received.length).toBe(1);
+
+    await inst.resetQuery();
+    // Already at the initial state.
+    await inst.resetQuery();
+    expect(received.length).toBe(2);
+    expect(received[1].search).toBe("");
+    document.body.removeChild(inst);
+});

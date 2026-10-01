@@ -1331,6 +1331,20 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Normalize and store a query mutation, emitting `querychange` only when
+     * the normalized state actually differs: the event means "the query
+     * changed", so re-assigning the same state stays silent.
+     * @param {?QueryState} query
+     */
+    #assignQuery(query) {
+        const previous = JSON.stringify(this.#query);
+        this.#query = this.#normalizeRuntimeQuery(query);
+        if (JSON.stringify(this.#query) !== previous) {
+            dispatch(this, "querychange", { query: this.query });
+        }
+    }
+
+    /**
      * Restart the progressive list from its first chunk. Called whenever the
      * population, the chunk size, or the data source changes; the following
      * refresh then replaces the rows instead of appending to them.
@@ -1370,8 +1384,8 @@ class DataGrid extends BaseElement {
      * explicit page is provided in the patch. Changing search or filters
      * (population changes) also clears the selection, since a `mode: "all"`
      * selection only means something for the population it was created on.
-     * Emits `querychange` with a normalized snapshot once the state is
-     * assigned, before the reload (including in lazy mode, where no load runs
+     * Emits `querychange` with a normalized snapshot when the state changes,
+     * before the reload (including in lazy mode, where no load runs
      * yet). Mutating `event.detail.query` never affects the grid. In pager
      * "more" mode the page is always coerced back to 1: chunks accumulate
      * through loadMore(), never through the query.
@@ -1393,8 +1407,7 @@ class DataGrid extends BaseElement {
         if (patch.filters !== undefined) next.filters = patch.filters;
         if (resetsPage && patch.page === undefined) next.page = 1;
         if (patch.page !== undefined) next.page = patch.page;
-        this.#query = this.#normalizeRuntimeQuery(next);
-        dispatch(this, "querychange", { query: this.query });
+        this.#assignQuery(next);
         if (changesPopulation) {
             this.#clearSelectionIfNeeded();
         }
@@ -1424,15 +1437,14 @@ class DataGrid extends BaseElement {
 
     /**
      * Reset the query to its initial state and reload. Emits `querychange`
-     * like setQuery does. `restoreQuery()` (bootstrap rehydration) and
+     * like setQuery does (only when the query differs from the initial one). `restoreQuery()` (bootstrap rehydration) and
      * `refresh()` / `load()` (no query mutation) never emit it.
      * @public
      * @returns {Promise<void>}
      */
     resetQuery() {
-        this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
+        this.#assignQuery(this.#initialQuery);
         this.#resetProgressiveState();
-        dispatch(this, "querychange", { query: this.query });
         this.#clearSelectionIfNeeded();
         return this.refresh();
     }

@@ -279,8 +279,9 @@ grid.addEventListener("querychange", (ev) => {
 ```
 
 `setQuery()` and `resetQuery()` emit `querychange` with a normalized snapshot
-once the state is assigned, before the reload - including in lazy mode, where
-no load runs yet. Mutating `event.detail.query` never affects the grid.
+when the state changes, before the reload - including in lazy mode, where no
+load runs yet. A patch that leaves the normalized query identical still
+reloads but stays silent. Mutating `event.detail.query` never affects the grid.
 `restoreQuery()` (bootstrap rehydration for stateful plugins), `refresh()`, and
 `load()` never emit it: the event means the query changed, not that data was
 reloaded.
