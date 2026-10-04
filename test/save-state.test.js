@@ -299,6 +299,73 @@ test("legacy field-based storage still restores visibility", async () => {
     document.body.removeChild(grid);
 });
 
+test("stable ids take precedence over colliding fields when restoring columns", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            columns: [
+                { id: "y", hidden: false, width: 230 },
+                { id: "z", hidden: true },
+            ],
+        }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "y", id: "z" },
+        { field: "x", id: "y" },
+    ]);
+
+    expect(grid.options.columns.map((column) => column.id)).toEqual(["y", "z"]);
+    expect(grid.options.columns.map((column) => column.field)).toEqual(["x", "y"]);
+    expect(grid.options.columns[0].width).toBe(230);
+    expect(grid.options.columns[1].hidden).toBe(true);
+    await grid.refresh();
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    expect(stored.columns).toEqual([
+        { id: "y", hidden: false, width: 230 },
+        { id: "z", hidden: true },
+    ]);
+    document.body.removeChild(grid);
+});
+
+test("legacy fields resolve to canonical columns for order, visibility and widths", async () => {
+    sessionStorage.setItem(
+        `gridSaveState_${gridId}`,
+        JSON.stringify({
+            columns: [
+                { field: "x", hidden: false, width: 230 },
+                { id: "y", hidden: true, width: 400 },
+                { field: "y", hidden: true },
+            ],
+        }),
+    );
+    const grid = await makeSaveStateGrid([
+        { field: "y", id: "z" },
+        { field: "x", id: "y" },
+    ]);
+
+    expect(grid.options.columns.map((column) => column.id)).toEqual(["y", "z"]);
+    expect(grid.options.columns[0].width).toBe(230);
+    expect(grid.options.columns[0].hidden).toBe(false);
+    expect(grid.options.columns[1].hidden).toBe(true);
+    await grid.refresh();
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    expect(stored.columns[0]).toEqual({ id: "y", hidden: false, width: 230 });
+    document.body.removeChild(grid);
+});
+
+test("resize persistence resolves event fields independently of column ids", async () => {
+    const grid = await makeSaveStateGrid([
+        { field: "y", id: "z" },
+        { field: "x", id: "y" },
+    ]);
+    resizeColumn(grid, "z", 100, 180);
+
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    expect(stored.columns.find((column) => column.id === "z").width).toBe(180);
+    expect(stored.columns.find((column) => column.id === "y").width).toBeUndefined();
+    document.body.removeChild(grid);
+});
+
 test("malformed storage fails harmlessly", async () => {
     sessionStorage.setItem(
         `gridSaveState_${gridId}`,

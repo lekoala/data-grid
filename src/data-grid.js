@@ -587,7 +587,7 @@ class DataGrid extends BaseElement {
     #initialQuery;
     /** @type {QueryState} */
     #query;
-    /** Last transport page loaded in pager "more" mode (query.page stays 1).
+    /** Last transport page loaded in pager "more" mode, or 0 before success (query.page stays 1).
      * @type {Number} */
     #loadedPage;
     /** Whether another chunk may exist in pager "more" mode: the only
@@ -661,7 +661,7 @@ class DataGrid extends BaseElement {
          * how many chunks were appended.
          */
         /** @type {Number} */
-        this.#loadedPage = 1;
+        this.#loadedPage = 0;
 
         /** @type {Boolean} */
         this.#hasMore = true;
@@ -1350,7 +1350,7 @@ class DataGrid extends BaseElement {
      * refresh then replaces the rows instead of appending to them.
      */
     #resetProgressiveState() {
-        this.#loadedPage = 1;
+        this.#loadedPage = 0;
         this.#hasMore = true;
     }
 
@@ -1437,8 +1437,9 @@ class DataGrid extends BaseElement {
 
     /**
      * Reset the query to its initial state and reload. Emits `querychange`
-     * like setQuery does (only when the query differs from the initial one). `restoreQuery()` (bootstrap rehydration) and
-     * `refresh()` / `load()` (no query mutation) never emit it.
+     * like setQuery does (only when the query differs from the initial one).
+     * `restoreQuery()` (bootstrap rehydration) stays silent. A load emits only
+     * when its result corrects an out-of-range page.
      * @public
      * @returns {Promise<void>}
      */
@@ -1482,6 +1483,7 @@ class DataGrid extends BaseElement {
      * @returns {Promise<void>}
      */
     async load() {
+        this.#resetProgressiveState();
         // An explicit load is a request for data now: bypass any pending lazy
         // deferral so the observer is disarmed and the fetch proceeds.
         if (this.#lazyPending) {
@@ -1549,8 +1551,9 @@ class DataGrid extends BaseElement {
      * the list is not exhausted yet. A concurrent setQuery() supersedes the
      * flight: its late response is dropped and its cleanup never touches the
      * newer load. Errors keep the loaded rows and leave the button available
-     * for a retry. Progress is already observable through rows.length, total
-     * and loading — no boolean needed.
+     * for a retry. Before the first successful chunk, it loads or retries
+     * page 1 through load(). Progress is already observable through rows.length,
+     * total and loading — no boolean needed.
      * @public
      * @returns {Promise<void>}
      */
@@ -1561,12 +1564,11 @@ class DataGrid extends BaseElement {
         if (!this.#hasMore) {
             return;
         }
-        // An explicit request for data now: bypass a pending lazy deferral
-        // like load() does, so the observer is disarmed and the fetch runs.
-        if (this.#lazyPending) {
-            this.#lazyPending = false;
-            this.#loadObserver?.disconnect();
-            this.#loadObserver = null;
+        // Before a successful first chunk, replace through the normal load
+        // path. This also activates lazy grids and retries failed resets
+        // without appending a new population onto previously loaded rows.
+        if (this.#loadedPage === 0) {
+            return this.load();
         }
         const requestId = ++this.#requestSeq;
         this.#controller?.abort();
@@ -1655,7 +1657,7 @@ class DataGrid extends BaseElement {
     applyResult(result) {
         // A replacement starts a new progressive sequence, even when it comes
         // from a bare refresh(): the next loadMore() restarts at chunk 2.
-        this.#resetProgressiveState();
+        this.#loadedPage = 1;
         this.rows = result.rows || [];
         // Classic pagination keeps its historic default; pager "more" preserves
         // the absence of a total so the chunk heuristic can apply.
@@ -1766,7 +1768,7 @@ class DataGrid extends BaseElement {
                 // Switching navigation mode restarts from the first chunk so
                 // the rows always match the freshly normalized query.
                 this.#resetProgressiveState();
-                this.#query = this.#normalizeRuntimeQuery(this.#query);
+                this.#assignQuery(this.#query);
                 this.renderTable();
                 return this.refresh();
             case "snap-columns":
@@ -4219,11 +4221,9 @@ class DataGrid extends BaseElement {
     fixPage() {
         if (!this.inputPage) return this;
         this.pages = this.totalPages();
-        if (this.#query.page > this.pages) {
-            this.#query.page = Math.max(1, this.pages);
-        }
-        if (this.#query.page < 1) {
-            this.#query.page = 1;
+        const page = Math.min(Math.max(1, this.#query.page), this.pages);
+        if (page !== this.#query.page) {
+            this.#assignQuery({ ...this.#query, page });
         }
         // Show current page in input
         this.inputPage.max = `${this.pages}`;

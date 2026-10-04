@@ -247,6 +247,63 @@ test("a loadMore error keeps the rows and stays retryable", async () => {
     document.body.removeChild(inst);
 });
 
+test("loadMore retries the first chunk after an initial load failure", async () => {
+    const { ds, queries } = instrument(rows, { fail: new Set([1]) });
+    const original = new ArrayDataSource(rows);
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+    expect(inst.hasAttribute("data-error")).toBe(true);
+    expect(moreButton(inst).hidden).toBe(false);
+    ds.load = (query, options) => {
+        queries.push({ ...query });
+        return original.load(query, options);
+    };
+
+    await inst.loadMore();
+    expect(queries.map((query) => query.page)).toEqual([1, 1]);
+    expect(inst.rows).toEqual(rows.slice(0, 20));
+    expect(inst.hasAttribute("data-error")).toBe(false);
+    await inst.loadMore();
+    expect(inst.rows).toEqual(rows.slice(0, 40));
+    document.body.removeChild(inst);
+});
+
+test("loadMore activates a lazy grid from the first chunk", async () => {
+    const { ds, queries } = instrument(rows);
+    const inst = await makeReadyGrid({
+        pager: "more",
+        loading: "lazy",
+        initialQuery: { pageSize: 20 },
+        dataSource: ds,
+    });
+    expect(queries).toHaveLength(0);
+
+    await inst.loadMore();
+    expect(queries.map((query) => query.page)).toEqual([1]);
+    expect(inst.rows).toEqual(rows.slice(0, 20));
+    await inst.loadMore();
+    expect(queries.map((query) => query.page)).toEqual([1, 2]);
+    expect(inst.rows).toEqual(rows.slice(0, 40));
+    document.body.removeChild(inst);
+});
+
+test("loadMore replaces old rows when retrying a failed refresh", async () => {
+    const { ds, queries } = instrument(rows);
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+    await inst.loadMore();
+    const original = ds.load;
+    ds.load = () => Promise.reject(new Error("temporary failure"));
+    await inst.refresh();
+    expect(inst.hasAttribute("data-error")).toBe(true);
+    ds.load = original;
+
+    await inst.loadMore();
+    expect(queries.map((query) => query.page)).toEqual([1, 2, 1]);
+    expect(inst.rows).toEqual(rows.slice(0, 20));
+    await inst.loadMore();
+    expect(inst.rows).toEqual(rows.slice(0, 40));
+    document.body.removeChild(inst);
+});
+
 test("a late chunk never appends after a population change", async () => {
     const { ds, release } = instrument(rows, { hang: new Set([3]) });
     DataGrid.unregisterPlugins();

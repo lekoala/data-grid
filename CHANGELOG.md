@@ -47,6 +47,11 @@ not documented.
 - Improved context-menu positioning and browser geometry tests.
 - Fixed progressive-loading edge cases around stale requests, resets, empty
   chunks and unknown totals.
+- Fixed `loadMore()` skipping the first chunk after a failed load or before
+  lazy activation, including retries after a failed refresh.
+- Fixed SaveState column restoration when a column id matches another field,
+  including legacy field-based storage and resize persistence.
+- Fixed `querychange` synchronization after page clamping and pager mode changes.
 
 ## [3.5.0] - 2026-09-16
 

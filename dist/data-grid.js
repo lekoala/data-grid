@@ -2037,7 +2037,7 @@ class DataGrid extends base_element_default {
     this.#query = this.#normalizeRuntimeQuery(this.#initialQuery);
     this.#selection = { mode: "explicit", ids: new Set, except: new Set };
     this.#requestSeq = 0;
-    this.#loadedPage = 1;
+    this.#loadedPage = 0;
     this.#hasMore = true;
     this.#controller = null;
     this.initialResult = null;
@@ -2420,7 +2420,7 @@ class DataGrid extends base_element_default {
     }
   }
   #resetProgressiveState() {
-    this.#loadedPage = 1;
+    this.#loadedPage = 0;
     this.#hasMore = true;
   }
   #resolveHasMore(result, chunkLength) {
@@ -2483,6 +2483,7 @@ class DataGrid extends base_element_default {
     return ds.load(query, { signal: controller.signal });
   }
   async load() {
+    this.#resetProgressiveState();
     if (this.#lazyPending) {
       this.#lazyPending = false;
       this.#loadObserver?.disconnect();
@@ -2539,10 +2540,8 @@ class DataGrid extends base_element_default {
     if (!this.#hasMore) {
       return;
     }
-    if (this.#lazyPending) {
-      this.#lazyPending = false;
-      this.#loadObserver?.disconnect();
-      this.#loadObserver = null;
+    if (this.#loadedPage === 0) {
+      return this.load();
     }
     const requestId = ++this.#requestSeq;
     this.#controller?.abort();
@@ -2610,7 +2609,7 @@ class DataGrid extends base_element_default {
     button.setAttribute("aria-label", busy ? this.labels.loading : this.labels.loadMore);
   }
   applyResult(result) {
-    this.#resetProgressiveState();
+    this.#loadedPage = 1;
     this.rows = result.rows || [];
     this.total = result.total ?? (this.options.pager === "more" ? null : this.rows.length);
     this.meta = result.meta || {};
@@ -2703,7 +2702,7 @@ class DataGrid extends base_element_default {
         break;
       case "pager":
         this.#resetProgressiveState();
-        this.#query = this.#normalizeRuntimeQuery(this.#query);
+        this.#assignQuery(this.#query);
         this.renderTable();
         return this.refresh();
       case "snap-columns":
@@ -4274,11 +4273,9 @@ class DataGrid extends base_element_default {
     if (!this.inputPage)
       return this;
     this.pages = this.totalPages();
-    if (this.#query.page > this.pages) {
-      this.#query.page = Math.max(1, this.pages);
-    }
-    if (this.#query.page < 1) {
-      this.#query.page = 1;
+    const page = Math.min(Math.max(1, this.#query.page), this.pages);
+    if (page !== this.#query.page) {
+      this.#assignQuery({ ...this.#query, page });
     }
     this.inputPage.max = `${this.pages}`;
     this.inputPage.value = `${this.#query.page}`;
@@ -6268,68 +6265,40 @@ class SaveState extends base_plugin_default {
   #restoreColumns(entries) {
     const grid = this.grid;
     const columns = grid.options.columns;
+    const byId = new Map(columns.map((column) => [grid.getColumnId(column), column]));
+    const byField = new Map(columns.map((column) => [column.field, column]));
     const known = [];
     const seen = new Set;
     for (const entry of entries) {
       if (!entry || typeof entry !== "object") {
         continue;
       }
-      const id = String(entry.id ?? entry.field ?? "");
-      if (!id || seen.has(id)) {
+      const target = entry.id != null ? byId.get(String(entry.id)) : byField.get(String(entry.field ?? ""));
+      if (!target || seen.has(target)) {
         continue;
       }
-      seen.add(id);
-      known.push({
-        id,
-        hasHidden: Object.hasOwn(entry, "hidden"),
-        hidden: Boolean(entry.hidden),
-        width: typeof entry.width === "number" && Number.isFinite(entry.width) ? entry.width : undefined
-      });
-    }
-    if (!known.length) {
-      return;
-    }
-    for (const entry of known) {
-      const target = this.#findColumnById(entry.id);
-      if (!target) {
-        continue;
+      seen.add(target);
+      known.push(target);
+      if (Object.hasOwn(entry, "hidden")) {
+        target.hidden = Boolean(entry.hidden);
       }
-      if (entry.hasHidden) {
-        target.hidden = entry.hidden;
-      }
-      if (entry.width !== undefined) {
+      if (typeof entry.width === "number" && Number.isFinite(entry.width)) {
         target.width = entry.width;
-        this.#userWidthIds.add(entry.id);
+        this.#userWidthIds.add(grid.getColumnId(target));
       }
     }
-    const columnIds = new Set(columns.map((column) => grid.getColumnId(column)));
-    const persisted = known.filter((entry) => columnIds.has(entry.id)).map((entry) => entry.id);
-    const slots = [];
+    let next = 0;
     for (let i = 0;i < columns.length; i++) {
-      if (seen.has(grid.getColumnId(columns[i]))) {
-        slots.push(i);
+      if (seen.has(columns[i])) {
+        columns[i] = known[next++];
       }
     }
-    const ordered = columns.slice();
-    for (let i = 0;i < Math.min(slots.length, persisted.length); i++) {
-      ordered[slots[i]] = this.#findColumnById(persisted[i]);
-    }
-    if (ordered.some((column, i) => column !== columns[i])) {
-      for (let i = 0;i < columns.length; i++) {
-        columns[i] = ordered[i];
-      }
-    }
-  }
-  #findColumnById(id) {
-    return this.grid.options.columns.find((column) => {
-      return this.grid.getColumnId(column) === id || column.field === id || column.id === id;
-    });
   }
   #matchColumnId(col) {
     if (col === undefined || col === null) {
       return null;
     }
-    const column = this.#findColumnById(String(col));
+    const column = this.grid.options.columns.find((column) => column.field === String(col));
     return column ? this.grid.getColumnId(column) : null;
   }
   log(...data) {

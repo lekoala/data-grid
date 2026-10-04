@@ -282,9 +282,10 @@ grid.addEventListener("querychange", (ev) => {
 when the state changes, before the reload - including in lazy mode, where no
 load runs yet. A patch that leaves the normalized query identical still
 reloads but stays silent. Mutating `event.detail.query` never affects the grid.
-`restoreQuery()` (bootstrap rehydration for stateful plugins), `refresh()`, and
-`load()` never emit it: the event means the query changed, not that data was
-reloaded.
+`restoreQuery()` (bootstrap rehydration for stateful plugins) stays silent.
+`refresh()` and `load()` emit only when a result corrects an out-of-range page;
+the corrected snapshot keeps URL adapters in sync with the displayed page.
+Switching to `pager="more"` also emits when it resets the query page to 1.
 
 ## External query builder
 

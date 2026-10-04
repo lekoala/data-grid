@@ -796,8 +796,9 @@ declare class DataGrid extends BaseElement {
     restoreQuery(query: QueryState | null): void;
     /**
      * Reset the query to its initial state and reload. Emits `querychange`
-     * like setQuery does (only when the query differs from the initial one). `restoreQuery()` (bootstrap rehydration) and
-     * `refresh()` / `load()` (no query mutation) never emit it.
+     * like setQuery does (only when the query differs from the initial one).
+     * `restoreQuery()` (bootstrap rehydration) stays silent. A load emits only
+     * when its result corrects an out-of-range page.
      * @public
      * @returns {Promise<void>}
      */
@@ -821,8 +822,9 @@ declare class DataGrid extends BaseElement {
      * the list is not exhausted yet. A concurrent setQuery() supersedes the
      * flight: its late response is dropped and its cleanup never touches the
      * newer load. Errors keep the loaded rows and leave the button available
-     * for a retry. Progress is already observable through rows.length, total
-     * and loading — no boolean needed.
+     * for a retry. Before the first successful chunk, it loads or retries
+     * page 1 through load(). Progress is already observable through rows.length,
+     * total and loading — no boolean needed.
      * @public
      * @returns {Promise<void>}
      */

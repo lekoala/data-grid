@@ -163,7 +163,9 @@ class SaveState extends BasePlugin {
     #restoreColumns(entries) {
         const grid = this.grid;
         const columns = grid.options.columns;
-        /** @type {Array<{ id: String, hidden: Boolean, hasHidden: Boolean, width: Number|undefined }>} */
+        const byId = new Map(columns.map((column) => [grid.getColumnId(column), column]));
+        const byField = new Map(columns.map((column) => [column.field, column]));
+        /** @type {Array<import("../data-grid.js").Column>} */
         const known = [];
         const seen = new Set();
 
@@ -171,71 +173,32 @@ class SaveState extends BasePlugin {
             if (!entry || typeof entry !== "object") {
                 continue;
             }
-            // v3.5 stored `{ field, hidden }`; the current format uses `id`.
-            const id = String(entry.id ?? entry.field ?? "");
-            if (!id || seen.has(id)) {
+            // Resolve each entry once. Current storage uses stable ids;
+            // v3.5 used fields, which may collide with another column's id.
+            const target = entry.id != null ? byId.get(String(entry.id)) : byField.get(String(entry.field ?? ""));
+            if (!target || seen.has(target)) {
                 continue;
             }
-            seen.add(id);
-            known.push({
-                id,
-                hasHidden: Object.hasOwn(entry, "hidden"),
-                hidden: Boolean(entry.hidden),
-                width: typeof entry.width === "number" && Number.isFinite(entry.width) ? entry.width : undefined,
-            });
-        }
-        if (!known.length) {
-            return;
-        }
-
-        // Apply visibility and user width to the matching base columns.
-        for (const entry of known) {
-            const target = this.#findColumnById(entry.id);
-            if (!target) {
-                continue;
+            seen.add(target);
+            known.push(target);
+            if (Object.hasOwn(entry, "hidden")) {
+                target.hidden = Boolean(entry.hidden);
             }
-            if (entry.hasHidden) {
-                target.hidden = entry.hidden;
-            }
-            if (entry.width !== undefined) {
+            if (typeof entry.width === "number" && Number.isFinite(entry.width)) {
                 target.width = entry.width;
-                this.#userWidthIds.add(entry.id);
+                this.#userWidthIds.add(grid.getColumnId(target));
             }
         }
 
         // Deterministic order merge: known columns keep their relative saved
         // order but only within the slots they currently occupy, so columns
         // added to the schema since the state was saved stay put.
-        const columnIds = new Set(columns.map((column) => grid.getColumnId(column)));
-        const persisted = known.filter((entry) => columnIds.has(entry.id)).map((entry) => entry.id);
-        const slots = [];
+        let next = 0;
         for (let i = 0; i < columns.length; i++) {
-            if (seen.has(grid.getColumnId(columns[i]))) {
-                slots.push(i);
+            if (seen.has(columns[i])) {
+                columns[i] = known[next++];
             }
         }
-        const ordered = columns.slice();
-        for (let i = 0; i < Math.min(slots.length, persisted.length); i++) {
-            ordered[slots[i]] = /** @type {import("../data-grid.js").Column} */ (this.#findColumnById(persisted[i]));
-        }
-        if (ordered.some((column, i) => column !== columns[i])) {
-            for (let i = 0; i < columns.length; i++) {
-                columns[i] = ordered[i];
-            }
-        }
-    }
-
-    /**
-     * Resolve a stable column id to its base column. Matches by column identity
-     * (`column.id ?? column.field`) first, then falls back to the bare `field`
-     * so legacy field-based storage keeps working for id-keyed columns.
-     * @param {String} id
-     * @returns {import("../data-grid.js").Column|undefined}
-     */
-    #findColumnById(id) {
-        return this.grid.options.columns.find((column) => {
-            return this.grid.getColumnId(column) === id || column.field === id || column.id === id;
-        });
     }
 
     /**
@@ -248,7 +211,7 @@ class SaveState extends BasePlugin {
         if (col === undefined || col === null) {
             return null;
         }
-        const column = this.#findColumnById(String(col));
+        const column = this.grid.options.columns.find((column) => column.field === String(col));
         return column ? this.grid.getColumnId(column) : null;
     }
 
