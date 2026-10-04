@@ -5,7 +5,7 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
-## [3.6.0] - Unreleased
+## [3.6.0] - 2026-10-04
 
 ### Breaking / migration
 - `parseResult()` no longer fabricates `total` from `rows.length` when the payload has
@@ -18,9 +18,12 @@ not documented.
 ### Added
 
 - Added `pager="more"` and `loadMore()` for progressively loading and appending
-  result chunks without exposing transport pages in `QueryState`.
+  result chunks without exposing transport pages in `QueryState`. The Load more
+  button keeps keyboard focus while busy and hands it to the first new row once
+  the results are exhausted.
 - Added optional `PageResult.hasMore` and support for unknown totals, allowing
-  backends to skip expensive `COUNT(*)` queries.
+  backends to skip expensive `COUNT(*)` queries. Bulk actions stay enabled for
+  an all-results selection whose total is unknown.
 - Added `querychange`, emitted when the runtime query changes, for integrations
   such as URL state and external query builders.
 - Added `frozen: "end"` in addition to start-frozen columns.
@@ -28,14 +31,14 @@ not documented.
 - Added `enterMovesDown` for spreadsheet-like editing flows.
 - Added `|` alternatives to `ArrayDataSource` global search
   (`info|warn` matches either value).
+- Added the stable column `id` to the `columnResized` event detail.
 - Added advanced-search, URL-state, frozen-column and progressive logs demos.
 
 ### Changed
 
 - `SaveState` now persists column order and user-resized widths in addition to
-  query and visibility state.
-- Progressive results may expose `total: null`; `hasMore` is authoritative when
-  provided.
+  query and visibility state, keyed by stable column id (states saved by 3.5,
+  keyed by field, are still restored).
 - Frozen-column geometry now handles start and end groups independently,
   including scroll snapping and RTL.
 - Moved the grid footer outside the table scroll viewport so pagination remains
@@ -45,19 +48,6 @@ not documented.
 ### Fixed
 
 - Improved context-menu positioning and browser geometry tests.
-- Fixed progressive-loading edge cases around stale requests, resets, empty
-  chunks and unknown totals.
-- Fixed `loadMore()` skipping the first chunk after a failed load or before
-  lazy activation, including retries after a failed refresh.
-- Fixed SaveState column restoration when a column id matches another field,
-  including legacy field-based storage and resize persistence.
-- Fixed `querychange` synchronization after page clamping and pager mode changes.
-- Fixed reconnecting grids containing nested tables in rendered content.
-- Kept bulk actions enabled for all-results selections with an unknown total.
-- Preserved Load more keyboard focus during loading and moved it to the first
-  new row on exhaustion (or the scroll viewport for an empty final chunk).
-- Added stable `id` to `columnResized` so SaveState can persist widths for
-  columns without a `field`.
 
 ## [3.5.0] - 2026-09-16
 
