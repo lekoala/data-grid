@@ -118,9 +118,8 @@ class SaveState extends BasePlugin {
         // `column.width` alone is not proof, since a width may be authored.
         if (event.type === "columnResized") {
             const detail = /** @type {CustomEvent} */ (event).detail;
-            const id = this.#matchColumnId(detail?.col);
-            if (id) {
-                this.#userWidthIds.add(id);
+            if (typeof detail?.id === "string") {
+                this.#userWidthIds.add(detail.id);
             }
         }
         this.#update();
@@ -199,20 +198,6 @@ class SaveState extends BasePlugin {
                 columns[i] = known[next++];
             }
         }
-    }
-
-    /**
-     * Resolve the column of a `columnResized` event (its detail carries the
-     * th `field`) to a stable base column id.
-     * @param {*} col
-     * @returns {String|null}
-     */
-    #matchColumnId(col) {
-        if (col === undefined || col === null) {
-            return null;
-        }
-        const column = this.grid.options.columns.find((column) => column.field === String(col));
-        return column ? this.grid.getColumnId(column) : null;
     }
 
     /**

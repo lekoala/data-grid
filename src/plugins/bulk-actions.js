@@ -126,13 +126,19 @@ class BulkActions extends BasePlugin {
         }
         const grid = this.grid;
         const selection = grid.getSelectionState();
+        // An all-results selection remains actionable without COUNT(*).
+        // Its size is unknown; only an explicitly empty selection is disabled.
         const count =
-            selection.mode === "all" ? Math.max(0, (grid.total ?? 0) - selection.except.size) : selection.ids.size;
+            selection.mode === "all"
+                ? grid.total == null
+                    ? null
+                    : Math.max(0, grid.total - selection.except.size)
+                : selection.ids.size;
 
-        this.countEl.hidden = count === 0;
+        this.countEl.hidden = count === null || count === 0;
         if (this.countVisible && this.countStatus) {
-            this.countVisible.textContent = `${count}`;
-            this.countStatus.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+            this.countVisible.textContent = count === null ? "" : `${count}`;
+            this.countStatus.textContent = count === null ? "" : grid.formatLabel(grid.labels.selectedCount, { count });
         }
         for (const button of this.buttons) {
             button.disabled = count === 0;

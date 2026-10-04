@@ -535,6 +535,11 @@ data-grid button:disabled:hover {
   border-color: var(--dg-control-border-color);
 }
 
+data-grid .dg-load-more[aria-disabled="true"] {
+  cursor: wait;
+  opacity: 0.45;
+}
+
 data-grid input[type="checkbox"] {
   margin: 0;
   padding: 0;

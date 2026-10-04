@@ -2199,9 +2199,9 @@ class DataGrid extends base_element_default {
     this.runPlugins("updateLabels");
   }
   #moreStatusText() {
-    if (!this.rows.length) {
-      return this.noData;
-    }
+    return this.rows.length ? this.#loadedCountText() : this.noData;
+  }
+  #loadedCountText() {
     return this.total == null ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length }) : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
   }
   updateMetaLabel() {
@@ -2210,7 +2210,7 @@ class DataGrid extends base_element_default {
       return;
     }
     if (this.options.pager === "more") {
-      meta.textContent = this.total == null ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length }) : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
+      meta.textContent = this.#loadedCountText();
       return;
     }
     const total = this.total ?? 0;
@@ -2321,7 +2321,7 @@ class DataGrid extends base_element_default {
           col.field = item;
         } else if (typeof item === "object") {
           col = Object.assign(col, item);
-          if (!col.field) {
+          if (!col.field && !col.id) {
             console.error("Invalid column definition", item);
           }
           if (!col.title) {
@@ -2365,10 +2365,10 @@ class DataGrid extends base_element_default {
     }
   }
   get thead() {
-    return this.querySelector("thead");
+    return this.table?.tHead;
   }
   get tbody() {
-    return this.querySelector("tbody");
+    return this.table?.tBodies[0];
   }
   get footerEl() {
     return this.querySelector(".dg-footer");
@@ -2455,9 +2455,6 @@ class DataGrid extends base_element_default {
     if (changesPopulation) {
       this.#clearSelectionIfNeeded();
     }
-    if (resetsPage) {
-      this.#resetProgressiveState();
-    }
     if (this.#lazyPending) {
       return Promise.resolve();
     }
@@ -2468,7 +2465,6 @@ class DataGrid extends base_element_default {
   }
   resetQuery() {
     this.#assignQuery(this.#initialQuery);
-    this.#resetProgressiveState();
     this.#clearSelectionIfNeeded();
     return this.refresh();
   }
@@ -2498,6 +2494,7 @@ class DataGrid extends base_element_default {
     this.setAttribute("data-loading", "");
     this.removeAttribute("data-error");
     this.#updateStatus(this.labels.loading);
+    this.#updateMoreButton();
     try {
       let result;
       if (this.#initialResult) {
@@ -2508,8 +2505,12 @@ class DataGrid extends base_element_default {
       }
       if (requestId !== this.#requestSeq)
         return;
+      const focusMore = document.activeElement === this.btnMore;
       if (this.applyResult(result)) {
         return this.refresh();
+      }
+      if (focusMore && this.btnMore?.hidden) {
+        this.#focusLoadedRow(0);
       }
       this.#updateStatus(this.options.pager === "more" ? this.#moreStatusText() : this.rows.length ? this.formatLabel(this.labels.resultCount, { count: this.total ?? 0 }) : this.noData);
     } catch (err) {
@@ -2518,13 +2519,7 @@ class DataGrid extends base_element_default {
       const e = err;
       if (e?.name === "AbortError" || controller.signal.aborted)
         return;
-      const message = this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
-      this.error = e;
-      this.setAttribute("data-error", "");
-      this.tbody?.setAttribute("data-empty-message", message);
-      this.#updateStatus(message);
-      this.renderBody();
-      dispatch(this, "loadError", e);
+      this.#fail(e, true);
     } finally {
       if (requestId === this.#requestSeq) {
         this.loading = false;
@@ -2532,6 +2527,17 @@ class DataGrid extends base_element_default {
         this.#updateMoreButton();
       }
     }
+  }
+  #fail(error, replaceBody = false) {
+    const message = this.options.errorMessage || error?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
+    this.error = error;
+    this.setAttribute("data-error", "");
+    this.tbody?.setAttribute("data-empty-message", message);
+    this.#updateStatus(message);
+    if (replaceBody) {
+      this.renderBody();
+    }
+    dispatch(this, "loadError", error);
   }
   async loadMore() {
     if (this.options.pager !== "more" || this.loading) {
@@ -2557,7 +2563,12 @@ class DataGrid extends base_element_default {
       const result = await this.#fetchPage({ ...this.query, page: this.#loadedPage + 1 }, controller);
       if (requestId !== this.#requestSeq || controller.signal.aborted)
         return;
+      const focusMore = document.activeElement === this.btnMore;
+      const firstNewRow = this.rows.length;
       this.#appendResult(result);
+      if (focusMore && this.btnMore?.hidden) {
+        this.#focusLoadedRow(firstNewRow);
+      }
       this.#updateStatus(this.#moreStatusText());
     } catch (err) {
       if (requestId !== this.#requestSeq)
@@ -2565,12 +2576,7 @@ class DataGrid extends base_element_default {
       const e = err;
       if (e?.name === "AbortError" || controller.signal.aborted)
         return;
-      const message = this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
-      this.error = e;
-      this.setAttribute("data-error", "");
-      this.tbody?.setAttribute("data-empty-message", message);
-      this.#updateStatus(message);
-      dispatch(this, "loadError", e);
+      this.#fail(e);
     } finally {
       if (requestId === this.#requestSeq) {
         this.loading = false;
@@ -2578,6 +2584,18 @@ class DataGrid extends base_element_default {
         this.#updateMoreButton();
       }
     }
+  }
+  #focusLoadedRow(index) {
+    const row = this.tbody?.querySelectorAll(":scope > tr.dg-data-row")[index];
+    if (!row) {
+      this.scrollEl.focus();
+      return;
+    }
+    if (!row.hasAttribute("tabindex")) {
+      row.tabIndex = -1;
+      row.addEventListener("blur", () => row.removeAttribute("tabindex"), { once: true });
+    }
+    row.focus();
   }
   #appendResult(result) {
     const appended = Array.isArray(result?.rows) ? result.rows : [];
@@ -2599,10 +2617,11 @@ class DataGrid extends base_element_default {
     }
     button.hidden = !this.#hasMore;
     const busy = this.loading;
-    button.disabled = busy;
     if (busy) {
+      button.setAttribute("aria-disabled", "true");
       button.setAttribute("aria-busy", "true");
     } else {
+      button.removeAttribute("aria-disabled");
       button.removeAttribute("aria-busy");
     }
     button.textContent = busy ? this.labels.loading : this.labels.loadMore;
@@ -2701,7 +2720,6 @@ class DataGrid extends base_element_default {
         this.populatePageSizes();
         break;
       case "pager":
-        this.#resetProgressiveState();
         this.#assignQuery(this.#query);
         this.renderTable();
         return this.refresh();
@@ -2715,7 +2733,6 @@ class DataGrid extends base_element_default {
   }
   srcChanged() {
     this.setupDataSource();
-    this.#resetProgressiveState();
     this.#clearSelectionIfNeeded();
     return this.refresh();
   }
@@ -2822,8 +2839,11 @@ class DataGrid extends base_element_default {
     return this.setQuery({ search: value });
   }
   #adoptDeclarativeTable() {
-    const adopted = this.querySelector("table[data-dg-table]");
-    const generated = this.querySelector("table[data-dg-generated-table]");
+    const tables = [
+      ...this.querySelectorAll(":scope > table, :scope > .dg-frame > table, :scope > .dg-frame > .dg-scroll > table")
+    ];
+    const adopted = tables.find((table) => table.hasAttribute("data-dg-table"));
+    const generated = tables.find((table) => table.hasAttribute("data-dg-generated-table"));
     if (adopted) {
       generated?.remove();
       return;
@@ -2831,7 +2851,7 @@ class DataGrid extends base_element_default {
     if (!generated) {
       return;
     }
-    const supplied = Array.from(this.querySelectorAll("table")).find((table) => table !== generated);
+    const supplied = tables.find((table) => table !== generated);
     if (!supplied) {
       return;
     }
@@ -4242,12 +4262,12 @@ class DataGrid extends base_element_default {
     const footer = this.footerEl;
     if (!footer)
       return;
+    this.renderFooter();
     this.classList.toggle("dg-pager-more", this.options.pager === "more");
     if (this.options.pager === "more") {
       this.pages = this.totalPages();
       this.updateMetaLabel();
       this.#updateMoreButton();
-      footer.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
       return;
     }
     this.pages = this.totalPages();
@@ -4261,7 +4281,6 @@ class DataGrid extends base_element_default {
       this.btnLast.disabled = this.#query.page >= this.pages;
     this.updateMetaLabel();
     this.updatePageStatus();
-    footer.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
   }
   totalPages() {
     if (this.total == null) {
@@ -4440,6 +4459,7 @@ class ColumnResizer extends base_plugin_default {
         }
       }
       dispatch(grid, "columnResized", {
+        id: col.getAttribute("data-column-id"),
         col: col.getAttribute("field"),
         width: col.getAttribute("width")
       });
@@ -4957,11 +4977,11 @@ class BulkActions extends base_plugin_default {
     }
     const grid = this.grid;
     const selection = grid.getSelectionState();
-    const count = selection.mode === "all" ? Math.max(0, (grid.total ?? 0) - selection.except.size) : selection.ids.size;
-    this.countEl.hidden = count === 0;
+    const count = selection.mode === "all" ? grid.total == null ? null : Math.max(0, grid.total - selection.except.size) : selection.ids.size;
+    this.countEl.hidden = count === null || count === 0;
     if (this.countVisible && this.countStatus) {
-      this.countVisible.textContent = `${count}`;
-      this.countStatus.textContent = grid.formatLabel(grid.labels.selectedCount, { count });
+      this.countVisible.textContent = count === null ? "" : `${count}`;
+      this.countStatus.textContent = count === null ? "" : grid.formatLabel(grid.labels.selectedCount, { count });
     }
     for (const button of this.buttons) {
       button.disabled = count === 0;
@@ -6238,9 +6258,8 @@ class SaveState extends base_plugin_default {
   #onGridEvent(event) {
     if (event.type === "columnResized") {
       const detail = event.detail;
-      const id = this.#matchColumnId(detail?.col);
-      if (id) {
-        this.#userWidthIds.add(id);
+      if (typeof detail?.id === "string") {
+        this.#userWidthIds.add(detail.id);
       }
     }
     this.#update();
@@ -6293,13 +6312,6 @@ class SaveState extends base_plugin_default {
         columns[i] = known[next++];
       }
     }
-  }
-  #matchColumnId(col) {
-    if (col === undefined || col === null) {
-      return null;
-    }
-    const column = this.grid.options.columns.find((column) => column.field === String(col));
-    return column ? this.grid.getColumnId(column) : null;
   }
   log(...data) {
     this.grid.log("[Save-State] ", ...data);

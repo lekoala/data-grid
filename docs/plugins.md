@@ -103,6 +103,10 @@ base column; `width` is stored per column only once the user actually resized it
 (the array order is the column order). Columns added to the schema later are
 kept in their authored position on restore.
 
+`columnResized` includes the stable column `id`, the legacy `col` field name
+and the `width` string. SaveState tracks resized widths by `id`, including
+columns rendered with an `id` and no `field`.
+
 The batteries-included entry (`data-grid.js`) registers them all and defines the
 `<data-grid>` element.
 

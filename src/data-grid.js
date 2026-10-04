@@ -964,9 +964,11 @@ class DataGrid extends BaseElement {
      * @returns {String}
      */
     #moreStatusText() {
-        if (!this.rows.length) {
-            return this.noData;
-        }
+        return this.rows.length ? this.#loadedCountText() : this.noData;
+    }
+
+    /** @returns {String} */
+    #loadedCountText() {
         return this.total == null
             ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length })
             : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
@@ -978,10 +980,7 @@ class DataGrid extends BaseElement {
             return;
         }
         if (this.options.pager === "more") {
-            meta.textContent =
-                this.total == null
-                    ? this.formatLabel(this.labels.loadedCountUnknown, { count: this.rows.length })
-                    : this.formatLabel(this.labels.loadedCount, { count: this.rows.length, total: this.total });
+            meta.textContent = this.#loadedCountText();
             return;
         }
         // Classic pagination always carries a finite total (see applyResult);
@@ -1191,7 +1190,7 @@ class DataGrid extends BaseElement {
                     col.field = item;
                 } else if (typeof item === "object") {
                     col = Object.assign(col, item);
-                    if (!col.field) {
+                    if (!col.field && !col.id) {
                         console.error("Invalid column definition", item);
                     }
                     if (!col.title) {
@@ -1256,12 +1255,12 @@ class DataGrid extends BaseElement {
 
     /** @returns {HTMLTableSectionElement} */
     get thead() {
-        return /** @type {HTMLTableSectionElement} */ (this.querySelector("thead"));
+        return /** @type {HTMLTableSectionElement} */ (this.table?.tHead);
     }
 
     /** @returns {HTMLTableSectionElement} */
     get tbody() {
-        return /** @type {HTMLTableSectionElement} */ (this.querySelector("tbody"));
+        return /** @type {HTMLTableSectionElement} */ (this.table?.tBodies[0]);
     }
 
     /** @returns {HTMLDivElement|null} */
@@ -1411,11 +1410,6 @@ class DataGrid extends BaseElement {
         if (changesPopulation) {
             this.#clearSelectionIfNeeded();
         }
-        if (resetsPage) {
-            // A new population or chunk size restarts the progressive list:
-            // the refresh below replaces the rows from the first chunk.
-            this.#resetProgressiveState();
-        }
         // While lazy and not yet first-loaded, only accumulate the query
         // state. The first load (when the grid becomes visible) uses it.
         if (this.#lazyPending) {
@@ -1445,7 +1439,6 @@ class DataGrid extends BaseElement {
      */
     resetQuery() {
         this.#assignQuery(this.#initialQuery);
-        this.#resetProgressiveState();
         this.#clearSelectionIfNeeded();
         return this.refresh();
     }
@@ -1501,6 +1494,7 @@ class DataGrid extends BaseElement {
         this.setAttribute("data-loading", "");
         this.removeAttribute("data-error");
         this.#updateStatus(this.labels.loading);
+        this.#updateMoreButton();
 
         try {
             let result;
@@ -1511,10 +1505,14 @@ class DataGrid extends BaseElement {
                 result = await this.#fetchPage(this.query, controller);
             }
             if (requestId !== this.#requestSeq) return;
+            const focusMore = document.activeElement === this.btnMore;
             if (this.applyResult(result)) {
                 // The requested page does not exist anymore (e.g. the dataset
                 // shrank after a deletion): refetch on the last valid page.
                 return this.refresh();
+            }
+            if (focusMore && this.btnMore?.hidden) {
+                this.#focusLoadedRow(0);
             }
             this.#updateStatus(
                 this.options.pager === "more"
@@ -1527,14 +1525,7 @@ class DataGrid extends BaseElement {
             if (requestId !== this.#requestSeq) return;
             const e = /** @type {any} */ (err);
             if (e?.name === "AbortError" || controller.signal.aborted) return;
-            const message =
-                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
-            this.error = e;
-            this.setAttribute("data-error", "");
-            this.tbody?.setAttribute("data-empty-message", message);
-            this.#updateStatus(message);
-            this.renderBody();
-            dispatch(this, "loadError", e);
+            this.#fail(e, true);
         } finally {
             if (requestId === this.#requestSeq) {
                 this.loading = false;
@@ -1543,6 +1534,24 @@ class DataGrid extends BaseElement {
                 this.#updateMoreButton();
             }
         }
+    }
+
+    /**
+     * Reflect a load failure, replacing the body only for a full load.
+     * @param {any} error
+     * @param {Boolean} [replaceBody]
+     */
+    #fail(error, replaceBody = false) {
+        const message =
+            this.options.errorMessage || error?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
+        this.error = error;
+        this.setAttribute("data-error", "");
+        this.tbody?.setAttribute("data-empty-message", message);
+        this.#updateStatus(message);
+        if (replaceBody) {
+            this.renderBody();
+        }
+        dispatch(this, "loadError", error);
     }
 
     /**
@@ -1584,19 +1593,18 @@ class DataGrid extends BaseElement {
         try {
             const result = await this.#fetchPage({ ...this.query, page: this.#loadedPage + 1 }, controller);
             if (requestId !== this.#requestSeq || controller.signal.aborted) return;
+            const focusMore = document.activeElement === this.btnMore;
+            const firstNewRow = this.rows.length;
             this.#appendResult(result);
+            if (focusMore && this.btnMore?.hidden) {
+                this.#focusLoadedRow(firstNewRow);
+            }
             this.#updateStatus(this.#moreStatusText());
         } catch (err) {
             if (requestId !== this.#requestSeq) return;
             const e = /** @type {any} */ (err);
             if (e?.name === "AbortError" || controller.signal.aborted) return;
-            const message =
-                this.options.errorMessage || e?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
-            this.error = e;
-            this.setAttribute("data-error", "");
-            this.tbody?.setAttribute("data-empty-message", message);
-            this.#updateStatus(message);
-            dispatch(this, "loadError", e);
+            this.#fail(e);
         } finally {
             // Exactly load()'s guard: a superseded flight must not clear the
             // newer load's flags, attributes or button state.
@@ -1606,6 +1614,27 @@ class DataGrid extends BaseElement {
                 this.#updateMoreButton();
             }
         }
+    }
+
+    /**
+     * Keep keyboard focus in the results when their pager button disappears.
+     * Rows stay outside the Tab sequence; temporary focusability ends on blur.
+     * An empty final chunk falls back to the existing scroll viewport.
+     * @param {Number} index
+     */
+    #focusLoadedRow(index) {
+        const row = /** @type {HTMLElement|undefined} */ (
+            this.tbody?.querySelectorAll(":scope > tr.dg-data-row")[index]
+        );
+        if (!row) {
+            this.scrollEl.focus();
+            return;
+        }
+        if (!row.hasAttribute("tabindex")) {
+            row.tabIndex = -1;
+            row.addEventListener("blur", () => row.removeAttribute("tabindex"), { once: true });
+        }
+        row.focus();
     }
 
     /**
@@ -1640,10 +1669,11 @@ class DataGrid extends BaseElement {
         }
         button.hidden = !this.#hasMore;
         const busy = this.loading;
-        button.disabled = busy;
         if (busy) {
+            button.setAttribute("aria-disabled", "true");
             button.setAttribute("aria-busy", "true");
         } else {
+            button.removeAttribute("aria-disabled");
             button.removeAttribute("aria-busy");
         }
         button.textContent = busy ? this.labels.loading : this.labels.loadMore;
@@ -1767,7 +1797,6 @@ class DataGrid extends BaseElement {
             case "pager":
                 // Switching navigation mode restarts from the first chunk so
                 // the rows always match the freshly normalized query.
-                this.#resetProgressiveState();
                 this.#assignQuery(this.#query);
                 this.renderTable();
                 return this.refresh();
@@ -1785,7 +1814,6 @@ class DataGrid extends BaseElement {
      */
     srcChanged() {
         this.setupDataSource();
-        this.#resetProgressiveState();
         this.#clearSelectionIfNeeded();
         return this.refresh();
     }
@@ -1954,8 +1982,15 @@ class DataGrid extends BaseElement {
      * table is marked `data-dg-table` and is never re-parsed or re-seeded.
      */
     #adoptDeclarativeTable() {
-        const adopted = /** @type {HTMLTableElement|null} */ (this.querySelector("table[data-dg-table]"));
-        const generated = /** @type {HTMLTableElement|null} */ (this.querySelector("table[data-dg-generated-table]"));
+        // Only structural tables belong to the grid. Cell renderers and
+        // plugins may contain their own tables, including on reconnect.
+        const tables = /** @type {HTMLTableElement[]} */ ([
+            ...this.querySelectorAll(
+                ":scope > table, :scope > .dg-frame > table, :scope > .dg-frame > .dg-scroll > table",
+            ),
+        ]);
+        const adopted = tables.find((table) => table.hasAttribute("data-dg-table"));
+        const generated = tables.find((table) => table.hasAttribute("data-dg-generated-table"));
         if (adopted) {
             // Already adopted on a previous connect: a re-injected generated
             // table is redundant.
@@ -1965,9 +2000,7 @@ class DataGrid extends BaseElement {
         if (!generated) {
             return;
         }
-        const supplied = /** @type {HTMLTableElement|undefined} */ (
-            Array.from(this.querySelectorAll("table")).find((table) => table !== generated)
-        );
+        const supplied = tables.find((table) => table !== generated);
         if (!supplied) {
             return;
         }
@@ -4175,6 +4208,7 @@ class DataGrid extends BaseElement {
         const footer = this.footerEl;
         if (!footer) return;
 
+        this.renderFooter();
         this.classList.toggle("dg-pager-more", this.options.pager === "more");
         if (this.options.pager === "more") {
             // Cumulative presentation: no page buttons, no per-page select,
@@ -4182,9 +4216,6 @@ class DataGrid extends BaseElement {
             this.pages = this.totalPages();
             this.updateMetaLabel();
             this.#updateMoreButton();
-            // autohidePager concerns classic navigation; in "more" mode the
-            // footer is a status line that stays while rows exist.
-            footer.toggleAttribute("hidden", this.options.autohidePager && this.total === 0);
             return;
         }
 
@@ -4198,7 +4229,6 @@ class DataGrid extends BaseElement {
         if (this.btnLast) this.btnLast.disabled = this.#query.page >= this.pages;
         this.updateMetaLabel();
         this.updatePageStatus();
-        footer.toggleAttribute("hidden", this.options.autohidePager && this.totalPages() <= 1);
     }
 
     /**

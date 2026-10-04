@@ -3,6 +3,7 @@ import DataGrid from "../data-grid.js";
 import { ArrayDataSource, FetchDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
 import RowActions from "../src/plugins/row-actions.js";
+import RowDetails from "../src/plugins/row-details.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 import { input } from "./helpers.js";
 
@@ -47,6 +48,68 @@ const DEMO_TABLE = `
     </tbody>
 </table>
 `;
+
+test.each(["", "data-dg-table", "data-dg-generated-table"])(
+    "reconnect ignores a cell's nested table with marker '%s'",
+    async (marker) => {
+        const inst = await makeDeclarativeGrid("", {
+            columns: [
+                {
+                    field: "name",
+                    renderCell: () => ({ html: `<table ${marker}><tbody><tr><td>Nested</td></tr></tbody></table>` }),
+                },
+            ],
+            dataSource: new ArrayDataSource([{ name: "Outer" }]),
+        });
+        const table = inst.table;
+        const disconnected = new Promise((resolve) => inst.addEventListener("disconnected", resolve, { once: true }));
+        inst.remove();
+        await disconnected;
+        const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));
+        document.body.appendChild(inst);
+        await connected;
+
+        expect(inst.table).toBe(table);
+        expect(inst.rows).toEqual([{ name: "Outer" }]);
+        expect(inst.querySelectorAll(":scope > .dg-frame > .dg-scroll > table")).toHaveLength(1);
+        expect(inst.tbody.querySelector("td table").textContent).toBe("Nested");
+        removeGrid(inst);
+    },
+);
+
+test("a table nested in authored host content is not adopted", async () => {
+    const inst = await makeDeclarativeGrid(
+        '<div><table><thead><tr><th data-field="wrong">Wrong</th></tr></thead><tbody><tr><td>Nested</td></tr></tbody></table></div>',
+        { columns: [{ field: "name" }], dataSource: new ArrayDataSource([{ name: "Outer" }]) },
+    );
+    expect(inst.options.columns.map((column) => column.field)).toEqual(["name"]);
+    expect(inst.rows).toEqual([{ name: "Outer" }]);
+    expect(inst.table.hasAttribute("data-dg-generated-table")).toBe(true);
+    expect(inst.hasDataError).toBe(false);
+    removeGrid(inst);
+});
+
+test("reconnect ignores a nested table in row details", async () => {
+    DataGrid.registerPlugins({ RowDetails });
+    const inst = await makeDeclarativeGrid("", {
+        columns: [{ field: "name" }],
+        dataSource: new ArrayDataSource([{ id: 1, name: "Outer" }]),
+        rowDetails: () => ({ html: "<table><tbody><tr><td>Details</td></tr></tbody></table>" }),
+        rowDetailsStartOpen: true,
+    });
+    const table = inst.table;
+    expect(inst.querySelector(".dg-row-details-row table")).not.toBeNull();
+    const disconnected = new Promise((resolve) => inst.addEventListener("disconnected", resolve, { once: true }));
+    inst.remove();
+    await disconnected;
+    const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));
+    document.body.appendChild(inst);
+    await connected;
+    expect(inst.table).toBe(table);
+    expect(inst.querySelector(".dg-row-details-row table").textContent).toBe("Details");
+    expect(inst.hasDataError).toBe(false);
+    removeGrid(inst);
+});
 
 test("thead declares columns and the tbody becomes the local dataset", async () => {
     const inst = await makeDeclarativeGrid(DEMO_TABLE, { sortable: true });

@@ -195,6 +195,7 @@ class ColumnResizer extends BasePlugin {
             }
 
             dispatch(grid, "columnResized", {
+                id: col.getAttribute("data-column-id"),
                 col: col.getAttribute("field"),
                 width: col.getAttribute("width"),
             });

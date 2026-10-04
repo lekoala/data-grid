@@ -127,10 +127,15 @@ test("column resizer reserves the minimum width of following columns", async () 
 
 test("a committed resize also updates the column model width", async () => {
     const { grid, th } = await makeGrid({ field: "value", title: "Value", width: 120 });
+    let detail;
+    grid.addEventListener("columnResized", (event) => {
+        detail = event.detail;
+    });
 
     drag(th, 100, 160);
 
     expect(th.getAttribute("width")).toBe("180");
     expect(grid.options.columns[0].width).toBe(180);
+    expect(detail).toEqual({ id: "value", col: "value", width: "180" });
     document.body.removeChild(grid);
 });

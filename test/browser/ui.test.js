@@ -8,6 +8,45 @@ beforeAll(ensureServer);
 afterAll(stopServer);
 
 test.skipIf(IS_WINDOWS)(
+    "load more preserves keyboard focus while busy and moves it to the first new row on exhaustion",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+        await v.evaluate('window.grid.setAttribute("pager", "more")');
+        await waitFor(v, 'window.grid.options.pager === "more" && !window.grid.loading');
+        await v.evaluate(`(async () => {
+            await window.grid.setQuery({ pageSize: 40 });
+            const source = window.grid.dataSource;
+            const load = source.load.bind(source);
+            window.moreCalls = 0;
+            source.load = (query, options) => {
+                window.moreCalls += 1;
+                return new Promise((resolve, reject) => {
+                    window.releaseMore = () => load(query, options).then(resolve, reject);
+                });
+            };
+            document.querySelector('#local-grid .dg-load-more').focus();
+        })()`);
+        await v.press("Space");
+        await waitFor(v, "window.grid.loading && window.releaseMore");
+        expect(await read(v, 'document.activeElement.matches("#local-grid .dg-load-more")')).toBe(true);
+        expect(await read(v, 'document.activeElement.getAttribute("aria-disabled")')).toBe("true");
+        await v.press("Space");
+        expect(await read(v, "window.moreCalls")).toBe(1);
+        await v.evaluate("window.releaseMore()");
+        await waitFor(
+            v,
+            `window.grid.rows.length === 50 && !window.grid.loading
+            && document.querySelector('#local-grid .dg-load-more').hidden
+            && document.activeElement.matches('#local-grid tr.dg-data-row[data-row-index="40"]')`,
+        );
+        expect(await read(v, "document.activeElement.tabIndex")).toBe(-1);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "clicking a checkbox selects the row",
     async () => {
         await using v = view();

@@ -107,9 +107,13 @@ grid.addEventListener("rowClick", (ev) => {
 
 `bulkActions` adds a permanent bar with one button per action. A
 `.dg-selection-count` badge shows the plain selected count and is hidden while
-nothing is selected; the buttons are disabled until the count reaches one.
+nothing is selected; the buttons are disabled when the selection is empty.
 The badge announces `selectedCount` ("3 selected") through a live region while
-staying visually language-neutral:
+staying visually language-neutral.
+
+With `pager="more"` and an unknown total, an all-results selection keeps the
+buttons enabled and hides the count badge, since its size cannot be computed.
+Explicit selections still show their known count.
 
 ```js
 const grid = new DataGrid({

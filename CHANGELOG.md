@@ -52,6 +52,12 @@ not documented.
 - Fixed SaveState column restoration when a column id matches another field,
   including legacy field-based storage and resize persistence.
 - Fixed `querychange` synchronization after page clamping and pager mode changes.
+- Fixed reconnecting grids containing nested tables in rendered content.
+- Kept bulk actions enabled for all-results selections with an unknown total.
+- Preserved Load more keyboard focus during loading and moved it to the first
+  new row on exhaustion (or the scroll viewport for an empty final chunk).
+- Added stable `id` to `columnResized` so SaveState can persist widths for
+  columns without a `field`.
 
 ## [3.5.0] - 2026-09-16
 

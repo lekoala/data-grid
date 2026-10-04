@@ -293,11 +293,15 @@ chunk. A backend may omit `total` and send `hasMore` instead (see
 `docs/server-data.md`); the footer then counts without a total. See
 `demo/logs.html`.
 
+The Load more button stays focusable while busy (`aria-disabled="true"`). When
+it disappears at the end of the results, keyboard focus moves to the first new
+row, or to the scroll viewport if the final chunk is empty.
+
 ## Scrollable grid
 
-The table lives inside a `.dg-scroll` viewport that owns its outer border,
-radius, scroll and the sticky anchor. The header (including the filter row)
-stays pinned to the top and the footer to the bottom of that viewport. This is
+The `.dg-frame` owns the outer border and radius. Its `.dg-scroll` viewport
+contains the table and anchors the sticky header (including the filter row).
+The footer sits after the viewport and stays visible outside its scroll. This is
 the default behavior — as soon as the grid is given a constrained height, the
 viewport takes the remaining space and its chrome stays visible while rows
 scroll:
@@ -567,7 +571,7 @@ See `docs/actions.md` for the full contract.
 | `loadError`        | error                                              | a load fails               |
 | `selectionChange`  | `{ selectionState }`                               | the selection changes      |
 | `columnVisibility` | `{ col, visibility }`                              | a column is hidden/shown   |
-| `columnResized`    | `{ col, width }`                                   | a column is resized        |
+| `columnResized`    | `{ id, col, width }`                               | a column is resized        |
 | `columnReordered`  | `{ col, from, to }`                                | a column is dragged        |
 | `headerRendered`   | -                                                  | the header is rendered     |
 | `bodyRendered`     | -                                                  | the body is rendered       |

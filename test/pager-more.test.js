@@ -1,8 +1,10 @@
 import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
+import BulkActions from "../src/plugins/bulk-actions.js";
 import RowDetails from "../src/plugins/row-details.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
+import { change } from "./helpers.js";
 
 const rows = Array.from({ length: 65 }, (_, i) => ({
     id: i + 1,
@@ -129,7 +131,8 @@ test("a second loadMore during a flight is a single fetch", async () => {
 
     const first = inst.loadMore();
     const second = inst.loadMore();
-    expect(moreButton(inst).disabled).toBe(true);
+    expect(moreButton(inst).disabled).toBe(false);
+    expect(moreButton(inst).getAttribute("aria-disabled")).toBe("true");
     expect(moreButton(inst).getAttribute("aria-busy")).toBe("true");
     await second;
     expect(queries.filter((query) => query.page === 2)).toHaveLength(1);
@@ -556,4 +559,119 @@ test("autohidePager keeps the status line while more may follow", async () => {
     expect(inst.footerEl.hasAttribute("hidden")).toBe(false);
     expect(metaText(inst)).toBe("20");
     document.body.removeChild(inst);
+});
+
+test("bulk actions stay actionable for an all-results selection with an unknown total", async () => {
+    DataGrid.unregisterPlugins();
+    DataGrid.registerPlugins({ SelectableRows, BulkActions });
+    const ds = noCountSource(rows);
+    const inst = new DataGrid({
+        pager: "more",
+        selectable: true,
+        columns: [{ field: "name" }],
+        dataSource: ds,
+        bulkActions: [{ name: "archive" }],
+        selectVisibleOnly: false,
+    });
+    const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));
+    document.body.appendChild(inst);
+    await connected;
+    const button = inst.querySelector('button[data-action="archive"]');
+    const count = inst.querySelector(".dg-selection-count");
+    expect(button.disabled).toBe(true);
+    inst.selectAll();
+    const checkbox = inst.querySelector("tbody input[type=checkbox]");
+    checkbox.checked = false;
+    change(checkbox);
+    expect(button.disabled).toBe(false);
+    expect(count.hidden).toBe(true);
+    expect(count.textContent).toBe("");
+    let detail;
+    inst.addEventListener("bulkAction", (event) => {
+        detail = event.detail;
+    });
+    button.click();
+    expect(detail.selection.mode).toBe("all");
+    expect(detail.selection.except.size).toBe(1);
+    expect(detail.query).toEqual(inst.query);
+    await inst.loadMore();
+    expect(button.disabled).toBe(false);
+    inst.clearSelection();
+    expect(button.disabled).toBe(true);
+    inst.selectRow(inst.rows[0]);
+    expect(button.disabled).toBe(false);
+    expect(count.hidden).toBe(false);
+    expect(count.querySelector('[aria-hidden="true"]').textContent).toBe("1");
+    inst.remove();
+});
+
+test("loading more keeps keyboard focus and ignores repeat activations", async () => {
+    const { ds, queries, release } = instrument(rows, { hang: new Set([2]) });
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+    const button = moreButton(inst);
+    button.focus();
+    const pending = inst.loadMore();
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    button.click();
+    expect(queries.map((query) => query.page)).toEqual([1, 2]);
+    release(2);
+    await pending;
+    expect(document.activeElement).toBe(button);
+    expect(button.hasAttribute("aria-disabled")).toBe(false);
+    inst.remove();
+});
+
+test("retrying the first chunk keeps focus while busy and moves it on exhaustion", async () => {
+    const { ds } = instrument(rows, { fail: new Set([1]) });
+    const inst = await makeReadyGrid({ pager: "more", dataSource: ds });
+    let release;
+    ds.load = () =>
+        new Promise((resolve) => {
+            release = () => resolve({ rows: rows.slice(0, 5), hasMore: false });
+        });
+    const button = moreButton(inst);
+    button.focus();
+    const pending = inst.loadMore();
+    expect(document.activeElement).toBe(button);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    release();
+    await pending;
+    expect(document.activeElement).toBe(inst.tbody.querySelector("tr.dg-data-row"));
+    expect(button.hidden).toBe(true);
+    inst.remove();
+});
+
+test("exhausting more moves focus to the first new row and clears its temporary tabindex on blur", async () => {
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 } }, rows.slice(0, 30));
+    moreButton(inst).focus();
+    await inst.loadMore();
+    const row = inst.tbody.querySelectorAll(":scope > tr.dg-data-row")[20];
+    expect(moreButton(inst).hidden).toBe(true);
+    expect(document.activeElement).toBe(row);
+    expect(row.tabIndex).toBe(-1);
+    inst.scrollEl.focus();
+    expect(row.hasAttribute("tabindex")).toBe(false);
+    inst.remove();
+});
+
+test("an empty final chunk moves pager focus to the scroll viewport", async () => {
+    const ds = { load: (query) => Promise.resolve({ rows: query.page === 1 ? rows.slice(0, 20) : [] }) };
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+    moreButton(inst).focus();
+    await inst.loadMore();
+    expect(document.activeElement).toBe(inst.scrollEl);
+    inst.remove();
+});
+
+test("a completed loadMore does not steal focus from another control", async () => {
+    const { ds, release } = instrument(rows.slice(0, 30), { hang: new Set([2]) });
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+    moreButton(inst).focus();
+    const pending = inst.loadMore();
+    inst.scrollEl.focus();
+    release(2);
+    await pending;
+    expect(document.activeElement).toBe(inst.scrollEl);
+    inst.remove();
 });

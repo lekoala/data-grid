@@ -366,6 +366,17 @@ test("resize persistence resolves event fields independently of column ids", asy
     document.body.removeChild(grid);
 });
 
+test("a resized column without a field persists its width by stable id", async () => {
+    const grid = await makeSaveStateGrid([{ id: "summary", title: "Summary", renderCell: () => "Summary" }]);
+    resizeColumn(grid, "summary", 100, 180);
+    const stored = JSON.parse(sessionStorage.getItem(`gridSaveState_${gridId}`));
+    expect(stored.columns[0]).toEqual({ id: "summary", hidden: false, width: 180 });
+    grid.remove();
+    const restored = await makeSaveStateGrid([{ id: "summary", title: "Summary", renderCell: () => "Summary" }]);
+    expect(restored.options.columns[0].width).toBe(180);
+    restored.remove();
+});
+
 test("malformed storage fails harmlessly", async () => {
     sessionStorage.setItem(
         `gridSaveState_${gridId}`,
