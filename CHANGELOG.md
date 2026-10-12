@@ -5,6 +5,35 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
+## [Unreleased]
+
+### Added
+
+- Added `normalizeTotal()`: numeric string totals (`"142"`) are coerced to
+  `Number`, invalid ones become `null`, in `parseResult()` and at the grid
+  boundary (`applyResult()`, progressive chunks).
+
+### Changed
+
+- `ColumnResizer` tracks Pointer Events with pointer capture, so touch resizes
+  like mouse (wider hit area on coarse pointers). Resize and reorder stay
+  pointer-driven with no keyboard alternative; use `column.width` and the
+  `options.columns` order instead.
+- Toolchain (Bun ≥ 1.4.3): `bun run typecheck` uses `bun check`; the Biome
+  script moves to `bun run check:lint` so bare `bun check` is the typechecker.
+  tsc stays for `.d.ts` emit only.
+- Documented `params` precedence over the runtime query, `fromUrl()`
+  limitations, local single-sort, and the `column.attr` event-handler warning.
+- Demo server binds `localhost` by default.
+
+### Fixed
+
+- Fixed multiline load errors collapsing without spacing (`"Line oneLine two"`).
+- Fixed local global search matching `"[object Object]"` on nested values:
+  only scalars participate.
+- Fixed locally derived select filter options: deduplicated on stringified
+  values and sorted locale-aware with numeric ordering.
+
 ## [3.6.0] - 2026-10-04
 
 ### Breaking / migration
