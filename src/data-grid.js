@@ -13,7 +13,7 @@ import {
     orderColumns,
 } from "./columns.js";
 import BaseElement from "./core/base-element.js";
-import { ArrayDataSource, FetchDataSource } from "./data-source.js";
+import { ArrayDataSource, FetchDataSource, normalizeTotal } from "./data-source.js";
 import {
     declarativeCells,
     declarativeHeaderContent,
@@ -96,7 +96,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String|((ctx: CellContext) => String|null|undefined)} [cellClass] - class(es) for body cells only, evaluated per row at render time. Unlike `class`, never applied to header or filter cells
- * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field
+ * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field. The attribute name is developer-controlled but the value comes from row data: never use an event-handler name (e.g. `attr: "onclick"` executes when set with a data value)
  * @property {Boolean} [hidden] - hide the column
  * @property {Boolean} [sortable] - disable sorting for this column (defaults to the grid-wide `sortable`)
  * @property {Boolean} [filterable] - disable filtering for this column (defaults to the grid-wide `filterable`)
@@ -1371,8 +1371,9 @@ class DataGrid extends BaseElement {
         if (typeof result?.hasMore === "boolean") {
             return result.hasMore;
         }
-        if (result?.total != null) {
-            return this.rows.length < result.total;
+        const total = normalizeTotal(result?.total);
+        if (total != null) {
+            return this.rows.length < total;
         }
         return chunkLength === this.#query.pageSize;
     }
@@ -1543,7 +1544,9 @@ class DataGrid extends BaseElement {
      */
     #fail(error, replaceBody = false) {
         const message =
-            this.options.errorMessage || error?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
+            this.options.errorMessage ||
+            error?.message?.trim().replace(/\s*\r?\n\s*/g, " ") ||
+            this.labels.networkError;
         this.error = error;
         this.setAttribute("data-error", "");
         this.tbody?.setAttribute("data-empty-message", message);
@@ -1647,7 +1650,9 @@ class DataGrid extends BaseElement {
     #appendResult(result) {
         const appended = Array.isArray(result?.rows) ? result.rows : [];
         this.rows = [...this.rows, ...appended];
-        this.total = result?.total ?? this.total;
+        // An absent total keeps the previous one; a present but invalid total
+        // normalizes to null (unknown) rather than a fabricated count.
+        this.total = result?.total === undefined ? this.total : normalizeTotal(result.total);
         this.meta = result?.meta || {};
         this.#loadedPage += 1;
         this.#hasMore = this.#resolveHasMore(result, appended.length);
@@ -1690,8 +1695,10 @@ class DataGrid extends BaseElement {
         this.#loadedPage = 1;
         this.rows = result.rows || [];
         // Classic pagination keeps its historic default; pager "more" preserves
-        // the absence of a total so the chunk heuristic can apply.
-        this.total = result.total ?? (this.options.pager === "more" ? null : this.rows.length);
+        // the absence of a total so the chunk heuristic can apply. Totals are
+        // normalized at this boundary so a custom data source returning "142"
+        // behaves like parseResult() and keeps the public Number|null type.
+        this.total = normalizeTotal(result.total) ?? (this.options.pager === "more" ? null : this.rows.length);
         this.meta = result.meta || {};
         this.#hasMore = this.#resolveHasMore(result, this.rows.length);
 
@@ -4018,8 +4025,9 @@ class DataGrid extends BaseElement {
             // Declarative cells provide a user-facing label (e.g. "Paid") for
             // the machine value (e.g. "paid"); the first non-empty label wins
             // when several rows share a value. Raw local values fall back to
-            // value === label.
-            /** @type {Map<any, string>} */
+            // value === label. Deduplication runs on the stringified value so
+            // 1 and "1" share one option.
+            /** @type {Map<string, {value: any, text: any}>} */
             const labels = new Map();
             for (const row of this.dataSource.rows ?? []) {
                 if (!field) {
@@ -4029,15 +4037,19 @@ class DataGrid extends BaseElement {
                 if (v === undefined || v === null || v === "") {
                     continue;
                 }
+                const key = String(v);
+                if (labels.has(key)) {
+                    continue;
+                }
                 const meta = declarativeCells(row)?.[field];
                 const text = meta?.label || v;
-                if (!labels.has(v)) {
-                    labels.set(v, text);
-                }
+                labels.set(key, { value: v, text });
             }
-            const options = [...labels.entries()]
-                .map(([value, text]) => ({ value, text }))
-                .sort((a, b) => (a.text < b.text ? -1 : a.text > b.text ? 1 : 0));
+            const options = [...labels.values()]
+                .map(({ value, text }) => ({ value, text }))
+                .sort((a, b) =>
+                    String(a.text).localeCompare(String(b.text), undefined, { sensitivity: "base", numeric: true }),
+                );
             return [firstFilterOption, ...options];
         }
         return [firstFilterOption];

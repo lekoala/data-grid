@@ -134,6 +134,25 @@ test("data-error is set on load failure without implying data-empty", async () =
     document.body.removeChild(inst);
 });
 
+test("a multiline load error collapses to a single spaced line", async () => {
+    const inst = new DataGrid({
+        columns: [{ field: "name" }],
+        dataSource: {
+            load: async () => {
+                throw new Error("Line one\nLine two");
+            },
+        },
+    });
+    document.body.appendChild(inst);
+    await new Promise((resolve) => {
+        inst.addEventListener("connected", resolve, { once: true });
+        setTimeout(resolve, 2000);
+    });
+
+    expect(inst.tbody.getAttribute("data-empty-message")).toBe("Line one Line two");
+    document.body.removeChild(inst);
+});
+
 test("data-empty reflects the presence of rows", async () => {
     const empty = await makeReadyGrid({ columns: [{ field: "name" }] }, []);
     expect(empty.hasAttribute("data-empty")).toBe(true);

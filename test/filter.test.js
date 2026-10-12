@@ -386,6 +386,19 @@ test("FetchDataSource never derives options from the current rows", () => {
     expect(inst.getFilterOptions(inst.options.columns[0])).toEqual([{ value: "", text: "" }]);
 });
 
+test("ArrayDataSource deduplicates options on stringified values with locale numeric sort", async () => {
+    const data = [{ n: 10 }, { n: "10" }, { n: 9 }, { n: "été" }, { n: "Zoé" }, { n: 1 }];
+    const inst = await makeReadyGrid({ columns: [{ field: "n", filterType: "select" }] }, data);
+    const options = inst.getFilterOptions(inst.options.columns[0]);
+    expect(options[0]).toEqual({ value: "", text: "" });
+    // 1 and "1"-style duplicates share one option: first occurrence wins.
+    expect(options.filter((o) => String(o.value) === "10")).toHaveLength(1);
+    expect(options.filter((o) => String(o.value) === "10")[0].value).toBe(10);
+    // Numeric-aware locale sort: 1, 9, 10 before text, accents folded.
+    expect(options.slice(1).map((o) => o.value)).toEqual([1, 9, 10, "été", "Zoé"]);
+    document.body.removeChild(inst);
+});
+
 test("relational operators flow end to end through the grid", async () => {
     const data = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, age: 18 + (i % 20) }));
     const inst = await makeReadyGrid({ columns: [{ field: "id" }, { field: "age" }] }, data);

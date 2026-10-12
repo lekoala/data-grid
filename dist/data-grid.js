@@ -483,6 +483,20 @@ function paginate(rows, page, pageSize) {
   const start = (page - 1) * pageSize;
   return rows.slice(start, start + pageSize);
 }
+function normalizeTotal(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) && value >= 0 ? value : null;
+  }
+  if (typeof value === "bigint") {
+    const asNumber = Number(value);
+    return Number.isFinite(asNumber) && asNumber >= 0 ? asNumber : null;
+  }
+  if (typeof value === "string" && value.trim() !== "") {
+    const asNumber = Number(value);
+    return Number.isFinite(asNumber) && asNumber >= 0 ? asNumber : null;
+  }
+  return null;
+}
 function parseResult(json) {
   if (Array.isArray(json)) {
     return { rows: json, total: json.length, hasMore: false, meta: {} };
@@ -490,7 +504,7 @@ function parseResult(json) {
   const rows = Array.isArray(json?.rows) ? json.rows : [];
   return {
     rows,
-    total: Number.isFinite(json?.total) ? json.total : null,
+    total: normalizeTotal(json?.total),
     ...typeof json?.hasMore === "boolean" ? { hasMore: json.hasMore } : {},
     meta: json?.meta ?? {}
   };
@@ -506,6 +520,10 @@ function applySearch(rows, search) {
   return rows.filter((row) => {
     for (const value of Object.values(row)) {
       if (value === null || value === undefined) {
+        continue;
+      }
+      const type = typeof value;
+      if (type !== "string" && type !== "number" && type !== "boolean" && type !== "bigint") {
         continue;
       }
       const cell = normalizeText(value);
@@ -2430,8 +2448,9 @@ class DataGrid extends base_element_default {
     if (typeof result?.hasMore === "boolean") {
       return result.hasMore;
     }
-    if (result?.total != null) {
-      return this.rows.length < result.total;
+    const total = normalizeTotal(result?.total);
+    if (total != null) {
+      return this.rows.length < total;
     }
     return chunkLength === this.#query.pageSize;
   }
@@ -2529,7 +2548,7 @@ class DataGrid extends base_element_default {
     }
   }
   #fail(error, replaceBody = false) {
-    const message = this.options.errorMessage || error?.message?.replace(/^\s+|\r\n|\n|\r$/g, "") || this.labels.networkError;
+    const message = this.options.errorMessage || error?.message?.trim().replace(/\s*\r?\n\s*/g, " ") || this.labels.networkError;
     this.error = error;
     this.setAttribute("data-error", "");
     this.tbody?.setAttribute("data-empty-message", message);
@@ -2600,7 +2619,7 @@ class DataGrid extends base_element_default {
   #appendResult(result) {
     const appended = Array.isArray(result?.rows) ? result.rows : [];
     this.rows = [...this.rows, ...appended];
-    this.total = result?.total ?? this.total;
+    this.total = result?.total === undefined ? this.total : normalizeTotal(result.total);
     this.meta = result?.meta || {};
     this.#loadedPage += 1;
     this.#hasMore = this.#resolveHasMore(result, appended.length);
@@ -2630,7 +2649,7 @@ class DataGrid extends base_element_default {
   applyResult(result) {
     this.#loadedPage = 1;
     this.rows = result.rows || [];
-    this.total = result.total ?? (this.options.pager === "more" ? null : this.rows.length);
+    this.total = normalizeTotal(result.total) ?? (this.options.pager === "more" ? null : this.rows.length);
     this.meta = result.meta || {};
     this.#hasMore = this.#resolveHasMore(result, this.rows.length);
     const inferredColumns = this.options.columns.length === 0 && this.rows.length > 0;
@@ -4128,13 +4147,15 @@ class DataGrid extends base_element_default {
         if (v === undefined || v === null || v === "") {
           continue;
         }
+        const key = String(v);
+        if (labels.has(key)) {
+          continue;
+        }
         const meta = declarativeCells(row)?.[field];
         const text = meta?.label || v;
-        if (!labels.has(v)) {
-          labels.set(v, text);
-        }
+        labels.set(key, { value: v, text });
       }
-      const options = [...labels.entries()].map(([value, text]) => ({ value, text })).sort((a, b) => a.text < b.text ? -1 : a.text > b.text ? 1 : 0);
+      const options = [...labels.values()].map(({ value, text }) => ({ value, text })).sort((a, b) => String(a.text).localeCompare(String(b.text), undefined, { sensitivity: "base", numeric: true }));
       return [firstFilterOption, ...options];
     }
     return [firstFilterOption];

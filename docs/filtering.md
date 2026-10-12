@@ -181,6 +181,10 @@ filter cell so the row stays aligned, but renders no control). A column without
 It never derives options from the currently loaded page, so a server grid must
 either set `filterList` or return `meta.filters`.
 
+Locally derived options are deduplicated on the stringified value (`1` and
+`"1"` share one option) and sorted locale-aware, case- and accent-insensitive,
+with numeric substrings ordered numerically.
+
 ## Multiple select
 
 A select column can accept several values with `filterMultiple: true` when the

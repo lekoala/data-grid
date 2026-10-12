@@ -113,6 +113,11 @@ styled:
 - `data-selected` - set on `tr` of selected rows
 - `data-editing` / `data-invalid` - set on editable cells
 
+A column with `attr` skips its cell and sets the named attribute on the row
+from the field value instead (e.g. `attr: "class"` adds classes). The name is
+developer-controlled but the value comes from row data: never use an
+event-handler name such as `attr: "onclick"`.
+
 The loading status is already announced by the grid's live region. Applications
 that also want a visible indicator, especially during the otherwise empty first
 load, can add one without a plugin:

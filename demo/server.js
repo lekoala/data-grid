@@ -156,6 +156,7 @@ async function handleStatic(url) {
  */
 export function start(port = Number(Bun.env.PORT ?? 8002)) {
     return Bun.serve({
+        hostname: "localhost",
         port,
         async fetch(req) {
             const url = new URL(req.url);

@@ -68,6 +68,11 @@ When an intermediary requires a unique URL instead, `cacheBust: true` appends
 `serializeQuery` and `params`; prefer the standard fetch cache option when it
 solves the problem.
 
+Constant `params` are merged over the serialized runtime query
+(`{ ...serialized, ...params }`), so a constant `page`, `search` or `filters`
+entry overrides the live query value. Avoid those keys for constants, or do so
+deliberately.
+
 ## Global search
 
 `search` is a single global search term, distinct from the column `filters`
@@ -99,7 +104,7 @@ The server must return a `PageResult`:
 ```
 
 - `rows` - the rows of the requested page.
-- `total` - number of rows matching the current query (after search + filters). Required for `pager="pages"`; optional in `pager="more"`, where a backend that skips `COUNT(*)` omits it (it arrives as `null`, never as a fabricated count).
+- `total` - number of rows matching the current query (after search + filters). Required for `pager="pages"`; optional in `pager="more"`, where a backend that skips `COUNT(*)` omits it (it arrives as `null`, never as a fabricated count). A finite numeric string (`"142"`, e.g. `COUNT(*)` returned as bigint text) is coerced to a `Number`; anything else becomes `null`.
 - `hasMore` - optional authoritative continuation signal for `pager="more"` (`true`/`false` wins over `total` when both are present; an empty chunk always ends the list).
 - `meta.unfilteredTotal` - optional, number of rows before any search/filter.
 - `meta` - optional extra information, e.g. `filters` to populate select filter options.
@@ -133,7 +138,7 @@ LIMIT 21
 
 See `demo/logs.html`, which emulates this pattern locally through a `NoCountSource` wrapper.
 
-`parseResponse` lets you adapt a different response shape. `ArrayDataSource.fromUrl(url)` fetches a static JSON file once and applies the query locally.
+`parseResponse` lets you adapt a different response shape. `ArrayDataSource.fromUrl(url)` fetches a static JSON file once (no fetch options or abort signal) and applies the query locally.
 
 ## Local data
 
@@ -154,7 +159,8 @@ exported from `src/data-source.js` and reused by `demo/server.js` so the client
 and the server speak the same contract.
 
 `applySort` always places empty values (`null`, `undefined`, empty string) at the
-end of the page, whatever the direction. For `FetchDataSource`, the server
+end of the page, whatever the direction. Only the first entry of `QueryState.sort`
+is applied locally; further entries are ignored. For `FetchDataSource`, the server
 remains responsible for its own sort semantics.
 
 ## Errors

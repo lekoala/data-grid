@@ -259,7 +259,9 @@ export function applyFilters(rows, filters) {
 }
 
 /**
- * Apply the first sort state to an array (single sort for now).
+ * Apply the first sort state to an array (single sort for now: further entries
+ * of `QueryState.sort` are ignored locally; servers decide their own
+ * multi-sort semantics).
  * @param {Array<Record<string, any>>} rows
  * @param {SortState[]} [sort]
  * @returns {Array<Record<string, any>>}
@@ -304,6 +306,31 @@ export function paginate(rows, page, pageSize) {
 }
 
 /**
+ * Normalize a `total` coming from a server or a custom data source.
+ * Backends often serialize COUNT(*) as a string (node-postgres returns bigint
+ * as `"142"`, some PDO configs and BigInt-safe serializers do the same).
+ * A finite numeric value >= 0 becomes a Number, anything else becomes null
+ * so pager "more" keeps its "unknown total" heuristic instead of concluding
+ * from a fabricated count.
+ * @param {any} value
+ * @returns {Number|null}
+ */
+export function normalizeTotal(value) {
+    if (typeof value === "number") {
+        return Number.isFinite(value) && value >= 0 ? value : null;
+    }
+    if (typeof value === "bigint") {
+        const asNumber = Number(value);
+        return Number.isFinite(asNumber) && asNumber >= 0 ? asNumber : null;
+    }
+    if (typeof value === "string" && value.trim() !== "") {
+        const asNumber = Number(value);
+        return Number.isFinite(asNumber) && asNumber >= 0 ? asNumber : null;
+    }
+    return null;
+}
+
+/**
  * Parse a raw response into a PageResult.
  *
  * The canonical server contract is:
@@ -315,7 +342,8 @@ export function paginate(rows, page, pageSize) {
  * skips COUNT(*) omits `total` (or sends `hasMore` instead): the absence of a
  * total is preserved as null so pager "more" can fall back to its chunk
  * heuristic instead of concluding from a fabricated count. Classic pagination
- * keeps its historic default in applyResult().
+ * keeps its historic default in applyResult(). A numeric string total
+ * (`"142"`, e.g. COUNT(*) returned as bigint text) is coerced to a Number.
  * @param {any} json
  * @returns {PageResult}
  */
@@ -326,7 +354,7 @@ export function parseResult(json) {
     const rows = Array.isArray(json?.rows) ? json.rows : [];
     return {
         rows,
-        total: Number.isFinite(json?.total) ? json.total : null,
+        total: normalizeTotal(json?.total),
         ...(typeof json?.hasMore === "boolean" ? { hasMore: json.hasMore } : {}),
         meta: json?.meta ?? {},
     };
@@ -363,6 +391,13 @@ export function applySearch(rows, search) {
             if (value === null || value === undefined) {
                 continue;
             }
+            // Only scalar values participate: nested objects and arrays (e.g.
+            // `$actions`) would otherwise stringify to "[object Object]" and
+            // match a search for "object".
+            const type = typeof value;
+            if (type !== "string" && type !== "number" && type !== "boolean" && type !== "bigint") {
+                continue;
+            }
             const cell = normalizeText(value);
             if (alternatives.some((alternative) => cell.includes(alternative))) {
                 return true;
@@ -380,7 +415,7 @@ export class FetchDataSource {
     /**
      * @param {String} url
      * @param {Object} [options]
-     * @param {Record<string, any>} [options.params] Extra constant HTTP params appended to each request
+     * @param {Record<string, any>} [options.params] Extra constant HTTP params appended to each request. They win over the serialized runtime query on key collision (a constant `page`, `search` or `filters` entry overrides the live query value)
      * @param {(query: QueryState) => any} [options.serializeQuery] Defaults to identity (QueryState preserved)
      * @param {(response: any) => PageResult} [options.parseResponse] Defaults to parseResult
      * @param {RequestInit} [options.fetch] Standard options forwarded to `fetch()`
@@ -451,7 +486,9 @@ export class ArrayDataSource {
     }
 
     /**
-     * Create a local data source by fetching a static file once.
+     * Create a local data source by fetching a static file once. No fetch
+     * options (credentials, headers) or abort signal are forwarded; the file
+     * is loaded a single time and queries then apply locally.
      * @param {String} url
      * @param {(response: any) => PageResult} [parseResponse]
      * @returns {Promise<ArrayDataSource>}

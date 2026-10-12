@@ -320,6 +320,25 @@ test("parseResult keeps the canonical shape and preserves an absent total", () =
     expect(parseResult({})).toEqual({ rows: [], total: null, meta: {} });
 });
 
+test("parseResult coerces numeric string totals and rejects invalid ones", () => {
+    expect(parseResult({ rows: [], total: "142" }).total).toBe(142);
+    expect(parseResult({ rows: [], total: " 142 " }).total).toBe(142);
+    expect(parseResult({ rows: [], total: "abc" }).total).toBeNull();
+    expect(parseResult({ rows: [], total: "" }).total).toBeNull();
+    expect(parseResult({ rows: [], total: -5 }).total).toBeNull();
+    expect(parseResult({ rows: [], total: "-5" }).total).toBeNull();
+    expect(parseResult({ rows: [], total: true }).total).toBeNull();
+});
+
+test("applySearch ignores nested objects and arrays", () => {
+    const rows = [
+        { name: "alpha", nested: { deep: "alpha" }, tags: ["alpha"], $actions: [{ label: "alpha" }] },
+        { name: "beta" },
+    ];
+    expect(applySearch(rows, "alpha").map((r) => r.name)).toEqual(["alpha"]);
+    expect(applySearch(rows, "object")).toEqual([]);
+});
+
 test("ArrayDataSource reports continuation alongside its known total", async () => {
     const ds = new ArrayDataSource([{ id: 1 }, { id: 2 }, { id: 3 }]);
     const first = await ds.load({ page: 1, pageSize: 2, search: "", sort: [], filters: {} });

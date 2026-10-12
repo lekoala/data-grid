@@ -164,3 +164,14 @@ test("setQuery keeps the page for page-only changes", async () => {
     expect(inst.rows[0].id).toBe(11);
     removeGrid(inst);
 });
+
+test("a custom data source returning a numeric string total paginates normally", async () => {
+    const inst = await makeReadyGrid({ pageSize: 10 });
+    const pageRows = Array.from({ length: 10 }, (_, i) => ({ id: i + 1 }));
+    inst.applyResult({ rows: pageRows, total: "142" });
+    expect(inst.total).toBe(142);
+    expect(inst.totalPages()).toBe(15);
+    const next = inst.querySelector(".dg-btn-next");
+    expect(next.disabled).toBe(false);
+    removeGrid(inst);
+});
