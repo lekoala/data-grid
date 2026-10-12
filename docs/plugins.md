@@ -120,6 +120,13 @@ compact `⋯` presentation. Unsupported browsers keep every action inline,
 including when `collapseActions` is requested; no business action depends on
 floating UI.
 
+`ColumnResizer` tracks Pointer Events with pointer capture, so mouse and touch
+both resize (coarse pointers get a wider hit area). `ColumnResizer` and
+`DraggableHeaders` are deliberately pointer-driven with no keyboard or ARIA
+alternative: set widths through `column.width` and order through the
+`options.columns` array followed by `renderTable()` instead — both are
+persisted by `SaveState`.
+
 ## Row details
 
 `rowDetails` receives `{ row, rowKey, grid }` and may return the same content

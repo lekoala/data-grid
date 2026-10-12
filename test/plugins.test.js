@@ -252,7 +252,7 @@ test("column resizer only clears widths on visible columns after a hidden column
 
     const resizer = c0.querySelector(".dg-resizer");
     expect(resizer).toBeTruthy();
-    resizer.dispatchEvent(new window.MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 10 }));
+    resizer.dispatchEvent(new window.PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 10 }));
 
     // Width is removed from the following *visible* column (c2) but the hidden
     // column (c1) is left untouched.

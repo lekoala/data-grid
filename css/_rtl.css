@@ -9,6 +9,13 @@ data-grid[dir="rtl"] .dg-resizer {
   right: auto;
 }
 
+@media (pointer: coarse) {
+  data-grid[dir="rtl"] .dg-resizer {
+    left: -8px;
+    right: auto;
+  }
+}
+
 /* Mirrors for the directional physical LTR declarations in _core.css /
    _actions.css. The RTL contract is the dir attribute on the grid element
    itself (see demo/i18n.html); generated CSS never uses :lang() selectors. */

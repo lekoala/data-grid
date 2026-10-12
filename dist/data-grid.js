@@ -4349,7 +4349,7 @@ class BasePlugin {
 var base_plugin_default = BasePlugin;
 
 // src/plugins/column-resizer.js
-var RESIZE_EVENTS = ["mousedown", "click"];
+var RESIZE_EVENTS = ["pointerdown", "click"];
 
 class ColumnResizer extends base_plugin_default {
   constructor(grid) {
@@ -4404,7 +4404,7 @@ class ColumnResizer extends base_plugin_default {
       event.stopPropagation();
     }
   }
-  onmousedown(event) {
+  onpointerdown(event) {
     if (!this.grid.options.resizable) {
       return;
     }
@@ -4456,15 +4456,20 @@ class ColumnResizer extends base_plugin_default {
         visibleCols[j].removeAttribute("width");
       }
     }
+    if (typeof resizer.setPointerCapture === "function") {
+      try {
+        resizer.setPointerCapture(event.pointerId);
+      } catch {}
+    }
     this._resizeController?.abort();
     this._resizeController = new AbortController;
     const { signal } = this._resizeController;
-    const mouseMoveHandler = (e) => {
+    const pointerMoveHandler = (e) => {
       const proposedWidth = startW + (e.clientX - startX) * resizeDirection;
       col.setAttribute("width", String(Math.max(minWidth, Math.min(maxWidth, proposedWidth))));
     };
-    const mouseUpHandler = () => {
-      grid.log("resized column");
+    const pointerEndHandler = (commit) => () => {
+      grid.log(commit ? "resized column" : "resize column cancelled");
       resizer.classList.remove("dg-resizer-active");
       if (grid.options.reorder) {
         col.draggable = true;
@@ -4472,6 +4477,9 @@ class ColumnResizer extends base_plugin_default {
       col.style.overflow = "hidden";
       this._resizeController?.abort();
       this._resizeController = null;
+      if (!commit) {
+        return;
+      }
       const column = grid.options.columns.find((c) => grid.getColumnId(c) === col.getAttribute("data-column-id"));
       if (column) {
         const width = Number(col.getAttribute("width"));
@@ -4485,8 +4493,9 @@ class ColumnResizer extends base_plugin_default {
         width: col.getAttribute("width")
       });
     };
-    document.addEventListener("mousemove", mouseMoveHandler, { signal });
-    document.addEventListener("mouseup", mouseUpHandler, { signal, once: true });
+    resizer.addEventListener("pointermove", pointerMoveHandler, { signal });
+    resizer.addEventListener("pointerup", pointerEndHandler(true), { signal, once: true });
+    resizer.addEventListener("pointercancel", pointerEndHandler(false), { signal, once: true });
   }
 }
 var column_resizer_default = ColumnResizer;

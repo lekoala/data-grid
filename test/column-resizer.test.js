@@ -54,22 +54,23 @@ test("registered column resizer stays disabled until resizable is enabled", asyn
     const th = /** @type {HTMLTableCellElement} */ (grid.querySelector('th[data-column-id="value"]'));
     Object.defineProperty(th, "offsetWidth", { configurable: true, value: 100 });
     const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));
-    resizer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: 100 }));
+    resizer.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 100 }));
     const width = th.getAttribute("width");
 
     grid.removeAttribute("resizable");
     expect(grid.querySelectorAll(".dg-resizer")).toHaveLength(0);
 
-    document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: 150 }));
+    resizer.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 150 }));
     expect(th.getAttribute("width")).toBe(width);
     document.body.removeChild(grid);
 });
 
-function drag(th, startX, endX) {
+function drag(th, startX, endX, pointerType = "mouse") {
     const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));
-    resizer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: startX }));
-    document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: endX }));
-    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: endX }));
+    const init = { bubbles: true, cancelable: true, pointerType };
+    resizer.dispatchEvent(new PointerEvent("pointerdown", { ...init, clientX: startX }));
+    resizer.dispatchEvent(new PointerEvent("pointermove", { ...init, clientX: endX }));
+    resizer.dispatchEvent(new PointerEvent("pointerup", { ...init, clientX: endX }));
 }
 
 test("column resizer clamps to an explicit minWidth and can grow again", async () => {
@@ -137,5 +138,35 @@ test("a committed resize also updates the column model width", async () => {
     expect(th.getAttribute("width")).toBe("180");
     expect(grid.options.columns[0].width).toBe(180);
     expect(detail).toEqual({ id: "value", col: "value", width: "180" });
+    document.body.removeChild(grid);
+});
+
+test("a touch pointer resizes like a mouse", async () => {
+    const { grid, th } = await makeGrid({ field: "value", title: "Value", width: 120 });
+
+    drag(th, 100, 160, "touch");
+
+    expect(th.getAttribute("width")).toBe("180");
+    expect(grid.options.columns[0].width).toBe(180);
+    document.body.removeChild(grid);
+});
+
+test("a cancelled gesture releases without committing", async () => {
+    const { grid, th } = await makeGrid({ field: "value", title: "Value", width: 120 });
+    let resized = 0;
+    grid.addEventListener("columnResized", () => {
+        resized++;
+    });
+    const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));
+
+    resizer.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 100 }));
+    resizer.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 160 }));
+    resizer.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true }));
+    // A late pointerup after the cancel must not commit either.
+    resizer.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: 160 }));
+
+    expect(resized).toBe(0);
+    expect(grid.options.columns[0].width).toBe(120);
+    expect(resizer.classList.contains("dg-resizer-active")).toBe(false);
     document.body.removeChild(grid);
 });

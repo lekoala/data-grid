@@ -3,7 +3,7 @@ import { getColumnMinWidth } from "../utils/columnWidth.js";
 import { dispatch } from "../utils/dispatch.js";
 import { off, on } from "../utils/events.js";
 
-const RESIZE_EVENTS = ["mousedown", "click"];
+const RESIZE_EVENTS = ["pointerdown", "click"];
 
 /**
  * Allows to resize columns
@@ -90,9 +90,9 @@ class ColumnResizer extends BasePlugin {
     }
 
     /**
-     * @param {MouseEvent} event
+     * @param {PointerEvent} event
      */
-    onmousedown(event) {
+    onpointerdown(event) {
         if (!this.grid.options.resizable) {
             return;
         }
@@ -160,19 +160,34 @@ class ColumnResizer extends BasePlugin {
             }
         }
 
+        // Pointer capture retargets the move/up events to the handle, so the
+        // gesture survives pointer slips and works for touch (with
+        // `touch-action: none` in CSS) as well as mouse. Synthetic events
+        // without a real pointer id throw: not fatal for the gesture.
+        if (typeof resizer.setPointerCapture === "function") {
+            try {
+                resizer.setPointerCapture(event.pointerId);
+            } catch {
+                // No active pointer (e.g. synthetic test event): the gesture
+                // still tracks through the listeners below.
+            }
+        }
+
         // Abort any previous resize gesture (e.g. a disconnect mid-drag)
         this._resizeController?.abort();
         this._resizeController = new AbortController();
         const { signal } = this._resizeController;
 
-        const mouseMoveHandler = (/** @type {MouseEvent} */ e) => {
+        const pointerMoveHandler = (/** @type {PointerEvent} */ e) => {
             const proposedWidth = startW + (e.clientX - startX) * resizeDirection;
             col.setAttribute("width", String(Math.max(minWidth, Math.min(maxWidth, proposedWidth))));
         };
 
-        // When user releases the mouse, remove the existing event listeners
-        const mouseUpHandler = () => {
-            grid.log("resized column");
+        // When the gesture ends, remove the active state and listeners. A
+        // commit writes the width back to the column model and notifies; a
+        // cancellation (pointercancel) only releases the gesture.
+        const pointerEndHandler = (/** @type {Boolean} */ commit) => () => {
+            grid.log(commit ? "resized column" : "resize column cancelled");
 
             resizer.classList.remove("dg-resizer-active");
             if (grid.options.reorder) {
@@ -183,6 +198,9 @@ class ColumnResizer extends BasePlugin {
             this._resizeController?.abort();
             this._resizeController = null;
 
+            if (!commit) {
+                return;
+            }
             // Commit the user width back to the base column model so later
             // renders derive the DOM width from the definition; the rendered
             // <th> is otherwise the only place holding the resized value.
@@ -201,8 +219,9 @@ class ColumnResizer extends BasePlugin {
             });
         };
 
-        document.addEventListener("mousemove", mouseMoveHandler, { signal });
-        document.addEventListener("mouseup", mouseUpHandler, { signal, once: true });
+        resizer.addEventListener("pointermove", pointerMoveHandler, { signal });
+        resizer.addEventListener("pointerup", pointerEndHandler(true), { signal, once: true });
+        resizer.addEventListener("pointercancel", pointerEndHandler(false), { signal, once: true });
     }
 }
 

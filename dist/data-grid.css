@@ -1059,6 +1059,13 @@ data-grid[dir="rtl"] .dg-resizer {
   right: auto;
 }
 
+@media (pointer: coarse) {
+  data-grid[dir="rtl"] .dg-resizer {
+    left: -8px;
+    right: auto;
+  }
+}
+
 data-grid[dir="rtl"] .dg-topbar-end {
   margin-left: 0;
   margin-right: auto;
@@ -1436,6 +1443,13 @@ data-grid .dg-resizer.dg-resizer-active:before {
   height: calc(100% - var(--dg-space-2));
   opacity: 1;
   width: 2px;
+}
+
+@media (pointer: coarse) {
+  data-grid .dg-resizer {
+    width: 16px;
+    right: -8px;
+  }
 }
 
 /* css/_disclosure.css */

@@ -175,9 +175,9 @@ function resizeColumn(grid, field, from, to) {
         },
     });
     const resizer = /** @type {HTMLElement} */ (th.querySelector(".dg-resizer"));
-    resizer.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true, clientX: from }));
-    document.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, clientX: to }));
-    document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, clientX: to }));
+    resizer.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: from }));
+    resizer.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: to }));
+    resizer.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: to }));
 }
 
 function drop(inst, draggedId, targetId) {

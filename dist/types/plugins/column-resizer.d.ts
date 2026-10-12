@@ -26,9 +26,9 @@ declare class ColumnResizer extends BasePlugin {
      */
     onclick(event: MouseEvent): void;
     /**
-     * @param {MouseEvent} event
+     * @param {PointerEvent} event
      */
-    onmousedown(event: MouseEvent): void;
+    onpointerdown(event: PointerEvent): void;
 }
 export default ColumnResizer;
 //# sourceMappingURL=column-resizer.d.ts.map

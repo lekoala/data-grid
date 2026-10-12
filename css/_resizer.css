@@ -39,3 +39,11 @@ data-grid .dg-resizer.dg-resizer-active:before {
   opacity: 1;
   width: 2px;
 }
+
+/* Coarse pointers get a wider hit area; the visible grip stays 1px. */
+@media (pointer: coarse) {
+  data-grid .dg-resizer {
+    right: -8px;
+    width: 16px;
+  }
+}
