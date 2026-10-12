@@ -16,14 +16,14 @@ bun install
 bun test           # unit/component tests (happy-dom) - excludes test/browser
 bun run test:browser # real-browser tests (Bun.WebView + demo/server.js) - CI only, skipped on Windows
 bun run test:browser:wsl # run the browser suite inside WSL (Linux/Chrome)
-bun run check      # Biome lint + format check
-bun run typecheck  # tsc -p jsconfig.json (JSDoc typecheck, strict)
-bun run types      # tsc -p tsconfig.types.json -> dist/types/*.d.ts
+bun run check:lint # Biome lint + format check (the `check:lint` script; bare `bun check` is Bun's own typechecker)
+bun run typecheck  # bun check (JSDoc typecheck from jsconfig.json, strict) - tsc stays only for .d.ts emit
+bun run types      # tsc -p tsconfig.types.json -> dist/types/*.d.ts (`bun check` does not emit, so tsc remains)
 bun run check:types # tsc consumer smoke test against the published type exports
 bun run manifest   # generate custom-elements.json (scripts/custom-elements.js)
 bun run build      # Bun.build JS + CSS into dist/ (scripts/build.js)
 bun run check:package # verify the npm tarball content (scripts/check-package.js)
-bun run ci         # check + baseline + typecheck + test + locales + types + consumer typecheck + manifest + build + drift check
+bun run ci         # check:lint + baseline + typecheck + test + locales + types + consumer typecheck + manifest + build + drift check
 bun run dev        # build + serve demo (Bun.serve, demo/server.js)
 ```
 

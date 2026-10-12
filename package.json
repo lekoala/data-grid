@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./data-grid.js",
   "types": "./dist/types/data-grid.d.ts",
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.3",
   "customElements": "custom-elements.json",
   "exports": {
     ".": {
@@ -54,18 +54,18 @@
     "test": "bun test --path-ignore-patterns 'test/browser/**'",
     "test:browser": "bun test test/browser",
     "test:browser:wsl": "wsl -e bash scripts/test-browser-wsl.sh",
-    "check": "biome check .",
+    "check:lint": "biome check .",
     "format": "biome format --write .",
     "check:baseline": "bun scripts/check-baseline.js",
     "check:locales": "bun scripts/check-locales.js",
     "size": "bun scripts/css-size.js",
     "check:drift": "bun scripts/check-drift.js",
-    "typecheck": "tsc -p jsconfig.json",
+    "typecheck": "bun check",
     "types": "tsc -p tsconfig.types.json",
     "check:types": "tsc -p test/types/tsconfig.json",
     "manifest": "bun scripts/custom-elements.js",
     "check:package": "bun scripts/check-package.js",
-    "ci": "bun run check && bun run check:baseline && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run check:types && bun run manifest && bun run build && bun run check:drift"
+    "ci": "bun run check:lint && bun run check:baseline && bun run typecheck && bun run test && bun run check:locales && bun run types && bun run check:types && bun run manifest && bun run build && bun run check:drift"
   },
   "repository": {
     "type": "git",

@@ -13,15 +13,15 @@ APIs in `src/`).
 ## Toolchain
 
 - Bun: install, test, build (`scripts/build.js` via `Bun.build`), dev server (`demo/server.js`)
-- Biome: lint + format (single `bun run check`)
-- tsc: typecheck from JSDoc (`checkJs`, `strict` on) via `bun run typecheck`; emits
-  `.d.ts` into `dist/types` via `bun run types` (`tsconfig.types.json`)
+- Biome: lint + format (single `bun run check:lint`; bare `bun check` is Bun's own typechecker, not this script)
+- `bun check` (Bun ≥ 1.4.3): typecheck from JSDoc (`checkJs`, `strict` on) via `bun run typecheck`; tsc stays
+  only for emit — `.d.ts` into `dist/types` via `bun run types` (`tsconfig.types.json`), since `bun check` never emits
 - `scripts/custom-elements.js` generates `custom-elements.json` (`bun run manifest`), schema `2.1.0`
 - `bun run check:baseline` (`scripts/check-baseline.js`) greps `src/` for APIs
   newer than the documented browser floor (`scrollend`) and `css/`
   for directional inline-axis logical properties (see "Bun CSS workaround")
 - `bun run size` (`scripts/css-size.js`) reports raw/gzip/brotli of the built CSS
-- `bun run ci` = check + check:baseline + typecheck + test + types + manifest +
+- `bun run ci` = check:lint + check:baseline + typecheck + test + types + manifest +
   build + drift check (`git diff --exit-code -- dist custom-elements.json`) so
   committed artifacts stay in sync
 - Mark the public API surface of `src/data-grid.js` with `@public` in JSDoc: the
