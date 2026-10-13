@@ -183,8 +183,19 @@ test.skipIf(IS_WINDOWS)(
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/demo/declarative.html`);
-        await waitFor(v, "document.querySelector('#declarative-actions-grid tbody [data-action=delete]')");
-        await v.evaluate("new Promise((resolve) => requestAnimationFrame(() => resolve()))");
+        // The authored HTML already contains Delete buttons before the grid
+        // upgrades. Wait for the generated action cell, not the source markup.
+        await waitFor(
+            v,
+            `document.querySelector('#declarative-actions-grid .dg-scroll tbody td[data-column-id="$actions"] [data-action="delete"]')`,
+        );
+        // Exercise shared column sizing with compact labels: the demo's system
+        // font varies by OS and can exhaust the inline action width heuristic.
+        await v.evaluate(`(async () => {
+            document.querySelector('#declarative-actions-grid').style.font = '14px/1.5 monospace';
+            await document.fonts.ready;
+            await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+        })()`);
 
         const geometry = JSON.parse(
             await read(
