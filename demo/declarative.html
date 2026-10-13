@@ -41,10 +41,10 @@
       <div class="demo-frame">
         <data-grid sortable filterable searchable page-size="10">
           <div class="dg-topbar">
-            <span>Local dataset</span>
+            <span>Users</span>
           </div>
           <table>
-            <caption>Users</caption>
+            <caption class="demo-visually-hidden">Users</caption>
             <colgroup>
               <col style="width: 30%" />
               <col style="width: 35%" />
@@ -96,9 +96,11 @@
       </div>
       <p class="demo-note">The <code>caption</code>, <code>colgroup</code> and table classes are preserved; the grid
         installs its own header rows, body and footer. <code>data-value</code> keeps a machine-readable value for
-        filter/sort/search while the initial markup stays rich. The bare <code>.dg-topbar</code> above is normalized
-        into start/end zones, so the summary sits next to the search inside the same frame. Searching for something
-        absent shows <code>No results for "…"</code>, unless <code>no-data</code> overrides it.</p>
+        filter/sort/search while the initial markup stays rich. The visible title lives in the bare
+        <code>.dg-topbar</code> above (normalized into start/end zones, so it sits next to the search inside the same
+        frame) while the <code>caption</code> stays as the visually-hidden accessible name: a single title row, never
+        both. Searching for something absent shows <code>No results for "…"</code>, unless <code>no-data</code>
+        overrides it.</p>
     </section>
 
     <section class="demo-grid">
@@ -108,7 +110,7 @@
         button below is an ordinary element wired with a few lines of JavaScript.</p>
 
       <div class="demo-frame">
-        <data-grid id="topbar-demo-grid" searchable search-placeholder="Search users…" page-size="5">
+        <data-grid id="topbar-demo-grid" aria-label="Users" searchable search-placeholder="Search users…" page-size="5">
           <div class="dg-topbar">
             <span>Local dataset</span>
             <button type="button" id="density-toggle">Compact rows</button>

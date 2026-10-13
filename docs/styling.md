@@ -105,6 +105,23 @@ content moves into `.dg-topbar-start`, while the search input lands in
 | `.dg-topbar-start` | Bulk actions, selection count, application commands |
 | `.dg-topbar-end` | Summary, custom filters, global search |
 
+## One visible title
+
+Bulk actions, search and the table title share one visual space: show a single
+visible title, never two. Two recipes cover both cases:
+
+- **Hero** (search with an optional summary, no bulk actions): put the title
+  first in the topbar next to the search, and keep the `caption` as the
+  visually-hidden accessible name (same snippet as under Caption). One chrome
+  row. See `demo/declarative.html`.
+- **Toolbar** (bulk actions, filters or custom controls): keep the topbar for
+  controls only and show the title as the quiet `caption` row below it. Two
+  chrome rows, no duplication. See the Full scene in `demo/index.html`.
+
+A page-level heading above the grid can carry the title instead; in that case
+no caption is needed at all. The accessible name always resolves through
+`caption`, falling back to `aria-labelledby`, then `aria-label`.
+
 The zones wrap naturally: on a narrow grid the actions stay on the first row
 and the search takes the second row at full width. Retarget topbar overrides
 to `.dg-frame > .dg-topbar`, as the bar is no longer a sibling of the frame.
