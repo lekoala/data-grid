@@ -70,7 +70,8 @@ data-grid {
   color: var(--dg-color);
   font: inherit;
   line-height: inherit;
-  /* Vertical layout: optional topbar above, .dg-frame (.dg-scroll + footer). */
+  /* Vertical layout: .dg-frame owns the outer border and radius with
+     [topbar][scroll viewport][footer] as its direct children. */
   display: flex;
   flex-direction: column;
   min-height: 6rem;
@@ -328,13 +329,19 @@ data-grid .dg-selectable {
   text-align: center;
 }
 
-data-grid .dg-topbar {
+/* Toolbar chrome: first child of the frame, above the scroll viewport and
+   symmetric with the footer below it. A single shared border and radius come
+   from .dg-frame; the topbar only draws the separator. Zones wrap naturally
+   so a narrow grid stacks actions above a full-width search without any
+   viewport media query. */
+data-grid > .dg-frame > .dg-topbar {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 0;
+  padding: var(--dg-space-2) var(--dg-padding-x);
+  border-bottom: 1px solid var(--dg-border-color);
 }
 
 data-grid .dg-topbar-start,
@@ -603,6 +610,15 @@ data-grid select:focus-visible {
   border-color: var(--dg-accent);
   box-shadow: 0 0 0 3px var(--dg-focus-ring);
   outline: 0;
+}
+
+/* The global search shares the column-filter focus: a plain inset outline
+   with no halo ring. Placed after the generic rule so it wins at equal
+   specificity. */
+data-grid input.dg-search:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
 }
 
 /* Regular buttons: accent border only */

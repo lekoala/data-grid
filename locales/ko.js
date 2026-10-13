@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "열 너비 조정",
     search: "검색",
     noData: "데이터 없음",
+    noResults: '"{query}"에 대한 결과 없음',
     loading: "로딩 중…",
     areYouSure: "확실합니까?",
     networkError: "불러오기 실패",

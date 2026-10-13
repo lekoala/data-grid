@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "تغيير حجم العمود",
     search: "بحث",
     noData: "لا توجد بيانات",
+    noResults: 'لا توجد نتائج لـ "{query}"',
     loading: "جارٍ التحميل…",
     areYouSure: "هل أنت متأكد؟",
     networkError: "خطأ في التحميل",

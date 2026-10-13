@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "列の幅を変更",
     search: "検索",
     noData: "データがありません",
+    noResults: '"{query}" に一致する結果がありません',
     loading: "読み込み中…",
     areYouSure: "よろしいですか？",
     networkError: "読み込みに失敗しました",

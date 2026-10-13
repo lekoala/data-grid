@@ -7,11 +7,26 @@ not documented.
 
 ## [Unreleased]
 
+### Breaking / migration
+
+- The topbar (`.dg-topbar`) now lives inside `.dg-frame`, above the scroll
+  viewport: frame = [topbar][scroll > table][footer] with a single shared
+  border. Class names are unchanged; retarget `.dg-topbar` overrides to
+  `.dg-frame > .dg-topbar`. Retargeting is required for specificity too, not
+  just placement: the core selector changed from `data-grid .dg-topbar` to
+  `data-grid > .dg-frame > .dg-topbar`, so a plain `data-grid .dg-topbar`
+  override no longer wins. Only a `.dg-topbar` placed directly under
+  `<data-grid>` (or already inside `.dg-frame`) is adopted; one nested in a
+  wrapper is ignored and a second topbar is created when search or bulk
+  actions mount.
+
 ### Added
 
 - Added `normalizeTotal()`: numeric string totals (`"142"`) are coerced to
   `Number`, invalid ones become `null`, in `parseResult()` and at the grid
   boundary (`applyResult()`, progressive chunks).
+- Added `labels.noResults` (`No results for "{query}"`), shown when a search
+  yields nothing unless `options.noData` is set.
 
 ### Changed
 
@@ -29,6 +44,10 @@ not documented.
 ### Fixed
 
 - Fixed multiline load errors collapsing without spacing (`"Line oneLine two"`).
+- Fixed a declarative `.dg-topbar` without start/end zones silently dropping
+  the search input and the bulk-actions bar: free content moves into
+  `.dg-topbar-start` and both zones are always normalized.
+- Fixed search debounce lost after element disconnect/reconnect.
 - Fixed local global search matching `"[object Object]"` on nested values:
   only scalars participate.
 - Fixed locally derived select filter options: deduplicated on stringified

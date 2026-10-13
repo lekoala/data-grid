@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "Kolom aanpassen",
     search: "Zoeken",
     noData: "Geen gegevens",
+    noResults: 'Geen resultaten voor "{query}"',
     loading: "Laden…",
     areYouSure: "Weet je het zeker?",
     networkError: "Fout bij het laden",

@@ -80,6 +80,35 @@ is a progressive enhancement: browsers without `position: sticky` on
 > implemented in v3.
 
 
+## Topbar composition
+
+`searchable` and `bulkActions` share a `.dg-topbar` that lives inside
+`.dg-frame`, above the scroll viewport: frame = [topbar][scroll >
+table][footer] with a single shared border. No topbar is created for grids
+without search, bulk actions or declarative topbar content.
+
+Provide your own commands declaratively; missing zones are created and free
+content moves into `.dg-topbar-start`, while the search input lands in
+`.dg-topbar-end`:
+
+```html
+<data-grid searchable>
+  <div class="dg-topbar">
+    <span class="app-summary">$22,550/mo</span>
+    <button type="button" id="export">Export</button>
+  </div>
+</data-grid>
+```
+
+| Zone | Default content |
+|------|-----------------|
+| `.dg-topbar-start` | Bulk actions, selection count, application commands |
+| `.dg-topbar-end` | Summary, custom filters, global search |
+
+The zones wrap naturally: on a narrow grid the actions stay on the first row
+and the search takes the second row at full width. Retarget topbar overrides
+to `.dg-frame > .dg-topbar`, as the bar is no longer a sibling of the frame.
+
 ## Bootstrap theme
 
 `themes/bootstrap.css` maps the tokens onto Bootstrap 5 variables, including dark

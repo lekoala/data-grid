@@ -281,13 +281,14 @@ data-grid .dg-selectable {
   font-size: 1em;
 }
 
-data-grid .dg-topbar {
+data-grid > .dg-frame > .dg-topbar {
   display: flex;
+  padding: var(--dg-space-2) var(--dg-padding-x);
+  border-bottom: 1px solid var(--dg-border-color);
   flex-wrap: wrap;
   justify-content: space-between;
   align-items:  center;
   gap: .5rem;
-  padding: .5rem 0;
 }
 
 data-grid .dg-topbar-start, data-grid .dg-topbar-end {
@@ -588,6 +589,12 @@ data-grid select:focus-visible {
   border-color: var(--dg-accent);
   box-shadow: 0 0 0 3px var(--dg-focus-ring);
   outline: 0;
+}
+
+data-grid input.dg-search:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
 }
 
 data-grid button:focus-visible {

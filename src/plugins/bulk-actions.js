@@ -87,7 +87,11 @@ class BulkActions extends BasePlugin {
 
         const table = grid.querySelector("table");
         if (table) {
-            grid.ensureTopbar().querySelector(".dg-topbar-start")?.appendChild(bar);
+            // ensureTopbar() guarantees the canonical start/end structure.
+            const start = /** @type {HTMLDivElement} */ (
+                grid.ensureTopbar().querySelector(":scope > .dg-topbar-start")
+            );
+            start.appendChild(bar);
         } else {
             grid.appendChild(bar);
         }

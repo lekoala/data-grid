@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "Изменить ширину столбца",
     search: "Поиск",
     noData: "Нет данных",
+    noResults: 'Нет результатов для "{query}"',
     loading: "Загрузка…",
     areYouSure: "Вы уверены?",
     networkError: "Ошибка загрузки",

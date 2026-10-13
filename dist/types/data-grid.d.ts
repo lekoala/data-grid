@@ -525,6 +525,10 @@ export type Labels = {
     resizeColumn: string;
     search: string;
     noData: string;
+    /**
+     * - empty state when a search yields nothing, with {query}
+     */
+    noResults: string;
     loading: string;
     areYouSure: string;
     networkError: string;
@@ -850,8 +854,13 @@ declare class DataGrid extends BaseElement {
     populatePageSizes(): void;
     /**
      * Lazily create the shared top bar: `.dg-topbar > .dg-topbar-start +
-     * .dg-topbar-end`, inserted before the table. Both the bulk actions plugin
-     * and the core search control use it.
+     * .dg-topbar-end`, as the first child of `.dg-frame`, above the scroll
+     * viewport. Both the bulk actions plugin and the core search control use
+     * it. A declarative `.dg-topbar` is reused: missing zones are created and
+     * free children (including text nodes) move into `start` around its
+     * existing content, so the author's order is preserved. Idempotent: an already-canonical
+     * topbar is left untouched. Grids without search, bulk actions or a
+     * declarative topbar never get one.
      * @returns {HTMLDivElement}
      */
     ensureTopbar(): HTMLDivElement;

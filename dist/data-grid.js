@@ -1120,6 +1120,7 @@ var DEFAULT_LABELS = {
   resizeColumn: "Resize column",
   search: "Search",
   noData: "No data",
+  noResults: 'No results for "{query}"',
   loading: "Loading…",
   areYouSure: "Are you sure?",
   networkError: "Network response error",
@@ -2164,7 +2165,13 @@ class DataGrid extends base_element_default {
     return formatLabel(template, values);
   }
   get noData() {
-    return this.options.noData || this.labels.noData;
+    if (this.options.noData) {
+      return this.options.noData;
+    }
+    if (this.#query.search) {
+      return this.formatLabel(this.labels.noResults, { query: this.#query.search });
+    }
+    return this.labels.noData;
   }
   #setNoData(tbody) {
     if (!this.hasDataError && tbody.getAttribute("data-empty-message") !== this.noData) {
@@ -2798,7 +2805,8 @@ class DataGrid extends base_element_default {
     }
   }
   ensureTopbar() {
-    let topbar = this.querySelector(".dg-topbar");
+    const frame = this.querySelector(":scope > .dg-frame");
+    let topbar = this.querySelector(":scope > .dg-frame > .dg-topbar") ?? this.querySelector(":scope > .dg-topbar");
     if (!topbar) {
       topbar = document.createElement("div");
       topbar.className = "dg-topbar";
@@ -2807,8 +2815,49 @@ class DataGrid extends base_element_default {
       const end = document.createElement("div");
       end.className = "dg-topbar-end";
       topbar.append(start, end);
-      const frame = this.querySelector(":scope > .dg-frame");
-      this.insertBefore(topbar, frame ?? this.scrollEl);
+      if (frame) {
+        frame.insertBefore(topbar, frame.firstChild);
+      } else {
+        this.insertBefore(topbar, this.firstChild);
+      }
+      return topbar;
+    }
+    if (frame && frame.firstElementChild !== topbar) {
+      frame.insertBefore(topbar, frame.firstChild);
+    }
+    let start = topbar.querySelector(":scope > .dg-topbar-start");
+    let end = topbar.querySelector(":scope > .dg-topbar-end");
+    if (!start) {
+      start = document.createElement("div");
+      start.className = "dg-topbar-start";
+      topbar.insertBefore(start, end ?? null);
+    }
+    if (!end) {
+      end = document.createElement("div");
+      end.className = "dg-topbar-end";
+      topbar.appendChild(end);
+    }
+    const siblings = [...topbar.childNodes];
+    const startIndex = siblings.indexOf(start);
+    const before = [];
+    const after = [];
+    for (const [index, node] of siblings.entries()) {
+      if (node === start || node === end) {
+        continue;
+      }
+      (index < startIndex ? before : after).push(node);
+    }
+    if (before.length) {
+      start.prepend(...before);
+    }
+    if (after.length) {
+      start.append(...after);
+    }
+    if (topbar.firstElementChild !== start) {
+      topbar.insertBefore(start, topbar.firstChild);
+    }
+    if (topbar.lastElementChild !== end) {
+      topbar.appendChild(end);
     }
     return topbar;
   }
@@ -2819,9 +2868,14 @@ class DataGrid extends base_element_default {
       return;
     }
     if (this.searchInput) {
-      this.searchInput.setAttribute("aria-label", this.labels.search);
-      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
-      return;
+      if (!this.contains(this.searchInput)) {
+        this.searchInput = null;
+      } else {
+        this.searchInput.setAttribute("aria-label", this.labels.search);
+        this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+        this.ensureTopbar();
+        return;
+      }
     }
     const input = document.createElement("input");
     input.type = "search";
@@ -2840,7 +2894,8 @@ class DataGrid extends base_element_default {
       composing: false,
       apply: debounce(() => this.commitSearch(), this.options.searchDelay)
     });
-    this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(field);
+    const end = this.ensureTopbar().querySelector(":scope > .dg-topbar-end");
+    end.appendChild(field);
     this.searchInput = input;
   }
   commitSearch() {
@@ -2940,6 +2995,9 @@ class DataGrid extends base_element_default {
       scroll.className = "dg-scroll";
       scroll.tabIndex = 0;
     }
+    if (this.querySelector(":scope > .dg-topbar, :scope > .dg-frame > .dg-topbar")) {
+      this.ensureTopbar();
+    }
     const footer = frame.querySelector(":scope > .dg-footer");
     if (footer && footer.previousElementSibling !== scroll) {
       frame.appendChild(footer);
@@ -2981,8 +3039,11 @@ class DataGrid extends base_element_default {
     this.#loadObserver = null;
     this.#controller?.abort();
     for (const input of this.querySelectorAll("input")) {
-      textInputState.get(input)?.apply.cancel();
-      textInputState.delete(input);
+      const state = textInputState.get(input);
+      state?.apply.cancel();
+      if (state) {
+        state.composing = false;
+      }
     }
     off(this, CORE_EVENTS, this);
     if (this.#frozenFrame !== null) {
@@ -4979,7 +5040,8 @@ class BulkActions extends base_plugin_default {
     }
     const table = grid.querySelector("table");
     if (table) {
-      grid.ensureTopbar().querySelector(".dg-topbar-start")?.appendChild(bar);
+      const start = grid.ensureTopbar().querySelector(":scope > .dg-topbar-start");
+      start.appendChild(bar);
     } else {
       grid.appendChild(bar);
     }

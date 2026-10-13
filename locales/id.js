@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "Ubah ukuran kolom",
     search: "Cari",
     noData: "Tidak ada data",
+    noResults: 'Tidak ada hasil untuk "{query}"',
     loading: "Memuat…",
     areYouSure: "Apakah Anda yakin?",
     networkError: "Gagal memuat",

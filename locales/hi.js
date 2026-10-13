@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "कॉलम का आकार बदलें",
     search: "खोजें",
     noData: "कोई डेटा नहीं",
+    noResults: '"{query}" के लिए कोई परिणाम नहीं',
     loading: "लोड हो रहा है…",
     areYouSure: "क्या आप सुनिश्चित हैं?",
     networkError: "लोड करने में त्रुटि",

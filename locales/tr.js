@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "Sütunu yeniden boyutlandır",
     search: "Ara",
     noData: "Veri yok",
+    noResults: '"{query}" için sonuç yok',
     loading: "Yükleniyor…",
     areYouSure: "Emin misiniz?",
     networkError: "Yükleme hatası",

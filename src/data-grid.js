@@ -315,6 +315,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {String} resizeColumn
  * @property {String} search
  * @property {String} noData
+ * @property {String} noResults - empty state when a search yields nothing, with {query}
  * @property {String} loading
  * @property {String} areYouSure
  * @property {String} networkError
@@ -891,7 +892,13 @@ class DataGrid extends BaseElement {
     /** Gets the text to be displayed when no data is loaded.
      * @public */
     get noData() {
-        return this.options.noData || this.labels.noData;
+        if (this.options.noData) {
+            return this.options.noData;
+        }
+        if (this.#query.search) {
+            return this.formatLabel(this.labels.noResults, { query: this.#query.search });
+        }
+        return this.labels.noData;
     }
 
     /**
@@ -1890,12 +1897,20 @@ class DataGrid extends BaseElement {
 
     /**
      * Lazily create the shared top bar: `.dg-topbar > .dg-topbar-start +
-     * .dg-topbar-end`, inserted before the table. Both the bulk actions plugin
-     * and the core search control use it.
+     * .dg-topbar-end`, as the first child of `.dg-frame`, above the scroll
+     * viewport. Both the bulk actions plugin and the core search control use
+     * it. A declarative `.dg-topbar` is reused: missing zones are created and
+     * free children (including text nodes) move into `start` around its
+     * existing content, so the author's order is preserved. Idempotent: an already-canonical
+     * topbar is left untouched. Grids without search, bulk actions or a
+     * declarative topbar never get one.
      * @returns {HTMLDivElement}
      */
     ensureTopbar() {
-        let topbar = /** @type {HTMLDivElement|null} */ (this.querySelector(".dg-topbar"));
+        const frame = /** @type {HTMLDivElement|null} */ (this.querySelector(":scope > .dg-frame"));
+        let topbar = /** @type {HTMLDivElement|null} */ (
+            this.querySelector(":scope > .dg-frame > .dg-topbar") ?? this.querySelector(":scope > .dg-topbar")
+        );
         if (!topbar) {
             topbar = document.createElement("div");
             topbar.className = "dg-topbar";
@@ -1904,9 +1919,59 @@ class DataGrid extends BaseElement {
             const end = document.createElement("div");
             end.className = "dg-topbar-end";
             topbar.append(start, end);
-            // The topbar lives outside the frame, above .dg-frame.
-            const frame = this.querySelector(":scope > .dg-frame");
-            this.insertBefore(topbar, frame ?? this.scrollEl);
+            // The topbar is grid chrome: first child of the frame, above the
+            // scroll viewport, symmetric with the footer below it.
+            if (frame) {
+                frame.insertBefore(topbar, frame.firstChild);
+            } else {
+                // Only reachable through direct external calls before
+                // connection; #wrapScroll() relocates it into the frame.
+                this.insertBefore(topbar, this.firstChild);
+            }
+            return topbar;
+        }
+        if (frame && frame.firstElementChild !== topbar) {
+            frame.insertBefore(topbar, frame.firstChild);
+        }
+        let start = /** @type {HTMLDivElement|null} */ (topbar.querySelector(":scope > .dg-topbar-start"));
+        let end = /** @type {HTMLDivElement|null} */ (topbar.querySelector(":scope > .dg-topbar-end"));
+        if (!start) {
+            start = document.createElement("div");
+            start.className = "dg-topbar-start";
+            topbar.insertBefore(start, end ?? null);
+        }
+        if (!end) {
+            end = document.createElement("div");
+            end.className = "dg-topbar-end";
+            topbar.appendChild(end);
+        }
+        // Free declarative content (elements and text nodes) belongs to start.
+        // Nodes originally before start are prepended, nodes after it are
+        // appended, so the author's order survives the regrouping: with
+        // A, start(B), C the start zone keeps A before B and C after it.
+        const siblings = [...topbar.childNodes];
+        const startIndex = siblings.indexOf(start);
+        const before = /** @type {ChildNode[]} */ ([]);
+        const after = /** @type {ChildNode[]} */ ([]);
+        for (const [index, node] of siblings.entries()) {
+            if (node === start || node === end) {
+                continue;
+            }
+            (index < startIndex ? before : after).push(node);
+        }
+        if (before.length) {
+            start.prepend(...before);
+        }
+        if (after.length) {
+            start.append(...after);
+        }
+        // Canonical order is start then end; move only when out of place so a
+        // reconnect never shuffles an already-correct topbar.
+        if (topbar.firstElementChild !== start) {
+            topbar.insertBefore(start, topbar.firstChild);
+        }
+        if (topbar.lastElementChild !== end) {
+            topbar.appendChild(end);
         }
         return topbar;
     }
@@ -1922,9 +1987,15 @@ class DataGrid extends BaseElement {
             return;
         }
         if (this.searchInput) {
-            this.searchInput.setAttribute("aria-label", this.labels.search);
-            this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
-            return;
+            // An input moved outside the grid is no longer ours: rebuild it.
+            if (!this.contains(this.searchInput)) {
+                this.searchInput = null;
+            } else {
+                this.searchInput.setAttribute("aria-label", this.labels.search);
+                this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+                this.ensureTopbar();
+                return;
+            }
         }
         const input = document.createElement("input");
         input.type = "search";
@@ -1952,7 +2023,9 @@ class DataGrid extends BaseElement {
             apply: debounce(() => this.commitSearch(), this.options.searchDelay),
         });
 
-        this.ensureTopbar().querySelector(".dg-topbar-end")?.appendChild(field);
+        // ensureTopbar() guarantees the canonical start/end structure.
+        const end = /** @type {HTMLDivElement} */ (this.ensureTopbar().querySelector(":scope > .dg-topbar-end"));
+        end.appendChild(field);
         this.searchInput = input;
     }
 
@@ -2102,6 +2175,12 @@ class DataGrid extends BaseElement {
             scroll.className = "dg-scroll";
             scroll.tabIndex = 0;
         }
+        // A declarative topbar belongs to the frame, above the viewport:
+        // normalize its zones even when nothing else needs the topbar.
+        // Grids without any topbar create none.
+        if (this.querySelector(":scope > .dg-topbar, :scope > .dg-frame > .dg-topbar")) {
+            this.ensureTopbar();
+        }
         // The footer always sits after the viewport, never inside the table.
         const footer = /** @type {HTMLDivElement|null} */ (frame.querySelector(":scope > .dg-footer"));
         if (footer && footer.previousElementSibling !== scroll) {
@@ -2161,10 +2240,15 @@ class DataGrid extends BaseElement {
         this.#loadObserver = null;
         this.#controller?.abort();
         // Cancel any pending per-input debounce before it can fire on a
-        // detached element.
+        // detached element. The state itself survives: a debounced function
+        // is reusable after cancel(), so a reconnected input keeps working
+        // with no recreation. A composition cut off mid-flight is reset.
         for (const input of this.querySelectorAll("input")) {
-            textInputState.get(input)?.apply.cancel();
-            textInputState.delete(input);
+            const state = textInputState.get(input);
+            state?.apply.cancel();
+            if (state) {
+                state.composing = false;
+            }
         }
 
         off(this, CORE_EVENTS, this);

@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "调整列宽",
     search: "搜索",
     noData: "暂无数据",
+    noResults: '没有与 "{query}" 匹配的结果',
     loading: "加载中…",
     areYouSure: "确定吗？",
     networkError: "加载失败",

@@ -24,6 +24,7 @@ const labels = {
     resizeColumn: "Redimensionar columna",
     search: "Buscar",
     noData: "Sin datos",
+    noResults: 'Sin resultados para "{query}"',
     loading: "Cargando…",
     areYouSure: "¿Estás seguro?",
     networkError: "Error al cargar",

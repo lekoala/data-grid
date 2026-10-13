@@ -92,4 +92,7 @@ Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `pageRange`, `pageStatus`, `resultCount`,
 `selectedCount`, `selectAll`, `selectRow`, `toggleActions`, `resizeColumn`,
 `showDetails`, `hideDetails`, `showHiddenColumns`, `hideHiddenColumns`, `search`,
-`noData`, `loading`, `areYouSure`, `networkError`, `booleanTrue`, `booleanFalse`.
+`noData`, `noResults`, `loading`, `areYouSure`, `networkError`, `booleanTrue`, `booleanFalse`.
+
+`noResults` (`No results for "{query}"`) replaces `noData` when a search is
+active and yields nothing, unless `options.noData` overrides both.

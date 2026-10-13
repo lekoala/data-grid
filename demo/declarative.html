@@ -40,6 +40,9 @@
 
       <div class="demo-frame">
         <data-grid sortable filterable searchable page-size="10">
+          <div class="dg-topbar">
+            <span>Local dataset</span>
+          </div>
           <table>
             <caption>Users</caption>
             <colgroup>
@@ -93,7 +96,72 @@
       </div>
       <p class="demo-note">The <code>caption</code>, <code>colgroup</code> and table classes are preserved; the grid
         installs its own header rows, body and footer. <code>data-value</code> keeps a machine-readable value for
-        filter/sort/search while the initial markup stays rich.</p>
+        filter/sort/search while the initial markup stays rich. The bare <code>.dg-topbar</code> above is normalized
+        into start/end zones, so the summary sits next to the search inside the same frame. Searching for something
+        absent shows <code>No results for "…"</code>, unless <code>no-data</code> overrides it.</p>
+    </section>
+
+    <section class="demo-grid">
+      <h2>Declarative topbar</h2>
+      <p class="demo-lead">Application commands live in the same frame as the table: free topbar content is normalized
+        into <code>.dg-topbar-start</code> while the global search lands in <code>.dg-topbar-end</code>. The density
+        button below is an ordinary element wired with a few lines of JavaScript.</p>
+
+      <div class="demo-frame">
+        <data-grid id="topbar-demo-grid" searchable search-placeholder="Search users…" page-size="5">
+          <div class="dg-topbar">
+            <span>Local dataset</span>
+            <button type="button" id="density-toggle">Compact rows</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th data-field="name">Name</th>
+                <th data-field="email">Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td>Ada Lovelace</td>
+                <td>ada@example.com</td>
+              </tr>
+              <tr data-row-key="2">
+                <td>Grace Hopper</td>
+                <td>grace@example.com</td>
+              </tr>
+              <tr data-row-key="3">
+                <td>Alan Turing</td>
+                <td>alan@example.com</td>
+              </tr>
+              <tr data-row-key="4">
+                <td>Margaret Hamilton</td>
+                <td>margaret@example.com</td>
+              </tr>
+              <tr data-row-key="5">
+                <td>Katherine Johnson</td>
+                <td>katherine@example.com</td>
+              </tr>
+              <tr data-row-key="6">
+                <td>Dorothy Vaughan</td>
+                <td>dorothy@example.com</td>
+              </tr>
+            </tbody>
+          </table>
+        </data-grid>
+      </div>
+      <script type="module">
+        const topbarGrid = document.getElementById("topbar-demo-grid");
+        const densityToggle = document.getElementById("density-toggle");
+        densityToggle.addEventListener("click", () => {
+          const compact = topbarGrid.getAttribute("density") === "compact";
+          if (compact) {
+            topbarGrid.removeAttribute("density");
+          } else {
+            topbarGrid.setAttribute("density", "compact");
+          }
+          densityToggle.textContent = compact ? "Compact rows" : "Comfortable rows";
+        });
+      </script>
     </section>
 
     <section class="demo-grid">
