@@ -5,6 +5,16 @@ inputs accept a minimal operator syntax, while select inputs use `eq`. Text
 matching is case- and accent-insensitive by default. Change a column's input
 mode with `filterType`.
 
+Generic text filters show no placeholder wording by default: placeholders are
+not labels (see `docs/translations.md`), so an empty, unfocused field shows a
+small I-beam glyph at the inline-end — the text-entry counterpart to the
+select caret. Focus or a value restores the normal field. Columns with an
+explicit placeholder keep their hint text with no glyph. `date`
+(`YYYY-MM-DD`)
+and percent (`%`) keep their contract placeholders; any column can set
+`filterPlaceholder` (or `data-filter-placeholder` declaratively) for a
+business hint.
+
 ## Preferred filter modes
 
 The effective mode of a column resolves as:

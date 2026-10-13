@@ -2274,7 +2274,7 @@ class DataGrid extends base_element_default {
       format: null,
       align: null,
       filterType: null,
-      filterPlaceholder: "_",
+      filterPlaceholder: "",
       firstFilterOption: { value: "", text: "" },
       filterMultiple: false
     };
@@ -4103,6 +4103,11 @@ class DataGrid extends base_element_default {
     if (filter instanceof HTMLSelectElement) {
       const field = document.createElement("span");
       field.className = "dg-select-field";
+      field.appendChild(filter);
+      th.appendChild(field);
+    } else if (filter instanceof HTMLInputElement) {
+      const field = document.createElement("span");
+      field.className = "dg-text-field";
       field.appendChild(filter);
       th.appendChild(field);
     } else {

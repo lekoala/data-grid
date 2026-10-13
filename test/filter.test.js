@@ -1210,7 +1210,14 @@ test("text filter placeholders use the grid default and can be overridden by the
     });
 
     const plain = inst.querySelector('.dg-head-filters input[data-name="name"]');
-    expect(plain.getAttribute("placeholder")).toBe(inst.defaultColumn.filterPlaceholder);
+    // No wording by default: placeholders are not labels, so an empty field
+    // carries no text and the affordance comes from styling, not content.
+    expect(inst.defaultColumn.filterPlaceholder).toBe("");
+    expect(plain.getAttribute("placeholder")).toBe("");
+    // Text inputs sit in a .dg-text-field wrapper carrying the I-beam mask,
+    // mirroring the .dg-select-field wrapper of selects.
+    expect(plain.closest(".dg-text-field")).toBeTruthy();
+    expect(plain.closest("th")).toBe(inst.querySelector('.dg-head-filters th[data-column-id="name"]'));
 
     const hinted = inst.querySelector('.dg-head-filters input[data-name="ref"]');
     expect(hinted.getAttribute("placeholder")).toBe("ABC-123");

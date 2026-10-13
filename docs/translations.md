@@ -41,8 +41,9 @@ DataGrid.setLabels({
 
 ## Placeholders are not labels
 
-`search-placeholder` is empty by default, while `filter-placeholder` can provide
-a language-neutral hint. Applications can replace either with a business hint
+`search-placeholder` and the generic text `filter-placeholder` are empty by
+default, while a column can provide a language-neutral hint. Applications can
+replace either with a business hint
 that explains a format or a domain ("Name, email or user ID", "≥ 100"), while
 the accessible name always comes from the labels / the column header.
 

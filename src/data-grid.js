@@ -1043,7 +1043,10 @@ class DataGrid extends BaseElement {
             // Null means "no explicit choice": the effective mode resolves as
             // explicit filterType > formatter hint > "text".
             filterType: null,
-            filterPlaceholder: "_",
+            // Empty by design: placeholders are not labels (see
+            // docs/translations.md), so the generic text hint carries no
+            // wording. Discoverability comes from the filter-row styling.
+            filterPlaceholder: "",
             firstFilterOption: { value: "", text: "" },
             filterMultiple: false,
         };
@@ -3952,6 +3955,15 @@ class DataGrid extends BaseElement {
         if (filter instanceof HTMLSelectElement) {
             const field = document.createElement("span");
             field.className = "dg-select-field";
+            field.appendChild(filter);
+            th.appendChild(field);
+        } else if (filter instanceof HTMLInputElement) {
+            // Text filters get the same inline-end affordance as selects: the
+            // wrapper carries an I-beam mask (see _core.css), so every filter
+            // control reads as a control. Other roots (multi-select) keep
+            // their own chrome.
+            const field = document.createElement("span");
+            field.className = "dg-text-field";
             field.appendChild(filter);
             th.appendChild(field);
         } else {

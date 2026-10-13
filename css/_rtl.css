@@ -44,6 +44,23 @@ data-grid[dir="rtl"] .dg-select-field::after {
   left: 12px;
 }
 
+/* Mirror of the text-filter I-beam in _core.css: glyph space and glyph
+   position swap to the inline-start side. */
+data-grid[dir="rtl"] thead tr.dg-head-filters input.dg-filter-control {
+  padding-right: var(--dg-padding-x);
+  padding-left: 32px;
+}
+
+@supports selector(:has(*)) {
+  data-grid[dir="rtl"]
+    thead
+    tr.dg-head-filters
+    .dg-text-field:has(> input.dg-filter-control[placeholder=""]:not(:focus):placeholder-shown)::after {
+    right: auto;
+    left: 12px;
+  }
+}
+
 data-grid[dir="rtl"] .dg-multiselect-trigger {
   text-align: right;
 }

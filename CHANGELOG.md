@@ -30,6 +30,14 @@ not documented.
 
 ### Changed
 
+- The generic text filter placeholder is now empty instead of `"_"`: an empty,
+  unfocused field shows a small I-beam glyph at the inline-end (the text-entry
+  counterpart to the select caret) instead of reading as missing data. Focus
+  or a value restores the normal field; explicit placeholders keep their hint
+  text with no glyph (no wording, so no translation needed;
+  browsers without `color-mix` show a plain empty field). `date`
+  (`YYYY-MM-DD`), percent (`%`) and explicit per-column `filterPlaceholder`
+  hints are unchanged.
 - `ColumnResizer` tracks Pointer Events with pointer capture, so touch resizes
   like mouse (wider hit area on coarse pointers). Resize and reorder stay
   pointer-driven with no keyboard alternative; use `column.width` and the

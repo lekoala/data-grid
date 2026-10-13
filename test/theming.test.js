@@ -43,6 +43,18 @@ test("all selects share the component caret", () => {
     expect(coreCss).not.toContain("dg-filter-cell:has(select)");
 });
 
+test("empty text filters show an I-beam affordance, mirrored in RTL", () => {
+    expect(coreCss).toMatch(
+        /\.dg-text-field:has\(\s*>\s*input\.dg-filter-control\[placeholder=""\]:not\(:focus\):placeholder-shown\)::?after/,
+    );
+    expect(coreCss).toMatch(/\.dg-text-field[\s\S]*?mask-image: url\(/);
+    expect(coreCss).toMatch(
+        /\[dir="rtl"\] thead tr\.dg-head-filters input\.dg-filter-control \{\s*padding-right: var\(--dg-padding-x\);\s*padding-left: 32px/,
+    );
+    expect(coreCss).toMatch(/\[dir="rtl"\][\s\S]*?\.dg-text-field[\s\S]*?::?after/);
+    expect(coreCss).toMatch(/forced-colors[\s\S]*?\.dg-text-field::?after \{\s*display: none/);
+});
+
 test("decorative SVG masks keep standard and legacy WebKit declarations", () => {
     for (const selector of [".dg-search-icon", ".dg-actions-toggle:before", ".dg-disclosure:before"]) {
         const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

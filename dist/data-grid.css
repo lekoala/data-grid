@@ -696,6 +696,40 @@ data-grid thead tr.dg-head-filters .dg-filter-control::placeholder {
   opacity: 1;
 }
 
+data-grid .dg-text-field {
+  display: inline-flex;
+  position: relative;
+  max-inline-size: 100%;
+}
+
+@supports selector(:has(*)) {
+  data-grid thead tr.dg-head-filters .dg-text-field:has( > input.dg-filter-control[placeholder=""]:not(:focus):placeholder-shown):after {
+    content: "";
+    color: var(--dg-muted-color);
+    opacity: .65;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 2h8v1H9v10h3v1H4v-1h3V3H4z'/%3E%3C/svg%3E");
+    -webkit-mask-position: center;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: contain;
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 2h8v1H9v10h3v1H4v-1h3V3H4z'/%3E%3C/svg%3E");
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-size: contain;
+    pointer-events: none;
+    position: absolute;
+    background-color: currentColor;
+    width: 10px;
+    height: 14px;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+  }
+}
+
+data-grid thead tr.dg-head-filters input.dg-filter-control {
+  padding-right: 32px;
+}
+
 data-grid thead tr.dg-head-filters .dg-filter-control:hover {
   background-color: var(--dg-row-hover-bg);
 }
@@ -717,7 +751,7 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
     padding-left: var(--dg-control-padding-inline);
   }
 
-  data-grid .dg-select-field:after {
+  data-grid .dg-select-field:after, data-grid thead .dg-text-field:after {
     display: none;
   }
 }
@@ -1100,6 +1134,18 @@ data-grid[dir="rtl"] select {
 data-grid[dir="rtl"] .dg-select-field:after {
   left: 12px;
   right: auto;
+}
+
+data-grid[dir="rtl"] thead tr.dg-head-filters input.dg-filter-control {
+  padding-right: var(--dg-padding-x);
+  padding-left: 32px;
+}
+
+@supports selector(:has(*)) {
+  data-grid[dir="rtl"] thead tr.dg-head-filters .dg-text-field:has( > input.dg-filter-control[placeholder=""]:not(:focus):placeholder-shown):after {
+    left: 12px;
+    right: auto;
+  }
 }
 
 data-grid[dir="rtl"] .dg-multiselect-trigger {
