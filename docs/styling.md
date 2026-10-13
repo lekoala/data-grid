@@ -113,14 +113,28 @@ visible title, never two. Two recipes cover both cases:
 - **Hero** (search with an optional summary, no bulk actions): put the title
   first in the topbar next to the search, and keep the `caption` as the
   visually-hidden accessible name (same snippet as under Caption). One chrome
-  row. See `demo/declarative.html`.
+  row. See `demo/declarative.html`. Hero and Declarative topbar are the visual
+  references.
 - **Toolbar** (bulk actions, filters or custom controls): keep the topbar for
   controls only and show the title as the quiet `caption` row below it. Two
-  chrome rows, no duplication. See the Full scene in `demo/index.html`.
+  chrome rows, no duplication. See the Full scene in `demo/index.html`. Full is
+  the combinatorial validation scene, not the visual reference.
 
-A page-level heading above the grid can carry the title instead; in that case
-no caption is needed at all. The accessible name always resolves through
-`caption`, falling back to `aria-labelledby`, then `aria-label`.
+A page-level heading above the grid can carry the visible title instead. A
+heading does not name the table by itself: point the grid at it explicitly so
+assistive technology announces the table. The accessible name always resolves
+through `caption`, falling back to `aria-labelledby`, then `aria-label`:
+
+```html
+<h2 id="users-title">Users</h2>
+<data-grid aria-labelledby="users-title"></data-grid>
+```
+
+A visible `caption` lives inside the `<table>` in `.dg-scroll`, so it scrolls
+with the rows both vertically and horizontally. The topbar lives outside that
+viewport, above it, so its title stays visible. Prefer the topbar title when
+the title must stay put; a visible caption remains a valid quiet dataset
+label.
 
 The zones wrap naturally: on a narrow grid the actions stay on the first row
 and the search takes the second row at full width. Retarget topbar overrides

@@ -74,3 +74,73 @@ test.skipIf(IS_WINDOWS)(
     },
     TIMEOUT,
 );
+
+const FOCUS_SETUP = `(async () => {
+    const { default: DataGrid, ArrayDataSource } = await import("/dist/data-grid.js");
+    const grid = new DataGrid({
+        columns: [{ field: "name", title: "Name" }],
+        dataSource: new ArrayDataSource([{ name: "Acme" }, { name: "Globex" }]),
+        searchable: true,
+        searchDelay: 0,
+    });
+    const topbar = document.createElement("div");
+    topbar.className = "dg-topbar";
+    const action = document.createElement("button");
+    action.type = "button";
+    action.id = "topbar-action";
+    action.textContent = "Export";
+    topbar.append(action);
+    window.__topbarClicks = 0;
+    action.addEventListener("click", () => {
+        window.__topbarClicks += 1;
+    });
+    grid.appendChild(topbar);
+    const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    document.body.appendChild(grid);
+    window.tgrid = grid;
+    window.tbtn = action;
+    await connected;
+})()`;
+
+test.skipIf(IS_WINDOWS)(
+    "a declarative topbar control stays operable and focusable after normalization and reconnect",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/test/browser/fixtures/grid.html`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+        await v.evaluate(FOCUS_SETUP);
+        await waitFor(v, "window.tgrid.querySelector('.dg-search')");
+
+        // Initialization: the same node survived normalization, in the start zone.
+        expect(await read(v, "window.tbtn.isConnected")).toBe(true);
+        expect(await read(v, "window.tgrid.querySelector('#topbar-action') === window.tbtn")).toBe(true);
+        expect(await read(v, "window.tbtn.closest('.dg-topbar-start') !== null")).toBe(true);
+
+        // Operable and focusable after normalization: focus and click from the
+        // connected state, never from a detached node.
+        await v.evaluate(`(() => window.tbtn.focus())()`);
+        expect(await read(v, "document.activeElement === window.tbtn")).toBe(true);
+        await v.evaluate(`(() => window.tbtn.click())()`);
+        expect(await read(v, "window.__topbarClicks")).toBe(1);
+
+        await v.evaluate(`(async () => {
+            const grid = window.tgrid;
+            grid.remove();
+            await new Promise((r) => setTimeout(r, 50));
+            const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+            document.body.appendChild(grid);
+            await connected;
+        })()`);
+        await waitFor(v, "window.tgrid.rows.length > 0");
+
+        // Reconnect: the same node is still there and works again. Focus is
+        // taken anew after reconnection; detaching normally drops it.
+        expect(await read(v, "window.tgrid.querySelector('#topbar-action') === window.tbtn")).toBe(true);
+        expect(await read(v, "window.tbtn.closest('.dg-topbar-start') !== null")).toBe(true);
+        await v.evaluate(`(() => window.tbtn.focus())()`);
+        expect(await read(v, "document.activeElement === window.tbtn")).toBe(true);
+        await v.evaluate(`(() => window.tbtn.click())()`);
+        expect(await read(v, "window.__topbarClicks")).toBe(2);
+    },
+    TIMEOUT,
+);
