@@ -2845,6 +2845,9 @@ class DataGrid extends base_element_default {
       if (node === start || node === end) {
         continue;
       }
+      if (node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").trim() === "" || node.nodeType === Node.COMMENT_NODE) {
+        continue;
+      }
       (index < startIndex ? before : after).push(node);
     }
     if (before.length) {

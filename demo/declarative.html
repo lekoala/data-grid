@@ -16,6 +16,55 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
   <link rel="stylesheet" href="../dist/data-grid.css" />
   <link rel="stylesheet" href="demo.css" />
+  <style>
+    /* Custom recipes, page CSS only: the core stays untouched. */
+
+    /* Detached toolbar: drop the shared frame chrome so the toolbar floats
+       above the table card, like grids did before the integrated topbar. */
+    #classic-demo-grid .dg-frame {
+      background: transparent;
+      border: 0;
+      border-radius: 0;
+    }
+    #classic-demo-grid .dg-topbar {
+      background: transparent;
+      border-bottom: 0;
+      padding-left: 0;
+      padding-right: 0;
+      margin-bottom: var(--dg-space-3);
+    }
+    #classic-demo-grid .dg-scroll {
+      background: var(--dg-bg);
+      border: 1px solid var(--dg-border-color);
+      border-bottom: 0;
+      border-radius: var(--dg-radius) var(--dg-radius) 0 0;
+    }
+    #classic-demo-grid .dg-footer {
+      border: 1px solid var(--dg-border-color);
+      border-radius: 0 0 var(--dg-radius) var(--dg-radius);
+    }
+
+    /* Hero: borderless full-width search first, monthly total pinned
+       top-right through the declarative end zone. */
+    #search-total-grid .dg-search-field {
+      flex: 1 1 auto;
+      max-inline-size: none;
+      order: -1;
+    }
+    #search-total-grid input.dg-search {
+      background: transparent;
+      border-color: transparent;
+    }
+    #search-total-grid input.dg-search:focus-visible {
+      border-color: transparent;
+    }
+    #search-total-grid .demo-topbar-meta {
+      color: var(--dg-muted-color);
+      font-size: 0.875em;
+      white-space: nowrap;
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
 
   <script type="module" src="../data-grid.js"></script>
 </head>
@@ -250,6 +299,103 @@
           </table>
         </data-grid>
       </div>
+    </section>
+
+    <section class="demo-grid">
+      <h2>Detached toolbar</h2>
+      <p class="demo-lead">Opting out of the shared frame with page CSS only: the frame chrome is removed so the
+        toolbar floats above the table card, like grids did before the integrated topbar. The DOM contract is
+        untouched — same markup, same normalization.</p>
+
+      <div class="demo-frame">
+        <data-grid id="classic-demo-grid" sortable searchable search-placeholder="Search users…" page-size="3">
+          <table>
+            <caption>Users</caption>
+            <thead>
+              <tr>
+                <th data-field="name">Name</th>
+                <th data-field="email">Email</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td>Ada Lovelace</td>
+                <td>ada@example.com</td>
+              </tr>
+              <tr data-row-key="2">
+                <td>Grace Hopper</td>
+                <td>grace@example.com</td>
+              </tr>
+              <tr data-row-key="3">
+                <td>Alan Turing</td>
+                <td>alan@example.com</td>
+              </tr>
+              <tr data-row-key="4">
+                <td>Margaret Hamilton</td>
+                <td>margaret@example.com</td>
+              </tr>
+            </tbody>
+          </table>
+        </data-grid>
+      </div>
+    </section>
+
+    <section class="demo-grid">
+      <h2>Search with total</h2>
+      <p class="demo-lead">Borderless full-width search first, with the monthly total pinned top-right through the
+        declarative end zone. All page CSS and a few lines of JavaScript — the core stays untouched.</p>
+
+      <div class="demo-frame">
+        <data-grid id="search-total-grid" aria-label="Services" searchable search-placeholder="Search services…"
+          page-size="5">
+          <div class="dg-topbar">
+            <div class="dg-topbar-end">
+              <span class="demo-topbar-meta" id="services-total"></span>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th data-field="service">Service</th>
+                <th data-field="monthly">Monthly</th>
+                <th data-field="mom">MoM</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td>api-gateway</td>
+                <td data-value="4210">$4,210</td>
+                <td><span class="badge blocked">+3%</span></td>
+              </tr>
+              <tr data-row-key="2">
+                <td>workers</td>
+                <td data-value="2880">$2,880</td>
+                <td><span class="badge approved">-8%</span></td>
+              </tr>
+              <tr data-row-key="3">
+                <td>postgres</td>
+                <td data-value="3150">$3,150</td>
+                <td><span class="badge blocked">+12%</span></td>
+              </tr>
+              <tr data-row-key="4">
+                <td>redis</td>
+                <td data-value="1420">$1,420</td>
+                <td><span class="badge approved">-4%</span></td>
+              </tr>
+              <tr data-row-key="5">
+                <td>queue</td>
+                <td data-value="980">$980</td>
+                <td><span class="badge blocked">+1%</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </data-grid>
+      </div>
+      <script type="module">
+        const monthly = [4210, 2880, 3150, 1420, 980];
+        const servicesTotal = monthly.reduce((sum, value) => sum + value, 0);
+        document.getElementById("services-total").textContent = `$${servicesTotal.toLocaleString("en-US")}/mo`;
+      </script>
     </section>
   </main>
 

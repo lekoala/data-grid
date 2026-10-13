@@ -47,6 +47,9 @@ not documented.
 - Fixed a declarative `.dg-topbar` without start/end zones silently dropping
   the search input and the bulk-actions bar: free content moves into
   `.dg-topbar-start` and both zones are always normalized.
+- Fixed an empty topbar zone offsetting the remaining zone by the topbar gap:
+  whitespace and comments are never parked in a zone and empty zones are
+  hidden.
 - Fixed search debounce lost after element disconnect/reconnect.
 - Fixed local global search matching `"[object Object]"` on nested values:
   only scalars participate.

@@ -151,6 +151,50 @@ test("free content keeps its order around an existing start zone", async () => {
     removeGrid(inst);
 });
 
+test("search appends after declarative end content, meta stays first", async () => {
+    const topbar = document.createElement("div");
+    topbar.className = "dg-topbar";
+    const end = document.createElement("div");
+    end.className = "dg-topbar-end";
+    const meta = document.createElement("span");
+    meta.id = "services-total";
+    meta.textContent = "$12,640/mo";
+    end.appendChild(meta);
+    topbar.appendChild(end);
+
+    const inst = await makeReadyGrid({ searchable: true }, rows, topbar);
+
+    const normalized = topbar.querySelector(":scope > .dg-topbar-end");
+    const search = inst.querySelector(".dg-search");
+    expect(search).toBeTruthy();
+    expect([...normalized.children].map((el) => el.className)).toEqual(["", "dg-search-field"]);
+    expect(normalized.firstElementChild).toBe(meta);
+    expect(search.closest(".dg-topbar-end")).toBe(normalized);
+    removeGrid(inst);
+});
+
+test("whitespace markup leaves the unused zone empty so it adds no gap", async () => {
+    const topbar = document.createElement("div");
+    topbar.className = "dg-topbar";
+    // Realistic author formatting: whitespace and a comment around the zones.
+    topbar.innerHTML = `
+        <!-- summary lives in the end zone -->
+        <div class="dg-topbar-end"><span id="m">meta</span></div>
+    `;
+
+    const inst = await makeReadyGrid({ searchable: true }, rows, topbar);
+
+    const start = topbar.querySelector(":scope > .dg-topbar-start");
+    expect(start).toBeTruthy();
+    // Whitespace and comments are never parked in a zone, so :empty matches
+    // and the CSS rule hiding empty zones applies.
+    expect(start.matches(":empty")).toBe(true);
+    const end = topbar.querySelector(":scope > .dg-topbar-end");
+    expect(end.querySelector("#m").parentElement).toBe(end);
+    expect(inst.querySelector(".dg-search").closest(".dg-topbar-end")).toBe(end);
+    removeGrid(inst);
+});
+
 test("a declarative topbar with only a start zone still mounts the search", async () => {
     const topbar = document.createElement("div");
     topbar.className = "dg-topbar";

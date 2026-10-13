@@ -298,6 +298,10 @@ data-grid .dg-topbar-start, data-grid .dg-topbar-end {
   gap: .5rem;
 }
 
+data-grid .dg-topbar-start:empty, data-grid .dg-topbar-end:empty {
+  display: none;
+}
+
 data-grid .dg-topbar-end {
   flex: auto;
   justify-content: flex-end;

@@ -1945,16 +1945,25 @@ class DataGrid extends BaseElement {
             end.className = "dg-topbar-end";
             topbar.appendChild(end);
         }
-        // Free declarative content (elements and text nodes) belongs to start.
-        // Nodes originally before start are prepended, nodes after it are
-        // appended, so the author's order survives the regrouping: with
+        // Free declarative content (elements and significant text) belongs to
+        // start. Nodes originally before start are prepended, nodes after it
+        // are appended, so the author's order survives the regrouping: with
         // A, start(B), C the start zone keeps A before B and C after it.
+        // Whitespace-only text and comments stay put: they are
+        // layout-invisible in the flex topbar, and parking them in a zone
+        // would defeat the :empty rule that hides unused zones.
         const siblings = [...topbar.childNodes];
         const startIndex = siblings.indexOf(start);
         const before = /** @type {ChildNode[]} */ ([]);
         const after = /** @type {ChildNode[]} */ ([]);
         for (const [index, node] of siblings.entries()) {
             if (node === start || node === end) {
+                continue;
+            }
+            if (
+                (node.nodeType === Node.TEXT_NODE && (node.textContent ?? "").trim() === "") ||
+                node.nodeType === Node.COMMENT_NODE
+            ) {
                 continue;
             }
             (index < startIndex ? before : after).push(node);

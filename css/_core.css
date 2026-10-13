@@ -352,6 +352,14 @@ data-grid .dg-topbar-end {
   align-items: center;
 }
 
+/* An unused zone leaves no trace: without this, the topbar gap would offset
+   the remaining zone by 0.5rem next to an empty one. Whitespace-only text and
+   comments are never parked in a zone, so :empty reliably matches. */
+data-grid .dg-topbar-start:empty,
+data-grid .dg-topbar-end:empty {
+  display: none;
+}
+
 data-grid .dg-topbar-end {
   margin-left: auto;
   flex: 1 1 auto;
