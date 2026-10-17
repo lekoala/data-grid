@@ -100,3 +100,12 @@ new DataGrid({ sortable: "yes" });
 new DataGrid({ spinnerClass: "spinner-border" });
 
 void grid;
+
+DataGrid.setDefaultControlClasses({ button: "btn", action: "btn action" });
+const buttonClasses: string = DataGrid.getDefaultControlClasses().button;
+grid.controlClasses = { input: "input", select: "select" };
+grid.controlClasses = null;
+new DataGrid({ controlClasses: { button: "btn" }, bulkActions: [{ name: "export", label: "Export", class: "btn" }] });
+// @ts-expect-error only documented control roles are supported
+DataGrid.setDefaultControlClasses({ textarea: "input" });
+void buttonClasses;

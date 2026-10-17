@@ -16,6 +16,7 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-bg`                     | `#fff`                  | table + menu surfaces          |
 | `--dg-color`                  | `#1f2328`               | primary text                   |
 | `--dg-muted-color`            | `#6b7280`               | footer/meta/placeholder text   |
+| `--dg-border-width`           | `1px`                   | structural and control borders |
 | `--dg-border-color`           | `#dbdcdd`               | outer structure + separators   |
 | `--dg-accent`                 | `#2563eb`               | interactive accent             |
 | `--dg-accent-soft`            | `#e9effd`               | subtle accent surface          |
@@ -41,6 +42,72 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-selection-column-width` | `40px`                  | selection column width         |
 | `--dg-actions-column-width`   | `48px`                  | collapsed actions column width |
 | `--dg-radius`                 | `8px`                   | table / control / menu radius  |
+
+## Host control classes
+
+Use the application's controls while keeping the grid's structural classes:
+
+```js
+const DataGrid = customElements.get("data-grid");
+DataGrid.setDefaultControlClasses({
+    button: "btn outline sm",
+    action: "btn outline sm",
+    input: "input sm",
+    select: "select sm",
+});
+```
+
+| Role | Controls |
+|------|----------|
+| `button` | Pagination, bulk actions, load more |
+| `action` | Row actions, links, collapsed actions toggle |
+| `input` | Search, page number |
+| `select` | Page size |
+
+Defaults are resolved when controls render. Changing them also updates connected
+controls in place, preserving focus. The static methods are available through
+`customElements.get("data-grid")` with ESM and the standalone script.
+`DataGrid.getDefaultControlClasses()` returns a copy.
+
+Set `grid.controlClasses = { action: "my-action" }` (or the constructor option)
+to override individual roles. Omitted roles follow the current global defaults;
+an empty string restores the grid skin for that role. Set the property to `null`
+to follow all defaults again. Properties assigned before element upgrade are supported.
+
+`Action.class` and `BulkAction.class` add classes to their role defaults. A control
+with host classes has no `dg-skin` marker: its border, background, radius, dimensions,
+intent colors, hover, disabled appearance and focus indicator belong to the host CSS.
+Provide a visible `:focus-visible` style, including in forced colors. Pagination
+icons keep their geometry, but host buttons can choose their own width (for example
+`button: "btn icon-only sm"`). Search uses the host input's own padding and
+decoration. Its default placeholder
+is the translated search label followed by an ellipsis. Supply `searchPlaceholder`
+to customize it, or an empty string to clear it. A host search icon can be styled
+on `.dg-search-field`.
+
+The actions column starts with an estimated width and measures host controls
+on the next frame, including margins and cell padding. Changes to control
+sizes (host classes, loaded fonts or styles) trigger a new measurement. All action
+cells and the column model share the measured width.
+
+Classes are applied with `classList`, never interpolated into HTML.
+
+Filter controls and sort headers do not use these roles. Use `column.renderFilterCell`
+for application-owned filters. Built-in filter and editor controls retain their cell styling.
+
+`--dg-border-width` changes structural borders and controls using the grid skin;
+focus outlines and pictograms keep their own strokes. On browsers supporting `color-mix()`,
+row separators use a 70% tint of `--dg-border-color`. Override `--dg-row-border-color`
+explicitly when the theme needs solid separators.
+
+Style header typography through the public selectors `.dg-head-columns th` and
+`.dg-sort-label`, for example:
+
+```css
+data-grid .dg-head-columns th {
+    text-transform: uppercase;
+}
+```
 
 ## Density
 
@@ -377,7 +444,7 @@ Notes:
 
 ## Selectors
 
-Common hooks: `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`,
+Common hooks: `.dg-head-columns th`, `.dg-sort-label`, `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`,
 `.dg-actions`, `.dg-footer`, `.dg-topbar`, `.dg-topbar-start`,
 `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
 `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`, `.dg-disclosure`,

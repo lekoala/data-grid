@@ -72,7 +72,7 @@ grid.addEventListener("action", (ev) => {
 | `label`    | `String`                                               | the button label and accessible name            |
 | `intent`   | `"default"\|"primary"\|"danger"`                       | sets `data-intent` (styled via `dg-intent-*`)   |
 | `href`     | `String \| Function`                                   | renders an `<a>` link                           |
-| `class`    | `String`                                               | class on the button                             |
+| `class`    | `String`                                               | additional host classes on the button                             |
 | `visible`  | `(row, ctx) => Boolean`                                | hide the action for a given row                 |
 | `disabled` | `Boolean \| (row, ctx) => Boolean`                     | block the action (see below)                    |
 | `render`   | `({ action, row, grid }) => content`                   | replace the button content                      |
@@ -231,3 +231,12 @@ Actions render as `<a>` when `href` is set, `<button>` otherwise, and follow the
 `--dg-*` control tokens. `intent: "danger"` maps to the `--dg-danger-*` tokens.
 The `$actions` column aligns to the end of the reading axis by default: right in
 LTR and left in RTL.
+
+`BulkAction.class` adds host classes just like `Action.class`. Both add to the
+role defaults in `controlClasses` (`button` for bulk actions, `action` for row actions).
+Classed controls use the host skin; see [Styling](styling.md#host-control-classes).
+
+With host control classes, the actions column measures the widest rendered group on the current page,
+including host control margins and cell padding. Control size changes update the
+column without replacing focused buttons. Hidden grids keep the initial estimate
+until their controls can be measured.

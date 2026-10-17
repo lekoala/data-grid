@@ -67,3 +67,33 @@ test("the standalone bundle leaks no globals", async () => {
     expect("ArrayDataSource" in globalThis).toBe(false);
     expect("FetchDataSource" in globalThis).toBe(false);
 });
+
+test("published standalone exposes the control-class statics without a global", async () => {
+    // Fresh process ensures no ESM test has already registered the source class.
+    const child = Bun.spawn(
+        [
+            process.execPath,
+            "--preload",
+            "./test/_setup-browser-env.js",
+            "-e",
+            `
+        new Function(await Bun.file(${JSON.stringify(Bun.file(BUNDLE_URL).name)}).text())();
+        const Grid = customElements.get("data-grid");
+        Grid.setDefaultControlClasses({ button: "host-button" });
+        if (Grid.getDefaultControlClasses().button !== "host-button") throw new Error("Missing statics");
+        const grid = document.createElement("data-grid");
+        const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+        document.body.append(grid);
+        await connected;
+        if (!grid.querySelector(".dg-btn-next").classList.contains("host-button")) throw new Error("Missing classes");
+        Grid.setDefaultControlClasses({ button: "late-button" });
+        if (!grid.querySelector(".dg-btn-next").classList.contains("late-button")) throw new Error("Stale defaults");
+        grid.remove();
+    `,
+        ],
+        { stdout: "pipe", stderr: "pipe" },
+    );
+    const error = await new Response(child.stderr).text();
+    expect(error).toBe("");
+    expect(await child.exited).toBe(0);
+});

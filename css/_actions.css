@@ -15,8 +15,8 @@ data-grid .dg-actions a {
   margin: 0;
 }
 
-data-grid .dg-actions button,
-data-grid .dg-actions a {
+data-grid .dg-actions button.dg-skin,
+data-grid .dg-actions a.dg-skin {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -24,14 +24,14 @@ data-grid .dg-actions a {
   height: 28px;
   padding: 0 var(--dg-space-2);
   background-color: var(--dg-control-bg);
-  border: solid 1px var(--dg-control-border-color);
+  border: solid var(--dg-border-width) var(--dg-control-border-color);
   border-radius: var(--dg-space-1);
   color: inherit;
   text-decoration: none;
 }
 
-data-grid .dg-actions button:hover,
-data-grid .dg-actions a:hover {
+data-grid .dg-actions button.dg-skin:hover,
+data-grid .dg-actions a.dg-skin:hover {
   background-color: var(--dg-row-hover-bg);
   opacity: 1;
 }
@@ -43,8 +43,7 @@ data-grid .dg-actions a + a {
   margin-left: var(--dg-space-1);
 }
 
-data-grid .dg-actions .dg-actions-toggle {
-  display: none;
+data-grid .dg-actions .dg-actions-toggle.dg-skin {
   color: var(--dg-muted-color);
   font-size: 1.125em;
   font-weight: 600;
@@ -71,18 +70,14 @@ data-grid .dg-actions-toggle::before {
   mask-size: contain;
 }
 
-data-grid .dg-actions.dg-actions-2 button,
-data-grid .dg-actions.dg-actions-2 a {
+data-grid .dg-actions.dg-actions-2 button.dg-skin,
+data-grid .dg-actions.dg-actions-2 a.dg-skin {
   min-width: 32px;
 }
 
 data-grid .dg-actions.dg-actions-more button,
 data-grid .dg-actions.dg-actions-more a {
   display: none;
-}
-
-data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
-  display: inline-flex;
 }
 
 data-grid .dg-actions-menu {
@@ -102,8 +97,8 @@ data-grid .dg-actions-menu li + li {
   margin-top: var(--dg-space-1);
 }
 
-data-grid .dg-actions-menu button,
-data-grid .dg-actions-menu a {
+data-grid .dg-actions-menu button.dg-skin,
+data-grid .dg-actions-menu a.dg-skin {
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -114,14 +109,14 @@ data-grid .dg-actions-menu a {
   height: auto;
   padding: 0 var(--dg-space-2);
   background-color: transparent;
-  border: 1px solid transparent;
+  border: var(--dg-border-width) solid transparent;
   border-radius: var(--dg-space-1);
   color: var(--dg-color);
   text-decoration: none;
 }
 
-data-grid .dg-actions-menu button:hover,
-data-grid .dg-actions-menu a:hover {
+data-grid .dg-actions-menu button.dg-skin:hover,
+data-grid .dg-actions-menu a.dg-skin:hover {
   background-color: var(--dg-row-hover-bg);
 }
 
@@ -132,62 +127,62 @@ data-grid .dg-action-label {
   white-space: nowrap;
 }
 
-data-grid .dg-actions-menu button[data-intent="primary"],
-data-grid .dg-actions-menu a[data-intent="primary"] {
+data-grid .dg-actions-menu button.dg-skin[data-intent="primary"],
+data-grid .dg-actions-menu a.dg-skin[data-intent="primary"] {
   background-color: transparent;
   border-color: transparent;
   color: var(--dg-accent);
 }
 
-data-grid .dg-actions-menu button[data-intent="danger"],
-data-grid .dg-actions-menu a[data-intent="danger"] {
+data-grid .dg-actions-menu button.dg-skin[data-intent="danger"],
+data-grid .dg-actions-menu a.dg-skin[data-intent="danger"] {
   background-color: transparent;
   border-color: transparent;
   color: var(--dg-danger-color);
 }
 
-data-grid button[data-intent="danger"],
-data-grid a[data-intent="danger"] {
+data-grid button.dg-skin[data-intent="danger"],
+data-grid a.dg-skin[data-intent="danger"] {
   background-color: var(--dg-danger-bg);
   border-color: var(--dg-danger-border-color);
   color: var(--dg-danger-color);
 }
 
-data-grid button[data-intent="primary"],
-data-grid a[data-intent="primary"] {
+data-grid button.dg-skin[data-intent="primary"],
+data-grid a.dg-skin[data-intent="primary"] {
   background-color: var(--dg-accent-soft);
   border-color: transparent;
   color: var(--dg-accent);
 }
 
-data-grid button[data-intent="primary"]:hover,
-data-grid a[data-intent="primary"]:hover,
-data-grid .dg-actions-menu button[data-intent="primary"]:hover,
-data-grid .dg-actions-menu a[data-intent="primary"]:hover {
+data-grid button.dg-skin[data-intent="primary"]:hover,
+data-grid a.dg-skin[data-intent="primary"]:hover,
+data-grid .dg-actions-menu button.dg-skin[data-intent="primary"]:hover,
+data-grid .dg-actions-menu a.dg-skin[data-intent="primary"]:hover {
   background-color: var(--dg-accent-soft);
   border-color: var(--dg-accent);
 }
 
-data-grid button[data-intent="danger"]:hover,
-data-grid a[data-intent="danger"]:hover,
-data-grid .dg-actions-menu button[data-intent="danger"]:hover,
-data-grid .dg-actions-menu a[data-intent="danger"]:hover {
+data-grid button.dg-skin[data-intent="danger"]:hover,
+data-grid a.dg-skin[data-intent="danger"]:hover,
+data-grid .dg-actions-menu button.dg-skin[data-intent="danger"]:hover,
+data-grid .dg-actions-menu a.dg-skin[data-intent="danger"]:hover {
   background-color: var(--dg-danger-bg);
   border-color: var(--dg-danger-color);
 }
 
 @supports (color: color-mix(in srgb, black, white)) {
-  data-grid button[data-intent="primary"]:hover,
-  data-grid a[data-intent="primary"]:hover,
-  data-grid .dg-actions-menu button[data-intent="primary"]:hover,
-  data-grid .dg-actions-menu a[data-intent="primary"]:hover {
+  data-grid button.dg-skin[data-intent="primary"]:hover,
+  data-grid a.dg-skin[data-intent="primary"]:hover,
+  data-grid .dg-actions-menu button.dg-skin[data-intent="primary"]:hover,
+  data-grid .dg-actions-menu a.dg-skin[data-intent="primary"]:hover {
     background-color: color-mix(in srgb, var(--dg-accent-soft), var(--dg-accent) 12%);
   }
 
-  data-grid button[data-intent="danger"]:hover,
-  data-grid a[data-intent="danger"]:hover,
-  data-grid .dg-actions-menu button[data-intent="danger"]:hover,
-  data-grid .dg-actions-menu a[data-intent="danger"]:hover {
+  data-grid button.dg-skin[data-intent="danger"]:hover,
+  data-grid a.dg-skin[data-intent="danger"]:hover,
+  data-grid .dg-actions-menu button.dg-skin[data-intent="danger"]:hover,
+  data-grid .dg-actions-menu a.dg-skin[data-intent="danger"]:hover {
     background-color: color-mix(in srgb, var(--dg-danger-bg), var(--dg-danger-color) 10%);
   }
 }
@@ -196,8 +191,8 @@ data-grid .dg-actions-menu a[data-intent="danger"]:hover {
    hover, plus the accent inset outline used by the other small controls.
    Intent items keep their tinted text color; when hovered and focused at once
    the intent hover fill applies, with the outline as the focus indicator. */
-data-grid .dg-actions-menu button:focus-visible,
-data-grid .dg-actions-menu a:focus-visible {
+data-grid .dg-actions-menu button.dg-skin:focus-visible,
+data-grid .dg-actions-menu a.dg-skin:focus-visible {
   background-color: var(--dg-row-hover-bg);
   border-color: transparent;
   outline: 2px solid var(--dg-accent);
@@ -206,4 +201,20 @@ data-grid .dg-actions-menu a:focus-visible {
 
 data-grid tr.dg-clickable-row {
   cursor: pointer;
+}
+
+/* Visibility and placement apply equally to host controls. */
+data-grid .dg-actions button.dg-actions-toggle {
+  display: none;
+}
+data-grid .dg-actions.dg-actions-more button.dg-actions-toggle {
+  display: inline-flex;
+}
+data-grid .dg-actions-menu > li > :is(button, a) {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--dg-space-2);
+  width: 100%;
 }

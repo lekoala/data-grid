@@ -1,35 +1,37 @@
 /**
- * Actual CSS theme for data-grid.
- * DataGrid keeps its density and geometry; Actual CSS provides the visual tokens.
- * Load this AFTER css/data-grid.css.
+ * Actual CSS theme for data-grid. Load after the core stylesheet.
+ * Host control classes are configured separately; see docs/styling.md.
  */
 data-grid {
-  --dg-bg: var(--surface, #fff);
-  --dg-color: var(--text, #1f2937);
-  --dg-muted-color: var(--text-muted, #6b7280);
-  --dg-border-color: var(--border, #d1d5db);
+  --dg-bg: var(--surface-raised);
+  --dg-color: var(--text);
+  --dg-muted-color: var(--text-muted);
+  --dg-border-width: var(--border-width);
+  --dg-border-color: var(--border);
 
-  --dg-accent: var(--primary, #2563eb);
-  --dg-accent-soft: var(--primary-soft, #dbeafe);
-  --dg-focus-ring: var(--focus-ring, rgb(37 99 235 / 25%));
+  /* The accent is also ink (sort arrow, active labels): a theme whose
+     primary is too light for text routes its ink through --link. */
+  --dg-accent: var(--link, var(--primary));
+  --dg-accent-soft: color-mix(in oklab, var(--surface) var(--soft-bg-mix), var(--primary));
+  --dg-focus-ring: var(--focus);
 
-  --dg-header-bg: var(--surface-subtle, #f8fafc);
-  --dg-header-color: var(--text-muted, #6b7280);
-  --dg-filter-bg: var(--surface, #fff);
+  /* Same header band as .table when a theme sets one. */
+  --dg-header-bg: var(--table-header-bg, var(--surface-subtle));
+  --dg-header-color: var(--table-header-fg, var(--text));
+  --dg-filter-bg: var(--surface);
 
-  --dg-row-stripe-bg: transparent;
-  --dg-row-hover-bg: var(--hover-overlay, #f8fafc);
-  --dg-row-selected-bg: var(--primary-soft, #dbeafe);
-  --dg-row-selected-hover-bg: var(--primary-soft, #bfdbfe);
-  --dg-row-border-color: var(--border, #d1d5db);
+  --dg-row-hover-bg: var(--hover-overlay);
+  --dg-row-selected-bg: color-mix(in oklab, var(--surface) calc(var(--soft-bg-mix) - 6%), var(--primary));
+  --dg-row-selected-hover-bg: color-mix(in oklab, var(--surface) calc(var(--soft-bg-mix) - 12%), var(--primary));
+  --dg-row-border-color: var(--border);
 
-  --dg-control-bg: var(--surface, #fff);
-  --dg-control-color: var(--text, #1f2937);
-  --dg-control-border-color: var(--border, #d1d5db);
+  --dg-control-bg: var(--surface-raised);
+  --dg-control-color: var(--text);
+  --dg-control-border-color: var(--border);
 
-  --dg-danger-bg: var(--danger-soft, #fee2e2);
-  --dg-danger-color: var(--danger, #b91c1c);
-  --dg-danger-border-color: var(--danger, #fca5a5);
+  --dg-danger-bg: color-mix(in oklab, var(--surface) var(--soft-bg-mix), var(--danger));
+  --dg-danger-color: var(--danger);
+  --dg-danger-border-color: color-mix(in oklab, var(--surface) var(--soft-border-mix, 65%), var(--danger));
 
-  --dg-radius: var(--radius-sm, 0.375rem);
+  --dg-radius: var(--radius);
 }

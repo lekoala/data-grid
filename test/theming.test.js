@@ -10,6 +10,7 @@ const themeCss = readFileSync(new URL("../themes/bootstrap.css", import.meta.url
 const actualThemeCss = readFileSync(new URL("../themes/actual.css", import.meta.url), "utf8");
 
 test("core css exposes --dg-* tokens", () => {
+    expect(coreCss).toContain("--dg-border-width");
     expect(coreCss).toContain("--dg-bg");
     expect(coreCss).toContain("--dg-color");
     expect(coreCss).toContain("--dg-accent");
@@ -34,12 +35,16 @@ test("the scroll viewport lets wheel input chain to the page", () => {
     expect(coreCss).not.toContain("overscroll-behavior: contain");
 });
 
-test("all selects share the component caret", () => {
-    expect(coreCss).toMatch(/data-grid select \{[\s\S]*?appearance: none;/);
-    expect(coreCss).toMatch(/data-grid \.dg-select-field:after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/);
+test("grid-skinned selects share the component caret", () => {
+    expect(coreCss).toMatch(
+        /data-grid select:where\(\.dg-skin, \.dg-filter-control, \.dg-editable\) \{[\s\S]*?appearance: none;/,
+    );
+    expect(coreCss).toMatch(
+        /data-grid \.dg-select-field:not\(\.dg-host-select\):after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/,
+    );
     // Physical LTR reserve, mirrored for [dir="rtl"] in _rtl.css (Bun CSS workaround)
     expect(coreCss).toContain("padding-right: 32px");
-    expect(coreCss).toContain('data-grid[dir="rtl"] select');
+    expect(coreCss).toContain('data-grid[dir="rtl"] select:where(');
     expect(coreCss).not.toContain("dg-filter-cell:has(select)");
 });
 
@@ -124,7 +129,10 @@ test("collapsed action items show one neutral keyboard focus, links included", (
     // neutral wash plus the accent inset outline. Intent items keep their
     // hover fill when hovered and focused at once, so only the base variants
     // are asserted here.
-    for (const selector of ["\\.dg-actions-menu button:focus-visible", "\\.dg-actions-menu a:focus-visible"]) {
+    for (const selector of [
+        "\\.dg-actions-menu button\\.dg-skin:focus-visible",
+        "\\.dg-actions-menu a\\.dg-skin:focus-visible",
+    ]) {
         expect(coreCss).toMatch(
             new RegExp(
                 `${selector} \\{[\\s\\S]*?background-color: var\\(--dg-row-hover-bg\\);[\\s\\S]*?outline: 2px solid var\\(--dg-accent\\);[\\s\\S]*?outline-offset: -2px;`,
@@ -167,10 +175,13 @@ test("bootstrap theme maps --dg-* onto --bs-* and covers dark mode", () => {
 });
 
 test("actual theme maps --dg-* onto Actual CSS tokens", () => {
+    expect(actualThemeCss).not.toMatch(/--primary-soft|--danger-soft|var\(--focus-ring/);
+    expect(actualThemeCss).toContain("--dg-focus-ring: var(--focus)");
+    expect(actualThemeCss).toContain("--dg-border-width: var(--border-width)");
     expect(actualThemeCss).toContain("--dg-bg: var(--surface");
     expect(actualThemeCss).toContain("--dg-color: var(--text");
     expect(actualThemeCss).toContain("--dg-border-color: var(--border");
-    expect(actualThemeCss).toContain("--dg-accent: var(--primary");
+    expect(actualThemeCss).toContain("--dg-accent: var(--link, var(--primary))");
 });
 
 test("density attribute maps to the density option", () => {

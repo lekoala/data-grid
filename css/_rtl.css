@@ -34,7 +34,7 @@ data-grid[dir="rtl"] .dg-selection-count {
   margin-left: 0.5rem;
 }
 
-data-grid[dir="rtl"] select {
+data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
   padding-right: var(--dg-control-padding-inline);
   padding-left: 32px;
 }
@@ -65,7 +65,7 @@ data-grid[dir="rtl"] .dg-multiselect-trigger {
   text-align: right;
 }
 
-data-grid[dir="rtl"] input.dg-search {
+data-grid[dir="rtl"] input.dg-search.dg-skin {
   padding-left: var(--dg-control-padding-inline);
   padding-right: calc(var(--dg-control-padding-inline) + 20px);
 }
@@ -82,10 +82,10 @@ data-grid[dir="rtl"] [data-frozen="end"] {
 
 data-grid[dir="rtl"] [data-frozen="start"][data-frozen-edge] {
   border-right: 0;
-  border-left: 1px solid var(--dg-border-color);
+  border-left: var(--dg-border-width) solid var(--dg-border-color);
 }
 
 data-grid[dir="rtl"] [data-frozen="end"][data-frozen-edge] {
   border-left: 0;
-  border-right: 1px solid var(--dg-border-color);
+  border-right: var(--dg-border-width) solid var(--dg-border-color);
 }

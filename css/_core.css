@@ -22,6 +22,7 @@ data-grid {
   --dg-bg: #fff;
   --dg-color: #1f2328;
   --dg-muted-color: #6b7280;
+  --dg-border-width: 1px;
   --dg-border-color: #dbdcdd;
 
   /* accent */
@@ -182,7 +183,7 @@ data-grid > .dg-frame {
   flex-direction: column;
   overflow: hidden;
   background: var(--dg-bg);
-  border: 1px solid var(--dg-border-color);
+  border: var(--dg-border-width) solid var(--dg-border-color);
   border-radius: var(--dg-radius);
   min-width: 280px;
 }
@@ -341,7 +342,7 @@ data-grid > .dg-frame > .dg-topbar {
   align-items: center;
   justify-content: space-between;
   padding: var(--dg-space-2) var(--dg-padding-x);
-  border-bottom: 1px solid var(--dg-border-color);
+  border-bottom: var(--dg-border-width) solid var(--dg-border-color);
 }
 
 data-grid .dg-topbar-start,
@@ -373,7 +374,7 @@ data-grid .dg-search-field {
   position: relative;
 }
 
-data-grid .dg-search {
+data-grid .dg-search-field > .dg-search {
   inline-size: 100%;
   min-inline-size: 0;
   max-inline-size: 100%;
@@ -413,14 +414,14 @@ data-grid .dg-selection-count {
   min-inline-size: 2.25rem;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
-  border: 1px solid var(--dg-control-border-color);
+  border: var(--dg-border-width) solid var(--dg-control-border-color);
   border-radius: 999px;
   background-color: var(--dg-control-bg);
   color: var(--dg-color);
   font-size: 0.875em;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
-  line-height: calc(var(--dg-control-height) - 2px);
+  line-height: calc(var(--dg-control-height) - 2 * var(--dg-border-width));
   text-align: center;
 }
 
@@ -453,9 +454,9 @@ data-grid .dg-clickable-cell {
   justify-content: center;
 }
 
-data-grid button,
-data-grid input,
-data-grid select {
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable),
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable),
+data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
   font: inherit;
 }
 
@@ -523,9 +524,9 @@ data-grid .dg-rotate {
   transform: rotate(-180deg);
 }
 
-data-grid button {
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable) {
   background-color: var(--dg-control-bg);
-  border: solid 1px var(--dg-control-border-color);
+  border: solid var(--dg-border-width) var(--dg-control-border-color);
   border-radius: var(--dg-radius);
   color: var(--dg-control-color);
   cursor: pointer;
@@ -541,11 +542,11 @@ data-grid button {
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
 }
 
-data-grid button:hover {
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):hover {
   background-color: var(--dg-row-hover-bg);
 }
 
-data-grid button:disabled:hover {
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):disabled:hover {
   background-color: var(--dg-control-bg);
   border-color: var(--dg-control-border-color);
 }
@@ -555,16 +556,16 @@ data-grid .dg-load-more[aria-disabled="true"] {
   opacity: 0.45;
 }
 
-data-grid input[type="checkbox"] {
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable)[type="checkbox"] {
   margin: 0;
   padding: 0;
 }
 
-data-grid :where(input:not([type="checkbox"], [type="radio"]), select) {
+data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"], [type="radio"]), select:where(.dg-skin, .dg-filter-control, .dg-editable)) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
-  border: 1px solid var(--dg-control-border-color);
+  border: var(--dg-border-width) solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
   height: var(--dg-control-height);
   margin: 0;
@@ -573,11 +574,11 @@ data-grid :where(input:not([type="checkbox"], [type="radio"]), select) {
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
 }
 
-/* Every select uses the same language-neutral caret. Keeping this on the base
+/* Every grid-skinned select uses the same language-neutral caret. Keeping this on the base
    element also covers plugin-provided controls and future editable selects.
    The reserved space is a directional (inline-end) concern: physical LTR here,
    mirrored for [dir="rtl"] in _rtl.css. */
-data-grid select {
+data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
   appearance: none;
   padding-right: 32px;
 }
@@ -590,7 +591,7 @@ data-grid .dg-select-field {
 
 /* Shared caret geometry for disclosure controls; each component positions its
    own instance below (_multiselect.css for the multi-select trigger). */
-data-grid :is(.dg-select-field, .dg-multiselect-trigger)::after {
+data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger)::after {
   content: "";
   width: 6px;
   height: 6px;
@@ -600,7 +601,7 @@ data-grid :is(.dg-select-field, .dg-multiselect-trigger)::after {
   opacity: 0.65;
 }
 
-data-grid .dg-select-field::after {
+data-grid .dg-select-field:not(.dg-host-select)::after {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -608,13 +609,13 @@ data-grid .dg-select-field::after {
   pointer-events: none;
 }
 
-data-grid input.dg-search {
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable).dg-search {
   padding-left: calc(var(--dg-control-padding-inline) + 20px);
 }
 
 /* Form controls keep a full ring on keyboard focus */
-data-grid input:not([type="checkbox"]):focus-visible,
-data-grid select:focus-visible {
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"]):focus-visible,
+data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
   border-color: var(--dg-accent);
   box-shadow: 0 0 0 3px var(--dg-focus-ring);
   outline: 0;
@@ -623,38 +624,38 @@ data-grid select:focus-visible {
 /* The global search shares the column-filter focus: a plain inset outline
    with no halo ring. Placed after the generic rule so it wins at equal
    specificity. */
-data-grid input.dg-search:focus-visible {
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable).dg-search:focus-visible {
   box-shadow: none;
   outline: 2px solid var(--dg-accent);
   outline-offset: -2px;
 }
 
 /* Regular buttons: accent border only */
-data-grid button:focus-visible {
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
   border-color: var(--dg-accent);
   outline: 0;
 }
 
 /* Small icon controls: an inset outline that stays inside the control */
-data-grid .dg-actions button:focus-visible,
-data-grid .dg-pagination button:focus-visible,
+data-grid .dg-actions button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible,
+data-grid .dg-pagination button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible,
 data-grid .dg-disclosure:focus-visible {
   outline: 2px solid var(--dg-accent);
   outline-offset: -2px;
   box-shadow: none;
 }
 
-data-grid input:not([type="checkbox"], [type="radio"])::placeholder {
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"], [type="radio"])::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
 
-data-grid input:not([type="checkbox"])[disabled],
-data-grid input:not([type="checkbox"]):disabled,
-data-grid select[disabled],
-data-grid select:disabled,
-data-grid button[disabled],
-data-grid button:disabled {
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"])[disabled],
+data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"]):disabled,
+data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable)[disabled],
+data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable):disabled,
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable)[disabled],
+data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):disabled {
   cursor: default;
   opacity: 0.45;
   pointer-events: none;
@@ -662,7 +663,7 @@ data-grid button:disabled {
 
 data-grid thead tr.dg-head-columns th {
   background-color: var(--dg-header-bg);
-  border-bottom: 1px solid var(--dg-border-color);
+  border-bottom: var(--dg-border-width) solid var(--dg-border-color);
 }
 
 data-grid thead tr.dg-head-filters {
@@ -672,7 +673,7 @@ data-grid thead tr.dg-head-filters {
 data-grid thead tr.dg-head-filters th {
   padding: var(--dg-space-1) var(--dg-padding-x) var(--dg-space-2);
   background-color: var(--dg-filter-bg);
-  border-bottom: 1px solid var(--dg-border-color);
+  border-bottom: var(--dg-border-width) solid var(--dg-border-color);
 }
 
 data-grid thead tr.dg-head-filters th > * {
@@ -774,12 +775,12 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
    RTL mirror of the select padding lives here too, so the forced-colors reset
    wins over the [dir="rtl"] reserve swap in _rtl.css in both directions. */
 @media (forced-colors: active) {
-  data-grid select {
+  data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
     appearance: auto;
     padding-right: var(--dg-control-padding-inline);
   }
 
-  data-grid[dir="rtl"] select {
+  data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
     padding-right: var(--dg-control-padding-inline);
     padding-left: var(--dg-control-padding-inline);
   }
@@ -890,7 +891,7 @@ data-grid tbody tr {
 /* Horizontal row dividers live on the cells: Chrome does not paint borders on
    <tr>. Direct cells only, so the nested responsive table stays untouched. */
 data-grid .dg-scroll > table > tbody > tr > td {
-  border-bottom: 1px solid var(--dg-row-border-color);
+  border-bottom: var(--dg-border-width) solid var(--dg-row-border-color);
 }
 
 data-grid .dg-scroll > table > tbody > tr:last-child > td {
@@ -948,11 +949,11 @@ data-grid thead [data-frozen="end"] {
 }
 
 data-grid [data-frozen="start"][data-frozen-edge] {
-  border-right: 1px solid var(--dg-border-color);
+  border-right: var(--dg-border-width) solid var(--dg-border-color);
 }
 
 data-grid [data-frozen="end"][data-frozen-edge] {
-  border-left: 1px solid var(--dg-border-color);
+  border-left: var(--dg-border-width) solid var(--dg-border-color);
 }
 
 /* Footer pager bar: grid chrome below the scroll viewport. It spans the
@@ -965,7 +966,7 @@ data-grid .dg-footer {
   gap: var(--dg-space-3);
   justify-content: flex-end;
   flex: none;
-  border-top: 1px solid var(--dg-border-color);
+  border-top: var(--dg-border-width) solid var(--dg-border-color);
   padding: var(--dg-space-2) var(--dg-padding-x);
   min-width: 0;
 }
@@ -976,7 +977,7 @@ data-grid .dg-footer .dg-page-nav {
   gap: var(--dg-space-2);
 }
 
-data-grid .dg-footer .dg-input-page {
+data-grid .dg-footer .dg-input-page.dg-skin {
   text-align: center;
   width: 4.5rem;
 }
@@ -984,8 +985,8 @@ data-grid .dg-footer .dg-input-page {
 /* The page-size select and page input share the pager button rhythm: a 2em
    square-ish control that scales with the type, so a large host font grows
    them instead of cranking a fixed 32px height. */
-data-grid .dg-footer .dg-select-per-page,
-data-grid .dg-footer .dg-input-page {
+data-grid .dg-footer .dg-select-per-page.dg-skin,
+data-grid .dg-footer .dg-input-page.dg-skin {
   block-size: 2em;
 }
 
@@ -1004,9 +1005,9 @@ data-grid .dg-footer .dg-pagination {
   text-align: center;
 }
 
-data-grid .dg-footer .dg-pagination button {
+data-grid .dg-footer .dg-pagination > button.dg-skin {
   background-color: var(--dg-control-bg);
-  border: 1px solid var(--dg-control-border-color);
+  border: var(--dg-border-width) solid var(--dg-control-border-color);
   border-radius: var(--dg-radius);
   color: var(--dg-muted-color);
   display: inline-grid;
@@ -1019,14 +1020,14 @@ data-grid .dg-footer .dg-pagination button {
   height: 2em;
 }
 
-data-grid .dg-footer .dg-pagination button:hover:not(:disabled) {
+data-grid .dg-footer .dg-pagination > button.dg-skin:hover:not(:disabled) {
   background-color: var(--dg-bg);
   border-color: var(--dg-accent);
   color: var(--dg-color);
 }
 
 /* Disabled pager buttons stay recognizably present: clearly off, not artifacts. */
-data-grid .dg-footer .dg-pagination button:disabled {
+data-grid .dg-footer .dg-pagination > button.dg-skin:disabled {
   opacity: 0.4;
 }
 
@@ -1206,4 +1207,16 @@ data-grid .dg-boolean[data-value="false"]::after {
   inline-size: calc(var(--dg-boolean-size) * 0.55);
   border-block-start: var(--dg-boolean-stroke) solid currentColor;
   transform: translate(-50%, -50%);
+}
+
+/* Host inputs own their padding and decoration. */
+data-grid .dg-search-field.dg-host-input .dg-search-icon {
+  display: none;
+}
+
+/* Control placement is shared with the host skin; dimensions belong to it. */
+data-grid .dg-pagination > button {
+  display: inline-grid;
+  place-items: center;
+  position: relative;
 }

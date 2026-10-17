@@ -10,6 +10,6 @@
 export function createDisclosureButton(controlClass) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `dg-disclosure ${controlClass}`;
+    button.className = `dg-disclosure dg-skin ${controlClass}`;
     return button;
 }

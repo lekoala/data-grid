@@ -33,6 +33,7 @@ import applyContent from "./utils/applyContent.js";
 import { parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
 import camelize from "./utils/camelize.js";
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
+import { normalizeControlClasses, refreshControlClasses, styleControl } from "./utils/controlClasses.js";
 import debounce from "./utils/debounce.js";
 import { dispatch } from "./utils/dispatch.js";
 import { off, on } from "./utils/events.js";
@@ -58,6 +59,18 @@ import transformValue from "./utils/transformValue.js";
 /** @typedef {import("./data-source.js").FilterOption} FilterOption */
 
 /** @typedef {Record<string, any>} Row */
+
+/**
+ * Host classes by control role. Empty strings retain the grid skin.
+ * @typedef {Object} ControlClasses
+ * @property {string} button Pagination, bulk actions and load more
+ * @property {string} action Row actions (buttons and links)
+ * @property {string} input Search and page number
+ * @property {string} select Page size
+ */
+
+/** @type {ControlClasses} */
+const defaultControlClasses = { button: "", action: "", input: "", select: "" };
 
 /**
  * Content accepted from render callbacks.
@@ -205,6 +218,7 @@ import transformValue from "./utils/transformValue.js";
  * Bulk action applied to the whole selection, server-first.
  * @typedef BulkAction
  * @property {String} name - the name of the action
+ * @property {String} [class] - additional host classes for the button
  * @property {String} label - the label of the button
  * @property {"default"|"primary"|"danger"} [intent] - visual intent (defaults to "default")
  * @property {Boolean | String | ((selection: SelectionState, ctx: BulkActionContext) => Boolean | String)} [confirm] - boolean (generic label), message string, or resolver
@@ -236,6 +250,7 @@ import transformValue from "./utils/transformValue.js";
 /**
  * Available data grid options, plugins included
  * @typedef Options
+ * @property {Partial<ControlClasses>|null} [controlClasses] Host control classes; null follows global defaults
  * @property {?String} id Custom id for the grid
  * @property {?String} src An URL to a server-side endpoint (FetchDataSource)
  * @property {Record<string, any>} params Extra constant HTTP params passed to FetchDataSource
@@ -277,7 +292,7 @@ import transformValue from "./utils/transformValue.js";
  * @property {Boolean} rowDetailsStartOpen Open row details by default (RowDetails module)
  * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
  * @property {Boolean} searchable Show the global search input (core, not a plugin)
- * @property {String} searchPlaceholder Visible hint for the search input (defaults to "")
+ * @property {?String} searchPlaceholder Visible search hint (null uses the translated search label with an ellipsis)
  * @property {Number} searchDelay Debounce delay in milliseconds before the global search is applied (0 = immediate)
  * @property {Number} minSearchLength Minimum number of characters before a search is applied (0 = always)
  * @property {Boolean} saveState Persist the query, column order, explicit visibility and user-resized column widths (SaveState module)
@@ -377,6 +392,7 @@ function formatLabel(template, values) {
  * @type {Record<string, any>}
  */
 const DEFAULT_OPTIONS = {
+    controlClasses: null,
     id: null,
     src: "",
     params: {},
@@ -416,7 +432,7 @@ const DEFAULT_OPTIONS = {
     rowDetailsStartOpen: false,
     filterDelay: 300,
     searchable: false,
-    searchPlaceholder: "",
+    searchPlaceholder: null,
     searchDelay: 300,
     minSearchLength: 0,
     saveState: false,
@@ -619,6 +635,9 @@ class DataGrid extends BaseElement {
      */
     constructor(options = {}) {
         super(options);
+        if (this.options.controlClasses != null) {
+            this.options.controlClasses = normalizeControlClasses(this.options.controlClasses);
+        }
 
         // Attribute removal returns to the documented default value. While an
         // attribute is present it still overrides constructor options.
@@ -674,7 +693,7 @@ class DataGrid extends BaseElement {
          * Optional initial result, can be set as a property before connection
          * @type {PageResult|null}
          */
-        this.initialResult = null;
+        this.initialResult = Object.getOwnPropertyDescriptor(this, "initialResult")?.value ?? null;
 
         /** @type {PageResult|null} */
         this.#initialResult = this.options.initialResult || this.initialResult || null;
@@ -774,6 +793,12 @@ class DataGrid extends BaseElement {
 
         /** @type {Number|null} */
         this.#frozenFrame = null;
+        // Replay own properties assigned before customElements.define().
+        if (Object.hasOwn(this, "controlClasses")) {
+            const value = this.controlClasses;
+            Reflect.deleteProperty(this, "controlClasses");
+            this.controlClasses = value;
+        }
     }
 
     _ready() {
@@ -798,6 +823,43 @@ class DataGrid extends BaseElement {
             instances[pluginName] = new pluginClass(this);
         }
         return instances;
+    }
+
+    /**
+     * Effective host classes, resolved against the current global defaults.
+     * Set null to follow defaults; empty role strings opt back into the grid skin.
+     * @public
+     * @returns {ControlClasses}
+     */
+    get controlClasses() {
+        return { ...defaultControlClasses, ...normalizeControlClasses(this.options.controlClasses ?? null) };
+    }
+
+    /** @param {Partial<ControlClasses>|null} value */
+    set controlClasses(value) {
+        this.options.controlClasses = value == null ? null : normalizeControlClasses(value);
+        refreshControlClasses(this);
+    }
+
+    /**
+     * Update role defaults, including existing connected controls.
+     * @public
+     * @param {Partial<ControlClasses>} partial
+     */
+    static setDefaultControlClasses(partial) {
+        Object.assign(defaultControlClasses, normalizeControlClasses(partial));
+        for (const grid of document.querySelectorAll("data-grid")) {
+            if (grid instanceof DataGrid) refreshControlClasses(grid);
+        }
+    }
+
+    /**
+     * Return a copy of the current role defaults.
+     * @public
+     * @returns {ControlClasses}
+     */
+    static getDefaultControlClasses() {
+        return { ...defaultControlClasses };
     }
 
     static template() {
@@ -931,7 +993,7 @@ class DataGrid extends BaseElement {
         }
         if (this.searchInput) {
             this.searchInput.setAttribute("aria-label", this.labels.search);
-            this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+            this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
         }
         /** @type {Array<[HTMLInputElement | null, String]>} */
         const buttonLabels = [
@@ -1879,7 +1941,7 @@ class DataGrid extends BaseElement {
 
     searchPlaceholderChanged() {
         if (this.searchInput) {
-            this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+            this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
         }
     }
 
@@ -2004,7 +2066,10 @@ class DataGrid extends BaseElement {
                 this.searchInput = null;
             } else {
                 this.searchInput.setAttribute("aria-label", this.labels.search);
-                this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+                this.searchInput.setAttribute(
+                    "placeholder",
+                    this.options.searchPlaceholder ?? `${this.labels.search}…`,
+                );
                 this.ensureTopbar();
                 return;
             }
@@ -2013,7 +2078,7 @@ class DataGrid extends BaseElement {
         input.type = "search";
         input.name = "search";
         input.className = "dg-search";
-        input.setAttribute("placeholder", this.options.searchPlaceholder);
+        input.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
         input.setAttribute("aria-label", this.labels.search);
         input.value = this.#query.search;
 
@@ -2023,6 +2088,7 @@ class DataGrid extends BaseElement {
         icon.className = "dg-search-icon";
         icon.setAttribute("aria-hidden", "true");
         field.append(icon, input);
+        styleControl(this, input, "input");
 
         // The visible value can temporarily diverge from query.search: it is
         // only committed when it becomes valid (see commitSearch). The
@@ -2216,6 +2282,12 @@ class DataGrid extends BaseElement {
         this.btnMore = this.querySelector(".dg-load-more");
         this.selectPerPage = this.querySelector(".dg-select-per-page");
         this.inputPage = this.querySelector(".dg-input-page");
+        refreshControlClasses(this);
+        for (const control of [this.btnFirst, this.btnPrev, this.btnNext, this.btnLast, this.btnMore]) {
+            if (control) styleControl(this, control, "button");
+        }
+        if (this.inputPage) styleControl(this, this.inputPage, "input");
+        if (this.selectPerPage) styleControl(this, this.selectPerPage, "select");
 
         // Declarative attributes are reflected into options before this hook
         // runs, but the upgrade-time attributeChangedCallback never fires the

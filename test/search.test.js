@@ -60,9 +60,9 @@ test("a non-searchable grid has no search input and no topbar", async () => {
     removeGrid(inst);
 });
 
-test("search placeholder is empty by default and follows search-placeholder", async () => {
+test("search placeholder defaults to the translated label and follows search-placeholder", async () => {
     const plain = await makeReadyGrid({ searchable: true });
-    expect(plain.querySelector(".dg-search").getAttribute("placeholder")).toBe("");
+    expect(plain.querySelector(".dg-search").getAttribute("placeholder")).toBe("Search…");
     removeGrid(plain);
 
     const hinted = await makeReadyGrid({ searchable: true, searchPlaceholder: "Name, email or patient ID" });
@@ -75,7 +75,7 @@ test("search placeholder is empty by default and follows search-placeholder", as
 test("toggling search-placeholder at runtime updates the existing input", async () => {
     const inst = await makeReadyGrid({ searchable: true });
     const input = inst.querySelector(".dg-search");
-    expect(input.getAttribute("placeholder")).toBe("");
+    expect(input.getAttribute("placeholder")).toBe("Search…");
 
     inst.setAttribute("search-placeholder", "Ref ABC-123");
     expect(input.getAttribute("placeholder")).toBe("Ref ABC-123");
@@ -247,4 +247,39 @@ test("toggling searchable at runtime adds and removes the search input", async (
     expect(inst.querySelector(".dg-search")).toBeNull();
     expect(inst.querySelector(".dg-search-field")).toBeNull();
     removeGrid(inst);
+});
+
+test("translated search hints update in place while explicit hints and empty strings are preserved", async () => {
+    const original = DataGrid.getLabels().search;
+    const grids = [];
+    try {
+        DataGrid.setLabels({ search: "Rechercher" });
+        const plain = await makeReadyGrid({ searchable: true });
+        const host = await makeReadyGrid({ searchable: true, controlClasses: { input: "host-input" } });
+        const custom = await makeReadyGrid({ searchable: true, searchPlaceholder: "Patient ID" });
+        const empty = await makeReadyGrid({ searchable: true, searchPlaceholder: "" });
+        grids.push(plain, host, custom, empty);
+        expect(plain.searchInput.placeholder).toBe("Rechercher…");
+        expect(host.searchInput.placeholder).toBe("Rechercher…");
+        const input = host.searchInput;
+        input.focus();
+        DataGrid.setLabels({ search: "Find" });
+        for (const grid of grids) grid.updateLabels();
+        expect(host.searchInput).toBe(input);
+        expect(document.activeElement).toBe(input);
+        expect(input.placeholder).toBe("Find…");
+        expect(input.getAttribute("aria-label")).toBe("Find");
+        expect(custom.searchInput.placeholder).toBe("Patient ID");
+        expect(empty.searchInput.placeholder).toBe("");
+        host.setAttribute("search-placeholder", "");
+        expect(input.placeholder).toBe("");
+        host.removeAttribute("search-placeholder");
+        expect(input.placeholder).toBe("Find…");
+        host.renderSearch();
+        expect(host.searchInput).toBe(input);
+        expect(input.placeholder).toBe("Find…");
+    } finally {
+        for (const grid of grids) grid.remove();
+        DataGrid.setLabels({ search: original });
+    }
 });

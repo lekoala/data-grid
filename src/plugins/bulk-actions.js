@@ -1,5 +1,6 @@
 import BasePlugin from "../core/base-plugin.js";
 import { resolveActionConfirmation } from "../utils/actionConfirm.js";
+import { styleControl } from "../utils/controlClasses.js";
 import { dispatch } from "../utils/dispatch.js";
 
 /**
@@ -55,6 +56,7 @@ class BulkActions extends BasePlugin {
         for (const action of bulkActions) {
             const button = document.createElement("button");
             button.type = "button";
+            styleControl(grid, button, "button", action.class);
             button.dataset.action = action.name;
             if (action.intent) {
                 button.dataset.intent = action.intent;

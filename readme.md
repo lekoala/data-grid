@@ -236,7 +236,7 @@ Some options only work if the proper plugin is loaded.
 | `showPageSize`        | `Boolean`            | `true`               | Show the page size select                                    |
 | `filterDelay`         | `Number`             | `300`                | Debounce delay (ms) for text column filters                  |
 | `searchable`          | `Boolean`            | `false`              | Show the global search input                                 |
-| `searchPlaceholder`   | `String`             | `""`                 | Visible hint for the search input                            |
+| `searchPlaceholder`   | `String\|null`       | `null`               | Search hint; defaults to the translated search label         |
 | `searchDelay`         | `Number`             | `300`                | Debounce delay (ms) for the global search                    |
 | `minSearchLength`     | `Number`             | `0`                  | Minimum characters before a search is applied                |
 | `density`             | `String`             | `"default"`          | Row density: `compact`, `default`, `comfortable`             |
@@ -334,6 +334,21 @@ Bootstrap 5 and Actual CSS. Load one after the core stylesheet:
 <link rel="stylesheet" href="themes/bootstrap.css" />
 <link rel="stylesheet" href="themes/actual.css" />
 ```
+
+For Actual CSS controls, configure the roles after the element is defined:
+
+```js
+customElements.get("data-grid").setDefaultControlClasses({
+    button: "btn outline sm",
+    action: "btn outline sm",
+    input: "input sm",
+    select: "select sm",
+});
+```
+
+Existing connected controls update too. Per-grid overrides and the styling contract
+are documented in [Styling](docs/styling.md#host-control-classes).
+
 
 See [Styling](docs/styling.md) for the complete token reference and custom
 theme guidance.

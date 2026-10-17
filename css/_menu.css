@@ -2,7 +2,7 @@ data-grid .dg-menu {
   position: absolute;
   z-index: 3;
   background: var(--dg-bg);
-  border: 1px solid var(--dg-border-color);
+  border: var(--dg-border-width) solid var(--dg-border-color);
   color: var(--dg-color);
   list-style: none;
   max-width: 220px;

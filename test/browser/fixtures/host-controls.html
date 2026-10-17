@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Host control styling</title>
+  <style id="host-style">
+    .x-btn, .x-input, .x-select {
+      border: 3px solid red;
+      border-radius: 11px;
+      height: 44px;
+      background: white;
+      color: black;
+      padding: 4px 12px;
+    }
+    .x-btn { width: 48px; }
+    .x-btn:focus-visible { outline: 3px solid blue; outline-offset: 2px; }
+    @media (forced-colors: active) {
+      .x-btn:focus-visible { outline: 3px solid Highlight; }
+    }
+    #plain { --dg-border-width: 3px; --dg-row-border-color: black; }
+  </style>
+</head>
+<body>
+  <data-grid id="host" searchable sortable filterable page-size="1">
+    <table>
+      <thead><tr><th data-field="name">Name</th></tr></thead>
+      <tbody><tr><td>Ada</td></tr><tr><td>Grace</td></tr></tbody>
+    </table>
+  </data-grid>
+  <data-grid id="plain" searchable>
+    <table><thead><tr><th data-field="name">Name</th></tr></thead><tbody><tr><td>Ada</td></tr></tbody></table>
+  </data-grid>
+  <script>
+    // Own properties exist before define; the constructor must replay the setter.
+    document.querySelector("#host").controlClasses = { input: "x-input" };
+  </script>
+  <script src="/dist/data-grid.standalone.min.js"></script>
+  <script>
+    const Grid = customElements.get("data-grid");
+    Grid.setDefaultControlClasses({ button: "x-btn", select: "x-select", action: "x-btn" });
+    document.querySelector("#plain").controlClasses = { button: "", input: "", select: "", action: "" };
+  </script>
+</body>
+</html>

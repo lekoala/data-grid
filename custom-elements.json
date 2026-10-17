@@ -139,6 +139,23 @@
           "members": [
             {
               "kind": "getter",
+              "name": "controlClasses",
+              "description": "Effective host classes, resolved against the current global defaults. Set null to follow defaults; empty role strings opt back into the grid skin."
+            },
+            {
+              "kind": "method",
+              "name": "setDefaultControlClasses",
+              "static": true,
+              "description": "Update role defaults, including existing connected controls."
+            },
+            {
+              "kind": "method",
+              "name": "getDefaultControlClasses",
+              "static": true,
+              "description": "Return a copy of the current role defaults."
+            },
+            {
+              "kind": "getter",
               "name": "labels"
             },
             {
@@ -426,6 +443,9 @@
             },
             {
               "name": "--dg-muted-color"
+            },
+            {
+              "name": "--dg-border-width"
             },
             {
               "name": "--dg-border-color"

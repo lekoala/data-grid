@@ -9,6 +9,24 @@ export type PageResult = import("./data-source.js").PageResult;
 export type FilterState = import("./data-source.js").FilterState;
 export type FilterOption = import("./data-source.js").FilterOption;
 export type Row = Record<string, any>;
+export type ControlClasses = {
+    /**
+     * Pagination, bulk actions and load more
+     */
+    button: string;
+    /**
+     * Row actions (buttons and links)
+     */
+    action: string;
+    /**
+     * Search and page number
+     */
+    input: string;
+    /**
+     * Page size
+     */
+    select: string;
+};
 export type RenderContent = string | number | boolean | Node | {
     html: string;
 } | null | undefined;
@@ -254,6 +272,10 @@ export type BulkAction = {
      */
     name: string;
     /**
+     * - additional host classes for the button
+     */
+    class?: string;
+    /**
      * - the label of the button
      */
     label: string;
@@ -287,6 +309,10 @@ export type PluginConstructor = import("./core/base-plugin.js").PluginConstructo
 export type PluginRegistry = import("./core/base-plugin.js").PluginRegistry;
 export type PluginInstances = import("./core/base-plugin.js").PluginInstances;
 export type Options = {
+    /**
+     * Host control classes; null follows global defaults
+     */
+    controlClasses?: Partial<ControlClasses> | null;
     /**
      * Custom id for the grid
      */
@@ -452,9 +478,9 @@ export type Options = {
      */
     searchable: boolean;
     /**
-     * Visible hint for the search input (defaults to "")
+     * Visible search hint (null uses the translated search label with an ellipsis)
      */
-    searchPlaceholder: string;
+    searchPlaceholder: string | null;
     /**
      * Debounce delay in milliseconds before the global search is applied (0 = immediate)
      */
@@ -622,6 +648,27 @@ declare class DataGrid extends BaseElement {
      */
     constructor(options?: Partial<Options>);
     _ready(): void;
+    /**
+     * Effective host classes, resolved against the current global defaults.
+     * Set null to follow defaults; empty role strings opt back into the grid skin.
+     * @public
+     * @returns {ControlClasses}
+     */
+    get controlClasses(): ControlClasses;
+    /** @param {Partial<ControlClasses>|null} value */
+    set controlClasses(value: Partial<ControlClasses> | null);
+    /**
+     * Update role defaults, including existing connected controls.
+     * @public
+     * @param {Partial<ControlClasses>} partial
+     */
+    static setDefaultControlClasses(partial: Partial<ControlClasses>): void;
+    /**
+     * Return a copy of the current role defaults.
+     * @public
+     * @returns {ControlClasses}
+     */
+    static getDefaultControlClasses(): ControlClasses;
     static template(): string;
     /**
      * @public

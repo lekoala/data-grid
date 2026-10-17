@@ -1207,6 +1207,47 @@ function getColumnMinWidth(th) {
   return Math.max(MIN_COLUMN_WIDTH, Number.isFinite(renderedMin) ? renderedMin : 0);
 }
 
+// src/utils/controlClasses.js
+function tokens(value) {
+  return typeof value === "string" ? [...new Set(value.trim().split(/\s+/).filter(Boolean))].filter((token) => token !== "dg-skin") : [];
+}
+function normalizeControlClasses(value) {
+  const result = {};
+  for (const role of ["button", "action", "input", "select"]) {
+    if (value && Object.hasOwn(value, role))
+      result[role] = tokens(value[role]).join(" ");
+  }
+  return result;
+}
+var controls = new WeakMap;
+function styleControl(grid, element, role, extra = "") {
+  const previous = controls.get(element);
+  if (previous)
+    for (const token of previous.applied)
+      element.classList.remove(token);
+  const structural = new Set(element.classList);
+  const classes = tokens(`${grid.controlClasses[role]} ${extra}`);
+  element.classList.toggle("dg-skin", classes.length === 0);
+  element.classList.add(...classes);
+  element.dataset.dgControl = role;
+  controls.set(element, { role, extra, applied: classes.filter((token) => !structural.has(token)) });
+  if (element.matches(".dg-search")) {
+    element.parentElement?.classList.toggle("dg-host-input", classes.length > 0);
+  }
+  if (element.matches(".dg-select-per-page")) {
+    element.parentElement?.classList.toggle("dg-host-select", classes.length > 0);
+  }
+}
+function refreshControlClasses(grid) {
+  for (const element of grid.querySelectorAll("[data-dg-control]")) {
+    if (!(element instanceof HTMLElement) || !grid.ownsControl(element))
+      continue;
+    const state = controls.get(element);
+    if (state)
+      styleControl(grid, element, state.role, state.extra);
+  }
+}
+
 // src/utils/debounce.js
 function debounce(handler, timeout = 300) {
   let timer = null;
@@ -1743,7 +1784,7 @@ function createMultiSelect(column, options, relatedTh) {
   root.dataset.emptyText = column.firstFilterOption?.text ?? column.filterPlaceholder ?? "";
   const trigger = doc.createElement("button");
   trigger.type = "button";
-  trigger.className = "dg-multiselect-trigger";
+  trigger.className = "dg-multiselect-trigger dg-skin";
   const panelId = randstr("dg-multiselect-");
   trigger.setAttribute("popovertarget", panelId);
   trigger.setAttribute("aria-controls", panelId);
@@ -1856,6 +1897,7 @@ function transformValue(value, transform, ctx) {
 }
 
 // src/data-grid.js
+var defaultControlClasses = { button: "", action: "", input: "", select: "" };
 var plugins = {};
 var textInputState = new WeakMap;
 var labels = { ...DEFAULT_LABELS };
@@ -1876,6 +1918,7 @@ function formatLabel(template, values) {
   return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
 }
 var DEFAULT_OPTIONS = {
+  controlClasses: null,
   id: null,
   src: "",
   params: {},
@@ -1915,7 +1958,7 @@ var DEFAULT_OPTIONS = {
   rowDetailsStartOpen: false,
   filterDelay: 300,
   searchable: false,
-  searchPlaceholder: "",
+  searchPlaceholder: null,
   searchDelay: 300,
   minSearchLength: 0,
   saveState: false,
@@ -2048,6 +2091,9 @@ class DataGrid extends base_element_default {
   #frozenFrame;
   constructor(options = {}) {
     super(options);
+    if (this.options.controlClasses != null) {
+      this.options.controlClasses = normalizeControlClasses(this.options.controlClasses);
+    }
     this.#optionDefaults = createDefaultOptions();
     this.#filterSelector = "[id^=dg-filter]";
     this.#excludedRowElementSelector = "a,button,input,select,textarea,[contenteditable]:not([contenteditable='false']),[data-row-click-ignore]";
@@ -2059,7 +2105,7 @@ class DataGrid extends base_element_default {
     this.#loadedPage = 0;
     this.#hasMore = true;
     this.#controller = null;
-    this.initialResult = null;
+    this.initialResult = Object.getOwnPropertyDescriptor(this, "initialResult")?.value ?? null;
     this.#initialResult = this.options.initialResult || this.initialResult || null;
     this.rows = [];
     this.total = 0;
@@ -2084,6 +2130,11 @@ class DataGrid extends base_element_default {
     this.#lazyPending = false;
     this.#renderContext = null;
     this.#frozenFrame = null;
+    if (Object.hasOwn(this, "controlClasses")) {
+      const value = this.controlClasses;
+      Reflect.deleteProperty(this, "controlClasses");
+      this.controlClasses = value;
+    }
   }
   _ready() {
     this.fireEvents = false;
@@ -2102,6 +2153,23 @@ class DataGrid extends base_element_default {
       instances[pluginName] = new pluginClass(this);
     }
     return instances;
+  }
+  get controlClasses() {
+    return { ...defaultControlClasses, ...normalizeControlClasses(this.options.controlClasses ?? null) };
+  }
+  set controlClasses(value) {
+    this.options.controlClasses = value == null ? null : normalizeControlClasses(value);
+    refreshControlClasses(this);
+  }
+  static setDefaultControlClasses(partial) {
+    Object.assign(defaultControlClasses, normalizeControlClasses(partial));
+    for (const grid of document.querySelectorAll("data-grid")) {
+      if (grid instanceof DataGrid)
+        refreshControlClasses(grid);
+    }
+  }
+  static getDefaultControlClasses() {
+    return { ...defaultControlClasses };
   }
   static template() {
     return `
@@ -2193,7 +2261,7 @@ class DataGrid extends base_element_default {
     }
     if (this.searchInput) {
       this.searchInput.setAttribute("aria-label", this.labels.search);
-      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
     }
     const buttonLabels = [
       [this.btnFirst, this.labels.gotoFirstPage],
@@ -2790,7 +2858,7 @@ class DataGrid extends base_element_default {
   }
   searchPlaceholderChanged() {
     if (this.searchInput) {
-      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+      this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
     }
   }
   populatePageSizes() {
@@ -2875,7 +2943,7 @@ class DataGrid extends base_element_default {
         this.searchInput = null;
       } else {
         this.searchInput.setAttribute("aria-label", this.labels.search);
-        this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder);
+        this.searchInput.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
         this.ensureTopbar();
         return;
       }
@@ -2884,7 +2952,7 @@ class DataGrid extends base_element_default {
     input.type = "search";
     input.name = "search";
     input.className = "dg-search";
-    input.setAttribute("placeholder", this.options.searchPlaceholder);
+    input.setAttribute("placeholder", this.options.searchPlaceholder ?? `${this.labels.search}…`);
     input.setAttribute("aria-label", this.labels.search);
     input.value = this.#query.search;
     const field = document.createElement("span");
@@ -2893,6 +2961,7 @@ class DataGrid extends base_element_default {
     icon.className = "dg-search-icon";
     icon.setAttribute("aria-hidden", "true");
     field.append(icon, input);
+    styleControl(this, input, "input");
     textInputState.set(input, {
       composing: false,
       apply: debounce(() => this.commitSearch(), this.options.searchDelay)
@@ -3022,6 +3091,15 @@ class DataGrid extends base_element_default {
     this.btnMore = this.querySelector(".dg-load-more");
     this.selectPerPage = this.querySelector(".dg-select-per-page");
     this.inputPage = this.querySelector(".dg-input-page");
+    refreshControlClasses(this);
+    for (const control of [this.btnFirst, this.btnPrev, this.btnNext, this.btnLast, this.btnMore]) {
+      if (control)
+        styleControl(this, control, "button");
+    }
+    if (this.inputPage)
+      styleControl(this, this.inputPage, "input");
+    if (this.selectPerPage)
+      styleControl(this, this.selectPerPage, "select");
     this.#syncSelectionOptions();
     on(this, CORE_EVENTS, this);
     this.showPageSizeChanged();
@@ -5017,6 +5095,7 @@ class BulkActions extends base_plugin_default {
     for (const action of bulkActions) {
       const button = document.createElement("button");
       button.type = "button";
+      styleControl(grid, button, "button", action.class);
       button.dataset.action = action.name;
       if (action.intent) {
         button.dataset.intent = action.intent;
@@ -5216,7 +5295,7 @@ var autosize_column_default = AutosizeColumn;
 function createDisclosureButton(controlClass) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `dg-disclosure ${controlClass}`;
+  button.className = `dg-disclosure dg-skin ${controlClass}`;
   return button;
 }
 
@@ -5699,8 +5778,12 @@ function inlineActionsWidth(count) {
 }
 
 class RowActions extends base_plugin_default {
+  #widthObserver;
+  #widthFrame;
   constructor(grid) {
     super(grid);
+    this.#widthFrame = null;
+    this.#widthObserver = new ResizeObserver(() => this.#queueWidthSync());
     this.menu = null;
     this.activeInvoker = null;
     this._keyboardOpen = false;
@@ -5720,6 +5803,11 @@ class RowActions extends base_plugin_default {
     attachPopoverPositioning(this.grid, { selector: ".dg-actions-menu", placement: "bottom-end" });
   }
   disconnected() {
+    this.#widthObserver.disconnect();
+    if (this.#widthFrame !== null) {
+      cancelAnimationFrame(this.#widthFrame);
+      this.#widthFrame = null;
+    }
     this.grid.removeEventListener("click", this);
     this.menu?.removeEventListener("toggle", this);
     this.menu?.remove();
@@ -5830,7 +5918,18 @@ class RowActions extends base_plugin_default {
     this.menu?.hidePopover?.();
   }
   afterRender() {
+    this.#widthObserver.disconnect();
+    if (!this.hasActions()) {
+      return;
+    }
     this.syncCellModes();
+    for (const cell of this.#bodyCells() ?? []) {
+      this.#widthObserver.observe(cell);
+      for (const control of cell.children) {
+        this.#widthObserver.observe(control, { box: "border-box" });
+      }
+    }
+    this.#queueWidthSync();
   }
   syncCellModes() {
     const grid = this.grid;
@@ -5850,21 +5949,79 @@ class RowActions extends base_plugin_default {
       mode = `dg-actions-${maxCount}`;
     }
     const width = mode === "dg-actions-more" ? COLLAPSED_ACTIONS_WIDTH : inlineActionsWidth(maxCount);
+    const cells = grid.querySelectorAll('[data-column-id="$actions"]');
+    for (const cell of cells) {
+      cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
+      cell.classList.add(mode);
+    }
+    this.#setWidth(width);
+  }
+  #bodyCells() {
+    return this.grid.tbody?.querySelectorAll(':scope > tr.dg-data-row > td[data-column-id="$actions"]');
+  }
+  #queueWidthSync() {
+    if (this.#widthFrame !== null || !this.grid.isConnected) {
+      return;
+    }
+    this.#widthFrame = requestAnimationFrame(() => {
+      this.#widthFrame = null;
+      this.#measureWidth();
+    });
+  }
+  #measureWidth() {
+    const cells = [...this.#bodyCells() ?? []];
+    const hasHostControls = cells.some((cell) => [...cell.children].some((control) => !control.classList.contains("dg-skin")));
+    if (!hasHostControls) {
+      this.syncCellModes();
+      return;
+    }
+    let width = 0;
+    for (const cell of cells) {
+      if (!cell.getClientRects().length) {
+        continue;
+      }
+      let contentWidth = 0;
+      for (const control of cell.children) {
+        const rect = control.getBoundingClientRect();
+        if (!rect.width) {
+          continue;
+        }
+        const style = getComputedStyle(control);
+        contentWidth += rect.width + (Number.parseFloat(style.marginLeft) || 0) + (Number.parseFloat(style.marginRight) || 0);
+      }
+      if (!contentWidth) {
+        continue;
+      }
+      const style = getComputedStyle(cell);
+      const edges = [style.paddingLeft, style.paddingRight, style.borderLeftWidth, style.borderRightWidth].reduce((sum, value) => sum + (Number.parseFloat(value) || 0), 0);
+      width = Math.max(width, contentWidth + edges);
+    }
+    if (width) {
+      this.#setWidth(Math.max(COLLAPSED_ACTIONS_WIDTH, Math.ceil(width)));
+    }
+  }
+  #setWidth(width) {
+    const grid = this.grid;
     const column = grid.getColumnById("$actions");
     if (column) {
       column.width = width;
       column.minWidth = width;
     }
-    const cells = grid.querySelectorAll('[data-column-id="$actions"]');
-    for (const cell of cells) {
-      cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
-      cell.classList.add(mode);
+    let changed = false;
+    for (const cell of grid.querySelectorAll('[data-column-id="$actions"]')) {
+      if (cell.getAttribute("width") === String(width) && cell.style.getPropertyValue("--dg-actions-effective-width") === `${width}px`) {
+        continue;
+      }
+      changed = true;
       cell.style.setProperty("--dg-actions-effective-width", `${width}px`);
       cell.setAttribute("width", String(width));
       if (cell.matches("thead tr.dg-head-columns th")) {
         cell.dataset.minWidth = String(width);
         cell.dataset.preferredWidth = String(width);
       }
+    }
+    if (changed) {
+      grid.queueFrozenSync();
     }
   }
   renderActionMenu(row) {
@@ -5895,6 +6052,7 @@ class RowActions extends base_plugin_default {
       const actionsToggle = document.createElement("button");
       actionsToggle.type = "button";
       actionsToggle.classList.add("dg-actions-toggle");
+      styleControl(grid, actionsToggle, "action");
       actionsToggle.setAttribute("aria-label", labels.toggleActions);
       actionsToggle.setAttribute("popovertarget", this.menu.id);
       actionsToggle.title = labels.toggleActions;
@@ -5970,9 +6128,7 @@ class RowActions extends base_plugin_default {
       el.dataset.intent = action.intent;
       el.classList.add(`dg-intent-${action.intent}`);
     }
-    if (action.class) {
-      el.classList.add(...action.class.trim().split(/\s+/));
-    }
+    styleControl(grid, el, "action", action.class);
     const isDisabled = typeof action.disabled === "function" ? action.disabled(row, ctx) : Boolean(action.disabled);
     if (isDisabled) {
       if (el.tagName === "BUTTON") {

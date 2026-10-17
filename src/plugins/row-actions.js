@@ -1,6 +1,7 @@
 import BasePlugin from "../core/base-plugin.js";
 import { resolveActionConfirmation } from "../utils/actionConfirm.js";
 import applyContent from "../utils/applyContent.js";
+import { styleControl } from "../utils/controlClasses.js";
 import { dispatch } from "../utils/dispatch.js";
 import interpolate from "../utils/interpolate.js";
 import { supportsPopover } from "../utils/popover.js";
@@ -49,11 +50,18 @@ function inlineActionsWidth(count) {
  * Add actions on rows
  */
 class RowActions extends BasePlugin {
+    /** @type {ResizeObserver} */
+    #widthObserver;
+    /** @type {Number|null} */
+    #widthFrame;
+
     /**
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid) {
         super(grid);
+        this.#widthFrame = null;
+        this.#widthObserver = new ResizeObserver(() => this.#queueWidthSync());
         /** @type {HTMLUListElement|null} */
         this.menu = null;
         /** @type {HTMLElement|null} */
@@ -78,6 +86,11 @@ class RowActions extends BasePlugin {
     }
 
     disconnected() {
+        this.#widthObserver.disconnect();
+        if (this.#widthFrame !== null) {
+            cancelAnimationFrame(this.#widthFrame);
+            this.#widthFrame = null;
+        }
         this.grid.removeEventListener("click", this);
         this.menu?.removeEventListener("toggle", this);
         this.menu?.remove();
@@ -242,7 +255,20 @@ class RowActions extends BasePlugin {
         // which is only known after the rows render. The header is created on a
         // separate render pass (renderTable), so the mode must be applied on
         // both passes: body cells and the header/filter must share it.
+        this.#widthObserver.disconnect();
+        if (!this.hasActions()) {
+            return;
+        }
         this.syncCellModes();
+        // Observe controls rather than the fixed-width column: a host class or
+        // font change can resize a button while the cell itself stays unchanged.
+        for (const cell of this.#bodyCells() ?? []) {
+            this.#widthObserver.observe(cell);
+            for (const control of cell.children) {
+                this.#widthObserver.observe(control, { box: "border-box" });
+            }
+        }
+        this.#queueWidthSync();
     }
 
     /**
@@ -275,23 +301,100 @@ class RowActions extends BasePlugin {
             mode = `dg-actions-${maxCount}`;
         }
         const width = mode === "dg-actions-more" ? COLLAPSED_ACTIONS_WIDTH : inlineActionsWidth(maxCount);
+        const cells = grid.querySelectorAll('[data-column-id="$actions"]');
+        for (const cell of cells) {
+            cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
+            cell.classList.add(mode);
+        }
+        this.#setWidth(width);
+    }
+
+    /** @returns {NodeListOf<HTMLTableCellElement>|undefined} */
+    #bodyCells() {
+        return this.grid.tbody?.querySelectorAll(':scope > tr.dg-data-row > td[data-column-id="$actions"]');
+    }
+
+    /** Coalesce layout reads after rendering and host-control resizes. */
+    #queueWidthSync() {
+        if (this.#widthFrame !== null || !this.grid.isConnected) {
+            return;
+        }
+        this.#widthFrame = requestAnimationFrame(() => {
+            this.#widthFrame = null;
+            this.#measureWidth();
+        });
+    }
+
+    /** Measure the widest rendered action group, including the cell's edges. */
+    #measureWidth() {
+        const cells = [...(this.#bodyCells() ?? [])];
+        const hasHostControls = cells.some((cell) =>
+            [...cell.children].some((control) => !control.classList.contains("dg-skin")),
+        );
+        if (!hasHostControls) {
+            this.syncCellModes();
+            return;
+        }
+        let width = 0;
+        for (const cell of cells) {
+            if (!cell.getClientRects().length) {
+                continue;
+            }
+            let contentWidth = 0;
+            for (const control of cell.children) {
+                const rect = control.getBoundingClientRect();
+                if (!rect.width) {
+                    continue;
+                }
+                const style = getComputedStyle(control);
+                contentWidth +=
+                    rect.width +
+                    (Number.parseFloat(style.marginLeft) || 0) +
+                    (Number.parseFloat(style.marginRight) || 0);
+            }
+            if (!contentWidth) {
+                continue;
+            }
+            const style = getComputedStyle(cell);
+            const edges = [style.paddingLeft, style.paddingRight, style.borderLeftWidth, style.borderRightWidth].reduce(
+                (sum, value) => sum + (Number.parseFloat(value) || 0),
+                0,
+            );
+            width = Math.max(width, contentWidth + edges);
+        }
+        if (width) {
+            this.#setWidth(Math.max(COLLAPSED_ACTIONS_WIDTH, Math.ceil(width)));
+        }
+    }
+
+    /** Keep the model, header, filter and body on one column width. @param {Number} width */
+    #setWidth(width) {
+        const grid = this.grid;
         const column = grid.getColumnById("$actions");
         if (column) {
             column.width = width;
             column.minWidth = width;
         }
-        const cells = /** @type {NodeListOf<HTMLTableCellElement>} */ (
+        let changed = false;
+        for (const cell of /** @type {NodeListOf<HTMLTableCellElement>} */ (
             grid.querySelectorAll('[data-column-id="$actions"]')
-        );
-        for (const cell of cells) {
-            cell.classList.remove("dg-actions-1", "dg-actions-2", "dg-actions-more", "dg-actions-inline");
-            cell.classList.add(mode);
+        )) {
+            if (
+                cell.getAttribute("width") === String(width) &&
+                cell.style.getPropertyValue("--dg-actions-effective-width") === `${width}px`
+            ) {
+                continue;
+            }
+            changed = true;
             cell.style.setProperty("--dg-actions-effective-width", `${width}px`);
             cell.setAttribute("width", String(width));
             if (cell.matches("thead tr.dg-head-columns th")) {
                 cell.dataset.minWidth = String(width);
                 cell.dataset.preferredWidth = String(width);
             }
+        }
+        if (changed) {
+            grid.queueFrozenSync();
         }
     }
 
@@ -338,6 +441,7 @@ class RowActions extends BasePlugin {
             const actionsToggle = document.createElement("button");
             actionsToggle.type = "button";
             actionsToggle.classList.add("dg-actions-toggle");
+            styleControl(grid, actionsToggle, "action");
             actionsToggle.setAttribute("aria-label", labels.toggleActions);
             actionsToggle.setAttribute("popovertarget", this.menu.id);
             actionsToggle.title = labels.toggleActions;
@@ -461,9 +565,7 @@ class RowActions extends BasePlugin {
             el.dataset.intent = action.intent;
             el.classList.add(`dg-intent-${action.intent}`);
         }
-        if (action.class) {
-            el.classList.add(...action.class.trim().split(/\s+/));
-        }
+        styleControl(grid, el, "action", action.class);
 
         // Disabled actions must really block: a native `disabled` on buttons,
         // `aria-disabled` on any element, a class hook and a guarded click.

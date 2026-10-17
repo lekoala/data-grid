@@ -81,7 +81,7 @@ export function createMultiSelect(column, options, relatedTh) {
 
     const trigger = doc.createElement("button");
     trigger.type = "button";
-    trigger.className = "dg-multiselect-trigger";
+    trigger.className = "dg-multiselect-trigger dg-skin";
 
     const panelId = randstr("dg-multiselect-");
     trigger.setAttribute("popovertarget", panelId);
