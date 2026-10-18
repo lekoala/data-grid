@@ -1321,12 +1321,14 @@ function getTextWidth(text, el = document.body, withPadding = false) {
 function crossAxisFor(side) {
   return side === "top" || side === "bottom" ? "x" : "y";
 }
+var OPPOSITE = { top: "bottom", bottom: "top", left: "right", right: "left" };
+var PLACEMENTS = new Set(Object.keys(OPPOSITE).flatMap((side) => [side, `${side}-start`, `${side}-end`]));
+var COORDINATE_SPACES = new Set(["viewport", "document"]);
 function parsePlacement(placement) {
+  if (!PLACEMENTS.has(placement))
+    throw new TypeError(`Unknown placement: ${placement}`);
   const [side, align = null] = placement.split("-");
   return { side, align, crossAxis: crossAxisFor(side) };
-}
-function flipSide(side) {
-  return { top: "bottom", bottom: "top", left: "right", right: "left" }[side] || side;
 }
 function computeCoords(reference, floating, side, align, rtl, distance) {
   const crossAxis = crossAxisFor(side);
@@ -1359,17 +1361,12 @@ function computeCoords(reference, floating, side, align, rtl, distance) {
 function overflowOn(position, size, start, end) {
   return Math.max(start - position, 0) + Math.max(position + size - end, 0);
 }
-function isRTL(element) {
-  const direction = "dir" in element ? element.dir : "";
-  if (direction === "rtl")
-    return true;
-  if (direction === "ltr")
-    return false;
-  const win = element.ownerDocument?.defaultView;
-  if (win?.CSS?.supports?.("selector(:dir(rtl))") && typeof element.matches === "function") {
-    return element.matches(":dir(rtl)");
+function isRTL(reference) {
+  const win = reference.ownerDocument?.defaultView;
+  if (win && reference instanceof win.Element) {
+    return win.getComputedStyle(reference).direction === "rtl";
   }
-  return Boolean(win?.Element && element instanceof win.Element && win.getComputedStyle(element).direction === "rtl");
+  return "dir" in reference && reference.dir === "rtl";
 }
 var STABLE_SCROLLBAR_MAX_WIDTH = 25;
 function getViewportBoundary(doc) {
@@ -1407,8 +1404,14 @@ function arrowPercent(referenceCenter, boxStart, size) {
   const percent = (referenceCenter - boxStart) / size * 100;
   return Math.round(Math.min(100, Math.max(0, percent)) * 1000) / 1000;
 }
-function isOutsideBoundary(rect, boundary) {
-  return rect.right < boundary.x || rect.left > boundary.right || rect.bottom < boundary.y || rect.top > boundary.bottom;
+function isOutsideBoundary(rects, boundary) {
+  for (let i = 0;i < rects.length; i++) {
+    const rect = rects[i];
+    if (rect.right >= boundary.x && rect.left <= boundary.right && rect.bottom >= boundary.y && rect.top <= boundary.bottom) {
+      return false;
+    }
+  }
+  return true;
 }
 function getAvailableHeight(referenceRect, side, boundary, distance, padding) {
   if (side === "top") {
@@ -1463,9 +1466,21 @@ function createTracker(doc) {
       for (const [subscription, type] of notifications) {
         if (!subscriptions.has(subscription) || !subscription.floating.isConnected)
           continue;
-        subscription.callback({ type });
+        try {
+          subscription.callback({ type });
+        } catch (error) {
+          reportError(error);
+        }
       }
     });
+  }
+  function reportError(error) {
+    if (typeof win.reportError === "function")
+      win.reportError(error);
+    else
+      win.setTimeout(() => {
+        throw error;
+      });
   }
   function notifyAll(type) {
     for (const subscription of subscriptions)
@@ -1557,28 +1572,32 @@ function autoUpdate(reference, floating, callback) {
   return trackerFor(floating).add(reference, floating, callback);
 }
 function positionOnce(reference, floating, options) {
+  const placement = options.placement === undefined ? "bottom-start" : options.placement;
+  let { side, align, crossAxis } = parsePlacement(placement);
+  const coordinateSpace = options.coordinateSpace === undefined ? "viewport" : options.coordinateSpace;
+  if (!COORDINATE_SPACES.has(coordinateSpace)) {
+    throw new TypeError(`Unknown coordinateSpace: ${coordinateSpace}`);
+  }
   if (!isVisible(floating))
     return null;
-  const placement = options.placement || "bottom-start";
   const distance = options.distance || 0;
   const flip = options.flip !== false;
   const shift = options.shift !== false;
   const shiftPadding = options.shiftPadding ?? 4;
-  let { side, align, crossAxis } = parsePlacement(placement);
   const rtl = align ? isRTL(reference) : false;
   const rects = reference.getClientRects();
-  const referenceRect = side === "bottom" ? rects[rects.length - 1] : rects[0];
-  if (!referenceRect)
+  if (!rects.length)
     return null;
+  const rectFor = (s) => s === "bottom" ? rects[rects.length - 1] : rects[0];
   const boundary = getBoundary(reference, options);
-  if (!boundary || isOutsideBoundary(referenceRect, boundary))
+  if (!boundary || isOutsideBoundary(rects, boundary))
     return null;
   const floatingRect = getFloatingSize(floating);
   const limits = {
     x: { size: floatingRect.width, start: boundary.x, end: boundary.right },
     y: { size: floatingRect.height, start: boundary.y, end: boundary.bottom }
   };
-  const place = (nextSide, nextAlign) => computeCoords(referenceRect, floatingRect, nextSide, nextAlign, rtl, distance);
+  const place = (nextSide, nextAlign) => computeCoords(rectFor(nextSide), floatingRect, nextSide, nextAlign, rtl, distance);
   const overflowAt = (position, axis) => {
     const { size, start, end } = limits[axis];
     return overflowOn(position, size, start + shiftPadding, end - shiftPadding);
@@ -1588,31 +1607,30 @@ function positionOnce(reference, floating, options) {
     return overflowAt(shift ? clampToBoundary(position, size, start, end, shiftPadding) : position, axis);
   };
   let coords = place(side, align);
+  const overflowFor = (nextSide, at) => {
+    const cross = crossAxisFor(nextSide);
+    const main = cross === "x" ? "y" : "x";
+    const mainOverflow = overflowAt(at[main], main);
+    return { main: mainOverflow, total: mainOverflow + shiftedOverflowAt(at[cross], cross) };
+  };
   if (flip) {
-    const mainAxis = crossAxis === "x" ? "y" : "x";
-    let overflow = overflowAt(coords[mainAxis], mainAxis);
-    if (overflow > 0) {
-      const opposite = flipSide(side);
-      const flipped = place(opposite, align);
-      const flippedOverflow = overflowAt(flipped[mainAxis], mainAxis);
-      if (flippedOverflow < overflow) {
-        side = opposite;
-        coords = flipped;
-        overflow = flippedOverflow;
+    let best = overflowFor(side, coords);
+    const consider = (nextSide) => {
+      const next = place(nextSide, align);
+      const overflow = overflowFor(nextSide, next);
+      if (overflow.total < best.total) {
+        side = nextSide;
+        coords = next;
+        best = overflow;
       }
+    };
+    if (best.main > 0)
+      consider(OPPOSITE[side]);
+    if (crossAxis === "y" && best.main > 0) {
+      consider("top");
+      consider("bottom");
     }
-    if (mainAxis === "x" && overflow > 0) {
-      const above = place("top", align);
-      const below = place("bottom", align);
-      const useBottom = overflowAt(below.y, "y") < overflowAt(above.y, "y");
-      const candidate = useBottom ? below : above;
-      const swapped = overflowAt(candidate.y, "y") + shiftedOverflowAt(candidate.x, "x");
-      if (swapped < overflow + shiftedOverflowAt(coords.y, "y")) {
-        side = useBottom ? "bottom" : "top";
-        crossAxis = "x";
-        coords = candidate;
-      }
-    }
+    crossAxis = crossAxisFor(side);
   }
   if (crossAxis === "x" && shift && align) {
     const overflow = overflowAt(coords.x, "x");
@@ -1629,12 +1647,13 @@ function positionOnce(reference, floating, options) {
     const { size, start, end } = limits[crossAxis];
     coords[crossAxis] = clampToBoundary(coords[crossAxis], size, start, end, shiftPadding);
   }
-  const arrowX = arrowPercent(referenceRect.x + referenceRect.width / 2, coords.x, floatingRect.width);
-  const arrowY = arrowPercent(referenceRect.y + referenceRect.height / 2, coords.y, floatingRect.height);
-  const availableHeight = `${getAvailableHeight(referenceRect, side, boundary, distance, shiftPadding)}px`;
+  const resolvedRect = rectFor(side);
+  const arrowX = arrowPercent(resolvedRect.x + resolvedRect.width / 2, coords.x, floatingRect.width);
+  const arrowY = arrowPercent(resolvedRect.y + resolvedRect.height / 2, coords.y, floatingRect.height);
+  const availableHeight = `${getAvailableHeight(resolvedRect, side, boundary, distance, shiftPadding)}px`;
   const { style } = floating;
   const roomChanged = style.getPropertyValue("--available-height") !== availableHeight;
-  const win = options.coordinateSpace === "document" ? reference.ownerDocument.defaultView : null;
+  const win = coordinateSpace === "document" ? reference.ownerDocument.defaultView : null;
   const originX = win ? win.scrollX : 0;
   const originY = win ? win.scrollY : 0;
   style.left = `${coords.x + originX}px`;
@@ -1669,17 +1688,14 @@ function reposition(reference, floating, options = {}) {
 }
 function repositionAt(x, y, floating, options = {}) {
   const doc = floating.ownerDocument;
-  const docEl = doc.documentElement;
   const win = doc.defaultView;
-  if (!win)
-    return false;
-  const direction = doc.dir || docEl?.dir || win.getComputedStyle?.(docEl).direction || "";
-  const point = new win.DOMRect(x, y, 0, 0);
   const reference = {
     ownerDocument: doc,
-    dir: direction,
-    matches: (selector) => selector === ":dir(rtl)" && direction === "rtl",
-    getClientRects: () => [point]
+    get dir() {
+      const docEl = doc.documentElement;
+      return win && docEl ? win.getComputedStyle(docEl).direction : "";
+    },
+    getClientRects: () => win ? [new win.DOMRect(x, y, 0, 0)] : []
   };
   return reposition(reference, floating, options);
 }
