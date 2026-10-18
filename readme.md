@@ -29,6 +29,8 @@ Docs:
 - [Inline editing](docs/editing.md)
 - [Translations](docs/translations.md)
 - [Migration from v2](docs/migration-from-v2.md)
+- [Migration from DataTables](docs/migration-from-datatables.md)
+- [Migration from ShadTable / TanStack Table](docs/migration-from-shadtable.md)
 
 ## How to use
 

@@ -30,6 +30,7 @@ not documented.
 
 ### Changed
 
+- Update @lekoala/floating to ^0.3.1 without changing the picker integration API.
 - The generic text filter placeholder is now empty instead of `"_"`: an empty,
   unfocused field shows a small I-beam glyph at the inline-end (the text-entry
   counterpart to the select caret) instead of reading as missing data. Focus
