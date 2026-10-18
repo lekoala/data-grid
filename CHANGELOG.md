@@ -5,7 +5,7 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
-## [Unreleased]
+## [3.7.0] - 2026-10-18
 
 ### Breaking / migration
 
