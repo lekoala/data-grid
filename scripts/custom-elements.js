@@ -79,7 +79,7 @@ function extractPublicMembers(source) {
         if (pendingDoc) {
             const def = line
                 .trim()
-                .match(/^(?:(static)\s+)?(?:(async|get)\s+)?([A-Za-z_$][\w$]*)\s*(\(|=|\{)/);
+                .match(/^(?:(static)\s+)?(?:(async|get)\s+)?(?:this\.)?([A-Za-z_$][\w$]*)\s*(\(|=|\{)/);
             if (def) {
                 const [, staticModifier, memberModifier, name, delimiter] = def;
                 let kind = "method";
@@ -162,6 +162,7 @@ function extractCssProperties(css) {
 async function main() {
     const gridSource = await read("src/data-grid.js");
     const cssSource = await read("css/_core.css");
+    const baseSource = await read("src/core/base-element.js");
 
     const pluginFiles = (await readdir("src/plugins"))
         .filter((f) => f.endsWith(".js"))
@@ -173,6 +174,7 @@ async function main() {
     const members = extractPublicMembers(gridSource);
     const events = [
         ...extractEvents(gridSource),
+        ...extractEvents(baseSource),
         ...allPluginSources.flatMap(extractEvents),
     ].filter((name, i, all) => all.indexOf(name) === i).sort();
     const cssProperties = extractCssProperties(cssSource);

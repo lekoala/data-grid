@@ -130,7 +130,7 @@ class RowActions extends BasePlugin {
         // the click count. Only a keyboard opening moves focus into the
         // popover — a mouse opening keeps focus on the invoker.
         this._keyboardOpen = event.detail === 0;
-        this.renderActionMenu(row);
+        this.renderActionMenu(row, rowIndex);
     }
 
     /**
@@ -404,14 +404,14 @@ class RowActions extends BasePlugin {
      * placement; focus moves into the popover on keyboard opening (see
      * ontoggle) and back to the invoker after a button activation.
      * @param {Record<string, any>} row
+     * @param {Number} [rowIndex]
      */
-    renderActionMenu(row) {
+    renderActionMenu(row, rowIndex = this.grid.rows.indexOf(row)) {
         const grid = this.grid;
         const menu = this.menu;
         if (!menu) {
             return;
         }
-        const rowIndex = grid.rows.indexOf(row);
         menu.replaceChildren();
         for (const action of this.#visibleActions(row, rowIndex)) {
             const li = grid.ownerDocument.createElement("li");

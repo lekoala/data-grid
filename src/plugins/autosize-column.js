@@ -9,14 +9,14 @@ class AutosizeColumn extends BasePlugin {
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context) {
-        if (context !== "table") {
+        if (context !== "table" && context !== "body") {
             return;
         }
         const grid = this.grid;
         if (!grid.options.autosize) {
             return;
         }
-        const availableWidth = grid.clientWidth;
+        const availableWidth = grid.scrollEl.clientWidth;
         const colMaxWidth = Math.round((availableWidth / grid.columnsLength(true)) * 2);
         const columns = new Map();
         for (const column of grid.getColumns()) {
@@ -67,8 +67,10 @@ class AutosizeColumn extends BasePlugin {
         // design: autosize means "fit the loaded sample", not "fit the whole
         // dataset".
         const id = grid.getColumnId(column);
-        const cells = /** @type {NodeListOf<HTMLTableCellElement>|undefined} */ (
-            grid.tbody?.querySelectorAll(`:scope > tr.dg-data-row:not([hidden]) td[data-column-id="${id}"]`)
+        const cells = /** @type {HTMLTableCellElement[]} */ (
+            [
+                ...(grid.tbody?.querySelectorAll(":scope > tr.dg-data-row:not([hidden]) > td[data-column-id]") ?? []),
+            ].filter((cell) => cell.getAttribute("data-column-id") === id)
         );
         if (!cells?.length) {
             return;

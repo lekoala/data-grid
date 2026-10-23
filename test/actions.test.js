@@ -301,6 +301,27 @@ test("more than two actions use one shared native popover", async () => {
     document.body.removeChild(inst);
 });
 
+test("collapsed actions keep the clicked row index when a row object appears twice", async () => {
+    const row = { name: "Alice" };
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "one" }, { name: "two" }, { name: "three" }],
+        },
+        [row, row],
+        { RowActions },
+    );
+    let detail;
+    inst.addEventListener("action", (event) => {
+        detail = event.detail;
+    });
+    inst.tbody.querySelectorAll(".dg-actions-toggle")[1].click();
+    inst.querySelector('.dg-actions-menu button[data-action="one"]').click();
+    expect(detail.rowIndex).toBe(1);
+    expect(detail.rowKey).toBe("1");
+    inst.remove();
+});
+
 test("icon-only render keeps its label visible in the menu", async () => {
     const inst = await makeReadyGrid(
         {
@@ -711,4 +732,36 @@ test("actions stay inline when native floating UI is unavailable", async () => {
             Object.defineProperty(HTMLElement.prototype, "popover", popoverDescriptor);
         }
     }
+});
+
+test("fallback row keys update and remove the displayed row after sorting and paging", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], initialQuery: { pageSize: 2 } }, [
+        { name: "a" },
+        { name: "b" },
+        { name: "c" },
+        { name: "d" },
+    ]);
+    await inst.setQuery({ sort: [{ field: "name", direction: "desc" }], page: 2 });
+    expect(inst.rows.map((row) => row.name)).toEqual(["b", "a"]);
+    expect(inst.findRowByKey("1")).toBe(inst.rows[1]);
+    expect(inst.updateRow("1", { name: "renamed" })).toBe(true);
+    expect(inst.dataSource.rows[0].name).toBe("renamed");
+    const loaded = new Promise((resolve) => inst.addEventListener("bodyRendered", resolve, { once: true }));
+    expect(inst.removeRow("0")).toBe(true);
+    await loaded;
+    expect(inst.dataSource.rows.map((row) => row.name)).toEqual(["renamed", "c", "d"]);
+    expect(inst.removeRow("missing")).toBe(false);
+    document.body.removeChild(inst);
+});
+
+test("removeRow still accepts an explicit key outside the current page", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], initialQuery: { pageSize: 1 } }, [
+        { id: 1, name: "a" },
+        { id: 2, name: "b" },
+    ]);
+    const loaded = new Promise((resolve) => inst.addEventListener("bodyRendered", resolve, { once: true }));
+    expect(inst.removeRow("2")).toBe(true);
+    await loaded;
+    expect(inst.dataSource.rows.map((row) => row.id)).toEqual([1]);
+    document.body.removeChild(inst);
 });

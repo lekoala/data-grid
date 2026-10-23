@@ -441,3 +441,19 @@ test("an explicit responsiveToggle: false keeps the responsive section out of th
     expect(inst.querySelector("tbody tr.dg-row-details-row")).toBeNull();
     document.body.removeChild(inst);
 });
+
+test("responsive restores cells with CSS metacharacters in column identifiers", async () => {
+    const id = 'odd"[column]\\id';
+    const inst = await makeReadyGrid({
+        columns: [
+            { field: "a", width: 100 },
+            { id, field: "b", width: 100 },
+        ],
+    });
+    forceResize(inst, 150);
+    forceResize(inst, 1000);
+    const cells = [...inst.tbody.querySelector("tr.dg-data-row").children];
+    expect(cells.map((cell) => cell.dataset.columnId).filter((value) => value !== "$responsive")).toEqual(["a", id]);
+    expect(cells.find((cell) => cell.dataset.columnId === id).hidden).toBe(false);
+    document.body.removeChild(inst);
+});

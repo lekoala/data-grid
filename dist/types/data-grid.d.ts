@@ -588,25 +588,36 @@ declare class DataGrid extends BaseElement {
     initialResult: PageResult | null;
     /**
      * Rows of the current page
+     * @public
      * @type {Array<Record<string, any>>}
      */
     rows: Array<Record<string, any>>;
     /**
      * Total number of rows matching the current query. Null in pager
      * "more" mode when the backend skipped COUNT(*).
+     * @public
      * @type {Number|null}
      */
     total: number | null;
     /**
      * Meta information returned by the data source
+     * @public
      * @type {Record<string, any>}
      */
     meta: Record<string, any>;
     /** @type {Number} */
     pages: number;
-    /** @type {Boolean} */
+    /**
+     * Whether a data request is in flight
+     * @public
+     * @type {Boolean}
+     */
     loading: boolean;
-    /** @type {?Error} */
+    /**
+     * Error from the latest failed load
+     * @public
+     * @type {?Error}
+     */
     error: Error | null;
     /**
      * The active data source, set by setupDataSource().

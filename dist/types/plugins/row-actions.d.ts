@@ -67,8 +67,9 @@ declare class RowActions extends BasePlugin {
      * placement; focus moves into the popover on keyboard opening (see
      * ontoggle) and back to the invoker after a button activation.
      * @param {Record<string, any>} row
+     * @param {Number} [rowIndex]
      */
-    renderActionMenu(row: Record<string, any>): void;
+    renderActionMenu(row: Record<string, any>, rowIndex?: number): void;
     /**
      * Build the actions cell content: a toggle button plus one element per
      * resolved action. A row without actions gets an empty cell.

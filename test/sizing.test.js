@@ -172,3 +172,35 @@ test("responsive columns expose a finite sizing basis", async () => {
     }
     removeGrid(inst);
 });
+
+test("autosize handles inferred columns after an initially empty result", async () => {
+    const inst = await makeReadyGrid({ autosize: true }, []);
+    Object.defineProperty(inst, "clientWidth", { configurable: true, value: 2000 });
+    Object.defineProperty(inst.scrollEl, "clientWidth", { configurable: true, value: 180 });
+    inst.applyResult({ rows: [{ name: "A very long name that must be constrained" }], total: 1 });
+    const th = inst.headerRow.querySelector("th");
+    expect(th.hasAttribute("width")).toBe(true);
+    expect(Number(th.getAttribute("width"))).toBe(180);
+    // Subsequent body renders must preserve a width already assigned.
+    th.setAttribute("width", "200");
+    inst.renderBody();
+    expect(th.getAttribute("width")).toBe("200");
+    removeGrid(inst);
+});
+
+test("autosize accepts column identifiers with CSS metacharacters", async () => {
+    const id = 'name"[odd]\\field';
+    const inst = await makeReadyGrid({ autosize: true, columns: [{ id, field: "name" }] }, [{ name: "Alice" }]);
+    const th = inst.headerRow.querySelector("th");
+    th.removeAttribute("width");
+    const td = inst.tbody.querySelector("td");
+    expect(
+        inst.getPlugin("AutosizeColumn").computeSize(
+            th,
+            inst.getColumns().find((column) => column.id === id),
+            0,
+            10000,
+        ),
+    ).toBe(getTextWidth("Alice0000", td, true));
+    removeGrid(inst);
+});

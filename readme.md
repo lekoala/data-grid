@@ -585,6 +585,8 @@ See `docs/actions.md` for the full contract.
 |--------------------|----------------------------------------------------|----------------------------|
 | `connected`        | -                                                  | the grid is connected      |
 | `disconnected`     | -                                                  | the grid is disconnected   |
+| `querychange`      | `{ query }`                                        | the query changes          |
+| `rowClick`         | `{ row, rowKey, rowIndex, originalEvent }`          | a data row is clicked      |
 | `loadError`        | error                                              | a load fails               |
 | `selectionChange`  | `{ selectionState }`                               | the selection changes      |
 | `columnVisibility` | `{ col, visibility }`                              | a column is hidden/shown   |
@@ -597,6 +599,8 @@ See `docs/actions.md` for the full contract.
 | `bulkAction`       | `{ action, name, selection, query, trigger }`      | a bulk action is performed |
 | `edit`             | `{ data, value, field, column }` (cancelable)      | an edit is committed       |
 | `rowDetailsToggle` | `{ row, rowKey, expanded }`                        | row details are toggled    |
+
+`rowClick` is cancelable: call `preventDefault()` to veto the configured row-click behavior.
 
 ## Server
 

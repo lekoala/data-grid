@@ -211,7 +211,11 @@ test("datetime style shortcut maps both, explicit options win", () => {
         { style: "medium", timeStyle: "short", timeZone: "UTC" },
         ctx,
     );
-    expect(time.textContent).toBe("Aug 26, 2026, 8:30 AM");
+    expect(time.textContent).toBe(
+        new Intl.DateTimeFormat("en-US", { dateStyle: "medium", timeStyle: "short", timeZone: "UTC" }).format(
+            new Date("2026-08-26T08:30:00Z"),
+        ),
+    );
 });
 
 // --- number ----------------------------------------------------------------

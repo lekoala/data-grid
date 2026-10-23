@@ -17,6 +17,34 @@ async function makeReadyGrid(options, rows = [{ id: 1, name: "Alice", email: "al
     return inst;
 }
 
+test("row details remain scoped to their grid when host ids collide", async () => {
+    const options = {
+        id: "shared-grid",
+        columns: [{ field: "name" }],
+        rowDetails: ({ row }) => `Details: ${row.name}`,
+    };
+    const first = await makeReadyGrid(options);
+    const second = await makeReadyGrid(options, [{ id: 1, name: "Bob" }]);
+    const firstDetails = first.getPlugin("RowDetails");
+    const secondDetails = second.getPlugin("RowDetails");
+
+    firstDetails.expand("1");
+    secondDetails.expand("1");
+    expect(first.tbody.querySelector(".dg-row-details-row").textContent).toBe("Details: Alice");
+    expect(second.tbody.querySelector(".dg-row-details-row").textContent).toBe("Details: Bob");
+
+    secondDetails.collapse("1");
+    expect(second.tbody.querySelector(".dg-row-details-row")).toBeNull();
+    expect(first.tbody.querySelector(".dg-row-details-row").textContent).toBe("Details: Alice");
+    secondDetails.expand("1");
+    firstDetails.collapse("1");
+    expect(first.tbody.querySelector(".dg-row-details-row")).toBeNull();
+    expect(second.tbody.querySelector(".dg-row-details-row").textContent).toBe("Details: Bob");
+
+    first.remove();
+    second.remove();
+});
+
 test("RowDetails renders application content, exposes state methods and emits one stateful event", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name" }],

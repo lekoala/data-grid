@@ -110,7 +110,7 @@ test("column resizer applies the same clamp in RTL", async () => {
     document.body.removeChild(grid);
 });
 
-test("column resizer reserves the minimum width of following columns", async () => {
+test("column resizer preserves explicit widths of following columns", async () => {
     const { grid, th } = await makeGrid(
         [
             { field: "first", title: "\u200b", width: 100 },
@@ -122,7 +122,9 @@ test("column resizer reserves the minimum width of following columns", async () 
     );
 
     drag(th, 100, 500);
-    expect(th.getAttribute("width")).toBe("150");
+    expect(th.getAttribute("width")).toBe("100");
+    expect(grid.querySelector('th[data-column-id="second"]').getAttribute("width")).toBe("100");
+    expect(grid.querySelector('th[data-column-id="third"]').getAttribute("width")).toBe("100");
     document.body.removeChild(grid);
 });
 
@@ -167,6 +169,45 @@ test("a cancelled gesture releases without committing", async () => {
 
     expect(resized).toBe(0);
     expect(grid.options.columns[0].width).toBe(120);
+    expect(th.getAttribute("width")).toBe("120");
     expect(resizer.classList.contains("dg-resizer-active")).toBe(false);
+    document.body.removeChild(grid);
+});
+
+test("resize cancellation restores auto-sized columns and preserves fixed columns", async () => {
+    const { grid, th } = await makeGrid([
+        { field: "value", width: 100 },
+        { field: "auto" },
+        { id: "$actions", class: "dg-not-resizable", width: 80 },
+    ]);
+    const auto = grid.querySelector('th[data-column-id="auto"]');
+    const fixed = grid.querySelector('th[data-column-id="$actions"]');
+    auto.setAttribute("width", "140");
+    const fixedWidth = fixed.getAttribute("width");
+    const resizer = th.querySelector(".dg-resizer");
+    resizer.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 100 }));
+    expect(auto.hasAttribute("width")).toBe(false);
+    expect(fixed.getAttribute("width")).toBe(fixedWidth);
+    resizer.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: 150 }));
+    resizer.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true }));
+    expect(auto.getAttribute("width")).toBe("140");
+    expect(th.getAttribute("width")).toBe("100");
+    drag(th, 100, 150);
+    expect(fixed.getAttribute("width")).toBe(fixedWidth);
+    document.body.removeChild(grid);
+});
+
+test("flexible following columns still yield down to their minimum widths", async () => {
+    const { grid, th } = await makeGrid(
+        [
+            { field: "first", title: "\u200b", width: 100 },
+            { field: "second", title: "\u200b", minWidth: 80 },
+            { field: "third", title: "\u200b", minWidth: 70 },
+        ],
+        "ltr",
+        300,
+    );
+    drag(th, 100, 500);
+    expect(th.getAttribute("width")).toBe("150");
     document.body.removeChild(grid);
 });

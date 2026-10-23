@@ -719,6 +719,7 @@ class DataGrid extends BaseElement {
 
         /**
          * Rows of the current page
+         * @public
          * @type {Array<Record<string, any>>}
          */
         this.rows = [];
@@ -726,12 +727,14 @@ class DataGrid extends BaseElement {
         /**
          * Total number of rows matching the current query. Null in pager
          * "more" mode when the backend skipped COUNT(*).
+         * @public
          * @type {Number|null}
          */
         this.total = 0;
 
         /**
          * Meta information returned by the data source
+         * @public
          * @type {Record<string, any>}
          */
         this.meta = {};
@@ -739,10 +742,18 @@ class DataGrid extends BaseElement {
         /** @type {Number} */
         this.pages = 0;
 
-        /** @type {Boolean} */
+        /**
+         * Whether a data request is in flight
+         * @public
+         * @type {Boolean}
+         */
         this.loading = false;
 
-        /** @type {?Error} */
+        /**
+         * Error from the latest failed load
+         * @public
+         * @type {?Error}
+         */
         this.error = null;
 
         /**
@@ -2862,7 +2873,10 @@ class DataGrid extends BaseElement {
         for (const column of this.getColumns()) {
             const id = this.getColumnId(column);
             const hidden = isColumnHidden(column);
-            for (const cell of this.querySelectorAll(`[data-column-id="${id}"]`)) {
+            for (const cell of this.querySelectorAll("[data-column-id]")) {
+                if (cell.getAttribute("data-column-id") !== id || cell.closest("data-grid") !== this) {
+                    continue;
+                }
                 cell.toggleAttribute("hidden", hidden);
                 cell.classList.toggle("dg-responsive-hidden", Boolean(column.responsiveHidden));
             }
@@ -2924,8 +2938,8 @@ class DataGrid extends BaseElement {
         let edgeCells = /** @type {HTMLElement[]} */ ([]);
         for (const column of ordered) {
             const id = this.getColumnId(column);
-            const cells = /** @type {HTMLElement[]} */ ([...this.querySelectorAll(`[data-column-id="${id}"]`)]).filter(
-                (cell) => cell.closest("data-grid") === this,
+            const cells = /** @type {HTMLElement[]} */ ([...this.querySelectorAll("[data-column-id]")]).filter(
+                (cell) => cell.getAttribute("data-column-id") === id && cell.closest("data-grid") === this,
             );
             const header = /** @type {HTMLElement|undefined} */ (
                 cells.find((cell) => cell.parentElement?.classList.contains("dg-head-columns"))
@@ -3086,7 +3100,7 @@ class DataGrid extends BaseElement {
      */
     findRowByKey(rowKey) {
         const wanted = String(rowKey);
-        return this.rows.find((row) => this.resolveRowKey(row) === wanted);
+        return this.rows.find((row, index) => this.resolveRowKey(row, index) === wanted);
     }
 
     /**
@@ -3125,7 +3139,20 @@ class DataGrid extends BaseElement {
             return false;
         }
         const wanted = String(rowKey);
-        const index = ds.rows.findIndex((/** @type {Record<string, any>} */ row) => this.resolveRowKey(row) === wanted);
+        // Index-based fallback keys belong to the displayed page, which may be
+        // sorted or filtered differently from the source collection.
+        const row = this.findRowByKey(wanted);
+        const index = row
+            ? ds.rows.indexOf(row)
+            : ds.rows.findIndex((/** @type {Record<string, any>} */ row) => {
+                  const key =
+                      typeof this.options.rowKey === "function"
+                          ? this.options.rowKey(row)
+                          : this.options.rowKey
+                            ? row[this.options.rowKey]
+                            : undefined;
+                  return key != null && String(key) === wanted;
+              });
         if (index === -1) {
             return false;
         }

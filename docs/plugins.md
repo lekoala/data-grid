@@ -12,6 +12,7 @@ Any object exposing one of these methods is a plugin (duck typing):
 | `connected()`                | the grid connects (`_connected`)             |
 | `disconnected()`             | the grid disconnects                         |
 | `extendColumns(columns)`     | before a render, to inject/configure columns |
+| `updateLabels()`             | the grid refreshes its translated labels     |
 | `beforeRender()`             | before a render cycle                        |
 | `afterRender(context)`       | after a render (`"table"` or `"body"`)       |
 | `responsiveChanged(enabled)` | the `responsive` option changes              |

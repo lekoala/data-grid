@@ -138,6 +138,31 @@
           ],
           "members": [
             {
+              "kind": "field",
+              "name": "rows",
+              "description": "Rows of the current page"
+            },
+            {
+              "kind": "field",
+              "name": "total",
+              "description": "Total number of rows matching the current query. Null in pager \"more\" mode when the backend skipped COUNT(*)."
+            },
+            {
+              "kind": "field",
+              "name": "meta",
+              "description": "Meta information returned by the data source"
+            },
+            {
+              "kind": "field",
+              "name": "loading",
+              "description": "Whether a data request is in flight"
+            },
+            {
+              "kind": "field",
+              "name": "error",
+              "description": "Error from the latest failed load"
+            },
+            {
               "kind": "getter",
               "name": "controlClasses",
               "description": "Effective host classes, resolved against the current global defaults. Set null to follow defaults; empty role strings opt back into the grid skin."
@@ -396,6 +421,12 @@
             },
             {
               "name": "columnVisibility"
+            },
+            {
+              "name": "connected"
+            },
+            {
+              "name": "disconnected"
             },
             {
               "name": "edit"

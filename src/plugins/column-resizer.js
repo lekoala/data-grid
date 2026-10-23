@@ -140,22 +140,31 @@ class ColumnResizer extends BasePlugin {
         const startW = col.offsetWidth;
         const minWidth = getColumnMinWidth(col);
         const resizeDirection = grid.options.dir === "rtl" ? -1 : 1;
+        const initialWidths = visibleCols.map((cell) => cell.getAttribute("width"));
+        const flexibleCols = new Set(
+            visibleCols.filter((cell) => {
+                const column = grid.getColumns().find((column) => grid.getColumnId(column) === cell.dataset.columnId);
+                return !cell.classList.contains("dg-not-resizable") && !column?.virtual && !column?.width;
+            }),
+        );
         let reservedWidth = 0;
         for (let j = 0; j < visibleCols.length; j++) {
             if (j < columnIndex) {
                 reservedWidth += visibleCols[j].offsetWidth;
             } else if (j > columnIndex) {
-                reservedWidth += getColumnMinWidth(visibleCols[j]);
+                reservedWidth += flexibleCols.has(visibleCols[j])
+                    ? getColumnMinWidth(visibleCols[j])
+                    : visibleCols[j].offsetWidth;
             }
         }
         const viewportWidth = grid.scrollEl.clientWidth;
         const maxWidth =
             viewportWidth > 0 ? Math.max(minWidth, viewportWidth - reservedWidth) : Number.POSITIVE_INFINITY;
 
-        // Remove width from next columns to allow auto layout
+        // Only auto-sized columns may yield space; configured and user widths stay authoritative.
         col.setAttribute("width", String(startW));
         for (let j = 0; j < visibleCols.length; j++) {
-            if (j > columnIndex) {
+            if (j > columnIndex && flexibleCols.has(visibleCols[j])) {
                 visibleCols[j].removeAttribute("width");
             }
         }
@@ -199,6 +208,15 @@ class ColumnResizer extends BasePlugin {
             this._resizeController = null;
 
             if (!commit) {
+                for (const [index, cell] of visibleCols.entries()) {
+                    const width = initialWidths[index];
+                    if (width === null) {
+                        cell.removeAttribute("width");
+                    } else {
+                        cell.setAttribute("width", width);
+                    }
+                }
+                grid.queueFrozenSync();
                 return;
             }
             // Commit the user width back to the base column model so later

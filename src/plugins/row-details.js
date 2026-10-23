@@ -177,7 +177,7 @@ class RowDetails extends BasePlugin {
         }
 
         const id = this.#detailId(rowIndex);
-        const current = document.getElementById(id);
+        const current = [...(this.grid.tbody?.children ?? [])].find((row) => row.id === id);
         if (!expanded) {
             current?.remove();
         } else if (!current) {

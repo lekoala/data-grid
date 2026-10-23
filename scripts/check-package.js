@@ -10,6 +10,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 
+if (!Bun.which(process.platform === "win32" ? "npm.cmd" : "npm")) {
+    console.error("Package check requires npm (npm pack --dry-run --json). Install npm and retry bun run check:package.");
+    process.exit(1);
+}
+
 const npmCommand = process.platform === "win32" ? process.env.ComSpec ?? "cmd.exe" : "npm";
 const npmArgs =
     process.platform === "win32"

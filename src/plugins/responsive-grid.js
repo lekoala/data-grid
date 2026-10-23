@@ -501,7 +501,7 @@ class ResponsiveGrid extends BasePlugin {
                 continue;
             }
             const id = this.grid.getColumnId(column);
-            const td = tr.querySelector(`:scope > td[data-column-id="${id}"]`);
+            const td = [...tr.children].find((cell) => cell.getAttribute("data-column-id") === id);
             if (!td) {
                 continue;
             }

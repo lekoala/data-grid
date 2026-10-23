@@ -141,3 +141,19 @@ test("a frozen end declarative column is parsed and rendered", async () => {
     expect(inst.querySelector('th[data-column-id="name"]').dataset.frozen).toBe("end");
     document.body.removeChild(inst);
 });
+
+test("visibility and frozen offsets accept column identifiers with CSS metacharacters", async () => {
+    const id = 'a"[odd]\\field';
+    const inst = await makeReadyGrid({ columns: [{ field: id, frozen: "start" }, { field: "b" }] }, [
+        { [id]: "a", b: "b" },
+    ]);
+    const cells = [...inst.querySelectorAll("[data-column-id]")].filter((cell) => cell.dataset.columnId === id);
+    inst.syncFrozenColumns();
+    expect(cells.length).toBeGreaterThan(1);
+    expect(cells.every((cell) => cell.hasAttribute("data-frozen-edge"))).toBe(true);
+    inst.hideColumn(id);
+    expect(cells.every((cell) => cell.hidden)).toBe(true);
+    inst.showColumn(id);
+    expect(cells.every((cell) => !cell.hidden)).toBe(true);
+    document.body.removeChild(inst);
+});

@@ -27,7 +27,12 @@ export default function normalizeData(v) {
             if (val.indexOf('"') === -1) {
                 val = val.replace(/'/g, '"');
             }
-            return JSON.parse(decodeURIComponent(val));
+            // Preserve literal percent signs and percent-encoded text in valid JSON.
+            try {
+                return JSON.parse(val);
+            } catch {
+                return JSON.parse(decodeURIComponent(val));
+            }
         } catch {
             console.error(`Failed to parse ${v}`);
             return {};

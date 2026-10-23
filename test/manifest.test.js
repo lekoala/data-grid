@@ -6,6 +6,14 @@ const grid = manifest.modules
     .find((declaration) => declaration.name === "DataGrid");
 
 describe("custom elements manifest", () => {
+    test("includes public response state and inherited lifecycle events", () => {
+        for (const name of ["rows", "total", "meta", "loading", "error"]) {
+            expect(grid.members.find((member) => member.name === name)?.kind).toBe("field");
+        }
+        for (const name of ["connected", "disconnected"]) {
+            expect(grid.events.some((event) => event.name === name)).toBe(true);
+        }
+    });
     test("includes public async methods", () => {
         expect(grid.members.find((member) => member.name === "loadLabels")).toMatchObject({
             kind: "method",
