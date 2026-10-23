@@ -7,11 +7,35 @@ not documented.
 
 ## [Unreleased]
 
+## [3.7.1] - 2026-10-23
+
+### Added
+
+- Added migration guides from DataTables and ShadTable / TanStack Table.
+
+### Changed
+
+- Updated the runtime dependency on `@lekoala/floating` to `^0.3.1`.
+- Completed the public API manifest and documentation for grid state, events,
+  plugin label updates and progressive pagination labels.
+
 ### Fixed
 
 - `column.attr` now refuses event-handler names (`on*`, case-insensitive) and
   non-string values at column normalization: the column renders normally and an
   error is logged, so a row value can no longer become executable code.
+- Fixed column visibility, frozen positioning, autosizing and responsive cells
+  with column IDs containing quotes or other CSS selector characters. Nested
+  grids keep their own column visibility and frozen state.
+- Fixed autosizing after body-only renders and measured available width from
+  the scroll viewport.
+- Fixed column resizing overwriting configured or user-set widths on following
+  columns; canceled resizes now restore the original widths.
+- Fixed row lookup and local removal with index-based fallback keys, including
+  sorted and filtered pages, and action menus for repeated row objects.
+- Fixed row details looking up their content outside the owning grid.
+- Fixed JSON attribute parsing corrupting literal percent signs and
+  percent-encoded text in otherwise valid JSON.
 
 ## [3.7.0] - 2026-10-18
 
