@@ -212,6 +212,16 @@ function orderColumns(columns) {
   }
   return [...start.reverse(), ...middle, ...end];
 }
+function sanitizeRowAttribute(attr) {
+  if (typeof attr !== "string") {
+    return "";
+  }
+  const name = attr.trim();
+  if (name.toLowerCase().startsWith("on")) {
+    return "";
+  }
+  return name;
+}
 function isColumnHidden(column) {
   return Boolean(column.hidden || column.responsiveHidden);
 }
@@ -1933,6 +1943,16 @@ var CORE_EVENTS = [
 function formatLabel(template, values) {
   return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
 }
+function normalizeRowAttribute(column) {
+  if (!column.attr) {
+    return;
+  }
+  const attr = sanitizeRowAttribute(column.attr);
+  if (!attr) {
+    console.error("Refused column attr", column.attr, "must be a non-event-handler string");
+  }
+  column.attr = attr;
+}
 var DEFAULT_OPTIONS = {
   controlClasses: null,
   id: null,
@@ -2405,6 +2425,9 @@ class DataGrid extends base_element_default {
   buildColumns() {
     const columns = this.convertColumns(this.options.columns);
     this.runPlugins("extendColumns", columns);
+    for (const column of columns) {
+      normalizeRowAttribute(column);
+    }
     return orderColumns(columns);
   }
   getColumns() {
@@ -2430,6 +2453,7 @@ class DataGrid extends base_element_default {
           col.field = item;
         } else if (typeof item === "object") {
           col = Object.assign(col, item);
+          normalizeRowAttribute(col);
           if (!col.field && !col.id) {
             console.error("Invalid column definition", item);
           }

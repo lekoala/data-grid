@@ -10,6 +10,15 @@ export type FilterOption = import("./data-source.js").FilterOption;
  */
 export declare function orderColumns(columns: Column[]): Column[];
 /**
+ * Row attributes are developer-named but row-data-valued, so an event-handler
+ * name would turn data into code. Only a `<tr>` is targeted, where URL and
+ * embedded-document attributes are inert; re-audit this ban when the
+ * destination changes.
+ * @param {unknown} attr
+ * @returns {String} the usable attribute name, or "" when it must be ignored
+ */
+export declare function sanitizeRowAttribute(attr: unknown): string;
+/**
  * Explicit and responsive visibility are distinct states but share the same
  * rendered result.
  * @param {Column} column

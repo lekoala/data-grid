@@ -11,6 +11,7 @@ import {
     isColumnHidden,
     isPercentColumn,
     orderColumns,
+    sanitizeRowAttribute,
 } from "./columns.js";
 import BaseElement from "./core/base-element.js";
 import { ArrayDataSource, FetchDataSource, normalizeTotal } from "./data-source.js";
@@ -109,7 +110,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String|((ctx: CellContext) => String|null|undefined)} [cellClass] - class(es) for body cells only, evaluated per row at render time. Unlike `class`, never applied to header or filter cells
- * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field. The attribute name is developer-controlled but the value comes from row data: never use an event-handler name (e.g. `attr: "onclick"` executes when set with a data value)
+ * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field. The attribute name is developer-controlled but the value comes from row data, so event-handler names (e.g. `attr: "onclick"`) and non-string values are refused during column normalization
  * @property {Boolean} [hidden] - hide the column
  * @property {Boolean} [sortable] - disable sorting for this column (defaults to the grid-wide `sortable`)
  * @property {Boolean} [filterable] - disable filtering for this column (defaults to the grid-wide `filterable`)
@@ -384,6 +385,24 @@ const CORE_EVENTS = [
  */
 function formatLabel(template, values) {
     return template.replace(LABEL_PLACEHOLDER_PATTERN, (_, key) => String(values[key] ?? ""));
+}
+
+/**
+ * Enforce the row attribute contract on one column: refuse event-handler names
+ * and non-string values so a row value can never become code.
+ * @param {Column} column
+ */
+function normalizeRowAttribute(column) {
+    if (!column.attr) {
+        return;
+    }
+    const attr = sanitizeRowAttribute(column.attr);
+    if (!attr) {
+        // Never interpolate: a Symbol or a null-prototype object throws on
+        // string conversion, and refusing the value must not fail the render.
+        console.error("Refused column attr", column.attr, "must be a non-event-handler string");
+    }
+    column.attr = attr;
 }
 
 /**
@@ -1216,6 +1235,11 @@ class DataGrid extends BaseElement {
     buildColumns() {
         const columns = this.convertColumns(this.options.columns);
         this.runPlugins("extendColumns", columns);
+        // Plugins add columns after the config boundary: gate them too, so the
+        // header/filter skip and the row render agree on what `attr` means.
+        for (const column of columns) {
+            normalizeRowAttribute(column);
+        }
         return orderColumns(columns);
     }
 
@@ -1262,6 +1286,9 @@ class DataGrid extends BaseElement {
                     col.field = item;
                 } else if (typeof item === "object") {
                     col = Object.assign(col, item);
+                    // `attr` is the only place where row data becomes an
+                    // attribute name chosen by the developer.
+                    normalizeRowAttribute(col);
                     if (!col.field && !col.id) {
                         console.error("Invalid column definition", item);
                     }

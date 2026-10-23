@@ -83,6 +83,43 @@ properties would then be optional, not automatic.
   `_disconnected`) accessible; other `DataGrid` state and helpers should be
   private unless they are part of the documented public or plugin API.
 
+## Data contracts
+
+The expensive defects here are boundary defects: correct in the nominal path,
+wrong once two states or two moments overlap. State the contract and test the
+transition, not only the settled state.
+
+- One authority per datum: `#query` owns the request, `rows` / `total` / `meta`
+  own the server response, the DOM is their projection. Never read identity or
+  state back from the projection: selection uses `rowKey`, a column uses
+  `column.id`, never a cell position or its text.
+- `total` is `null` when unknown, never zero: do not derive "0 of 0", page
+  counts or full-selection claims from it. `normalizeTotal()` is the only
+  coercion, and classic pagination's finite-total fallback lives in
+  `applyResult()`, not in render or selection code.
+- A request is an intent with a deadline. A late response, progressive chunk or
+  plugin callback must not overwrite a newer query or emit a stale commit event.
+  Paging, sorting, filtering, searching or replacing the source while a load is
+  in flight is a normal transition, not an edge case.
+- Lifecycle: work started before `_disconnected` must not mutate the grid after
+  it, and reconnect must not build twice. Cancel or ignore in-flight work
+  instead of guarding every continuation separately.
+- Effective native state wins over the reflected property: read
+  `matches(":disabled")` rather than `.disabled` when a parent fieldset can
+  disable a control, and respect native defaults, form reset and focus behavior
+  on controls the grid reuses.
+
+## Row attributes
+
+`Column.attr` names an attribute from developer configuration but fills it from
+row data, so it is an injection sink by construction. `normalizeRowAttribute()`
+runs in `convertColumns()` for the declared config and again in `buildColumns()`
+after plugins extend the list, so no column reaches render unchecked: it refuses
+`on*` names (case-insensitive, whitespace trimmed) and non-string values, logs an
+error and renders the column normally. The destination is a `<tr>`, where URL
+and `srcdoc` attributes are inert; re-audit the ban list before applying the
+value to another element.
+
 ## Public surface
 
 A small, flexible, powerful grid — not a monster to configure. Every public knob
@@ -177,6 +214,13 @@ Avoid:
   use `Space`, which activates on keyup. Reuse a key/gesture already proven in
   the suite; a new interaction primitive must be shown to reach the element
   before the assertion around it is trusted.
+- Test transitions, not only settled states: a second intent completing before
+  the awaited one, a page/source/sort/filter change during the await, a
+  disconnect during the await, and the inverse operation. A stale completion
+  may neither overwrite newer state nor emit its commit event.
+- Distribution is part of the contract: `dist.test.js` and `standalone.test.js`
+  assert the published modes, and `bun run ci` rebuilds and diffs committed
+  artifacts. A green `src/` run alone does not prove what ships.
 
 ## Documentation
 

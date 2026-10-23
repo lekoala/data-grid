@@ -5,6 +5,14 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
+## [Unreleased]
+
+### Fixed
+
+- `column.attr` now refuses event-handler names (`on*`, case-insensitive) and
+  non-string values at column normalization: the column renders normally and an
+  error is logged, so a row value can no longer become executable code.
+
 ## [3.7.0] - 2026-10-18
 
 ### Breaking / migration

@@ -65,6 +65,35 @@ test("extendColumns injects a virtual column rendered by renderCell", async () =
     document.body.removeChild(inst);
 });
 
+test("extendColumns cannot bypass the row attribute gate", async () => {
+    class UnsafeAttrPlugin {
+        constructor(grid) {
+            this.grid = grid;
+        }
+        extendColumns(columns) {
+            columns.push({ field: "name", attr: "onclick" });
+        }
+    }
+
+    const originalError = console.error;
+    const errors = [];
+    console.error = (...args) => errors.push(args.join(" "));
+    try {
+        const inst = await makeReadyGrid({ UnsafeAttrPlugin }, { columns: [{ field: "id" }] }, [
+            { id: 1, name: "globalThis.__dgPwned = true" },
+        ]);
+        const tr = inst.querySelector("tbody tr");
+        expect(tr.hasAttribute("onclick")).toBe(false);
+        // The refused column is a normal column: header and cell stay aligned
+        expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(2);
+        expect(tr.querySelectorAll("td")).toHaveLength(2);
+        expect(errors.some((error) => error.includes("Refused column attr"))).toBe(true);
+        document.body.removeChild(inst);
+    } finally {
+        console.error = originalError;
+    }
+});
+
 test("SelectableRows and RowActions inject start/end columns", async () => {
     const inst = await makeReadyGrid(
         { SelectableRows, RowActions },

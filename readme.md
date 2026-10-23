@@ -462,7 +462,7 @@ response protection).
 | `id`                                    | `String`             | stable identifier (defaults to `field`)                                 |
 | `width`                                 | `Number`             | preferred width (the column stays flexible without one)                 |
 | `class`                                 | `String`             | class on the column (`th.class` / `td.class`)                           |
-| `attr`                                  | `String`             | set a row attribute instead of rendering                                |
+| `attr`                                  | `String`             | set a row attribute instead of rendering (`on*` names are refused)      |
 | `hidden`                                | `Boolean`            | hide the column                                                         |
 | `sortable`                              | `Boolean`            | disable sorting for this column (defaults to grid)                      |
 | `filterable`                            | `Boolean`            | disable filtering for this column (defaults to grid)                    |

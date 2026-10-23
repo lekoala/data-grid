@@ -242,8 +242,9 @@ styled:
 
 A column with `attr` skips its cell and sets the named attribute on the row
 from the field value instead (e.g. `attr: "class"` adds classes). The name is
-developer-controlled but the value comes from row data: never use an
-event-handler name such as `attr: "onclick"`.
+developer-controlled but the value comes from row data, so event-handler names
+such as `attr: "onclick"` and non-string names are refused during column
+normalization (an error is logged) and the column renders normally.
 
 The loading status is already announced by the grid's live region. Applications
 that also want a visible indicator, especially during the otherwise empty first

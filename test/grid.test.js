@@ -398,6 +398,69 @@ test("row attr class coerces non-strings and ignores empty values", async () => 
     removeGrid(inst);
 });
 
+test("row attr refuses event-handler names and non-strings instead of executing data", async () => {
+    const originalError = console.error;
+    const errors = [];
+    console.error = (...args) => errors.push(args.join(" "));
+    try {
+        const inst = await makeReadyGrid(
+            {
+                columns: [
+                    { field: "payload", attr: "onclick" },
+                    { field: "hover", attr: " OnMouseOver " },
+                    { field: "name" },
+                ],
+            },
+            [{ id: 1, payload: "globalThis.__dgPwned = true", hover: "x", name: "Alice" }],
+        );
+        const tr = inst.querySelector("tbody tr");
+        expect(tr.hasAttribute("onclick")).toBe(false);
+        expect(tr.hasAttribute("onmouseover")).toBe(false);
+        // A refused attr column renders as an ordinary data column
+        expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(3);
+        expect(tr.querySelectorAll("td")).toHaveLength(3);
+        expect(errors.filter((error) => error.includes("Refused column attr"))).toHaveLength(2);
+        removeGrid(inst);
+
+        // A non-string name would throw in setAttribute: refuse it at normalization
+        const inst2 = await makeReadyGrid({ columns: [{ field: "n", attr: 42 }] }, [{ id: 1, n: "value" }]);
+        expect(inst2.querySelector("tbody td").textContent).toBe("value");
+        expect(inst2.querySelector("tbody tr").hasAttribute("42")).toBe(false);
+        expect(inst2.options.columns[0].attr).toBe("");
+        removeGrid(inst2);
+    } finally {
+        console.error = originalError;
+    }
+});
+
+test("row attr refuses values that cannot be stringified", async () => {
+    const originalError = console.error;
+    const logged = [];
+    // Keep the raw arguments: joining would throw on a Symbol or a
+    // null-prototype object, which is exactly what must not break rendering.
+    console.error = (...args) => logged.push(args);
+    try {
+        const inst = await makeReadyGrid(
+            {
+                columns: [
+                    { field: "sym", attr: Symbol("onclick") },
+                    { field: "proto", attr: Object.create(null) },
+                    { field: "name" },
+                ],
+            },
+            [{ id: 1, sym: "a", proto: "b", name: "Alice" }],
+        );
+        const tr = inst.querySelector("tbody tr");
+        expect(inst.querySelectorAll("thead tr.dg-head-columns th")).toHaveLength(3);
+        expect(tr.querySelectorAll("td")).toHaveLength(3);
+        expect(inst.options.columns.every((column) => column.attr === "")).toBe(true);
+        expect(logged.filter((args) => args.includes("Refused column attr"))).toHaveLength(2);
+        removeGrid(inst);
+    } finally {
+        console.error = originalError;
+    }
+});
+
 test("uppercase/lowercase transforms coerce non-strings instead of throwing", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "n", transform: "uppercase" }] }, [{ id: 1, n: 42 }]);
     expect(inst.querySelector("tbody td").textContent).toBe("42");

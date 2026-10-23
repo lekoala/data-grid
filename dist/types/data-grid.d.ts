@@ -88,7 +88,7 @@ export type Column = {
      */
     cellClass?: string | ((ctx: CellContext) => string | null | undefined);
     /**
-     * - don't render the column and set a matching attribute on the row with the value of the field. The attribute name is developer-controlled but the value comes from row data: never use an event-handler name (e.g. `attr: "onclick"` executes when set with a data value)
+     * - don't render the column and set a matching attribute on the row with the value of the field. The attribute name is developer-controlled but the value comes from row data, so event-handler names (e.g. `attr: "onclick"`) and non-string values are refused during column normalization
      */
     attr?: string;
     /**
