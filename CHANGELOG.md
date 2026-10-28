@@ -10,22 +10,25 @@ not documented.
 ### Added
 
 - Declarative cell templates: a direct-child `<template data-cell="field">`
-  renders a column's cells without JavaScript. `data-dg-text="value"` receives
-  the raw scalar value through `textContent`, and the rendered cell exposes it
+  renders a column's cells without a JavaScript renderer.
+  `data-dg-text="value"` receives the raw scalar value through `textContent`, and the rendered cell exposes it
   as `data-value` for CSS. Templates replay on every render, including after
   `updateRow()`, and take precedence over the authored cell markup and
   `format`/`transform` (`renderCell` still wins). Unsafe templates (`script`,
   `style`, `on*`, executable URL protocols) are ignored and fall back to the
-  default renderer; `data:` remains available for image/media `src`.
+  default renderer; `data:` remains available for image/media `src`. Templates
+  remain trusted application HTML: these checks are not a sanitizer.
 - Row details dialog: `detailsDisplay: "dialog"` (attribute
   `details-display="dialog"`) opens row details in a modal `<dialog>` instead of
-  an inline row. Without `rowDetails`, the grid composes a record sheet from its
-  visible and responsive-hidden columns; `rowDetails` content, when present, is
+  an inline row. The grid composes a record sheet from its visible and
+  responsive-hidden columns; `rowDetails` content, when present, is
   appended after it. The option is initial-only. `RowDetails.expand()`,
   `collapse()`, `toggle()`, `isExpanded()` and `collapseAll()` keep their
   contract, `rowDetailsToggle` reports open and close, and the dialog survives
-  body rerenders. `closeDialog` is a new translatable label. Long row labels
-  wrap in the dialog header instead of running under the close button, and the
+  body rerenders, keeping the snapshot captured when opened. The `RowDetails`
+  plugin is required; `rowDetailsStartOpen` is ignored in dialog mode.
+  `closeDialog` is a new translatable label. Long row labels wrap in the dialog
+  header instead of running under the close button, and the
   row control uses a consultation (eye) icon instead of the inline chevron.
 - Icon tokens: `--dg-icon-search`, `--dg-icon-actions`, `--dg-icon-disclosure`,
   `--dg-icon-details`, `--dg-icon-filter-text` and `--dg-icon-close` expose the
@@ -34,6 +37,11 @@ not documented.
 - `dg-caret` draws the shared select caret on a positioned element, for custom
   editors or datalist inputs; the actions demo uses it to replace the native
   datalist glyph.
+- Full-record editing example in `demo/full-edit.html`: an application-owned
+  dialog loads a server-rendered form over AJAX, displays validation errors
+  (HTTP 422), then refreshes the grid after a successful save. The application
+  owns the form, endpoints and validation; no form-management API is added to
+  the grid.
 
 ### Changed
 
@@ -46,8 +54,18 @@ not documented.
 - `action` is cancelable and its detail now includes `originalEvent`. Calling
   `preventDefault()` in the listener blocks the native link navigation, which
   lets an application take over a row action (a full edit, for example) while
-  uncanceled clicks keep navigating and Ctrl/Cmd+click keeps opening a new tab.
-  See `demo/full-edit.html`.
+  uncanceled clicks keep navigating. Applications can inspect `originalEvent`
+  to leave modified clicks (including Ctrl/Cmd+click) to the browser, as shown
+  in `demo/full-edit.html`.
+
+### Fixed
+
+- Retrying `loadMore()` after an error-state body render replaces the error row
+  with the loaded records instead of appending new rows below it and leaving
+  previously loaded records absent from the DOM.
+- Canceled link actions in the collapsed row actions popover now return focus
+  to the toggle instead of dropping it with the hidden menu; a navigating link
+  still lets the browser follow it.
 - Inline row action links share the button box model (`box-sizing: border-box`),
   so an action rendered as `<a>` has the same dimensions as a `<button>`.
 - Sort indicators are vertically centered with the header label.
@@ -84,9 +102,6 @@ not documented.
 - Fixed row details looking up their content outside the owning grid.
 - Fixed JSON attribute parsing corrupting literal percent signs and
   percent-encoded text in otherwise valid JSON.
-- Canceled link actions in the collapsed row actions popover now return focus
-  to the toggle instead of dropping it with the hidden menu; a navigating link
-  still lets the browser follow it.
 
 ## [3.7.0] - 2026-10-18
 
