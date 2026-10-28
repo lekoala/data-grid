@@ -5,14 +5,14 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
-## [Unreleased]
+## [3.8.0] - 2026-10-28
 
 ### Added
 
 - Declarative cell templates: a direct-child `<template data-cell="field">`
-  renders a column's cells without a JavaScript renderer.
-  `data-dg-text="value"` receives the raw scalar value through `textContent`, and the rendered cell exposes it
-  as `data-value` for CSS. Templates replay on every render, including after
+  renders a column's cells without a JavaScript renderer. `data-dg-text="value"`
+  receives the raw scalar value through `textContent`, and the rendered cell
+  exposes it as `data-value` for CSS. Templates replay on every render, including after
   `updateRow()`, and take precedence over the authored cell markup and
   `format`/`transform` (`renderCell` still wins). Unsafe templates (`script`,
   `style`, `on*`, executable URL protocols) are ignored and fall back to the
