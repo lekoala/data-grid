@@ -60,14 +60,8 @@ data-grid .dg-actions-toggle::before {
   display: block;
   inline-size: 1.125em;
   block-size: 1.125em;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
+  -webkit-mask: var(--dg-icon-actions) center / contain no-repeat;
+  mask: var(--dg-icon-actions) center / contain no-repeat;
 }
 
 data-grid .dg-actions.dg-actions-2 button.dg-skin,

@@ -42,6 +42,28 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-selection-column-width` | `40px`                  | selection column width         |
 | `--dg-actions-column-width`   | `48px`                  | collapsed actions column width |
 | `--dg-radius`                 | `8px`                   | table / control / menu radius  |
+| `--dg-icon-search`            | inline SVG              | global search icon             |
+| `--dg-icon-actions`           | inline SVG              | collapsed actions toggle icon  |
+| `--dg-icon-disclosure`        | inline SVG              | disclosure chevron (responsive + inline details) |
+| `--dg-icon-details`           | inline SVG              | dialog row details eye         |
+| `--dg-icon-filter-text`       | inline SVG              | text filter hint icon          |
+| `--dg-icon-close`             | inline SVG              | dialog close button icon       |
+
+Icon tokens hold a monochrome mask URL, painted with `currentColor`. Override one
+on `data-grid` to swap a pictogram; the defaults are inline SVG data URIs.
+`--dg-icon-details` is only used in dialog mode and `--dg-icon-disclosure` in
+inline mode, so a theme can distinguish the two interactions:
+
+```css
+data-grid {
+    --dg-icon-actions: url("/icons/more-horizontal.svg");
+    --dg-icon-search: url("/icons/search.svg");
+}
+```
+
+The `mask` shorthand is applied on the consumer, never the default value: a
+token declared on the pseudo-element would shadow the value inherited from the
+host.
 
 ## Host control classes
 
@@ -417,7 +439,8 @@ the grid itself does not depend on it.
 The responsive toggle column (`$responsive`) and the row details toggle column
 (`$details`) render the same primitive: a `.dg-disclosure` icon button inside a
 `.dg-disclosure-cell`. Geometry and colors are shared, the inline chevron rotates
-on open, and the row details dialog mode replaces the mask with an eye:
+on open, and the row details dialog mode swaps the mask to an eye through
+`--dg-icon-disclosure` and `--dg-icon-details`:
 
 ```css
 data-grid .dg-disclosure {

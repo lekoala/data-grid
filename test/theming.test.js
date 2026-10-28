@@ -52,7 +52,7 @@ test("empty text filters show an I-beam affordance, mirrored in RTL", () => {
     expect(coreCss).toMatch(
         /\.dg-text-field:has\(\s*>\s*input\.dg-filter-control\[placeholder=""\]:not\(:focus\):placeholder-shown\)::?after/,
     );
-    expect(coreCss).toMatch(/\.dg-text-field[\s\S]*?mask-image: url\(/);
+    expect(coreCss).toMatch(/\.dg-text-field[\s\S]*?mask: var\(--dg-icon-filter-text\)/);
     expect(coreCss).toMatch(
         /\[dir="rtl"\] thead tr\.dg-head-filters input\.dg-filter-control \{\s*padding-right: var\(--dg-padding-x\);\s*padding-left: 32px/,
     );
@@ -64,8 +64,16 @@ test("decorative SVG masks keep standard and legacy WebKit declarations", () => 
     for (const selector of [".dg-search-icon", ".dg-actions-toggle:before", ".dg-disclosure:before"]) {
         const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         expect(coreCss).toMatch(
-            new RegExp(`${escaped} \\{[\\s\\S]*?-webkit-mask-image: url\\([\\s\\S]*?mask-image: url\\(`),
+            new RegExp(
+                `${escaped} \\{[\\s\\S]*?-webkit-mask: var\\(--dg-icon-[a-z-]+\\)[\\s\\S]*?mask: var\\(--dg-icon-[a-z-]+\\)`,
+            ),
         );
+    }
+});
+
+test("icon masks are defined once as overridable tokens", () => {
+    for (const name of ["search", "actions", "disclosure", "details", "filter-text", "close"]) {
+        expect(coreCss).toContain(`--dg-icon-${name}: url(`);
     }
 });
 

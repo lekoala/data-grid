@@ -27,6 +27,10 @@ not documented.
   body rerenders. `closeDialog` is a new translatable label. Long row labels
   wrap in the dialog header instead of running under the close button, and the
   row control uses a consultation (eye) icon instead of the inline chevron.
+- Icon tokens: `--dg-icon-search`, `--dg-icon-actions`, `--dg-icon-disclosure`,
+  `--dg-icon-details`, `--dg-icon-filter-text` and `--dg-icon-close` expose the
+  built-in pictograms as monochrome mask URLs. Override one on `data-grid` to
+  swap a pictogram without a new JavaScript API.
 
 ### Changed
 

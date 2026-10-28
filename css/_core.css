@@ -64,6 +64,14 @@ data-grid {
   --dg-actions-column-width: 48px;
   --dg-radius: 8px;
 
+  /* icons (monochrome masks; override the URL on the host to swap a pictogram) */
+  --dg-icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
+  --dg-icon-actions: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Ccircle cx='5' cy='12' r='1.75'/%3E%3Ccircle cx='12' cy='12' r='1.75'/%3E%3Ccircle cx='19' cy='12' r='1.75'/%3E%3C/svg%3E");
+  --dg-icon-disclosure: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='m9 6 6 6-6 6' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  --dg-icon-details: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
+  --dg-icon-filter-text: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 2h8v1H9v10h3v1H4v-1h3V3H4z'/%3E%3C/svg%3E");
+  --dg-icon-close: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6 6 18' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+
   /* internal tokens */
   --dg-padding-half: calc(var(--dg-padding-y) / 2);
   --dg-icon-scale: 1;
@@ -387,14 +395,8 @@ data-grid .dg-search-icon {
   inline-size: 16px;
   block-size: 16px;
   left: var(--dg-control-padding-inline);
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
-  -webkit-mask-position: center;
-  -webkit-mask-repeat: no-repeat;
-  -webkit-mask-size: contain;
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0'/%3E%3C/svg%3E");
-  mask-position: center;
-  mask-repeat: no-repeat;
-  mask-size: contain;
+  -webkit-mask: var(--dg-icon-search) center / contain no-repeat;
+  mask: var(--dg-icon-search) center / contain no-repeat;
   pointer-events: none;
   position: absolute;
   top: 50%;
@@ -739,14 +741,8 @@ data-grid .dg-text-field {
     background-color: currentColor;
     color: var(--dg-muted-color);
     opacity: 0.65;
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 2h8v1H9v10h3v1H4v-1h3V3H4z'/%3E%3C/svg%3E");
-    -webkit-mask-position: center;
-    -webkit-mask-repeat: no-repeat;
-    -webkit-mask-size: contain;
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 2h8v1H9v10h3v1H4v-1h3V3H4z'/%3E%3C/svg%3E");
-    mask-position: center;
-    mask-repeat: no-repeat;
-    mask-size: contain;
+    -webkit-mask: var(--dg-icon-filter-text) center / contain no-repeat;
+    mask: var(--dg-icon-filter-text) center / contain no-repeat;
     pointer-events: none;
     position: absolute;
     right: 12px;

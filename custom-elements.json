@@ -564,6 +564,24 @@
             },
             {
               "name": "--dg-radius"
+            },
+            {
+              "name": "--dg-icon-search"
+            },
+            {
+              "name": "--dg-icon-actions"
+            },
+            {
+              "name": "--dg-icon-disclosure"
+            },
+            {
+              "name": "--dg-icon-details"
+            },
+            {
+              "name": "--dg-icon-filter-text"
+            },
+            {
+              "name": "--dg-icon-close"
             }
           ]
         }
