@@ -18,21 +18,26 @@
 
 <body>
   <header>
-        <div data-demo-nav></div>
-        <script type="module">
-          import { renderDemoNav } from "./nav.js";
-          renderDemoNav();
-        </script>
-    <h1>Built-in formatters</h1>
+    <h1>Data Grid</h1>
+    <p><em>Standalone data grid web component</em></p>
+  </header>
+
+  <main>
+    <div data-demo-nav></div>
+    <script type="module">
+      import { renderDemoNav } from "./nav.js";
+      renderDemoNav();
+    </script>
+
+    <h2>Built-in formatters</h2>
+
     <p>Four built-in formatters turn raw values into semantic HTML: <code>boolean</code>, <code>date</code>,
       <code>datetime</code> and <code>number</code>. DataGrid provides the kind of representation, <code>Intl</code>
       provides its configuration through <code>formatOptions</code>. The formatters never touch cell layout — the core
       resolves geometry (<code>minWidth</code>, <code>align</code>) from the column options and the formatter defaults.
       The alignment applies to the whole column: header and body cells share the same axis.
     </p>
-  </header>
 
-  <main>
     <section class="demo-grid">
       <p class="demo-kicker">format / formatOptions</p>
       <h2>All four formatters</h2>
