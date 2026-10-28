@@ -183,6 +183,8 @@ test("a template inside a th is not collected", async () => {
 test.each([
     ["script", "<script>alert(1)</script>"],
     ["style", "<style>.x{color:red}</style>"],
+    ["SVG script", "<svg><script>alert(1)</script></svg>"],
+    ["SVG style", "<svg><style>.x{color:red}</style></svg>"],
     ["event attribute", '<span onclick="alert(1)">x</span>'],
     ["unsafe URL", '<a href="javascript:alert(1)">x</a>'],
     ["obfuscated unsafe URL", '<a href="java&#9;script:alert(1)">x</a>'],

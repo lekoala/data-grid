@@ -287,6 +287,50 @@ test("focus falls back to the row toggle when the browser leaves it on the body"
     document.body.removeChild(grid);
 });
 
+test.each(["expand", "toggle"])("dialog %s before connection has no effect", (method) => {
+    DataGrid.registerPlugins({ RowDetails });
+    const grid = new DataGrid({ columns: [{ field: "name" }], detailsDisplay: "dialog" });
+    grid.rows = ROWS;
+    const plugin = grid.getPlugin("RowDetails");
+    const events = [];
+    grid.addEventListener("rowDetailsToggle", (event) => events.push(event.detail));
+
+    expect(() => plugin[method]("1")).not.toThrow();
+
+    expect(plugin.isExpanded("1")).toBe(false);
+    expect(dialogOf(grid)).toBeNull();
+    expect(events).toHaveLength(0);
+});
+
+test.each(["expand", "toggle"])("dialog %s after removal stays closed and works after reconnect", async (method) => {
+    const grid = await makeReadyGrid({ detailsDisplay: "dialog" });
+    const plugin = grid.getPlugin("RowDetails");
+    plugin.expand("1");
+    const dialog = dialogOf(grid);
+    grid.remove();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const events = [];
+    grid.addEventListener("rowDetailsToggle", (event) => events.push(event.detail));
+
+    expect(() => plugin[method]("1")).not.toThrow();
+
+    expect(plugin.isExpanded("1")).toBe(false);
+    expect(dialog.open).toBe(false);
+    expect(events).toHaveLength(0);
+
+    const connected = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    document.body.appendChild(grid);
+    await connected;
+    plugin[method]("1");
+
+    expect(plugin.isExpanded("1")).toBe(true);
+    expect(dialogOf(grid).open).toBe(true);
+    expect(grid.querySelectorAll("dialog.dg-details-dialog")).toHaveLength(1);
+    expect(events).toHaveLength(1);
+    expect(events[0].expanded).toBe(true);
+    grid.remove();
+});
+
 test("disconnecting closes the dialog silently", async () => {
     const grid = await makeReadyGrid({ detailsDisplay: "dialog" });
     const events = [];

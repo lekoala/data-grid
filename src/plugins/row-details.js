@@ -447,6 +447,9 @@ class RowDetails extends BasePlugin {
 
     /** @param {String} rowKey */
     #openDialog(rowKey) {
+        if (!this.grid.isConnected) {
+            return;
+        }
         const key = String(rowKey);
         // Already showing this row: reopening would close and reopen the modal
         // (and emit a close/open pair) without changing the snapshot.

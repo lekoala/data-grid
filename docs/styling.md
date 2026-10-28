@@ -44,7 +44,7 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-radius`                 | `8px`                   | table / control / menu radius  |
 | `--dg-icon-search`            | inline SVG              | global search icon             |
 | `--dg-icon-actions`           | inline SVG              | collapsed actions toggle icon  |
-| `--dg-icon-disclosure`        | inline SVG              | disclosure chevron (responsive + inline details) |
+| `--dg-icon-disclosure`        | inline SVG              | disclosure chevron             |
 | `--dg-icon-details`           | inline SVG              | dialog row details eye         |
 | `--dg-icon-filter-text`       | inline SVG              | text filter hint icon          |
 | `--dg-icon-close`             | inline SVG              | dialog close button icon       |
@@ -511,17 +511,17 @@ The dialog never uses `:modal` (Chrome 105) and caps its height with `vh`, then
 `themes/actual.css` maps the dialog onto Actual's modal tokens without using its
 global `.modal` classes (also a Bootstrap class):
 
-| Element | Core | `themes/actual.css` |
-|---|---|---|
-| Surface | `--dg-bg` | `--surface-raised` |
-| Text | `--dg-color` | `--text` |
-| Border | `--dg-border-color` | `--border` |
-| Radius | `--dg-radius` | `--radius-lg` |
-| Shadow | literal | `--shadow` |
-| Header | `--dg-header-bg` | `--surface-subtle` |
-| Spacing | `--details-pad` | `--modal-pad` |
-| Width | `32rem` | `--modal-size` |
-| Backdrop | literal | `--backdrop-fill` |
+| Element  | Core                | `themes/actual.css` |
+|----------|---------------------|---------------------|
+| Surface  | `--dg-bg`           | `--surface-raised`  |
+| Text     | `--dg-color`        | `--text`            |
+| Border   | `--dg-border-color` | `--border`          |
+| Radius   | `--dg-radius`       | `--radius-lg`       |
+| Shadow   | literal             | `--shadow`          |
+| Header   | `--dg-header-bg`    | `--surface-subtle`  |
+| Spacing  | `--details-pad`     | `--modal-pad`       |
+| Width    | `32rem`             | `--modal-size`      |
+| Backdrop | literal             | `--backdrop-fill`   |
 
 DataGrid owns the dialog lifecycle (`showModal()`, `close()`, focus and events).
 Use an Actual CSS release whose dialog runtime excludes dialogs that live inside

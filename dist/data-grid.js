@@ -1246,7 +1246,7 @@ function templateText(value) {
 }
 function isSafeCellTemplate(template) {
   for (const element of template.content.querySelectorAll("*")) {
-    if (UNSAFE_ELEMENTS.has(element.tagName)) {
+    if (UNSAFE_ELEMENTS.has(element.tagName.toUpperCase())) {
       return false;
     }
     for (const attribute of Array.from(element.attributes)) {
@@ -7199,6 +7199,9 @@ class RowDetails extends base_plugin_default {
     }
   }
   #openDialog(rowKey) {
+    if (!this.grid.isConnected) {
+      return;
+    }
     const key = String(rowKey);
     if (this.#openKey === key && this.#dialog?.open) {
       return;
