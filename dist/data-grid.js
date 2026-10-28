@@ -2270,7 +2270,7 @@ class DataGrid extends base_element_default {
     this.#loadObserver = null;
     this.#lazyPending = false;
     this.#renderContext = null;
-    this.#renderedCount = 0;
+    this.#renderedCount = null;
     this.#frozenFrame = null;
     if (Object.hasOwn(this, "controlClasses")) {
       const value = this.controlClasses;
@@ -4511,7 +4511,7 @@ class DataGrid extends base_element_default {
     } else {
       this.table?.appendChild(tbody);
     }
-    this.#renderedCount = this.rows.length;
+    this.#renderedCount = this.hasDataError || !this.rows.length ? null : this.rows.length;
     this.paginate();
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
@@ -6407,7 +6407,7 @@ class RowActions extends base_plugin_default {
       const menu = this.menu;
       if (menu?.contains(el)) {
         menu.hidePopover?.();
-        if (el.tagName === "BUTTON") {
+        if (el.tagName === "BUTTON" || !accepted) {
           this.activeInvoker?.focus?.();
         }
       }

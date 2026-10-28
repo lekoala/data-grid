@@ -605,12 +605,14 @@ class RowActions extends BasePlugin {
                 ev.preventDefault();
             }
             // Close the shared collapsed actions popover after activation, once
-            // the action has been dispatched. A button returns focus to the
-            // invoker it came from; a link lets the navigation take over.
+            // the action has been dispatched. A button, or a link whose
+            // navigation the application canceled, has no native focus
+            // destination: return focus to the invoker. A navigating link lets
+            // the browser follow it.
             const menu = this.menu;
             if (menu?.contains(el)) {
                 menu.hidePopover?.();
-                if (el.tagName === "BUTTON") {
+                if (el.tagName === "BUTTON" || !accepted) {
                     this.activeInvoker?.focus?.();
                 }
             }

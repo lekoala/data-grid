@@ -303,12 +303,18 @@ test("canceling an action inside the collapsed popover prevents the click", asyn
         { RowActions },
     );
     inst.addEventListener("action", (ev) => ev.preventDefault());
-    inst.querySelector(".dg-actions-toggle").click();
+    const toggle = inst.querySelector(".dg-actions-toggle");
+    toggle.focus();
+    toggle.click();
     const link = inst.querySelector('.dg-actions-menu a[data-action="edit"]');
+    link.focus();
     const click = new MouseEvent("click", { bubbles: true, cancelable: true });
     link.dispatchEvent(click);
 
     expect(click.defaultPrevented).toBe(true);
+    // The canceled link no longer navigates, so focus returns to the invoker
+    // instead of falling to the document body with the hidden popover.
+    expect(document.activeElement).toBe(toggle);
 
     document.body.removeChild(inst);
 });

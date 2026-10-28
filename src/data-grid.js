@@ -662,9 +662,10 @@ class DataGrid extends BaseElement {
     #lazyPending;
     /** @type {import("./core/base-plugin.js").RenderContext|null} */
     #renderContext;
-    /** Number of records the current body DOM renders. Progressive chunks
-     * append only when the projection still matches the model.
-     * @type {Number} */
+    /** Number of records the current body DOM renders, or null when the body
+     * shows an empty or error state that an append cannot sit on. Progressive
+     * chunks append only when the projection still matches the model.
+     * @type {Number|null} */
     #renderedCount;
     /** @type {Number|null} */
     #frozenFrame;
@@ -857,10 +858,11 @@ class DataGrid extends BaseElement {
         this.#renderContext = null;
 
         /**
-         * Number of records the current body DOM renders, see renderBody.
-         * @type {Number}
+         * Number of records the current body DOM renders, or null when the
+         * body shows an empty or error row. See renderBody.
+         * @type {Number|null}
          */
-        this.#renderedCount = 0;
+        this.#renderedCount = null;
 
         /** @type {Number|null} */
         this.#frozenFrame = null;
@@ -1819,7 +1821,8 @@ class DataGrid extends BaseElement {
      * lifecycle runs afterwards, so plugins resynchronize their own state
      * (spacer row, open details, selection, action widths...).
      * Falls back to a full renderBody() when the projection no longer matches
-     * the model (detached tbody, external DOM change).
+     * the model (detached tbody, external DOM change, empty or error row
+     * rendered while the model already holds records).
      * @param {Number} firstNewRow
      */
     #appendRows(firstNewRow) {
@@ -4403,7 +4406,9 @@ class DataGrid extends BaseElement {
         } else {
             this.table?.appendChild(tbody);
         }
-        this.#renderedCount = this.rows.length;
+        // An append can only extend a body made of data rows: an error or empty
+        // row would otherwise stay in the middle of the list.
+        this.#renderedCount = this.hasDataError || !this.rows.length ? null : this.rows.length;
 
         this.paginate();
 

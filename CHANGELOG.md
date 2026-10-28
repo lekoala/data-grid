@@ -84,6 +84,9 @@ not documented.
 - Fixed row details looking up their content outside the owning grid.
 - Fixed JSON attribute parsing corrupting literal percent signs and
   percent-encoded text in otherwise valid JSON.
+- Canceled link actions in the collapsed row actions popover now return focus
+  to the toggle instead of dropping it with the hidden menu; a navigating link
+  still lets the browser follow it.
 
 ## [3.7.0] - 2026-10-18
 

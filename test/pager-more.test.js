@@ -255,6 +255,37 @@ test("a loadMore error keeps the rows and stays retryable", async () => {
     document.body.removeChild(inst);
 });
 
+test("a retry after a body render during an error replaces the error row", async () => {
+    const small = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `row${i}` }));
+    let failPage2 = true;
+    const ds = new ArrayDataSource(small);
+    const original = ds.load.bind(ds);
+    ds.load = (query, options) => {
+        if (query.page === 2 && failPage2) {
+            return Promise.reject(new Error("boom"));
+        }
+        return original(query, options);
+    };
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds }, null);
+
+    await inst.loadMore();
+    expect(inst.hasAttribute("data-error")).toBe(true);
+    // Any body render while the error is set materializes the error row after
+    // the loaded data rows.
+    inst.updateRow("1", { name: "edited" });
+    expect(inst.tbody.querySelectorAll(".dg-error-row")).toHaveLength(1);
+
+    failPage2 = false;
+    await inst.loadMore();
+
+    // The new chunk must not append after the stale error row.
+    expect(inst.rows).toHaveLength(30);
+    expect(inst.hasAttribute("data-error")).toBe(false);
+    expect(inst.tbody.querySelectorAll(":scope > tr.dg-data-row")).toHaveLength(30);
+    expect(inst.tbody.querySelectorAll(".dg-error-row")).toHaveLength(0);
+    inst.remove();
+});
+
 test("loadMore retries the first chunk after an initial load failure", async () => {
     const { ds, queries } = instrument(rows, { fail: new Set([1]) });
     const original = new ArrayDataSource(rows);
