@@ -125,24 +125,36 @@ test("loadLabels fetches and applies labels", async () => {
 });
 
 test("plugin registration merges by name and exposes a snapshot", () => {
+    class ExistingPlugin {}
     class FirstPlugin {}
     class ReplacementPlugin {}
 
-    const builtIns = DataGrid.registeredPlugins();
-    expect(Object.keys(builtIns).length > 0).toBeTruthy();
+    const original = DataGrid.registeredPlugins();
+    try {
+        // Other suites may clear the shared registry. Exercise both initial
+        // states explicitly rather than depending on file execution order.
+        for (const baseline of [{}, { ExistingPlugin }]) {
+            DataGrid.unregisterPlugins();
+            DataGrid.registerPlugins(baseline);
+            expect(DataGrid.registeredPlugins()).toEqual(baseline);
 
-    DataGrid.registerPlugins({ TestPlugin: FirstPlugin });
-    expect(DataGrid.registeredPlugins()).toEqual({ ...builtIns, TestPlugin: FirstPlugin });
+            DataGrid.registerPlugins({ TestPlugin: FirstPlugin });
+            expect(DataGrid.registeredPlugins()).toEqual({ ...baseline, TestPlugin: FirstPlugin });
 
-    DataGrid.registerPlugins({ TestPlugin: ReplacementPlugin });
-    const snapshot = DataGrid.registeredPlugins();
-    expect(snapshot.TestPlugin).toBe(ReplacementPlugin);
+            DataGrid.registerPlugins({ TestPlugin: ReplacementPlugin });
+            const snapshot = DataGrid.registeredPlugins();
+            expect(snapshot).toEqual({ ...baseline, TestPlugin: ReplacementPlugin });
 
-    delete snapshot.TestPlugin;
-    expect(DataGrid.registeredPlugins().TestPlugin).toBe(ReplacementPlugin);
+            delete snapshot.TestPlugin;
+            expect(DataGrid.registeredPlugins().TestPlugin).toBe(ReplacementPlugin);
 
-    DataGrid.unregisterPlugins("TestPlugin");
-    expect(DataGrid.registeredPlugins()).toEqual(builtIns);
+            DataGrid.unregisterPlugins("TestPlugin");
+            expect(DataGrid.registeredPlugins()).toEqual(baseline);
+        }
+    } finally {
+        DataGrid.unregisterPlugins();
+        DataGrid.registerPlugins(original);
+    }
 });
 
 test("the ESM entry does not create legacy globals", () => {
