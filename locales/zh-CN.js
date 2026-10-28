@@ -19,6 +19,7 @@ const labels = {
     toggleActions: "显示行操作",
     showDetails: "显示 {row} 的详细信息",
     hideDetails: "隐藏 {row} 的详细信息",
+    closeDialog: "关闭对话框",
     showHiddenColumns: "显示 {row} 的其他列",
     hideHiddenColumns: "隐藏 {row} 的其他列",
     resizeColumn: "调整列宽",

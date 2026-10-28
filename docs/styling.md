@@ -443,13 +443,78 @@ Notes:
   to the control (no token): restyle `.dg-disclosure:hover` if you need another
   feedback, and keep some transparency to preserve that guarantee.
 
+## Details dialog
+
+`detailsDisplay: "dialog"` renders the row details in a `<dialog
+class="dg-details-dialog">`, a direct child of the grid (never inside
+`.dg-scroll`), so it inherits the grid tokens in the top layer.
+
+```html
+<dialog class="dg-details-dialog" aria-labelledby="…">
+  <button class="dg-details-close" type="button" aria-label="Close dialog"></button>
+  <div class="dg-details-panel">
+    <header class="dg-details-header">
+      <h2 class="dg-details-title">Alice Martin</h2>
+    </header>
+    <div class="dg-details-body">
+      <dl class="dg-details-list">
+        <dt>Email</dt>
+        <dd>alice@example.com</dd>
+      </dl>
+      <div class="dg-details-app"><!-- rowDetails --></div>
+    </div>
+  </div>
+</dialog>
+```
+
+- The `<dialog>` is the outer surface (`padding: 0`, no scroll,
+  `overflow: hidden`).
+- `.dg-details-panel` carries the spacing and the flex column; its padding is
+  exposed as the local `--details-pad` (default `--dg-space-4`).
+- `.dg-details-header` stays outside the scroll area; `.dg-details-body` is the
+  only scrollable region.
+- `.dg-details-close` is absolute in the dialog corner, outside the panel. Its X
+  is an empty `::before` CSS mask colored with `currentColor`.
+- `.dg-details-list` is a two-column `dl`; below `30rem` the pairs stack.
+- `dialog.dg-details-dialog::backdrop` uses a literal `rgb(0 0 0 / 40%)`.
+- `data-value` on the sheet value cells comes from declarative cell templates; a
+  page can style the sheet with `.dg-details-dialog [data-value="…"]`.
+
+The dialog never uses `:modal` (Chrome 105) and caps its height with `vh`, then
+`100svh` inside `@supports (height: 100svh)`.
+
+### Actual CSS
+
+`themes/actual.css` maps the dialog onto Actual's modal tokens without using its
+global `.modal` classes (also a Bootstrap class):
+
+| Element | Core | `themes/actual.css` |
+|---|---|---|
+| Surface | `--dg-bg` | `--surface-raised` |
+| Text | `--dg-color` | `--text` |
+| Border | `--dg-border-color` | `--border` |
+| Radius | `--dg-radius` | `--radius-lg` |
+| Shadow | literal | `--shadow` |
+| Header | `--dg-header-bg` | `--surface-subtle` |
+| Spacing | `--details-pad` | `--modal-pad` |
+| Width | `32rem` | `--modal-size` |
+| Backdrop | literal | `--backdrop-fill` |
+
+DataGrid owns the dialog lifecycle (`showModal()`, `close()`, focus and events).
+Use an Actual CSS release whose dialog runtime excludes dialogs that live inside
+a web component; DataGrid does not opt into it. If that exclusion is not
+available yet, keep `actual-css/js/dialog.js` off the pages that open the sheet,
+otherwise both runtimes handle the same `<dialog>`.
+
 ## Selectors
 
-Common hooks: `.dg-head-columns th`, `.dg-sort-label`, `th.dg-sortable`, `.dg-sort`, `.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`,
-`.dg-actions`, `.dg-footer`, `.dg-topbar`, `.dg-topbar-start`,
-`.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`, `.dg-selection-count`,
-`.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`, `.dg-disclosure`,
-`.dg-disclosure-cell`.
+Common hooks: `.dg-head-columns th`, `.dg-sort-label`, `th.dg-sortable`, `.dg-sort`,
+`.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`, `.dg-actions`, `.dg-footer`,
+`.dg-topbar`, `.dg-topbar-start`, `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`,
+`.dg-selection-count`, `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`,
+`.dg-disclosure`, `.dg-disclosure-cell`, `.dg-details-dialog`, `.dg-details-panel`,
+`.dg-details-header`, `.dg-details-title`, `.dg-details-body`, `.dg-details-close`,
+`.dg-details-list`, `.dg-details-app`.
 Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
 formatter default); the filter control inherits the same `text-align`, except

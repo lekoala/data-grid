@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid Demo - Details dialog</title>
+
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+
+    <style>
+      /* Page CSS only: the grid stays untouched. */
+      .demo-badge {
+        border-radius: 999px;
+        display: inline-block;
+        font-size: 0.75em;
+        font-weight: 600;
+        padding: 0.15em 0.6em;
+        text-transform: capitalize;
+      }
+      .demo-badge[data-status="active"] {
+        background: #e6f4ea;
+        color: #1e7e34;
+      }
+      .demo-badge[data-status="inactive"] {
+        background: #fdecea;
+        color: #b42318;
+      }
+      .demo-activity {
+        display: grid;
+        gap: var(--dg-space-2);
+        margin: 0;
+      }
+      .demo-activity strong {
+        color: var(--dg-muted-color);
+        font-weight: 600;
+      }
+    </style>
+
+    <script type="module">
+      import { createStaticGrid } from "./demo.js";
+
+      function statusCell({ value }) {
+        const badge = document.createElement("span");
+        badge.className = "demo-badge";
+        badge.dataset.status = value;
+        badge.textContent = value;
+        return badge;
+      }
+
+      const columns = [
+        { field: "first_name", title: "First Name" },
+        { field: "last_name", title: "Last Name" },
+        { field: "email", title: "Email", responsive: 1 },
+        { field: "company", title: "Company", responsive: 2 },
+        { field: "job_title", title: "Job Title", responsive: 3 },
+        { field: "city", title: "City", responsive: 4, hidden: true },
+      ];
+
+      const sheetGrid = await createStaticGrid(document.getElementById("sheet-demo"), "demo.json", {
+        detailsDisplay: "dialog",
+        responsive: true,
+        rowLabel: (row) => `${row.first_name} ${row.last_name}`,
+        initialQuery: { pageSize: 8 },
+        columns: [
+          ...columns,
+          {
+            field: "id",
+            title: "Status",
+            width: 96,
+            renderCell: ({ rowIndex }) => statusCell({ value: rowIndex % 2 ? "inactive" : "active" }),
+          },
+        ],
+      });
+      sheetGrid.addEventListener("rowDetailsToggle", (event) => {
+        console.log(event.type, event.detail.rowKey, event.detail.expanded);
+      });
+
+      const appGrid = await createStaticGrid(document.getElementById("app-demo"), "demo.json", {
+        detailsDisplay: "dialog",
+        responsive: true,
+        rowDetails: ({ row }) => {
+          const activity = document.createElement("dl");
+          activity.className = "demo-activity";
+          const label = document.createElement("strong");
+          label.textContent = "Recent activity";
+          const content = document.createElement("span");
+          content.textContent = `Notes and history for customer ${row.id} belong here, next to the record sheet.`;
+          activity.append(label, content);
+          return activity;
+        },
+        rowLabel: (row) => `${row.first_name} ${row.last_name}`,
+        initialQuery: { pageSize: 8 },
+        columns: [
+          ...columns,
+          {
+            field: "id",
+            title: "Status",
+            width: 96,
+            renderCell: ({ rowIndex }) => statusCell({ value: rowIndex % 2 ? "inactive" : "active" }),
+          },
+        ],
+      });
+
+      const width = document.getElementById("width");
+      new ResizeObserver(() => {
+        width.textContent = `${Math.round(document.getElementById("sheet-frame").getBoundingClientRect().width)}px`;
+      }).observe(document.getElementById("sheet-frame"));
+
+      const appWidth = document.getElementById("app-width");
+      new ResizeObserver(() => {
+        appWidth.textContent = `${Math.round(document.getElementById("app-frame").getBoundingClientRect().width)}px`;
+      }).observe(document.getElementById("app-frame"));
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Standalone data grid web component</em></p>
+    </header>
+    <main>
+      <div data-demo-nav></div>
+      <script type="module">
+        import { renderDemoNav } from "./nav.js";
+        renderDemoNav();
+      </script>
+
+      <h2>Details dialog</h2>
+      <p>
+        <code>details-display="dialog"</code> opens row details in a modal
+        <code>&lt;dialog&gt;</code> instead of an inline row. It works without
+        <code>rowDetails</code>: the grid composes a record sheet from its own columns, so responsive values
+        stay reachable on a narrow screen.
+      </p>
+      <p>
+        <code>detailsDisplay</code> is initial-only, like <code>loading</code>. One grid opens one dialog at a
+        time; <kbd>Escape</kbd> and the close button end the session, and a body rerender (sort, filter, page
+        change) leaves it open.
+      </p>
+
+      <div class="demo-grid">
+        <div class="demo-toolbar">
+          <div>
+            <p class="demo-kicker">Built-in sheet</p>
+            <h2>No rowDetails</h2>
+          </div>
+          <span class="demo-meta">width: <code id="width">—</code></span>
+        </div>
+        <div class="resize-me" id="sheet-frame">
+          <div id="sheet-demo"></div>
+        </div>
+        <p class="demo-note">
+          Every visible column and every responsive-hidden column appears in the sheet. <code>hidden: true</code>
+          columns stay out, and the <code>Status</code> cell is the same <code>renderCell</code> output as the
+          table. Shrink the container to hide responsive columns, then open the chevron.
+        </p>
+      </div>
+
+      <div class="demo-grid">
+        <div class="demo-toolbar">
+          <div>
+            <p class="demo-kicker">Complement</p>
+            <h2>Sheet + application content</h2>
+          </div>
+          <span class="demo-meta">width: <code id="app-width">—</code></span>
+        </div>
+        <div class="resize-me is-narrow" id="app-frame">
+          <div id="app-demo"></div>
+        </div>
+        <p class="demo-note">
+          <code>rowDetails</code> is appended after the record sheet, in the same scrollable body. It is
+          additional content, not a replacement: do not repeat the fields the sheet already shows.
+        </p>
+      </div>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by
+      <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>

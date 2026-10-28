@@ -19,6 +19,7 @@ const labels = {
     toggleActions: "Tampilkan aksi baris",
     showDetails: "Tampilkan detail {row}",
     hideDetails: "Sembunyikan detail {row}",
+    closeDialog: "Tutup dialog",
     showHiddenColumns: "Tampilkan kolom tambahan untuk {row}",
     hideHiddenColumns: "Sembunyikan kolom tambahan untuk {row}",
     resizeColumn: "Ubah ukuran kolom",

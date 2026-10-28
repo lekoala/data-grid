@@ -19,6 +19,7 @@ const labels = {
     toggleActions: "إظهار إجراءات الصف",
     showDetails: "إظهار تفاصيل {row}",
     hideDetails: "إخفاء تفاصيل {row}",
+    closeDialog: "إغلاق مربع الحوار",
     showHiddenColumns: "إظهار الأعمدة الإضافية لـ {row}",
     hideHiddenColumns: "إخفاء الأعمدة الإضافية لـ {row}",
     resizeColumn: "تغيير حجم العمود",

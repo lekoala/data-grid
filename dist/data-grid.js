@@ -1129,6 +1129,7 @@ var DEFAULT_LABELS = {
   toggleActions: "Toggle row actions",
   showDetails: "Show details for {row}",
   hideDetails: "Hide details for {row}",
+  closeDialog: "Close dialog",
   showHiddenColumns: "Show additional columns for {row}",
   hideHiddenColumns: "Hide additional columns for {row}",
   resizeColumn: "Resize column",
@@ -2082,6 +2083,7 @@ var DEFAULT_OPTIONS = {
   responsiveStartOpen: false,
   rowDetails: null,
   rowDetailsStartOpen: false,
+  detailsDisplay: "inline",
   filterDelay: 300,
   searchable: false,
   searchPlaceholder: null,
@@ -2109,6 +2111,10 @@ var OPTION_ATTRIBUTES = {
   "responsive-toggle": { option: "responsiveToggle", type: "boolean" },
   "responsive-start-open": { option: "responsiveStartOpen", type: "boolean" },
   "row-details-start-open": { option: "rowDetailsStartOpen", type: "boolean" },
+  "details-display": {
+    option: "detailsDisplay",
+    parse: (value) => parseEnumAttribute(value, ["inline", "dialog"], "inline")
+  },
   selectable: { type: "boolean" },
   "single-select": { option: "singleSelect", type: "boolean" },
   "select-visible-only": { option: "selectVisibleOnly", type: "boolean" },
@@ -2143,7 +2149,7 @@ var INITIAL_ATTRIBUTES = {
   page: { type: "integer" },
   "page-size": { type: "integer" }
 };
-var INITIAL_ONLY_ATTRIBUTES = new Set(["loading"]);
+var INITIAL_ONLY_ATTRIBUTES = new Set(["loading", "details-display"]);
 function createDefaultOptions() {
   return {
     ...DEFAULT_OPTIONS,
@@ -5821,10 +5827,16 @@ class ResponsiveGrid extends base_plugin_default {
     }
   }
   #sharesDisclosure() {
-    return Boolean(this.grid.options.responsiveToggle) && typeof this.grid.options.rowDetails === "function" && Boolean(this.grid.getPlugin("RowDetails"));
+    return Boolean(this.grid.options.responsiveToggle) && this.#detailsEnabled() && Boolean(this.grid.getPlugin("RowDetails"));
+  }
+  #detailsEnabled() {
+    return typeof this.grid.options.rowDetails === "function" || this.grid.options.detailsDisplay === "dialog";
+  }
+  #dialogDetailsActive() {
+    return this.grid.options.detailsDisplay === "dialog" && Boolean(this.grid.getPlugin("RowDetails"));
   }
   followDisclosure(tr, expanded) {
-    if (!this.#sharesDisclosure()) {
+    if (this.#dialogDetailsActive() || !this.#sharesDisclosure()) {
       return;
     }
     this.#blockObserver();
@@ -5913,6 +5925,9 @@ class ResponsiveGrid extends base_plugin_default {
     this.#seedRows();
   }
   #seedRows() {
+    if (this.#dialogDetailsActive()) {
+      return;
+    }
     for (const tr of this.#dataRows()) {
       let expanded = tr.dataset.responsiveExpanded;
       if (expanded === undefined) {
@@ -5930,7 +5945,7 @@ class ResponsiveGrid extends base_plugin_default {
     }
   }
   afterRender(context) {
-    if (context !== "body") {
+    if (context !== "body" || this.#dialogDetailsActive()) {
       return;
     }
     if (!this.grid.options.responsiveStartOpen || !this.#hasHiddenColumns()) {
@@ -6799,22 +6814,39 @@ var save_state_default = SaveState;
 
 // src/plugins/row-details.js
 var DETAILS_CLASS = "dg-row-details";
+var DIALOG_CLASS = "dg-details-dialog";
+var DETAILS_PREFIX = "dg-details";
 
 class RowDetails extends base_plugin_default {
+  #dialog;
+  #openKey;
+  #openRow;
   constructor(grid) {
     super(grid);
     this.expanded = new Set;
     this.collapsed = new Set;
+    this.#dialog = null;
+    this.#openKey = null;
+    this.#openRow = null;
   }
   connected() {
     this.grid.addEventListener("click", this);
   }
   disconnected() {
     this.grid.removeEventListener("click", this);
+    this.#closeDialog(false);
+  }
+  hasDetails() {
+    return typeof this.grid.options.rowDetails === "function" || this.#dialogMode();
   }
   onclick(event) {
     const target = event.target;
     if (!(target instanceof Element) || !this.grid.ownsControl(target)) {
+      return;
+    }
+    if (target.closest(`.${DETAILS_PREFIX}-close`)) {
+      event.stopPropagation();
+      this.#closeDialog(true);
       return;
     }
     const button = target.closest(`.${DETAILS_CLASS}-toggle-control`);
@@ -6835,7 +6867,7 @@ class RowDetails extends base_plugin_default {
     this.toggle(key);
   }
   extendColumns(columns) {
-    if (typeof this.grid.options.rowDetails !== "function") {
+    if (!this.hasDetails()) {
       return;
     }
     columns.unshift({
@@ -6853,18 +6885,43 @@ class RowDetails extends base_plugin_default {
     });
   }
   isExpanded(rowKey) {
+    if (this.#dialogMode()) {
+      return this.#openKey === String(rowKey);
+    }
     return this.expanded.has(String(rowKey));
   }
   expand(rowKey) {
+    if (this.#dialogMode()) {
+      this.#openDialog(rowKey);
+      return;
+    }
     this.#change(rowKey, true);
   }
   collapse(rowKey) {
+    if (this.#dialogMode()) {
+      if (this.isExpanded(rowKey)) {
+        this.#closeDialog(true);
+      }
+      return;
+    }
     this.#change(rowKey, false);
   }
   toggle(rowKey) {
+    if (this.#dialogMode()) {
+      if (this.isExpanded(rowKey)) {
+        this.collapse(rowKey);
+      } else {
+        this.expand(rowKey);
+      }
+      return;
+    }
     this.#change(rowKey, !this.isExpanded(rowKey));
   }
   collapseAll() {
+    if (this.#dialogMode()) {
+      this.#closeDialog(true);
+      return;
+    }
     for (const key of this.expanded) {
       this.collapsed.add(key);
     }
@@ -6892,15 +6949,32 @@ class RowDetails extends base_plugin_default {
   #detailId(rowIndex) {
     return `dg-row-detail-${this.grid.id}-${rowIndex}`;
   }
+  #dialogMode() {
+    return this.grid.options.detailsDisplay === "dialog";
+  }
+  #dialogId() {
+    return `dg-details-dialog-${this.grid.id}`;
+  }
   createToggle({ row = {}, rowIndex = 0 }) {
     const key = this.grid.resolveRowKey(row, rowIndex);
     const expanded = this.isExpanded(key);
     const button = createDisclosureButton(`${DETAILS_CLASS}-toggle-control`);
-    button.setAttribute("aria-controls", this.#detailId(rowIndex));
     this.#syncToggle(button, row, rowIndex, expanded);
     return button;
   }
   #syncToggle(button, row, rowIndex, expanded) {
+    if (this.#dialogMode()) {
+      button.setAttribute("aria-haspopup", "dialog");
+      button.setAttribute("aria-controls", this.#dialogId());
+      button.removeAttribute("aria-expanded");
+      button.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showDetails, {
+        row: this.grid.getRowLabel(row, rowIndex)
+      }));
+      button.classList.remove(`${DETAILS_CLASS}-toggle-control-open`);
+      return;
+    }
+    button.removeAttribute("aria-haspopup");
+    button.setAttribute("aria-controls", this.#detailId(rowIndex));
     button.setAttribute("aria-expanded", String(expanded));
     button.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {
       row: this.grid.getRowLabel(row, rowIndex)
@@ -6940,7 +7014,7 @@ class RowDetails extends base_plugin_default {
     }
   }
   afterRender(context) {
-    if (context !== "body" || typeof this.grid.options.rowDetails !== "function") {
+    if (context !== "body" || this.#dialogMode() || typeof this.grid.options.rowDetails !== "function") {
       return;
     }
     for (const tr of this.grid.querySelectorAll("tbody > tr.dg-data-row")) {
@@ -6959,6 +7033,10 @@ class RowDetails extends base_plugin_default {
     }
   }
   updateLabels() {
+    const close = this.#dialog?.querySelector(`.${DETAILS_PREFIX}-close`);
+    if (close) {
+      close.setAttribute("aria-label", this.grid.labels.closeDialog);
+    }
     for (const tr of this.grid.querySelectorAll("tbody > tr.dg-data-row")) {
       const rowIndex = Number.parseInt(tr.dataset.rowIndex ?? "0", 10) || 0;
       const row = this.grid.rows[rowIndex];
@@ -6967,6 +7045,158 @@ class RowDetails extends base_plugin_default {
         this.#syncToggle(button, row, rowIndex, this.isExpanded(this.grid.resolveRowKey(row, rowIndex)));
       }
     }
+  }
+  #ensureDialog() {
+    if (this.#dialog && this.grid.contains(this.#dialog)) {
+      return this.#dialog;
+    }
+    const dialog = document.createElement("dialog");
+    dialog.className = DIALOG_CLASS;
+    dialog.id = this.#dialogId();
+    const titleId = `${dialog.id}-title`;
+    const close = document.createElement("button");
+    close.type = "button";
+    close.className = `${DETAILS_PREFIX}-close`;
+    close.setAttribute("aria-label", this.grid.labels.closeDialog);
+    const panel = document.createElement("div");
+    panel.className = `${DETAILS_PREFIX}-panel`;
+    const header = document.createElement("header");
+    header.className = `${DETAILS_PREFIX}-header`;
+    const title = document.createElement("h2");
+    title.className = `${DETAILS_PREFIX}-title`;
+    title.id = titleId;
+    header.append(title);
+    const body = document.createElement("div");
+    body.className = `${DETAILS_PREFIX}-body`;
+    panel.append(header, body);
+    dialog.append(close, panel);
+    dialog.setAttribute("aria-labelledby", titleId);
+    dialog.addEventListener("close", () => {
+      if (dialog.open) {
+        return;
+      }
+      const key = this.#openKey;
+      const row = this.#openRow;
+      this.#openKey = null;
+      this.#openRow = null;
+      this.#endSession(key, row, true);
+    });
+    this.grid.append(dialog);
+    this.#dialog = dialog;
+    return dialog;
+  }
+  #renderDialog(dialog, row, rowIndex) {
+    const title = dialog.querySelector(`.${DETAILS_PREFIX}-title`);
+    if (title) {
+      title.textContent = this.grid.getRowLabel(row, rowIndex);
+    }
+    const body = dialog.querySelector(`.${DETAILS_PREFIX}-body`);
+    if (!body) {
+      return;
+    }
+    body.replaceChildren();
+    const list = document.createElement("dl");
+    list.className = `${DETAILS_PREFIX}-list`;
+    for (const column of this.grid.getColumns()) {
+      const field = column.field;
+      if (!field || column.virtual || column.attr || column.hidden) {
+        continue;
+      }
+      const dt = document.createElement("dt");
+      dt.textContent = column.title || field;
+      const dd = document.createElement("dd");
+      const ctx = {
+        grid: this.grid,
+        column,
+        row,
+        rowIndex,
+        value: row[field]
+      };
+      if (column.renderCell) {
+        const content = column.renderCell(ctx);
+        applyContent(dd, content instanceof Node && content.isConnected ? content.cloneNode(true) : content);
+      } else {
+        this.grid.renderDefaultCell(dd, ctx);
+      }
+      list.append(dt, dd);
+    }
+    if (list.childElementCount) {
+      body.append(list);
+    }
+    const renderer = this.grid.options.rowDetails;
+    if (typeof renderer === "function") {
+      const app = document.createElement("div");
+      app.className = `${DETAILS_PREFIX}-app`;
+      const content = renderer({ row, rowKey: this.grid.resolveRowKey(row, rowIndex), grid: this.grid });
+      applyContent(app, content instanceof Node && content.isConnected ? content.cloneNode(true) : content);
+      if (app.hasChildNodes()) {
+        body.append(app);
+      }
+    }
+  }
+  #openDialog(rowKey) {
+    const key = String(rowKey);
+    if (this.#openKey === key && this.#dialog?.open) {
+      return;
+    }
+    const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === key);
+    if (index < 0) {
+      return;
+    }
+    const row = this.grid.rows[index];
+    if (this.#openKey !== null) {
+      this.#closeDialog(true);
+    }
+    const dialog = this.#ensureDialog();
+    this.#renderDialog(dialog, row, index);
+    if (!dialog.querySelector(`.${DETAILS_PREFIX}-body`)?.hasChildNodes()) {
+      this.grid.log("row details dialog has no content to show");
+      return;
+    }
+    this.#openKey = key;
+    this.#openRow = row;
+    dialog.showModal();
+    dispatch(this.grid, "rowDetailsToggle", { row, rowKey: key, expanded: true });
+  }
+  #closeDialog(emit = true) {
+    const key = this.#openKey;
+    const row = this.#openRow;
+    if (key === null) {
+      return;
+    }
+    this.#openKey = null;
+    this.#openRow = null;
+    if (this.#dialog?.open) {
+      this.#dialog.close();
+    }
+    this.#endSession(key, row, emit);
+  }
+  #endSession(key, row, emit) {
+    if (key === null) {
+      return;
+    }
+    if (emit && row) {
+      dispatch(this.grid, "rowDetailsToggle", { row, rowKey: key, expanded: false });
+    }
+    this.#restoreFocus(key);
+  }
+  #restoreFocus(rowKey) {
+    if (!this.grid.isConnected) {
+      return;
+    }
+    const active = document.activeElement;
+    const insideClosedDialog = this.#dialog?.contains(active) ?? false;
+    const usable = active instanceof HTMLElement && active !== document.body && active.isConnected;
+    if (usable && !insideClosedDialog) {
+      return;
+    }
+    const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === rowKey);
+    const toggle = index < 0 ? null : this.grid.tbody?.querySelector(`tr.dg-data-row[data-row-index="${index}"] .${DETAILS_CLASS}-toggle-control`);
+    if (toggle instanceof HTMLElement) {
+      toggle.focus();
+      return;
+    }
+    this.grid.scrollEl?.focus();
   }
 }
 var row_details_default = RowDetails;

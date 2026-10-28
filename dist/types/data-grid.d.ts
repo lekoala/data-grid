@@ -199,6 +199,9 @@ export type CellContext = {
     row?: Row;
     rowIndex?: number;
     value?: any;
+    /**
+     * - the rendered row; absent when the row details dialog reuses a cell renderer for its record sheet
+     */
     tr?: HTMLTableRowElement;
     sampleTh?: HTMLTableCellElement;
     availableWidth?: number;
@@ -470,6 +473,10 @@ export type Options = {
      */
     rowDetailsStartOpen: boolean;
     /**
+     * Render row details below the row ("inline") or in a modal dialog ("dialog", RowDetails module). Initial-only.
+     */
+    detailsDisplay?: "inline" | "dialog";
+    /**
      * Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
      */
     filterDelay: number;
@@ -546,6 +553,10 @@ export type Labels = {
     toggleActions: string;
     showDetails: string;
     hideDetails: string;
+    /**
+     * - accessible name of the details dialog close button
+     */
+    closeDialog: string;
     showHiddenColumns: string;
     hideHiddenColumns: string;
     resizeColumn: string;

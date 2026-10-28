@@ -11,6 +11,12 @@ declare class RowDetails extends BasePlugin {
     connected(): void;
     disconnected(): void;
     /**
+     * Whether the plugin owns a disclosure control: application details, or the
+     * built-in record sheet in dialog mode (where `rowDetails` is optional).
+     * @returns {Boolean}
+     */
+    hasDetails(): boolean;
+    /**
      * Delegate the expand/collapse toggle. The row is resolved from the DOM
      * (`data-row-index`) through the model (`grid.rows`), so the toggle keeps
      * working across body rerenders without re-attaching anything.

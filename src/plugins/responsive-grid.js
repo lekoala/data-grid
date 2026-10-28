@@ -529,9 +529,28 @@ class ResponsiveGrid extends BasePlugin {
     #sharesDisclosure() {
         return (
             Boolean(this.grid.options.responsiveToggle) &&
-            typeof this.grid.options.rowDetails === "function" &&
+            this.#detailsEnabled() &&
             Boolean(this.grid.getPlugin("RowDetails"))
         );
+    }
+
+    /**
+     * Whether row details are available at all, with or without application
+     * content: the built-in record sheet in dialog mode counts.
+     * @returns {Boolean}
+     */
+    #detailsEnabled() {
+        return typeof this.grid.options.rowDetails === "function" || this.grid.options.detailsDisplay === "dialog";
+    }
+
+    /**
+     * Dialog mode owns the expanded surface of the row: responsive values live
+     * in the sheet, so responsive neither seeds nor follows a child row. The
+     * plugin check keeps `detailsDisplay` inert when `RowDetails` is absent.
+     * @returns {Boolean}
+     */
+    #dialogDetailsActive() {
+        return this.grid.options.detailsDisplay === "dialog" && Boolean(this.grid.getPlugin("RowDetails"));
     }
 
     /**
@@ -539,12 +558,12 @@ class ResponsiveGrid extends BasePlugin {
      * whole expansion surface of its row, responsive values included. No-op
      * unless responsive has yielded its own toggle, so an explicit
      * `responsiveToggle: false` keeps its section governed by
-     * `responsiveStartOpen` alone.
+     * `responsiveStartOpen` alone. Dialog mode has no child row to follow.
      * @param {HTMLTableRowElement} tr
      * @param {Boolean} expanded
      */
     followDisclosure(tr, expanded) {
-        if (!this.#sharesDisclosure()) {
+        if (this.#dialogDetailsActive() || !this.#sharesDisclosure()) {
             return;
         }
         this.#blockObserver();
@@ -691,6 +710,11 @@ class ResponsiveGrid extends BasePlugin {
      * with no state yet are seeded from `responsiveStartOpen`.
      */
     #seedRows() {
+        // Dialog mode keeps the hidden values in the sheet: seeding a child row
+        // here would duplicate them next to the dialog.
+        if (this.#dialogDetailsActive()) {
+            return;
+        }
         for (const tr of this.#dataRows()) {
             let expanded = tr.dataset.responsiveExpanded;
             if (expanded === undefined) {
@@ -717,7 +741,7 @@ class ResponsiveGrid extends BasePlugin {
         // drops any existing detail rows, so start-open details must be
         // re-applied here. No-op unless start-open is active with hidden
         // columns, keeping the default collapsed behavior untouched.
-        if (context !== "body") {
+        if (context !== "body" || this.#dialogDetailsActive()) {
             return;
         }
         if (!this.grid.options.responsiveStartOpen || !this.#hasHiddenColumns()) {

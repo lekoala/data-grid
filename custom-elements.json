@@ -52,6 +52,9 @@
               "name": "row-details-start-open"
             },
             {
+              "name": "details-display"
+            },
+            {
               "name": "selectable"
             },
             {

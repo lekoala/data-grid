@@ -18,6 +18,7 @@ const DEMOS = [
     { href: "lazy.html", label: "Lazy", group: "grids" },
     { href: "declarative.html", label: "Declarative", group: "grids" },
     { href: "responsive.html", label: "Responsive", group: "grids" },
+    { href: "details.html", label: "Details dialog", group: "grids" },
     { href: "i18n.html", label: "i18n", group: "grids" },
     { href: "frozen.html", label: "Frozen columns", group: "grids" },
     { href: "actions.html", label: "Actions", group: "recipes" },

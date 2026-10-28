@@ -1226,6 +1226,16 @@ data-grid[dir="rtl"] [data-frozen="end"][data-frozen-edge] {
   border-right: var(--dg-border-width) solid var(--dg-border-color);
 }
 
+data-grid[dir="rtl"] .dg-details-close {
+  left: var(--dg-space-2);
+  right: auto;
+}
+
+data-grid[dir="rtl"] .dg-details-title {
+  padding-left: 2.5rem;
+  padding-right: 0;
+}
+
 /* css/_menu.css */
 data-grid .dg-menu {
   position: absolute;
@@ -1670,6 +1680,156 @@ data-grid .dg-row-details-row > td {
   background: var(--dg-bg);
   padding: var(--dg-space-3) var(--dg-padding-x);
   white-space: normal;
+}
+
+/* css/_details-dialog.css */
+data-grid .dg-details-dialog {
+  --details-pad: var(--dg-space-4);
+  background: var(--dg-bg);
+  border: var(--dg-border-width) solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  color: var(--dg-color);
+  overflow: hidden;
+  max-block-size: calc(100vh - 2rem);
+  inline-size: min(32rem, 100vw - 2rem);
+  max-inline-size: calc(100vw - 2rem);
+  padding: 0;
+  box-shadow: 0 24px 48px -12px #00000040;
+}
+
+@supports (height: 100svh) {
+  data-grid .dg-details-dialog {
+    max-block-size: calc(100svh - 2rem);
+  }
+}
+
+data-grid .dg-details-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+data-grid .dg-details-dialog::backdrop {
+  background: #0006;
+}
+
+data-grid .dg-details-panel {
+  display: flex;
+  padding: var(--details-pad);
+  flex-direction: column;
+  flex: auto;
+  min-block-size: 0;
+}
+
+data-grid .dg-details-header {
+  background: var(--dg-header-bg);
+  border-bottom: var(--dg-border-width) solid var(--dg-border-color);
+  margin: calc(-1 * var(--details-pad)) calc(-1 * var(--details-pad)) var(--dg-space-3);
+  padding: var(--dg-space-3) var(--details-pad);
+  flex: none;
+}
+
+data-grid .dg-details-title {
+  margin: 0;
+  padding-right: 2.5rem;
+  font-size: 1.125em;
+}
+
+data-grid .dg-details-body {
+  overflow: auto;
+  flex: auto;
+  min-block-size: 0;
+}
+
+data-grid .dg-details-close {
+  appearance: none;
+  border-radius: var(--dg-radius);
+  color: var(--dg-muted-color);
+  position: absolute;
+  right: var(--dg-space-2);
+  top: var(--dg-space-2);
+  z-index: 1;
+  background-color: #0000;
+  border: 0;
+  block-size: 2rem;
+  inline-size: 2rem;
+  padding: 0;
+}
+
+data-grid .dg-details-close:before {
+  content: "";
+  display: block;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6 6 18' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6 6 18' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+  background-color: currentColor;
+  block-size: 1.25rem;
+  inline-size: 1.25rem;
+  margin: auto;
+}
+
+data-grid .dg-details-close:hover {
+  color: var(--dg-color);
+  background-color: #1f232814;
+}
+
+data-grid .dg-details-close:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+}
+
+data-grid .dg-details-list {
+  display: grid;
+  gap: var(--dg-space-2) var(--dg-space-4);
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  margin: 0 0 var(--dg-space-3);
+  text-align: start;
+}
+
+data-grid .dg-details-list dt {
+  color: var(--dg-muted-color);
+  font-weight: 600;
+}
+
+data-grid .dg-details-list dd {
+  overflow-wrap: anywhere;
+  min-inline-size: 0;
+  margin: 0;
+}
+
+data-grid .dg-details-list + .dg-details-app {
+  border-top: var(--dg-border-width) solid var(--dg-border-color);
+  padding-top: var(--dg-space-3);
+}
+
+@media (max-width: 30rem) {
+  data-grid .dg-details-list {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  data-grid .dg-details-list dt {
+    margin-top: var(--dg-space-2);
+  }
+
+  data-grid .dg-details-list dt:first-of-type {
+    margin-top: 0;
+  }
+
+  data-grid .dg-details-list dd {
+    margin-bottom: var(--dg-space-1);
+  }
+}
+
+@media (forced-colors: active) {
+  data-grid .dg-details-dialog {
+    border: 1px solid canvastext;
+  }
 }
 
 /* css/data-grid.css */

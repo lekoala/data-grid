@@ -262,6 +262,7 @@ Some options only work if the proper plugin is loaded.
 | `responsiveStartOpen` | `Boolean`            | `false`              | Open responsive detail rows by default                       |
 | `rowDetails`          | `Function`           | -                    | Render expandable application content for a row              |
 | `rowDetailsStartOpen` | `Boolean`            | `false`              | Open row details by default                                  |
+| `detailsDisplay`      | `String`             | `"inline"`           | `inline` / `dialog` row details (initial-only)               |
 | `autosize`            | `Boolean`            | `false`              | Measure widthless columns to give them a preferred width     |
 | `enterMovesDown`      | `Boolean`            | `false`              | Enter commits and moves the edit focus one row down          |
 | `autoheight`          | `Boolean`            | `true`               | Fill table height on the last page                           |
@@ -299,7 +300,8 @@ stable `id`.
 
 The main attributes are `src`, `loading`, `page`, `page-size`, `sortable`, `filterable`, `searchable`,
 `search-placeholder`, `search-delay`, `min-search-length`, `filter-delay`, `responsive`,
-`responsive-toggle`, `responsive-start-open`, `row-details-start-open`, `selectable`, `single-select`,
+`responsive-toggle`, `responsive-start-open`, `row-details-start-open`, `details-display`, `selectable`,
+`single-select`,
 `select-visible-only`, `row-click`, `row-key`, `row-label`,
 `collapse-actions`, `save-state`, `no-data`, `error-message`, `page-sizes`, `row-actions`,
 `reorder`, `menu`, `wrap`, `snap-columns`, `autosize`, `enter-moves-down`, `resizable`, `autoheight`,
@@ -454,6 +456,27 @@ new DataGrid({
 Responsive content is then the narrow-screen representation of normal table
 columns, while the remaining row-details chevron reveals only the application
 content.
+
+## Row details dialog
+
+`detailsDisplay: "dialog"` (attribute `details-display="dialog"`) opens row
+details in a modal instead of an inline row. It is initial-only: configure it
+before connection.
+
+```js
+new DataGrid({
+    responsive: true,
+    detailsDisplay: "dialog",
+    rowDetails: ({ row }) => renderCustomerActivity(row),
+});
+```
+
+`rowDetails` is optional in this mode. Without it, the grid builds a record
+sheet from its visible and responsive-hidden columns; `hidden: true`,
+virtual and `attr` columns are excluded. When `rowDetails` is set, its content
+is appended after the sheet. The dialog is modal, closes on Escape or its close
+button, and survives body rerenders. See `docs/plugins.md` for the full
+composition rules.
 
 ## API
 

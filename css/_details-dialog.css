@@ -1,0 +1,164 @@
+/* Details dialog: the built-in record sheet opened by RowDetails when
+   `detailsDisplay: "dialog"`. The <dialog> is the outer surface with no
+   padding and no scroll; the panel owns the spacing and the only scrollable
+   region is the body. Class names stay `dg-details-*` (never `.modal`, which
+   is also a Bootstrap class with a different behavior). */
+data-grid .dg-details-dialog {
+  --details-pad: var(--dg-space-4);
+
+  background: var(--dg-bg);
+  border: var(--dg-border-width) solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 25%);
+  color: var(--dg-color);
+  inline-size: min(32rem, calc(100vw - 2rem));
+  max-inline-size: calc(100vw - 2rem);
+  max-block-size: calc(100vh - 2rem);
+  overflow: hidden;
+  padding: 0;
+}
+
+/* `svh` is newer than the browser baseline: it is an improvement, not the
+   base. Chrome 99 / Firefox 98 keep the vh value. */
+@supports (height: 100svh) {
+  data-grid .dg-details-dialog {
+    max-block-size: calc(100svh - 2rem);
+  }
+}
+
+/* Scope the flex layout to the open state so the UA `display: none` of a
+   closed dialog keeps winning. */
+data-grid .dg-details-dialog[open] {
+  display: flex;
+  flex-direction: column;
+}
+
+data-grid .dg-details-dialog::backdrop {
+  background: rgb(0 0 0 / 40%);
+}
+
+data-grid .dg-details-panel {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-block-size: 0;
+  padding: var(--details-pad);
+}
+
+data-grid .dg-details-header {
+  background: var(--dg-header-bg);
+  border-bottom: var(--dg-border-width) solid var(--dg-border-color);
+  flex: none;
+  margin: calc(-1 * var(--details-pad)) calc(-1 * var(--details-pad)) var(--dg-space-3);
+  padding: var(--dg-space-3) var(--details-pad);
+}
+
+data-grid .dg-details-title {
+  font-size: 1.125em;
+  margin: 0;
+  padding-right: 2.5rem;
+}
+
+data-grid .dg-details-body {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow: auto;
+}
+
+data-grid .dg-details-close {
+  appearance: none;
+  background-color: transparent;
+  border: 0;
+  border-radius: var(--dg-radius);
+  block-size: 2rem;
+  color: var(--dg-muted-color);
+  inline-size: 2rem;
+  padding: 0;
+  position: absolute;
+  right: var(--dg-space-2);
+  top: var(--dg-space-2);
+  z-index: 1;
+}
+
+/* Empty DOM hook: the X is a mask so a theme can recolor it through `color`
+   or replace the shape, like the other built-in pictograms. */
+data-grid .dg-details-close::before {
+  background-color: currentColor;
+  block-size: 1.25rem;
+  content: "";
+  display: block;
+  inline-size: 1.25rem;
+  margin: auto;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6 6 18' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6 6l12 12M18 6 6 18' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-position: center;
+  mask-repeat: no-repeat;
+  mask-size: contain;
+}
+
+data-grid .dg-details-close:hover {
+  background-color: rgb(31 35 40 / 8%);
+  color: var(--dg-color);
+}
+
+data-grid .dg-details-close:focus-visible {
+  box-shadow: none;
+  outline: 2px solid var(--dg-accent);
+  outline-offset: -2px;
+}
+
+data-grid .dg-details-list {
+  display: grid;
+  gap: var(--dg-space-2) var(--dg-space-4);
+  grid-template-columns: minmax(6rem, max-content) 1fr;
+  margin: 0 0 var(--dg-space-3);
+  text-align: start;
+}
+
+data-grid .dg-details-list dt {
+  color: var(--dg-muted-color);
+  font-weight: 600;
+}
+
+data-grid .dg-details-list dd {
+  margin: 0;
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Application content complements the record sheet; the separator only shows
+   when the sheet itself rendered. */
+data-grid .dg-details-list + .dg-details-app {
+  border-top: var(--dg-border-width) solid var(--dg-border-color);
+  padding-top: var(--dg-space-3);
+}
+
+/* Narrow viewport: pairs stack instead of squeezing two columns. The dialog
+   keeps a viewport margin, never full screen. */
+@media (max-width: 30rem) {
+  data-grid .dg-details-list {
+    gap: 0;
+    grid-template-columns: 1fr;
+  }
+
+  data-grid .dg-details-list dt {
+    margin-top: var(--dg-space-2);
+  }
+
+  data-grid .dg-details-list dt:first-of-type {
+    margin-top: 0;
+  }
+
+  data-grid .dg-details-list dd {
+    margin-bottom: var(--dg-space-1);
+  }
+}
+
+@media (forced-colors: active) {
+  data-grid .dg-details-dialog {
+    border: 1px solid CanvasText;
+  }
+}

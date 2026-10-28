@@ -19,6 +19,7 @@ const labels = {
     toggleActions: "पंक्ति क्रियाएँ दिखाएँ",
     showDetails: "{row} का विवरण दिखाएँ",
     hideDetails: "{row} का विवरण छिपाएँ",
+    closeDialog: "संवाद बंद करें",
     showHiddenColumns: "{row} के लिए अतिरिक्त कॉलम दिखाएँ",
     hideHiddenColumns: "{row} के लिए अतिरिक्त कॉलम छिपाएँ",
     resizeColumn: "कॉलम का आकार बदलें",

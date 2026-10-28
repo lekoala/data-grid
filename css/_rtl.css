@@ -89,3 +89,15 @@ data-grid[dir="rtl"] [data-frozen="end"][data-frozen-edge] {
   border-left: 0;
   border-right: var(--dg-border-width) solid var(--dg-border-color);
 }
+
+/* Details dialog: the close control and the title gutter swap sides. The
+   header band itself stays symmetric. */
+data-grid[dir="rtl"] .dg-details-close {
+  left: var(--dg-space-2);
+  right: auto;
+}
+
+data-grid[dir="rtl"] .dg-details-title {
+  padding-left: 2.5rem;
+  padding-right: 0;
+}

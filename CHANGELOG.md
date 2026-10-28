@@ -17,6 +17,14 @@ not documented.
   `format`/`transform` (`renderCell` still wins). Unsafe templates (`script`,
   `style`, `on*`, executable URL protocols) are ignored and fall back to the
   default renderer; `data:` remains available for image/media `src`.
+- Row details dialog: `detailsDisplay: "dialog"` (attribute
+  `details-display="dialog"`) opens row details in a modal `<dialog>` instead of
+  an inline row. Without `rowDetails`, the grid composes a record sheet from its
+  visible and responsive-hidden columns; `rowDetails` content, when present, is
+  appended after it. The option is initial-only. `RowDetails.expand()`,
+  `collapse()`, `toggle()`, `isExpanded()` and `collapseAll()` keep their
+  contract, `rowDetailsToggle` reports open and close, and the dialog survives
+  body rerenders. `closeDialog` is a new translatable label.
 
 ## [3.7.1] - 2026-10-23
 

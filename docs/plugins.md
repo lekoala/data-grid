@@ -153,6 +153,87 @@ details.collapseAll();
 Use `rowDetailsStartOpen: true` to seed rows open. A toggle dispatches
 `rowDetailsToggle` with `{ row, rowKey, expanded }`.
 
+### Dialog display
+
+`detailsDisplay: "dialog"` (attribute `details-display="dialog"`) opens the
+same feature in a modal `<dialog>` instead of an inline row. It is one of two
+values, `"inline"` (default) or `"dialog"`, and it is initial-only like
+`loading`: set it before the grid connects or from the constructor. A later
+change is ignored, with a debug warning.
+
+```html
+<data-grid src="/api/users" responsive details-display="dialog"></data-grid>
+```
+
+`rowDetails` is optional in dialog mode. Without it, the grid composes a
+**record sheet** from its own columns, in `grid.getColumns()` order:
+
+- included: columns with a `field`, not `virtual`, not `attr`, and not
+  `hidden: true` — so visible and responsive-hidden columns;
+- excluded: `hidden: true` columns (even when editable), virtual columns such as
+  `$actions`, `attr` columns, and columns without a `field` — even when they
+  define a `renderCell`, since a computed display column is not row data;
+- label: `column.title || column.field`;
+- value: `column.renderCell` when present, otherwise the default renderer
+  (transform, format and declarative cell templates included).
+
+The sheet reuses the table renderers, so keep `renderCell` pure as for any body
+rerender. A renderer that returns a node already attached to the table gets a
+clone in the sheet; the row keeps its own cell. The sheet context has no `tr`
+(unlike a body cell), so a renderer or formatter that reads `ctx.tr` must handle
+its absence.
+
+When `rowDetails` is also configured, it is **appended after** the sheet in the
+same scrollable body (`.dg-details-app`). It complements the sheet: do not repeat
+fields the sheet already displays. When the renderer returns nothing, only the
+sheet remains.
+
+Behavior and limits:
+
+- one dialog per grid and one session at a time: `expand()` on another row
+  closes the previous one, then opens the new one; `expand()` on the row already
+  open is a no-op and does not refresh the snapshot;
+- `expand(rowKey)`, `collapse(rowKey)`, `toggle(rowKey)`, `isExpanded(rowKey)` and
+  `collapseAll()` keep working; there is no `openDialog()` method;
+- `rowDetailsToggle` fires `{ row, rowKey, expanded }` on open and on close
+  (button, Escape or `collapse()`); disconnecting closes silently;
+- `Escape` and the close button end the session. The backdrop does not close the
+  dialog in this version;
+- a body rerender (sort, filter, page change) does not close it: the content is
+  a snapshot taken at open time. The same holds for `refresh()` or a replaced
+  `dataSource`, even when the row disappears; `isExpanded()` keeps reporting the
+  session until it closes;
+- the dialog is a direct child of `<data-grid>`, outside `.dg-scroll`, so it
+  inherits the grid theme tokens even in the top layer;
+- a grid without a stable `rowKey` falls back to the row index for the sheet; a
+  stable key is strongly recommended;
+- the grid does not stack dialogs. If the application opens its own dialog (a
+  full edit form, for example), close the grid one first.
+
+`detailsDisplay: "dialog"` requires the `RowDetails` plugin; the
+batteries-included entry registers it. Without the plugin the option is inert
+and responsive keeps its own toggle.
+
+### Combining responsive columns and a dialog
+
+In dialog mode `ResponsiveGrid` yields its disclosure control to `RowDetails`
+(one chevron per row) and no longer seeds a responsive child row, including with
+`responsiveStartOpen: true`: the hidden values are already in the sheet.
+
+- `responsiveStartOpen` is ignored in dialog mode;
+- `rowDetailsStartOpen` is ignored in dialog mode;
+- `responsiveToggle: false` still leaves the single `RowDetails` control and the
+  sheet keeps the hidden values;
+- the mode cannot switch at runtime, so an inline/dialog toggle is not offered.
+
+### Application content
+
+Application content is responsible for its own typography and colors. The grid
+draws the sheet labels (`.dg-details-list dt`) and keeps the value cells quiet,
+so a `renderCell` badge (or a declarative cell template) looks the same in the
+table and in the sheet.
+
+
 ### Combining responsive columns and row details
 
 Responsive columns and row details have different roles: responsive columns

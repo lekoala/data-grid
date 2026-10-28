@@ -19,6 +19,7 @@ const labels = {
     toggleActions: "Toggle row actions",
     showDetails: "Show details for {row}",
     hideDetails: "Hide details for {row}",
+    closeDialog: "Close dialog",
     showHiddenColumns: "Show additional columns for {row}",
     hideHiddenColumns: "Hide additional columns for {row}",
     resizeColumn: "Resize column",

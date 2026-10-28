@@ -48,6 +48,7 @@ test("DataGrid observed attributes are the declarative option surface", () => {
         "responsive-toggle",
         "responsive-start-open",
         "row-details-start-open",
+        "details-display",
         "selectable",
         "single-select",
         "select-visible-only",

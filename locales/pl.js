@@ -19,6 +19,7 @@ const labels = {
     toggleActions: "Pokaż akcje wiersza",
     showDetails: "Pokaż szczegóły {row}",
     hideDetails: "Ukryj szczegóły {row}",
+    closeDialog: "Zamknij okno dialogowe",
     showHiddenColumns: "Pokaż dodatkowe kolumny dla {row}",
     hideHiddenColumns: "Ukryj dodatkowe kolumny dla {row}",
     resizeColumn: "Zmień szerokość kolumny",

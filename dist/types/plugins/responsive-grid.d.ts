@@ -43,7 +43,7 @@ declare class ResponsiveGrid extends BasePlugin {
      * whole expansion surface of its row, responsive values included. No-op
      * unless responsive has yielded its own toggle, so an explicit
      * `responsiveToggle: false` keeps its section governed by
-     * `responsiveStartOpen` alone.
+     * `responsiveStartOpen` alone. Dialog mode has no child row to follow.
      * @param {HTMLTableRowElement} tr
      * @param {Boolean} expanded
      */

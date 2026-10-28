@@ -158,7 +158,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {Row} [row]
  * @property {Number} [rowIndex]
  * @property {any} [value]
- * @property {HTMLTableRowElement} [tr]
+ * @property {HTMLTableRowElement} [tr] - the rendered row; absent when the row details dialog reuses a cell renderer for its record sheet
  * @property {HTMLTableCellElement} [sampleTh]
  * @property {Number} [availableWidth]
  * @property {Number} [colMaxWidth]
@@ -292,6 +292,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {Boolean} responsiveStartOpen Open responsive detail rows by default when columns are hidden (ResponsiveGrid module)
  * @property {((ctx: RowDetailsContext) => RenderContent)|null} [rowDetails] Render expanded row content (RowDetails module)
  * @property {Boolean} rowDetailsStartOpen Open row details by default (RowDetails module)
+ * @property {"inline"|"dialog"} [detailsDisplay] Render row details below the row ("inline") or in a modal dialog ("dialog", RowDetails module). Initial-only.
  * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
  * @property {Boolean} searchable Show the global search input (core, not a plugin)
  * @property {?String} searchPlaceholder Visible search hint (null uses the translated search label with an ellipsis)
@@ -327,6 +328,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {String} toggleActions
  * @property {String} showDetails
  * @property {String} hideDetails
+ * @property {String} closeDialog - accessible name of the details dialog close button
  * @property {String} showHiddenColumns
  * @property {String} hideHiddenColumns
  * @property {String} resizeColumn
@@ -450,6 +452,7 @@ const DEFAULT_OPTIONS = {
     responsiveStartOpen: false,
     rowDetails: null,
     rowDetailsStartOpen: false,
+    detailsDisplay: "inline",
     filterDelay: 300,
     searchable: false,
     searchPlaceholder: null,
@@ -483,6 +486,10 @@ const OPTION_ATTRIBUTES = {
     "responsive-toggle": { option: "responsiveToggle", type: "boolean" },
     "responsive-start-open": { option: "responsiveStartOpen", type: "boolean" },
     "row-details-start-open": { option: "rowDetailsStartOpen", type: "boolean" },
+    "details-display": {
+        option: "detailsDisplay",
+        parse: (value) => parseEnumAttribute(value, ["inline", "dialog"], "inline"),
+    },
     selectable: { type: "boolean" },
     "single-select": { option: "singleSelect", type: "boolean" },
     "select-visible-only": { option: "selectVisibleOnly", type: "boolean" },
@@ -521,7 +528,7 @@ const INITIAL_ATTRIBUTES = {
 };
 
 /** Option attributes that become immutable at the first connection. */
-const INITIAL_ONLY_ATTRIBUTES = new Set(["loading"]);
+const INITIAL_ONLY_ATTRIBUTES = new Set(["loading", "details-display"]);
 
 /**
  * @returns {Record<string, any>}

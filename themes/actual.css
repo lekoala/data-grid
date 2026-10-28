@@ -35,3 +35,25 @@ data-grid {
 
   --dg-radius: var(--radius);
 }
+
+/* Details dialog: Actual's modal anatomy (surface, shadow, header band,
+   spacing, width) without its global `.modal` classes or its dialog runtime.
+   DataGrid owns the lifecycle; Actual CSS only styles the surface. */
+data-grid .dg-details-dialog {
+  --details-pad: var(--modal-pad);
+
+  background: var(--surface-raised);
+  border-color: var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  inline-size: min(var(--modal-size), calc(100vw - 2rem));
+}
+
+data-grid .dg-details-dialog::backdrop {
+  background: var(--backdrop-fill);
+}
+
+data-grid .dg-details-header {
+  background: var(--surface-subtle);
+}
