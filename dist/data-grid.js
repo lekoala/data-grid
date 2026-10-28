@@ -2224,6 +2224,7 @@ class DataGrid extends base_element_default {
   #loadObserver;
   #lazyPending;
   #renderContext;
+  #renderedCount;
   #frozenFrame;
   constructor(options = {}) {
     super(options);
@@ -2269,6 +2270,7 @@ class DataGrid extends base_element_default {
     this.#loadObserver = null;
     this.#lazyPending = false;
     this.#renderContext = null;
+    this.#renderedCount = 0;
     this.#frozenFrame = null;
     if (Object.hasOwn(this, "controlClasses")) {
       const value = this.controlClasses;
@@ -2802,8 +2804,7 @@ class DataGrid extends base_element_default {
       if (requestId !== this.#requestSeq || controller.signal.aborted)
         return;
       const focusMore = document.activeElement === this.btnMore;
-      const firstNewRow = this.rows.length;
-      this.#appendResult(result);
+      const firstNewRow = this.#appendResult(result);
       if (focusMore && this.btnMore?.hidden) {
         this.#focusLoadedRow(firstNewRow);
       }
@@ -2837,12 +2838,35 @@ class DataGrid extends base_element_default {
   }
   #appendResult(result) {
     const appended = Array.isArray(result?.rows) ? result.rows : [];
+    const firstNewRow = this.rows.length;
     this.rows = [...this.rows, ...appended];
     this.total = result?.total === undefined ? this.total : normalizeTotal(result.total);
     this.meta = result?.meta || {};
     this.#loadedPage += 1;
     this.#hasMore = this.#resolveHasMore(result, appended.length);
-    this.renderBody();
+    this.#appendRows(firstNewRow);
+    return firstNewRow;
+  }
+  #appendRows(firstNewRow) {
+    const tbody = this.tbody;
+    if (!tbody || this.#renderedCount !== firstNewRow) {
+      this.renderBody();
+      return;
+    }
+    this.log("append rows");
+    this.runPlugins("beforeRender");
+    this.#renderContext = "body";
+    const fragment = document.createDocumentFragment();
+    for (let rowIndex = firstNewRow;rowIndex < this.rows.length; rowIndex++) {
+      fragment.appendChild(this.#renderDataRow(this.rows[rowIndex], rowIndex));
+    }
+    tbody.appendChild(fragment);
+    this.#renderedCount = this.rows.length;
+    this.paginate();
+    this.runPlugins("afterRender", this.#renderContext);
+    this.queueFrozenSync();
+    this.removeAttribute("data-empty");
+    dispatch(this, "bodyRendered");
   }
   #updateMoreButton() {
     const button = this.btnMore;
@@ -4487,6 +4511,7 @@ class DataGrid extends base_element_default {
     } else {
       this.table?.appendChild(tbody);
     }
+    this.#renderedCount = this.rows.length;
     this.paginate();
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
@@ -5389,13 +5414,20 @@ class FixedHeight extends base_plugin_default {
   }
   createSpacerRow() {
     const grid = this.grid;
-    const { row } = createSpanningRow(grid, { className: "dg-spacer-row" });
-    row.hidden = true;
-    row.setAttribute("aria-hidden", "true");
-    grid.tbody?.appendChild(row);
+    const tbody = grid.tbody;
+    if (!tbody) {
+      return;
+    }
+    let row = this.spacerRow;
+    if (!row) {
+      row = createSpanningRow(grid, { className: "dg-spacer-row" }).row;
+      row.hidden = true;
+      row.setAttribute("aria-hidden", "true");
+    }
+    tbody.appendChild(row);
   }
   get spacerRow() {
-    return this.grid.querySelector(".dg-spacer-row");
+    return this.grid.tbody?.querySelector(":scope > .dg-spacer-row") ?? null;
   }
   updateSpacerRow() {
     const grid = this.grid;
@@ -6388,6 +6420,7 @@ var row_actions_default = RowActions;
 
 // src/plugins/editable-column.js
 class EditableColumn extends base_plugin_default {
+  #mounted = new WeakSet;
   afterRender(context) {
     if (context !== "body") {
       return;
@@ -6399,6 +6432,9 @@ class EditableColumn extends base_plugin_default {
     }
     const cells = grid.querySelectorAll("tbody td.dg-editable-col");
     for (const td of cells) {
+      if (this.#mounted.has(td)) {
+        continue;
+      }
       const rowIndex = Number.parseInt(td.dataset.rowIndex ?? "");
       const column = columns.get(td.getAttribute("data-column-id") ?? "");
       const item = grid.rows[rowIndex];
@@ -6406,6 +6442,7 @@ class EditableColumn extends base_plugin_default {
         continue;
       }
       this.makeEditableInput(td, column, item, rowIndex);
+      this.#mounted.add(td);
     }
   }
   makeEditableInput(td, column, item, i) {

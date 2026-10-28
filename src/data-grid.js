@@ -662,6 +662,10 @@ class DataGrid extends BaseElement {
     #lazyPending;
     /** @type {import("./core/base-plugin.js").RenderContext|null} */
     #renderContext;
+    /** Number of records the current body DOM renders. Progressive chunks
+     * append only when the projection still matches the model.
+     * @type {Number} */
+    #renderedCount;
     /** @type {Number|null} */
     #frozenFrame;
 
@@ -851,6 +855,12 @@ class DataGrid extends BaseElement {
          * @type {import("./core/base-plugin.js").RenderContext|null}
          */
         this.#renderContext = null;
+
+        /**
+         * Number of records the current body DOM renders, see renderBody.
+         * @type {Number}
+         */
+        this.#renderedCount = 0;
 
         /** @type {Number|null} */
         this.#frozenFrame = null;
@@ -1700,13 +1710,13 @@ class DataGrid extends BaseElement {
 
     /**
      * Append the next transport chunk in pager "more" mode, then render the
-     * grown list. No-op unless the pager is "more", no load is running, and
-     * the list is not exhausted yet. A concurrent setQuery() supersedes the
-     * flight: its late response is dropped and its cleanup never touches the
-     * newer load. Errors keep the loaded rows and leave the button available
-     * for a retry. Before the first successful chunk, it loads or retries
-     * page 1 through load(). Progress is already observable through rows.length,
-     * total and loading — no boolean needed.
+     * new rows into the existing body. No-op unless the pager is "more", no
+     * load is running, and the list is not exhausted yet. A concurrent
+     * setQuery() supersedes the flight: its late response is dropped and its
+     * cleanup never touches the newer load. Errors keep the loaded rows and
+     * leave the button available for a retry. Before the first successful
+     * chunk, it loads or retries page 1 through load(). Progress is already
+     * observable through rows.length, total and loading — no boolean needed.
      * @public
      * @returns {Promise<void>}
      */
@@ -1738,8 +1748,7 @@ class DataGrid extends BaseElement {
             const result = await this.#fetchPage({ ...this.query, page: this.#loadedPage + 1 }, controller);
             if (requestId !== this.#requestSeq || controller.signal.aborted) return;
             const focusMore = document.activeElement === this.btnMore;
-            const firstNewRow = this.rows.length;
-            this.#appendResult(result);
+            const firstNewRow = this.#appendResult(result);
             if (focusMore && this.btnMore?.hidden) {
                 this.#focusLoadedRow(firstNewRow);
             }
@@ -1787,9 +1796,11 @@ class DataGrid extends BaseElement {
      * re-clamped. An empty chunk also terminates the list, for backends whose
      * total lags behind the actually available rows.
      * @param {PageResult} result
+     * @returns {Number} index of the first appended row
      */
     #appendResult(result) {
         const appended = Array.isArray(result?.rows) ? result.rows : [];
+        const firstNewRow = this.rows.length;
         this.rows = [...this.rows, ...appended];
         // An absent total keeps the previous one; a present but invalid total
         // normalizes to null (unknown) rather than a fabricated count.
@@ -1797,7 +1808,43 @@ class DataGrid extends BaseElement {
         this.meta = result?.meta || {};
         this.#loadedPage += 1;
         this.#hasMore = this.#resolveHasMore(result, appended.length);
-        this.renderBody();
+        this.#appendRows(firstNewRow);
+        return firstNewRow;
+    }
+
+    /**
+     * Render a progressive chunk by appending only the new rows. Rows already
+     * in the DOM keep their elements, so an in-progress edit, focus or an open
+     * detail row survives "load more" instead of being rebuilt. The same body
+     * lifecycle runs afterwards, so plugins resynchronize their own state
+     * (spacer row, open details, selection, action widths...).
+     * Falls back to a full renderBody() when the projection no longer matches
+     * the model (detached tbody, external DOM change).
+     * @param {Number} firstNewRow
+     */
+    #appendRows(firstNewRow) {
+        const tbody = this.tbody;
+        if (!tbody || this.#renderedCount !== firstNewRow) {
+            this.renderBody();
+            return;
+        }
+        this.log("append rows");
+        this.runPlugins("beforeRender");
+        this.#renderContext = "body";
+
+        const fragment = document.createDocumentFragment();
+        for (let rowIndex = firstNewRow; rowIndex < this.rows.length; rowIndex++) {
+            fragment.appendChild(this.#renderDataRow(this.rows[rowIndex], rowIndex));
+        }
+        tbody.appendChild(fragment);
+        this.#renderedCount = this.rows.length;
+
+        this.paginate();
+        this.runPlugins("afterRender", this.#renderContext);
+        this.queueFrozenSync();
+        this.removeAttribute("data-empty");
+
+        dispatch(this, "bodyRendered");
     }
 
     /**
@@ -4356,6 +4403,7 @@ class DataGrid extends BaseElement {
         } else {
             this.table?.appendChild(tbody);
         }
+        this.#renderedCount = this.rows.length;
 
         this.paginate();
 

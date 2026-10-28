@@ -2,6 +2,8 @@ import { expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
+import EditableColumn from "../src/plugins/editable-column.js";
+import FixedHeight from "../src/plugins/fixed-height.js";
 import RowDetails from "../src/plugins/row-details.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 import { change } from "./helpers.js";
@@ -12,8 +14,11 @@ const rows = Array.from({ length: 65 }, (_, i) => ({
     status: i % 2 ? "active" : "archived",
 }));
 
-async function makeReadyGrid(opts = {}, data = rows) {
+async function makeReadyGrid(opts = {}, data = rows, plugins = null) {
     DataGrid.unregisterPlugins();
+    if (plugins) {
+        DataGrid.registerPlugins(plugins);
+    }
     const inst = new DataGrid({
         columns: [{ field: "name" }],
         ...opts,
@@ -339,6 +344,73 @@ test("a late chunk never appends after a population change", async () => {
     document.body.removeChild(inst);
 });
 
+test("loadMore appends new rows without rebuilding the mounted ones", async () => {
+    const small = Array.from({ length: 30 }, (_, i) => ({ id: i + 1, name: `row${i}` }));
+    const inst = await makeReadyGrid(
+        {
+            pager: "more",
+            initialQuery: { pageSize: 20 },
+            columns: [{ field: "name", editable: true }],
+            dataSource: new ArrayDataSource(small),
+        },
+        rows,
+        { EditableColumn },
+    );
+    const firstRow = inst.tbody.querySelector("tr.dg-data-row");
+    const firstInput = firstRow.querySelector("input.dg-editable");
+    firstInput.value = "unsaved";
+
+    await inst.loadMore();
+
+    expect(inst.rows).toHaveLength(30);
+    expect(inst.tbody.querySelector("tr.dg-data-row")).toBe(firstRow);
+    expect(firstRow.querySelector("input.dg-editable")).toBe(firstInput);
+    expect(firstInput.value).toBe("unsaved");
+    // Appended rows still mount their own editor.
+    expect(inst.tbody.querySelectorAll("tr.dg-data-row input.dg-editable")).toHaveLength(30);
+    inst.remove();
+});
+
+test("loadMore keeps a single FixedHeight spacer row in last position", async () => {
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 } }, rows.slice(0, 30), {
+        FixedHeight,
+    });
+    const spacer = inst.tbody.querySelector(":scope > tr.dg-spacer-row");
+    expect(spacer).toBeTruthy();
+
+    await inst.loadMore();
+
+    expect(inst.tbody.querySelectorAll(":scope > tr.dg-spacer-row")).toHaveLength(1);
+    expect(inst.tbody.querySelector(":scope > tr.dg-spacer-row")).toBe(spacer);
+    expect(inst.tbody.lastElementChild).toBe(spacer);
+    inst.remove();
+});
+
+test("loadMore still runs the body lifecycle for the new rows only", async () => {
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 } }, rows.slice(0, 30));
+    let bodyRendered = 0;
+    const rendered = [];
+    inst.addEventListener("bodyRendered", () => bodyRendered++);
+    inst.addEventListener("rowRendered", (ev) => rendered.push(ev.detail.rowData.id));
+
+    await inst.loadMore();
+
+    expect(bodyRendered).toBe(1);
+    // Already mounted rows are not rendered again.
+    expect(rendered).toEqual(rows.slice(20, 30).map((row) => row.id));
+    inst.remove();
+});
+
+test("a query change still rebuilds the whole body", async () => {
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 } }, rows);
+    const firstRow = inst.tbody.querySelector("tr.dg-data-row");
+
+    await inst.setQuery({ search: "row" });
+
+    expect(inst.tbody.querySelector("tr.dg-data-row")).not.toBe(firstRow);
+    inst.remove();
+});
+
 test("selection survives a plain loadMore", async () => {
     DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ SelectableRows });
@@ -386,10 +458,14 @@ test("expanded details survive appended chunks", async () => {
     });
 
     inst.getPlugin("RowDetails").expand("1");
+    const detailRow = inst.querySelector(".dg-row-details-row");
     await inst.loadMore();
 
     expect(inst.getPlugin("RowDetails").isExpanded("1")).toBe(true);
     expect(inst.querySelectorAll(".dg-row-details-row")).toHaveLength(1);
+    // The appended rows come after the expanded row's own detail row.
+    expect(inst.querySelector(".dg-row-details-row")).toBe(detailRow);
+    expect(detailRow.previousElementSibling).toBe(inst.querySelector('tr.dg-data-row[data-row-index="0"]'));
     document.body.removeChild(inst);
 });
 

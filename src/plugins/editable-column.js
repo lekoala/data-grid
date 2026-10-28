@@ -9,6 +9,11 @@ import { dispatch } from "../utils/dispatch.js";
  * Commit dispatches a cancelable "edit" event; preventDefault() rejects.
  */
 class EditableColumn extends BasePlugin {
+    /** Cells whose editor is already mounted. A progressive append must not
+     * rebuild them: the user may be editing one of them.
+     * @type {WeakSet<HTMLTableCellElement>} */
+    #mounted = new WeakSet();
+
     /**
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
@@ -25,6 +30,10 @@ class EditableColumn extends BasePlugin {
             grid.querySelectorAll("tbody td.dg-editable-col")
         );
         for (const td of cells) {
+            // Cells already mounted keep their control (and its listeners).
+            if (this.#mounted.has(td)) {
+                continue;
+            }
             const rowIndex = Number.parseInt(td.dataset.rowIndex ?? "");
             const column = columns.get(td.getAttribute("data-column-id") ?? "");
             const item = grid.rows[rowIndex];
@@ -32,6 +41,7 @@ class EditableColumn extends BasePlugin {
                 continue;
             }
             this.makeEditableInput(td, column, item, rowIndex);
+            this.#mounted.add(td);
         }
     }
 

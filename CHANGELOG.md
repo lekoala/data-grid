@@ -37,6 +37,12 @@ not documented.
 
 ### Changed
 
+- `loadMore()` appends only the new rows to the body instead of rebuilding every
+  row: mounted rows keep their DOM elements and state, so an in-progress edit,
+  keyboard focus or an open inline detail row survives a chunk. Plugins still
+  run their body hooks to resynchronize their own state (spacer row, open
+  details, selection, action widths). Search, filter, sort, page-size or
+  data-source changes keep replacing the whole body.
 - `action` is cancelable and its detail now includes `originalEvent`. Calling
   `preventDefault()` in the listener blocks the native link navigation, which
   lets an application take over a row action (a full edit, for example) while

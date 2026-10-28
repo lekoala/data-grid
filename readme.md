@@ -334,7 +334,10 @@ chunk. A backend may omit `total` and send `hasMore` instead (see
 
 The Load more button stays focusable while busy (`aria-disabled="true"`). When
 it disappears at the end of the results, keyboard focus moves to the first new
-row, or to the scroll viewport if the final chunk is empty.
+row, or to the scroll viewport if the final chunk is empty. A chunk appends only
+the new rows: mounted rows keep their elements, so an in-progress edit, focus or
+an open inline detail row survives the load. A search, filter, sort, page-size or
+data-source change still replaces the whole body.
 
 ## Scrollable grid
 

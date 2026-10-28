@@ -7,6 +7,11 @@ declare class FixedHeight extends BasePlugin {
      * @param {import("../core/base-plugin.js").RenderContext} context
      */
     afterRender(context: import("../core/base-plugin.js").RenderContext): void;
+    /**
+     * Reuse the single spacer row and keep it last. A progressive append puts
+     * the new rows after the existing spacer, so moving it re-appends it at
+     * the end instead of piling up duplicate spacers.
+     */
     createSpacerRow(): void;
     /** @returns {HTMLTableRowElement|null} */
     get spacerRow(): HTMLTableRowElement | null;

@@ -891,13 +891,13 @@ declare class DataGrid extends BaseElement {
     load(): Promise<void>;
     /**
      * Append the next transport chunk in pager "more" mode, then render the
-     * grown list. No-op unless the pager is "more", no load is running, and
-     * the list is not exhausted yet. A concurrent setQuery() supersedes the
-     * flight: its late response is dropped and its cleanup never touches the
-     * newer load. Errors keep the loaded rows and leave the button available
-     * for a retry. Before the first successful chunk, it loads or retries
-     * page 1 through load(). Progress is already observable through rows.length,
-     * total and loading — no boolean needed.
+     * new rows into the existing body. No-op unless the pager is "more", no
+     * load is running, and the list is not exhausted yet. A concurrent
+     * setQuery() supersedes the flight: its late response is dropped and its
+     * cleanup never touches the newer load. Errors keep the loaded rows and
+     * leave the button available for a retry. Before the first successful
+     * chunk, it loads or retries page 1 through load(). Progress is already
+     * observable through rows.length, total and loading — no boolean needed.
      * @public
      * @returns {Promise<void>}
      */

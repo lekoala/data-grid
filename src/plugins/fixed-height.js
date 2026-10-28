@@ -16,17 +16,31 @@ class FixedHeight extends BasePlugin {
         this.updateSpacerRow();
     }
 
+    /**
+     * Reuse the single spacer row and keep it last. A progressive append puts
+     * the new rows after the existing spacer, so moving it re-appends it at
+     * the end instead of piling up duplicate spacers.
+     */
     createSpacerRow() {
         const grid = this.grid;
-        const { row } = createSpanningRow(grid, { className: "dg-spacer-row" });
-        row.hidden = true;
-        row.setAttribute("aria-hidden", "true");
-        grid.tbody?.appendChild(row);
+        const tbody = grid.tbody;
+        if (!tbody) {
+            return;
+        }
+        let row = this.spacerRow;
+        if (!row) {
+            row = createSpanningRow(grid, { className: "dg-spacer-row" }).row;
+            row.hidden = true;
+            row.setAttribute("aria-hidden", "true");
+        }
+        tbody.appendChild(row);
     }
 
     /** @returns {HTMLTableRowElement|null} */
     get spacerRow() {
-        return this.grid.querySelector(".dg-spacer-row");
+        return /** @type {HTMLTableRowElement|null} */ (
+            this.grid.tbody?.querySelector(":scope > .dg-spacer-row") ?? null
+        );
     }
 
     /**
