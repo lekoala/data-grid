@@ -45,6 +45,9 @@ not documented.
 - Inline row action links share the button box model (`box-sizing: border-box`),
   so an action rendered as `<a>` has the same dimensions as a `<button>`.
 - Sort indicators are vertically centered with the header label.
+- Text filters no longer reserve inline-end space for the I-beam glyph shown on
+  an empty field: filter text and placeholders keep the column's alignment edge,
+  like header and body text.
 
 ## [3.7.1] - 2026-10-23
 

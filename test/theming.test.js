@@ -53,11 +53,17 @@ test("empty text filters show an I-beam affordance, mirrored in RTL", () => {
         /\.dg-text-field:has\(\s*>\s*input\.dg-filter-control\[placeholder=""\]:not\(:focus\):placeholder-shown\)::?after/,
     );
     expect(coreCss).toMatch(/\.dg-text-field[\s\S]*?mask: var\(--dg-icon-filter-text\)/);
-    expect(coreCss).toMatch(
-        /\[dir="rtl"\] thead tr\.dg-head-filters input\.dg-filter-control \{\s*padding-right: var\(--dg-padding-x\);\s*padding-left: 32px/,
-    );
-    expect(coreCss).toMatch(/\[dir="rtl"\][\s\S]*?\.dg-text-field[\s\S]*?::?after/);
+    expect(coreCss).toMatch(/\[dir="rtl"\][\s\S]*?\.dg-text-field[\s\S]*?::?after \{[\s\S]*?left: 12px/);
     expect(coreCss).toMatch(/forced-colors[\s\S]*?\.dg-text-field::?after \{\s*display: none/);
+});
+
+test("text filters keep the column alignment gutter", () => {
+    // The I-beam only shows on an empty field, so it must not reserve inline
+    // space: filter text has to end (or start) where header and body text do.
+    expect(coreCss).not.toMatch(/input\.dg-filter-control \{[^}]*padding-(right|left)/);
+    expect(coreCss).toMatch(
+        /thead tr\.dg-head-filters \.dg-filter-control \{[\s\S]*?padding: 4px var\(--dg-padding-x\);[\s\S]*?text-align: inherit;/,
+    );
 });
 
 test("decorative SVG masks keep standard and legacy WebKit declarations", () => {

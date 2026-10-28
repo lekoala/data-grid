@@ -49,13 +49,9 @@ data-grid[dir="rtl"] .dg-caret::after {
   left: 12px;
 }
 
-/* Mirror of the text-filter I-beam in _core.css: glyph space and glyph
-   position swap to the inline-start side. */
-data-grid[dir="rtl"] thead tr.dg-head-filters input.dg-filter-control {
-  padding-right: var(--dg-padding-x);
-  padding-left: 32px;
-}
-
+/* Mirror of the text-filter I-beam in _core.css: the glyph sits at the
+   inline-start side. It reserves no inline space, so the input keeps the
+   base padding and its text stays on the column's alignment edge. */
 @supports selector(:has(*)) {
   data-grid[dir="rtl"]
     thead

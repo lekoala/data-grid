@@ -775,10 +775,6 @@ data-grid .dg-text-field {
   }
 }
 
-data-grid thead tr.dg-head-filters input.dg-filter-control {
-  padding-right: 32px;
-}
-
 data-grid thead tr.dg-head-filters .dg-filter-control:hover {
   background-color: var(--dg-row-hover-bg);
 }
@@ -1194,11 +1190,6 @@ data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
 data-grid[dir="rtl"] .dg-select-field:after, data-grid[dir="rtl"] .dg-caret:after {
   left: 12px;
   right: auto;
-}
-
-data-grid[dir="rtl"] thead tr.dg-head-filters input.dg-filter-control {
-  padding-right: var(--dg-padding-x);
-  padding-left: 32px;
 }
 
 @supports selector(:has(*)) {

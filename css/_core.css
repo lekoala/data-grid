@@ -723,7 +723,11 @@ data-grid thead tr.dg-head-filters .dg-filter-control::placeholder {
    (YYYY-MM-DD, %, business text) never overlap the glyph. Mask keeps the
    currentColor theming; both declarations for WebKit, like the other
    built-in masks. Gated on selector(:has()) so older browsers show a plain
-   empty field. */
+   empty field.
+
+   Unlike the select caret, the glyph reserves no inline space: it only shows
+   on an empty field, so typed text and the placeholder keep the same
+   inline-end gutter as the header and body cells (column alignment). */
 data-grid .dg-text-field {
   display: inline-flex;
   max-inline-size: 100%;
@@ -749,12 +753,6 @@ data-grid .dg-text-field {
     top: 50%;
     transform: translateY(-50%);
   }
-}
-
-/* Reserve the glyph space, mirroring the select reserve. Physical LTR here,
-   mirrored for [dir="rtl"] in _rtl.css. */
-data-grid thead tr.dg-head-filters input.dg-filter-control {
-  padding-right: 32px;
 }
 
 data-grid thead tr.dg-head-filters .dg-filter-control:hover {
