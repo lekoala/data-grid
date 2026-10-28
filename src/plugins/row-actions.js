@@ -48,12 +48,15 @@ class RowActions extends BasePlugin {
     #widthObserver;
     /** @type {Number|null} */
     #widthFrame;
+    /** @type {WeakMap<HTMLTableRowElement, Object|undefined>} */
+    #renderedDefinitions;
 
     /**
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid) {
         super(grid);
+        this.#renderedDefinitions = new WeakMap();
         this.#widthFrame = null;
         this.#widthObserver = new ResizeObserver(() => this.#queueWidthSync());
         /** @type {HTMLUListElement|null} */
@@ -253,6 +256,24 @@ class RowActions extends BasePlugin {
         if (!this.hasActions()) {
             return;
         }
+        // Progressive chunks replace grid-wide metadata. Refresh only old
+        // server-driven action cells; editors and other row content survive.
+        const grid = this.grid;
+        const column = grid.getColumnById("$actions");
+        if (column) {
+            for (const cell of this.#bodyCells() ?? []) {
+                const tr = /** @type {HTMLTableRowElement} */ (cell.parentElement);
+                const rowIndex = Number(tr.dataset.rowIndex);
+                const row = grid.rows[rowIndex];
+                if (row?.$actions === undefined || this.#renderedDefinitions.get(tr) === grid.meta?.actions) {
+                    continue;
+                }
+                if (grid.options.rowClick === "action") {
+                    tr.classList.remove("dg-clickable-row");
+                }
+                cell.replaceChildren(this.makeActionRow({ grid, column, row, rowIndex, tr }));
+            }
+        }
         this.syncCellModes();
         // Observe controls rather than the fixed-width column: a host class or
         // font change can resize a button while the cell itself stays unchanged.
@@ -422,6 +443,9 @@ class RowActions extends BasePlugin {
      * @returns {DocumentFragment}
      */
     makeActionRow({ row, tr, grid, rowIndex }) {
+        if (tr) {
+            this.#renderedDefinitions.set(tr, grid.meta?.actions);
+        }
         const labels = grid.labels;
         const rowData = row ?? {};
         const index = rowIndex ?? 0;

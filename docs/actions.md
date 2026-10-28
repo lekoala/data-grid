@@ -237,6 +237,11 @@ row.$actions           per-row availability + overrides
   an `Object` is merged over the definition of the same name.
 - A row without `$actions` falls back to `options.actions`.
 
+With `pager="more"`, each response replaces `meta` for all loaded rows, including
+`meta.actions`. Existing server-driven action controls follow the latest definitions;
+other cells keep their DOM and editing state. Omitting `meta.actions` clears the server
+definitions. Repeat them in each response while they remain applicable.
+
 ```json
 {
     "rows": [

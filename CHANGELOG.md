@@ -60,9 +60,13 @@ not documented.
 
 ### Fixed
 
+- `loadMore()` stops at a retained total when later custom-source chunks omit
+  `total`, while an explicit `hasMore` still takes priority.
+- Progressive chunks resynchronize existing server-driven row action controls
+  with the latest `meta.actions` without rebuilding other cells.
 - Retrying `loadMore()` after an error-state body render replaces the error row
-  with the loaded records instead of appending new rows below it and leaving
-  previously loaded records absent from the DOM.
+  with a clean body containing all loaded records instead of appending new rows
+  below the stale error message.
 - Canceled link actions in the collapsed row actions popover now return focus
   to the toggle instead of dropping it with the hidden menu; a navigating link
   still lets the browser follow it.

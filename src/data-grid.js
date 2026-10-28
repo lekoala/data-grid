@@ -1524,9 +1524,8 @@ class DataGrid extends BaseElement {
         if (typeof result?.hasMore === "boolean") {
             return result.hasMore;
         }
-        const total = normalizeTotal(result?.total);
-        if (total != null) {
-            return this.rows.length < total;
+        if (this.total != null) {
+            return this.rows.length < this.total;
         }
         return chunkLength === this.#query.pageSize;
     }

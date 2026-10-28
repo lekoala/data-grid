@@ -2669,9 +2669,8 @@ class DataGrid extends base_element_default {
     if (typeof result?.hasMore === "boolean") {
       return result.hasMore;
     }
-    const total = normalizeTotal(result?.total);
-    if (total != null) {
-      return this.rows.length < total;
+    if (this.total != null) {
+      return this.rows.length < this.total;
     }
     return chunkLength === this.#query.pageSize;
   }
@@ -6025,8 +6024,10 @@ function inlineActionsWidth(count) {
 class RowActions extends base_plugin_default {
   #widthObserver;
   #widthFrame;
+  #renderedDefinitions;
   constructor(grid) {
     super(grid);
+    this.#renderedDefinitions = new WeakMap;
     this.#widthFrame = null;
     this.#widthObserver = new ResizeObserver(() => this.#queueWidthSync());
     this.menu = null;
@@ -6167,6 +6168,22 @@ class RowActions extends base_plugin_default {
     if (!this.hasActions()) {
       return;
     }
+    const grid = this.grid;
+    const column = grid.getColumnById("$actions");
+    if (column) {
+      for (const cell of this.#bodyCells() ?? []) {
+        const tr = cell.parentElement;
+        const rowIndex = Number(tr.dataset.rowIndex);
+        const row = grid.rows[rowIndex];
+        if (row?.$actions === undefined || this.#renderedDefinitions.get(tr) === grid.meta?.actions) {
+          continue;
+        }
+        if (grid.options.rowClick === "action") {
+          tr.classList.remove("dg-clickable-row");
+        }
+        cell.replaceChildren(this.makeActionRow({ grid, column, row, rowIndex, tr }));
+      }
+    }
     this.syncCellModes();
     for (const cell of this.#bodyCells() ?? []) {
       this.#widthObserver.observe(cell);
@@ -6284,6 +6301,9 @@ class RowActions extends base_plugin_default {
     }
   }
   makeActionRow({ row, tr, grid, rowIndex }) {
+    if (tr) {
+      this.#renderedDefinitions.set(tr, grid.meta?.actions);
+    }
     const labels = grid.labels;
     const rowData = row ?? {};
     const index = rowIndex ?? 0;

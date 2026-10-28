@@ -4,6 +4,7 @@ import { ArrayDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
 import EditableColumn from "../src/plugins/editable-column.js";
 import FixedHeight from "../src/plugins/fixed-height.js";
+import RowActions from "../src/plugins/row-actions.js";
 import RowDetails from "../src/plugins/row-details.js";
 import SelectableRows from "../src/plugins/selectable-rows.js";
 import { change } from "./helpers.js";
@@ -600,6 +601,87 @@ test("explicit hasMore wins over the total in both directions", async () => {
     // Total says exhausted (20 of 20), hasMore says continue: it stays.
     expect(moreButton(inst2).hidden).toBe(false);
     document.body.removeChild(inst2);
+});
+
+test("an omitted total stops more at the retained count unless hasMore overrides it", async () => {
+    for (const hasMore of [undefined, true, false]) {
+        const ds = new ArrayDataSource(rows.slice(0, 40));
+        const original = ds.load.bind(ds);
+        ds.load = async (query, options) => {
+            const { rows: chunk } = await original(query, options);
+            return query.page === 1 ? { rows: chunk, total: 40 } : { rows: chunk, hasMore };
+        };
+        const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+        await inst.loadMore();
+        expect(inst.total).toBe(40);
+        expect(metaText(inst)).toBe("40 of 40");
+        expect(moreButton(inst).hidden).toBe(hasMore !== true);
+        document.body.removeChild(inst);
+    }
+});
+
+test("an explicit unknown total clears the retained count for more", async () => {
+    const ds = new ArrayDataSource(rows.slice(0, 40));
+    const original = ds.load.bind(ds);
+    ds.load = async (query, options) => {
+        const { rows: chunk } = await original(query, options);
+        return { rows: chunk, total: query.page === 1 ? 40 : null };
+    };
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 }, dataSource: ds });
+    await inst.loadMore();
+    expect(inst.total).toBeNull();
+    expect(metaText(inst)).toBe("40");
+    expect(moreButton(inst).hidden).toBe(false);
+    document.body.removeChild(inst);
+});
+
+test("more synchronizes grid-wide action definitions without rebuilding data cells", async () => {
+    const ds = new ArrayDataSource(rows.map((row) => ({ ...row, $actions: ["view"] })));
+    const original = ds.load.bind(ds);
+    ds.load = async (query, options) => {
+        const result = await original(query, options);
+        return {
+            ...result,
+            meta:
+                query.page < 3
+                    ? { actions: { view: { href: `/v${query.page}/{id}`, default: query.page === 1 } } }
+                    : {},
+        };
+    };
+    const inst = await makeReadyGrid(
+        { pager: "more", rowActions: true, rowClick: "action", initialQuery: { pageSize: 20 }, dataSource: ds },
+        rows,
+        { RowActions },
+    );
+    const tr = inst.tbody.querySelector("tr.dg-data-row");
+    const dataCell = tr.querySelector('[data-column-id="name"]');
+    const actionsCell = tr.querySelector('[data-column-id="$actions"]');
+    expect(actionsCell.querySelector("a").getAttribute("href")).toBe("/v1/1");
+    expect(tr.classList.contains("dg-clickable-row")).toBe(true);
+
+    const events = [];
+    inst.addEventListener("action", (event) => {
+        event.preventDefault();
+        events.push(event.detail.action.href);
+    });
+    await inst.loadMore();
+    expect(inst.tbody.querySelector("tr.dg-data-row")).toBe(tr);
+    expect(tr.querySelector('[data-column-id="name"]')).toBe(dataCell);
+    expect(tr.querySelector('[data-column-id="$actions"]')).toBe(actionsCell);
+    expect(actionsCell.querySelector("a").getAttribute("href")).toBe("/v2/1");
+    expect(tr.classList.contains("dg-clickable-row")).toBe(false);
+    actionsCell.querySelector("a").click();
+    expect(events).toEqual(["/v2/{id}"]);
+    expect(inst.getActionsForRow(inst.rows[0])[0].href).toBe("/v2/{id}");
+
+    await inst.loadMore();
+    expect(inst.getActionsForRow(inst.rows[0])).toEqual([]);
+    expect(actionsCell.children).toHaveLength(0);
+    expect(tr.querySelector('[data-column-id="name"]')).toBe(dataCell);
+
+    await inst.refresh();
+    expect(inst.tbody.querySelector('[data-action="view"]').getAttribute("href")).toBe("/v1/1");
+    document.body.removeChild(inst);
 });
 
 test("without total or hasMore a full chunk assumes a sequel", async () => {
