@@ -1,6 +1,7 @@
 /**
  * Create the disclosure control shared by the responsive and row details
- * toggle columns: a compact ghost button whose chevron is drawn by CSS.
+ * toggle columns: a compact ghost button whose icon is drawn by CSS (a chevron
+ * unless the calling plugin overrides the mask).
  * Only the geometry and the icon hook are shared; the state (aria-expanded,
  * aria-label, aria-controls and the plugin `-open` class) stays owned by the
  * calling plugin.

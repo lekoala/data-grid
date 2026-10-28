@@ -6360,14 +6360,18 @@ class RowActions extends base_plugin_default {
         ev.preventDefault();
         return;
       }
-      dispatch(grid, "action", {
+      const accepted = dispatch(grid, "action", {
         action,
         name: action.name,
         row,
         rowKey,
         rowIndex,
-        trigger: el
-      });
+        trigger: el,
+        originalEvent: ev
+      }, { cancelable: true });
+      if (!accepted) {
+        ev.preventDefault();
+      }
       const menu = this.menu;
       if (menu?.contains(el)) {
         menu.hidePopover?.();
@@ -6816,6 +6820,7 @@ var save_state_default = SaveState;
 var DETAILS_CLASS = "dg-row-details";
 var DIALOG_CLASS = "dg-details-dialog";
 var DETAILS_PREFIX = "dg-details";
+var DIALOG_CONTROL_CLASS = `${DETAILS_CLASS}-toggle-control-dialog`;
 
 class RowDetails extends base_plugin_default {
   #dialog;
@@ -6967,6 +6972,7 @@ class RowDetails extends base_plugin_default {
       button.setAttribute("aria-haspopup", "dialog");
       button.setAttribute("aria-controls", this.#dialogId());
       button.removeAttribute("aria-expanded");
+      button.classList.add(DIALOG_CONTROL_CLASS);
       button.setAttribute("aria-label", this.grid.formatLabel(this.grid.labels.showDetails, {
         row: this.grid.getRowLabel(row, rowIndex)
       }));
@@ -6974,6 +6980,7 @@ class RowDetails extends base_plugin_default {
       return;
     }
     button.removeAttribute("aria-haspopup");
+    button.classList.remove(DIALOG_CONTROL_CLASS);
     button.setAttribute("aria-controls", this.#detailId(rowIndex));
     button.setAttribute("aria-expanded", String(expanded));
     button.setAttribute("aria-label", this.grid.formatLabel(expanded ? this.grid.labels.hideDetails : this.grid.labels.showDetails, {

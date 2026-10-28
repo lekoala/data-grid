@@ -22,6 +22,7 @@ const DEMOS = [
     { href: "i18n.html", label: "i18n", group: "grids" },
     { href: "frozen.html", label: "Frozen columns", group: "grids" },
     { href: "actions.html", label: "Actions", group: "recipes" },
+    { href: "full-edit.html", label: "Full edit", group: "recipes" },
     { href: "api.html", label: "API", group: "recipes" },
     { href: "formatters.html", label: "Formatters", group: "recipes" },
     { href: "advanced-search.html", label: "Advanced search", group: "recipes" },

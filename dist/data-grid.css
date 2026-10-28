@@ -1682,6 +1682,11 @@ data-grid .dg-row-details-row > td {
   white-space: normal;
 }
 
+data-grid .dg-row-details-toggle-control-dialog:before {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='12' cy='12' r='3' fill='none' stroke='black' stroke-width='1.5'/%3E%3C/svg%3E");
+}
+
 /* css/_details-dialog.css */
 data-grid .dg-details-dialog {
   --details-pad: var(--dg-space-4);
@@ -1718,6 +1723,7 @@ data-grid .dg-details-panel {
   flex-direction: column;
   flex: auto;
   min-block-size: 0;
+  min-inline-size: 0;
 }
 
 data-grid .dg-details-header {
@@ -1726,9 +1732,12 @@ data-grid .dg-details-header {
   margin: calc(-1 * var(--details-pad)) calc(-1 * var(--details-pad)) var(--dg-space-3);
   padding: var(--dg-space-3) var(--details-pad);
   flex: none;
+  inline-size: auto;
+  min-inline-size: 0;
 }
 
 data-grid .dg-details-title {
+  overflow-wrap: anywhere;
   margin: 0;
   padding-right: 2.5rem;
   font-size: 1.125em;

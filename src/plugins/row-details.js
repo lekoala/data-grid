@@ -7,6 +7,8 @@ import { createSpanningRow } from "../utils/spanningRow.js";
 const DETAILS_CLASS = "dg-row-details";
 const DIALOG_CLASS = "dg-details-dialog";
 const DETAILS_PREFIX = "dg-details";
+/** Dialog mode consults a record instead of expanding the row in place. */
+const DIALOG_CONTROL_CLASS = `${DETAILS_CLASS}-toggle-control-dialog`;
 
 /** Expandable, application-rendered content associated with a data row. */
 class RowDetails extends BasePlugin {
@@ -211,6 +213,7 @@ class RowDetails extends BasePlugin {
             button.setAttribute("aria-haspopup", "dialog");
             button.setAttribute("aria-controls", this.#dialogId());
             button.removeAttribute("aria-expanded");
+            button.classList.add(DIALOG_CONTROL_CLASS);
             button.setAttribute(
                 "aria-label",
                 this.grid.formatLabel(this.grid.labels.showDetails, {
@@ -222,6 +225,7 @@ class RowDetails extends BasePlugin {
         }
 
         button.removeAttribute("aria-haspopup");
+        button.classList.remove(DIALOG_CONTROL_CLASS);
         button.setAttribute("aria-controls", this.#detailId(rowIndex));
         button.setAttribute("aria-expanded", String(expanded));
         button.setAttribute(

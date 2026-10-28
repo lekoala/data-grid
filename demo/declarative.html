@@ -209,8 +209,21 @@
         </data-grid>
       </div>
       <p class="demo-note">The authored cell keeps the machine value and a readable label for filters and search; the
-        template rebuilds the badge on every render, including after <code>updateRow()</code>. No JavaScript is
-        involved, and the template only inserts text: values are never parsed as HTML.</p>
+        template rebuilds the badge on every render, including after <code>updateRow()</code>. The template itself
+        needs no JavaScript and only inserts text: values are never parsed as HTML. The button below calls
+        <code>updateRow()</code> to replay it.</p>
+      <p><button type="button" id="templates-update">Cycle row 2 status</button></p>
+      <script type="module">
+        const grid = document.getElementById("templates-demo");
+        const statuses = ["active", "pending", "blocked"];
+        const button = document.getElementById("templates-update");
+        let step = 0;
+        button.addEventListener("click", () => {
+          const status = statuses[step++ % statuses.length];
+          grid.updateRow("2", { status });
+          button.textContent = `Row 2 status: ${status}`;
+        });
+      </script>
     </section>
 
     <section class="demo-grid">

@@ -53,7 +53,7 @@ grid.addEventListener("action", async (ev) => {
 
 ```js
 grid.addEventListener("action", (ev) => {
-    // { action, name, row, rowKey, rowIndex, trigger }
+    // { action, name, row, rowKey, rowIndex, trigger, originalEvent }
     console.log(ev.detail.action.intent, ev.detail.row, ev.detail.rowKey);
 });
 ```
@@ -63,6 +63,49 @@ grid.addEventListener("action", (ev) => {
 - `row` / `rowKey` / `rowIndex` - the target row and its stable key.
 - `trigger` - the `<button>`/`<a>` actually clicked, useful to show a loading
   state. DataGrid itself never performs HTTP.
+- `originalEvent` - the native click event, including its modifiers and button.
+
+The event is cancelable. Calling `preventDefault()` blocks the browser's default
+behavior (link navigation) so the application can take over; without
+cancellation, a link action navigates exactly as before.
+
+## Intercepting an action for a full edit
+
+An action can point at a real URL and be upgraded to an application-owned dialog.
+The link remains the no-JavaScript fallback, and modified clicks keep their
+native behavior:
+
+```js
+grid.addEventListener("action", (event) => {
+    if (event.detail.name !== "edit") {
+        return;
+    }
+
+    const native = event.detail.originalEvent;
+    if (native.metaKey || native.ctrlKey || native.shiftKey || native.altKey || native.button !== 0) {
+        return;
+    }
+
+    event.preventDefault();
+    openEditDialog(event.detail.rowKey);
+});
+```
+
+The application owns the rest:
+
+1. open its own `<dialog>` (not the row details one);
+2. load the form, from the server or locally;
+3. submit and render validation errors (for example a 422 response) without
+   closing the draft;
+4. on success, close the dialog and call `grid.refresh()` (remote source) or
+   `grid.updateRow(rowKey, patch)` (local source).
+
+The grid does not know the fields, the endpoint or the form. `rowDetails` and
+`detailsDisplay` are not involved. `demo/full-edit.html` is a complete example.
+
+When the action is the row's default and a row click activates it,
+`originalEvent` is the click DataGrid dispatches on the control, not the row
+click. Listen to `rowClick` for the row gesture itself.
 
 ## Action properties
 

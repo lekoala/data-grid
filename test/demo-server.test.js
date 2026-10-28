@@ -71,3 +71,48 @@ test("edit persists an in-memory override", async () => {
     expect(json.total).toBe(1);
     expect(json.rows[0].id).toBe(1);
 });
+
+test("serves the full edit form fragment", async () => {
+    const res = await Bun.fetch(`${base}/api/users/1/edit`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const html = await res.text();
+    expect(html).toContain('action="/api/users/1/edit"');
+    expect(html).toContain('name="first_name"');
+    expect(html).toContain('value="First name 1"');
+    expect(html).toContain("novalidate");
+});
+
+test("the full edit fragment is a 404 for an unknown row", async () => {
+    const res = await Bun.fetch(`${base}/api/users/9999/edit`);
+    expect(res.status).toBe(404);
+});
+
+test("the full edit route rejects invalid input with 422", async () => {
+    const form = new NativeFormData();
+    form.set("first_name", "");
+    form.set("last_name", "Last name 2");
+    form.set("company", "Acme");
+    const res = await Bun.fetch(`${base}/api/users/2/edit`, { method: "POST", body: form });
+    expect(res.status).toBe(422);
+    const json = await res.json();
+    expect(json.errors.first_name).toBe("First name is required.");
+});
+
+test("the full edit route persists a valid form", async () => {
+    const form = new NativeFormData();
+    form.set("first_name", "Edited");
+    form.set("last_name", "Name 3");
+    form.set("company", "Google");
+    const res = await Bun.fetch(`${base}/api/users/3/edit`, { method: "POST", body: form });
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.record.first_name).toBe("Edited");
+
+    const check = await Bun.fetch(
+        `${base}/api/users?filters[first_name][operator]=eq&filters[first_name][value]=Edited`,
+    );
+    const list = await check.json();
+    expect(list.rows).toHaveLength(1);
+    expect(list.rows[0].id).toBe(3);
+});

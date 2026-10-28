@@ -659,6 +659,9 @@ See `docs/actions.md` for the full contract.
 | `rowDetailsToggle` | `{ row, rowKey, expanded }`                        | row details are toggled    |
 
 `rowClick` is cancelable: call `preventDefault()` to veto the configured row-click behavior.
+`action` is cancelable too: its detail also includes `originalEvent`, and
+`preventDefault()` blocks a link action's native navigation so the application
+can take over (see `docs/actions.md`).
 
 ## Server
 

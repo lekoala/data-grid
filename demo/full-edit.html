@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+
+<head>
+  <script type="importmap">
+    { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+  </script>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Data Grid Demo - Full edit</title>
+
+  <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+  <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>?</text></svg>" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+  <link rel="stylesheet" href="../dist/data-grid.css" />
+  <link rel="stylesheet" href="demo.css" />
+
+  <style>
+    /* The application dialog is application-owned: DataGrid only renders the
+       Edit link. These styles intentionally stay outside the grid's tokens. */
+    #edit-dialog {
+      background: #fff;
+      border: 1px solid #dbdcdd;
+      border-radius: 8px;
+      box-shadow: 0 24px 48px -12px rgb(0 0 0 / 25%);
+      color: #1f2328;
+      max-block-size: calc(100vh - 2rem);
+      padding: 0;
+      width: min(28rem, calc(100vw - 2rem));
+    }
+
+    #edit-dialog::backdrop {
+      background: rgb(0 0 0 / 40%);
+    }
+
+    #edit-dialog[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #edit-dialog > header {
+      align-items: center;
+      border-bottom: 1px solid #dbdcdd;
+      display: flex;
+      gap: 0.5rem;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+    }
+
+    #edit-dialog h2 {
+      font-size: 1rem;
+      margin: 0;
+    }
+
+    #edit-close {
+      background: transparent;
+      border: 0;
+      color: inherit;
+      cursor: pointer;
+      font-size: 1.5rem;
+      line-height: 1;
+      padding: 0 0.35rem;
+    }
+
+    #edit-body {
+      overflow: auto;
+      padding: 1rem;
+    }
+
+    .demo-edit-form {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .demo-edit-form label {
+      display: grid;
+      gap: 0.25rem;
+      font-weight: 600;
+    }
+
+    .demo-edit-form input,
+    .demo-edit-form select {
+      border: 1px solid #dbdcdd;
+      border-radius: 6px;
+      font: inherit;
+      padding: 0.45rem 0.6rem;
+    }
+
+    .demo-edit-form button[type="submit"] {
+      background: #2563eb;
+      border: 0;
+      border-radius: 6px;
+      color: #fff;
+      cursor: pointer;
+      font: inherit;
+      justify-self: start;
+      padding: 0.5rem 1rem;
+    }
+
+    .demo-edit-errors {
+      color: #b42318;
+      margin: 0;
+    }
+  </style>
+
+  <script type="module">
+    import { DataGrid } from "../data-grid.js";
+
+    const grid = new DataGrid({
+      src: "/api/users",
+      pageSize: 10,
+      rowKey: "id",
+      columns: [
+        { field: "first_name", title: "First name" },
+        { field: "last_name", title: "Last name" },
+        { field: "company", title: "Company" },
+      ],
+      actions: [
+        {
+          name: "edit",
+          label: "Edit",
+          href: (row) => `/api/users/${row.id}/edit`,
+        },
+      ],
+    });
+    grid.id = "full-edit-grid";
+    document.getElementById("full-edit-host").append(grid);
+
+    const dialog = document.getElementById("edit-dialog");
+    const dialogBody = document.getElementById("edit-body");
+    const dialogTitle = document.getElementById("edit-title");
+
+    grid.addEventListener("action", async (event) => {
+      if (event.detail.name !== "edit") {
+        return;
+      }
+
+      // Modified clicks keep their native behavior: new tab, new window, ...
+      const native = event.detail.originalEvent;
+      if (native.metaKey || native.ctrlKey || native.shiftKey || native.altKey || native.button !== 0) {
+        return;
+      }
+
+      // The application takes over: the link must not also navigate.
+      event.preventDefault();
+
+      const { first_name, last_name } = event.detail.row;
+      dialogTitle.textContent = `Edit ${first_name} ${last_name}`;
+      dialogBody.textContent = "Loading form…";
+      dialog.showModal();
+
+      const response = await fetch(event.detail.trigger.getAttribute("href"));
+      if (!response.ok) {
+        dialogBody.textContent = `Could not load the form (${response.status}).`;
+        return;
+      }
+      dialogBody.innerHTML = await response.text();
+      dialogBody.querySelector("input")?.focus();
+    });
+
+    dialogBody.addEventListener("submit", async (event) => {
+      const form = event.target;
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+      event.preventDefault();
+
+      const summary = form.querySelector(".demo-edit-errors");
+      summary.hidden = true;
+      const response = await fetch(form.action, { method: "POST", body: new FormData(form) });
+
+      if (response.status === 422) {
+        const { errors } = await response.json();
+        summary.hidden = false;
+        summary.textContent = Object.values(errors).join(" ");
+        return;
+      }
+      if (!response.ok) {
+        summary.hidden = false;
+        summary.textContent = `Save failed (${response.status}).`;
+        return;
+      }
+
+      dialog.close();
+      await grid.refresh();
+    });
+
+    document.getElementById("edit-close").addEventListener("click", () => dialog.close());
+    dialog.addEventListener("close", () => {
+      dialogBody.replaceChildren();
+    });
+  </script>
+</head>
+
+<body>
+  <header>
+    <h1>Data Grid</h1>
+    <p><em>Standalone data grid web component</em></p>
+  </header>
+  <main>
+    <div data-demo-nav></div>
+    <script type="module">
+      import { renderDemoNav } from "./nav.js";
+      renderDemoNav();
+    </script>
+
+    <h2>Full edit</h2>
+    <p class="demo-lead">
+      The <code>Edit</code> action points at a real URL and is upgraded to an
+      application-owned <code>&lt;dialog&gt;</code> from the cancelable
+      <code>action</code> event. The grid never sees the form, the endpoint or the
+      validation.
+    </p>
+    <div class="demo-grid">
+      <div id="full-edit-host"></div>
+    </div>
+    <p class="demo-note">
+      The link stays usable without JavaScript: it returns the server-rendered
+      form fragment. <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+click keeps the native
+      navigation. Clear a field and save to see the server validation error
+      (422) without losing the dialog; a successful save closes it and refreshes
+      the grid.
+    </p>
+  </main>
+
+  <dialog id="edit-dialog" aria-labelledby="edit-title">
+    <header>
+      <h2 id="edit-title">Edit user</h2>
+      <button type="button" id="edit-close" aria-label="Close">&times;</button>
+    </header>
+    <div id="edit-body"></div>
+  </dialog>
+
+  <footer>
+    <hr />
+    Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by
+    <a href="https://www.lekoala.be">LeKoala</a>
+  </footer>
+</body>
+
+</html>

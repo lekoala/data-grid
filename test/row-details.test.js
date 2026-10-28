@@ -61,6 +61,7 @@ test("RowDetails renders application content, exposes state methods and emits on
     // Shared disclosure primitive: same compact control as the responsive
     // toggle, and never the full-cell click target of the selection column.
     expect(button.classList.contains("dg-disclosure")).toBe(true);
+    expect(button.classList.contains("dg-row-details-toggle-control-dialog")).toBe(false);
     expect(button.classList.contains("dg-clickable-cell")).toBe(false);
     expect(button.childElementCount).toBe(0);
     expect(button.closest("td").classList.contains("dg-disclosure-cell")).toBe(true);

@@ -24,7 +24,17 @@ not documented.
   appended after it. The option is initial-only. `RowDetails.expand()`,
   `collapse()`, `toggle()`, `isExpanded()` and `collapseAll()` keep their
   contract, `rowDetailsToggle` reports open and close, and the dialog survives
-  body rerenders. `closeDialog` is a new translatable label.
+  body rerenders. `closeDialog` is a new translatable label. Long row labels
+  wrap in the dialog header instead of running under the close button, and the
+  row control uses a consultation (eye) icon instead of the inline chevron.
+
+### Changed
+
+- `action` is cancelable and its detail now includes `originalEvent`. Calling
+  `preventDefault()` in the listener blocks the native link navigation, which
+  lets an application take over a row action (a full edit, for example) while
+  uncanceled clicks keep navigating and Ctrl/Cmd+click keeps opening a new tab.
+  See `demo/full-edit.html`.
 
 ## [3.7.1] - 2026-10-23
 

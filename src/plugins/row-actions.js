@@ -585,14 +585,25 @@ class RowActions extends BasePlugin {
                 ev.preventDefault();
                 return;
             }
-            dispatch(grid, "action", {
-                action,
-                name: action.name,
-                row,
-                rowKey,
-                rowIndex,
-                trigger: el,
-            });
+            const accepted = dispatch(
+                grid,
+                "action",
+                {
+                    action,
+                    name: action.name,
+                    row,
+                    rowKey,
+                    rowIndex,
+                    trigger: el,
+                    originalEvent: ev,
+                },
+                { cancelable: true },
+            );
+            // An application that takes over (a full edit, for example) cancels
+            // the event; its native link navigation must not also run.
+            if (!accepted) {
+                ev.preventDefault();
+            }
             // Close the shared collapsed actions popover after activation, once
             // the action has been dispatched. A button returns focus to the
             // invoker it came from; a link lets the navigation take over.

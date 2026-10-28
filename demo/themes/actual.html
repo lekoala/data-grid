@@ -52,7 +52,8 @@
         margin-block: var(--space-20);
       }
 
-      .heading h1 {
+      .heading h1,
+      .heading h2 {
         display: flex;
         align-items: center;
         gap: 0.45rem;
@@ -285,6 +286,42 @@
       </data-grid>
 
       <p class="meta">Rich declarative headers, one-page pagination, and columns that exercise a preferred width with a real minimum.</p>
+
+      <div class="heading">
+        <div>
+          <h2>Details dialog</h2>
+          <span class="meta">The record sheet inherits the Actual modal tokens</span>
+        </div>
+      </div>
+
+      <data-grid id="dialog-demo" details-display="dialog" row-label="summary" row-key="id" autohide-pager>
+        <table>
+          <caption class="sr-only">Details dialog sample</caption>
+          <thead>
+            <tr>
+              <th data-field="summary">Summary</th>
+              <th data-field="theme">Theme</th>
+              <th data-field="impact" data-align="center">Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr data-row-key="1">
+              <td>Limit the number of daily appointments</td>
+              <td data-value="Scheduling"><span class="badge sm primary">Scheduling</span></td>
+              <td data-value="5">5</td>
+            </tr>
+            <tr data-row-key="2">
+              <td>Bulk reschedule appointments</td>
+              <td data-value="Scheduling"><span class="badge sm primary">Scheduling</span></td>
+              <td data-value="3">3</td>
+            </tr>
+          </tbody>
+        </table>
+      </data-grid>
+
+      <p class="meta">The eye opens the record sheet in a modal. DataGrid owns the dialog lifecycle, while
+        <code>themes/actual.css</code> maps the surface, shadow, header band and modal padding. Do not load the Actual
+        CSS dialog runtime until its release excludes dialogs that live inside a web component.</p>
     </main>
 
     <script type="module">

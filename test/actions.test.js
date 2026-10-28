@@ -240,6 +240,79 @@ test("clicking an action dispatches the action event", async () => {
     document.body.removeChild(inst);
 });
 
+test("a canceled action prevents the native click and exposes the original event", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "edit", label: "Edit", href: (row) => `/users/${row.id}` }],
+        },
+        [{ id: 1, name: "a" }],
+        { RowActions },
+    );
+    let detail = null;
+    inst.addEventListener("action", (ev) => {
+        detail = ev.detail;
+        ev.preventDefault();
+    });
+    const link = inst.querySelector('tbody a[data-action="edit"]');
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(true);
+    expect(detail.originalEvent).toBe(click);
+    expect(detail.trigger).toBe(link);
+    expect(detail.rowKey).toBe("1");
+
+    document.body.removeChild(inst);
+});
+
+test("an uncanceled action leaves the native click alone", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [{ name: "edit", label: "Edit", href: (row) => `/users/${row.id}` }],
+        },
+        [{ id: 1, name: "a" }],
+        { RowActions },
+    );
+    let detail = null;
+    inst.addEventListener("action", (ev) => {
+        detail = ev.detail;
+    });
+    const link = inst.querySelector('tbody a[data-action="edit"]');
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(false);
+    expect(detail.originalEvent).toBe(click);
+
+    document.body.removeChild(inst);
+});
+
+test("canceling an action inside the collapsed popover prevents the click", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            actions: [
+                { name: "edit", label: "Edit", href: (row) => `/users/${row.id}` },
+                { name: "copy", label: "Copy" },
+                { name: "delete", label: "Delete" },
+            ],
+        },
+        [{ id: 1, name: "a" }],
+        { RowActions },
+    );
+    inst.addEventListener("action", (ev) => ev.preventDefault());
+    inst.querySelector(".dg-actions-toggle").click();
+    const link = inst.querySelector('.dg-actions-menu a[data-action="edit"]');
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+
+    expect(click.defaultPrevented).toBe(true);
+
+    document.body.removeChild(inst);
+});
+
 test("default action makes the row clickable", async () => {
     const inst = await makeReadyGrid(
         {

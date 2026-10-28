@@ -415,9 +415,9 @@ the grid itself does not depend on it.
 ## Disclosure controls
 
 The responsive toggle column (`$responsive`) and the row details toggle column
-(`$details`) render the same primitive: a `.dg-disclosure` chevron button inside
-a `.dg-disclosure-cell`. Geometry, colors and the open rotation are styled once
-on the shared classes, so restyling the pair takes a single rule:
+(`$details`) render the same primitive: a `.dg-disclosure` icon button inside a
+`.dg-disclosure-cell`. Geometry and colors are shared, the inline chevron rotates
+on open, and the row details dialog mode replaces the mask with an eye:
 
 ```css
 data-grid .dg-disclosure {
@@ -505,6 +505,8 @@ Use an Actual CSS release whose dialog runtime excludes dialogs that live inside
 a web component; DataGrid does not opt into it. If that exclusion is not
 available yet, keep `actual-css/js/dialog.js` off the pages that open the sheet,
 otherwise both runtimes handle the same `<dialog>`.
+`demo/themes/actual.html` opens the record sheet with these tokens; it does not
+load the Actual dialog runtime.
 
 ## Selectors
 

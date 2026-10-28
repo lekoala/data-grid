@@ -80,6 +80,60 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "a long row label wraps inside the header and clears the close button",
+    async () => {
+        await using v = view();
+        await openSheet(v);
+
+        // A page-level element rule must not reach the dialog header.
+        await v.evaluate(`(() => {
+            const style = document.createElement('style');
+            style.textContent = 'header { width: 1100px; padding: 3rem 0; }';
+            document.head.append(style);
+            document.querySelector('#sheet-grid .dg-details-title').textContent =
+                'Cherilynn with a name that is far too long for the dialog header';
+        })()`);
+
+        const box = JSON.parse(
+            await read(
+                v,
+                `JSON.stringify((() => {
+                    const dialog = document.querySelector('#sheet-grid dialog.dg-details-dialog');
+                    const panel = dialog.querySelector('.dg-details-panel');
+                    const header = dialog.querySelector('.dg-details-header');
+                    const title = dialog.querySelector('.dg-details-title');
+                    const close = dialog.querySelector('.dg-details-close');
+                    const t = title.getBoundingClientRect();
+                    const c = close.getBoundingClientRect();
+                    return {
+                        header: header.getBoundingClientRect().width,
+                        panel: panel.getBoundingClientRect().width,
+                        wrapped: t.height > 30,
+                        clear: t.right - parseFloat(getComputedStyle(title).paddingRight) <= c.left,
+                    };
+                })())`,
+            ),
+        );
+        expect(box.header).toBeLessThanOrEqual(box.panel);
+        expect(box.wrapped).toBe(true);
+        expect(box.clear).toBe(true);
+
+        const word = JSON.parse(
+            await read(
+                v,
+                `JSON.stringify((() => {
+                    const title = document.querySelector('#sheet-grid .dg-details-title');
+                    title.textContent = 'x'.repeat(200);
+                    return { scroll: title.scrollWidth, client: title.clientWidth };
+                })())`,
+            ),
+        );
+        expect(word.scroll).toBeLessThanOrEqual(word.client);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "the dialog keeps a viewport margin and the application content follows the sheet",
     async () => {
         await using v = view();

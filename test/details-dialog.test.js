@@ -46,6 +46,7 @@ test("dialog mode renders a disclosure control and opens the built-in sheet with
     expect(toggle).toBeTruthy();
     expect(toggle.getAttribute("aria-haspopup")).toBe("dialog");
     expect(toggle.hasAttribute("aria-expanded")).toBe(false);
+    expect(toggle.classList.contains("dg-row-details-toggle-control-dialog")).toBe(true);
     expect(toggle.classList.contains("dg-row-details-toggle-control-open")).toBe(false);
 
     toggle.click();

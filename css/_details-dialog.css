@@ -42,6 +42,7 @@ data-grid .dg-details-panel {
   flex: 1 1 auto;
   flex-direction: column;
   min-block-size: 0;
+  min-inline-size: 0;
   padding: var(--details-pad);
 }
 
@@ -49,13 +50,16 @@ data-grid .dg-details-header {
   background: var(--dg-header-bg);
   border-bottom: var(--dg-border-width) solid var(--dg-border-color);
   flex: none;
+  inline-size: auto;
   margin: calc(-1 * var(--details-pad)) calc(-1 * var(--details-pad)) var(--dg-space-3);
+  min-inline-size: 0;
   padding: var(--dg-space-3) var(--details-pad);
 }
 
 data-grid .dg-details-title {
   font-size: 1.125em;
   margin: 0;
+  overflow-wrap: anywhere;
   padding-right: 2.5rem;
 }
 

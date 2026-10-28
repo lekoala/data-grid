@@ -1,7 +1,8 @@
 /* Disclosure controls: the responsive and the row details toggle columns are
-   the same primitive (a compact chevron button in a narrow virtual column), so
-   geometry, colors and states live here once. Plugin classes stay on the
-   elements for behavior selectors only. */
+   the same primitive (a compact icon button in a narrow virtual column), so
+   geometry, colors and states live here once. The default icon is a chevron;
+   a plugin may replace the mask (row details uses an eye in dialog mode).
+   Plugin classes stay on the elements for behavior selectors only. */
 data-grid .dg-disclosure-cell {
   padding: 0;
   text-align: center;

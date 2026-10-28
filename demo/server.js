@@ -17,6 +17,36 @@ const rows = Array.from({ length: ROWS_COUNT }, (_, i) => ({
 // In-memory overrides for the edit action
 const overrides = new Map();
 
+const HTML_ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };
+
+/**
+ * @param {any} value
+ * @returns {String}
+ */
+function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, (char) => HTML_ESCAPES[char]);
+}
+
+/**
+ * Server-rendered full edit form, loaded by the application dialog. The demo
+ * owns the fields, validation and endpoint; DataGrid only renders the action.
+ * @param {Record<string, any>} record
+ * @returns {String}
+ */
+function editForm(record) {
+    const options = COMPANIES.map(
+        (company) =>
+            `<option value="${company}"${company === record.company ? " selected" : ""}>${company}</option>`,
+    ).join("");
+    return `<form method="post" action="/api/users/${record.id}/edit" class="demo-edit-form" novalidate>
+  <p class="demo-edit-errors" role="alert" hidden></p>
+  <label>First name <input name="first_name" value="${escapeHtml(record.first_name)}" /></label>
+  <label>Last name <input name="last_name" value="${escapeHtml(record.last_name)}" /></label>
+  <label>Company <select name="company">${options}</select></label>
+  <button type="submit">Save changes</button>
+</form>`;
+}
+
 // Number of /api/users list requests served (for the lazy-load demo)
 let userListRequests = 0;
 
@@ -90,6 +120,48 @@ export async function handleApi(req, url) {
 
     if (url.pathname === "/api/users/requests") {
         return NativeResponse.json({ count: userListRequests }, { headers });
+    }
+
+    // Full edit demo: a server-rendered fragment and its dedicated submit route.
+    const editMatch = url.pathname.match(/^\/api\/users\/(\d+)\/edit$/);
+    if (editMatch) {
+        const id = Number(editMatch[1]);
+        const base = rows.find((row) => row.id === id);
+        if (!base) {
+            return new NativeResponse("Not found", { status: 404, headers });
+        }
+        const record = { ...base, ...overrides.get(id) };
+        if (req.method === "POST") {
+            const form = await req.formData();
+            const patch = {
+                first_name: String(form.get("first_name") ?? "").trim(),
+                last_name: String(form.get("last_name") ?? "").trim(),
+                company: String(form.get("company") ?? "").trim(),
+            };
+            /** @type {Record<String, String>} */
+            const errors = {};
+            if (!patch.first_name) {
+                errors.first_name = "First name is required.";
+            }
+            if (!patch.last_name) {
+                errors.last_name = "Last name is required.";
+            }
+            if (!COMPANIES.includes(patch.company)) {
+                errors.company = "Choose a company from the list.";
+            }
+            if (Object.keys(errors).length) {
+                return NativeResponse.json({ errors }, { status: 422, headers });
+            }
+            const updated = { ...record, ...patch };
+            overrides.set(id, updated);
+            return NativeResponse.json({ success: 1, record: updated }, { headers });
+        }
+        if (req.method !== "GET") {
+            return new NativeResponse("Method not allowed", { status: 405, headers });
+        }
+        return new NativeResponse(editForm(record), {
+            headers: { ...headers, "Content-Type": "text/html; charset=utf-8" },
+        });
     }
 
     if (url.pathname !== "/api/users") {

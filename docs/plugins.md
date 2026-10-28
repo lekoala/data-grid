@@ -193,6 +193,10 @@ Behavior and limits:
 - one dialog per grid and one session at a time: `expand()` on another row
   closes the previous one, then opens the new one; `expand()` on the row already
   open is a no-op and does not refresh the snapshot;
+- the row control shows a consultation (eye) icon instead of the inline chevron.
+  It keeps the same cell, size and focus ring, exposes `aria-haspopup="dialog"`
+  and `aria-controls`, and has no `aria-expanded` (the row itself does not
+  expand);
 - `expand(rowKey)`, `collapse(rowKey)`, `toggle(rowKey)`, `isExpanded(rowKey)` and
   `collapseAll()` keep working; there is no `openDialog()` method;
 - `rowDetailsToggle` fires `{ row, rowKey, expanded }` on open and on close
@@ -217,8 +221,9 @@ and responsive keeps its own toggle.
 ### Combining responsive columns and a dialog
 
 In dialog mode `ResponsiveGrid` yields its disclosure control to `RowDetails`
-(one chevron per row) and no longer seeds a responsive child row, including with
-`responsiveStartOpen: true`: the hidden values are already in the sheet.
+(one consultation control per row) and no longer seeds a responsive child row,
+including with `responsiveStartOpen: true`: the hidden values are already in the
+sheet.
 
 - `responsiveStartOpen` is ignored in dialog mode;
 - `rowDetailsStartOpen` is ignored in dialog mode;
