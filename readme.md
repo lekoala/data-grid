@@ -188,9 +188,44 @@ labels are derived from the same `data-value` + cell text when present. With a
 `src`/`dataSource`, the source stays authoritative and the `<tbody>` is not
 consumed as data.
 
-Rule of thumb: **HTML = declarative configuration, JS = behavior.** For
-custom rendering (`renderCell`), validators or a custom data source, use the
-JavaScript API instead.
+### Cell templates
+
+A direct-child `<template data-cell="field">` declares the presentation of a
+column. The template is cloned for every cell; `data-dg-text="value"` receives
+the **raw scalar value** through `textContent`:
+
+```html
+<data-grid src="/api/users">
+  <table>...</table>
+  <template data-cell="status">
+    <span class="badge" data-dg-text="value"></span>
+  </template>
+</data-grid>
+```
+
+The rendered cell exposes the same value as `td[data-value]`, so conditional
+styling stays in CSS:
+
+```css
+td[data-value="active"] .badge { color: green; }
+```
+
+Precedence: `renderCell` > template > authored cell markup > `format` /
+`transform`. Templates bypass `format` and `transform`; use `renderCell` for
+formatted output. On an `editable` column the inline editor replaces the
+template in the cell: the template is the pre-edit presentation and
+`data-value` reflects the last rendered value; use `renderEditor` for a custom
+editing UI. No conditions, loops or attribute interpolation: the template is a
+renderer, not a template language. Objects and arrays render as empty text and
+expose no `data-value`. The template is cloned for every cell, so avoid `id`
+attributes; use classes and `data-value` for styling. Templates are trusted
+application HTML: values are never parsed, but the guard against `script`,
+`style`, `on*` attributes and executable URL protocols is not a sanitizer
+(`data:` is allowed for image/media `src`).
+
+Rule of thumb: **HTML = declarative configuration and simple presentation,
+JS = behavior.** For custom rendering (`renderCell`), validators or a custom
+data source, use the JavaScript API instead.
 
 ## Options
 

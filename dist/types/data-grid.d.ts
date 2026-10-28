@@ -1300,12 +1300,12 @@ declare class DataGrid extends BaseElement {
      */
     renderBody(): void;
     /**
-     * Default cell renderer for base columns (transform).
+     * Default cell renderer for base columns (templates, transform, format).
      * Editable cells are marked for the EditableColumn plugin.
-     * @param {HTMLTableCellElement} td
+     * @param {HTMLElement} td
      * @param {CellContext} ctx
      */
-    renderDefaultCell(td: HTMLTableCellElement, ctx: CellContext): void;
+    renderDefaultCell(td: HTMLElement, ctx: CellContext): void;
     paginate(): void;
     /**
      * @public

@@ -33,6 +33,7 @@ import addSelectOption from "./utils/addSelectOption.js";
 import applyContent from "./utils/applyContent.js";
 import { parseEnumAttribute, parseIntegerListAttribute } from "./utils/attributes.js";
 import camelize from "./utils/camelize.js";
+import { applyCellTemplate, collectCellTemplates } from "./utils/cellTemplate.js";
 import { MIN_COLUMN_WIDTH } from "./utils/columnWidth.js";
 import { normalizeControlClasses, refreshControlClasses, styleControl } from "./utils/controlClasses.js";
 import debounce from "./utils/debounce.js";
@@ -640,6 +641,14 @@ class DataGrid extends BaseElement {
     #initialResult;
     /** @type {Column[]} */
     #columns;
+    /** @type {Map<String, HTMLTemplateElement>} */
+    #cellTemplates;
+    /** @type {WeakSet<HTMLTemplateElement>} */
+    #warnedTemplates;
+    /** @type {Set<String>} */
+    #warnedUnmatchedTemplates;
+    /** @type {Set<String>} */
+    #warnedDuplicateTemplates;
     /** @type {IntersectionObserver|null} */
     #loadObserver;
     /** @type {Boolean} */
@@ -761,6 +770,21 @@ class DataGrid extends BaseElement {
          * @type {Column[]}
          */
         this.#columns = [];
+
+        /**
+         * Declarative cell templates, keyed by column field.
+         * @type {Map<String, HTMLTemplateElement>}
+         */
+        this.#cellTemplates = new Map();
+
+        /** @type {WeakSet<HTMLTemplateElement>} */
+        this.#warnedTemplates = new WeakSet();
+
+        /** @type {Set<String>} */
+        this.#warnedUnmatchedTemplates = new Set();
+
+        /** @type {Set<String>} */
+        this.#warnedDuplicateTemplates = new Set();
 
         /**
          * The active data source, set by setupDataSource().
@@ -2311,6 +2335,7 @@ class DataGrid extends BaseElement {
 
     async _connected() {
         this.#adoptDeclarativeTable();
+        this.#collectCellTemplates();
         this.table = this.querySelector("table");
         this.#wrapScroll();
         this.btnFirst = this.querySelector(".dg-btn-first");
@@ -3656,7 +3681,9 @@ class DataGrid extends BaseElement {
     renderTable() {
         this.log("render table");
 
+        this.#collectCellTemplates();
         this.#columns = this.buildColumns();
+        this.#warnUnmatchedCellTemplates();
         this.runPlugins("beforeRender");
         this.#renderContext = "table";
         this.updateTableLabel();
@@ -4410,15 +4437,71 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Default cell renderer for base columns (transform).
+     * Register the direct-child cell templates, independent from the column
+     * schema, and report rejected or duplicate declarations once.
+     */
+    #collectCellTemplates() {
+        const { templates, rejected, duplicates } = collectCellTemplates(this);
+        this.#cellTemplates = templates;
+        for (const { field, template } of rejected) {
+            if (this.#warnedTemplates.has(template)) {
+                continue;
+            }
+            this.#warnedTemplates.add(template);
+            console.warn(`data-grid: ignoring unsafe template[data-cell="${field}"]`);
+        }
+        for (const field of duplicates) {
+            if (this.#warnedDuplicateTemplates.has(field)) {
+                continue;
+            }
+            this.#warnedDuplicateTemplates.add(field);
+            this.log(`duplicate template for "${field}"; the last one wins`);
+        }
+    }
+
+    /**
+     * Warn once for a template that does not match a known column field. The
+     * check waits for the schema: AJAX grids may infer their columns after the
+     * templates are registered.
+     */
+    #warnUnmatchedCellTemplates() {
+        if (!this.#columns.length) {
+            return;
+        }
+        const fields = new Set();
+        for (const column of this.#columns) {
+            if (column.field && !column.attr && !column.virtual) {
+                fields.add(column.field);
+            }
+        }
+        for (const field of this.#cellTemplates.keys()) {
+            if (fields.has(field) || this.#warnedUnmatchedTemplates.has(field)) {
+                continue;
+            }
+            this.#warnedUnmatchedTemplates.add(field);
+            console.warn(`data-grid: no column found for template[data-cell="${field}"]`);
+        }
+    }
+
+    /**
+     * Default cell renderer for base columns (templates, transform, format).
      * Editable cells are marked for the EditableColumn plugin.
-     * @param {HTMLTableCellElement} td
+     * @param {HTMLElement} td
      * @param {CellContext} ctx
      */
     renderDefaultCell(td, ctx) {
         const { column, row: item } = ctx;
         const field = column.field;
         if (!field || !item) {
+            return;
+        }
+
+        // A declarative template owns the presentation for this column and is
+        // replayed on every render, including after a value update. It wins
+        // over the authored blueprint and over format/transform.
+        const template = this.#cellTemplates.get(field);
+        if (template) {
+            applyCellTemplate(td, template, item[field]);
             return;
         }
 

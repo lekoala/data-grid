@@ -7,6 +7,17 @@ not documented.
 
 ## [Unreleased]
 
+### Added
+
+- Declarative cell templates: a direct-child `<template data-cell="field">`
+  renders a column's cells without JavaScript. `data-dg-text="value"` receives
+  the raw scalar value through `textContent`, and the rendered cell exposes it
+  as `data-value` for CSS. Templates replay on every render, including after
+  `updateRow()`, and take precedence over the authored cell markup and
+  `format`/`transform` (`renderCell` still wins). Unsafe templates (`script`,
+  `style`, `on*`, executable URL protocols) are ignored and fall back to the
+  default renderer; `data:` remains available for image/media `src`.
+
 ## [3.7.1] - 2026-10-23
 
 ### Added

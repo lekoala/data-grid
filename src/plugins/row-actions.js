@@ -7,12 +7,12 @@ import interpolate from "../utils/interpolate.js";
 import { supportsPopover } from "../utils/popover.js";
 import { attachPopoverPositioning } from "../utils/positionPopover.js";
 import randstr from "../utils/randstr.js";
+import { isSafeUrl } from "../utils/safeUrl.js";
 
 const COLLAPSED_ACTIONS_WIDTH = 48;
 const INLINE_ACTION_WIDTH = 64;
 const INLINE_ACTION_GAP = 4;
 const ACTIONS_CELL_PADDING = 16;
-const UNSAFE_URL_PROTOCOLS = new Set(["data:", "javascript:", "vbscript:"]);
 
 /**
  * Keep ordinary relative and application URLs while preventing href values
@@ -24,13 +24,7 @@ function normalizeActionHref(value) {
     if (value === null || value === undefined) {
         return null;
     }
-    const href = String(value);
-    try {
-        const protocol = new URL(href, document.baseURI).protocol.toLowerCase();
-        return UNSAFE_URL_PROTOCOLS.has(protocol) ? null : href;
-    } catch {
-        return null;
-    }
+    return isSafeUrl(value) ? String(value) : null;
 }
 
 /**

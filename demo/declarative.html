@@ -64,6 +64,22 @@
       white-space: nowrap;
       font-variant-numeric: tabular-nums;
     }
+    /* Cell templates: the value stays data, the appearance stays in CSS. */
+    #templates-demo .badge {
+      text-transform: capitalize;
+    }
+    #templates-demo td[data-value="active"] .badge {
+      background: #e6f4ea;
+      color: #1e7e34;
+    }
+    #templates-demo td[data-value="pending"] .badge {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    #templates-demo td[data-value="blocked"] .badge {
+      background: #fdecea;
+      color: #b42318;
+    }
   </style>
 
   <script type="module" src="../data-grid.js"></script>
@@ -150,6 +166,51 @@
         frame) while the <code>caption</code> stays as the visually-hidden accessible name: a single title row, never
         both. Searching for something absent shows <code>No results for "…"</code>, unless <code>no-data</code>
         overrides it.</p>
+    </section>
+
+    <section class="demo-grid">
+      <h2>Declarative cell templates</h2>
+      <p class="demo-lead">A direct-child <code>&lt;template data-cell="field"&gt;</code> declares the presentation of
+        a column. It is cloned for every cell, <code>data-dg-text="value"</code> receives the raw scalar value, and the
+        cell exposes it as <code>data-value</code> so the appearance stays in CSS.</p>
+
+      <div class="demo-frame">
+        <data-grid id="templates-demo" sortable filterable page-size="5">
+          <table>
+            <thead>
+              <tr>
+                <th data-field="name">Name</th>
+                <th data-field="status" data-filter="select">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr data-row-key="1">
+                <td>Ada Lovelace</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+              </tr>
+              <tr data-row-key="2">
+                <td>Grace Hopper</td>
+                <td data-value="pending"><span class="badge pending">Pending</span></td>
+              </tr>
+              <tr data-row-key="3">
+                <td>Alan Turing</td>
+                <td data-value="blocked"><span class="badge blocked">Blocked</span></td>
+              </tr>
+              <tr data-row-key="4">
+                <td>Margaret Hamilton</td>
+                <td data-value="active"><span class="badge approved">Active</span></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <template data-cell="status">
+            <span class="badge" data-dg-text="value"></span>
+          </template>
+        </data-grid>
+      </div>
+      <p class="demo-note">The authored cell keeps the machine value and a readable label for filters and search; the
+        template rebuilds the badge on every render, including after <code>updateRow()</code>. No JavaScript is
+        involved, and the template only inserts text: values are never parsed as HTML.</p>
     </section>
 
     <section class="demo-grid">

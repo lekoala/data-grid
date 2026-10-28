@@ -1214,6 +1214,92 @@ function camelize(str) {
   return str.toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g, (m, chr) => chr.toUpperCase());
 }
 
+// src/utils/safeUrl.js
+var UNSAFE_URL_PROTOCOLS = new Set(["data:", "javascript:", "vbscript:"]);
+function isSafeUrl(value, { allowData = false } = {}) {
+  if (value === null || value === undefined) {
+    return false;
+  }
+  try {
+    const protocol = new URL(String(value), document.baseURI).protocol.toLowerCase();
+    if (protocol === "data:") {
+      return allowData;
+    }
+    return !UNSAFE_URL_PROTOCOLS.has(protocol);
+  } catch {
+    return false;
+  }
+}
+
+// src/utils/cellTemplate.js
+var UNSAFE_ELEMENTS = new Set(["SCRIPT", "STYLE"]);
+var URL_ATTRIBUTES = new Set(["href", "src", "action", "formaction", "xlink:href"]);
+var DATA_URL_ELEMENTS = new Set(["IMG", "SOURCE", "VIDEO", "AUDIO", "TRACK"]);
+var VALUE_BINDING = '[data-dg-text="value"]';
+function isScalar(value) {
+  const type = typeof value;
+  return type === "string" || type === "number" || type === "boolean" || type === "bigint";
+}
+function templateText(value) {
+  return isScalar(value) ? String(value) : "";
+}
+function isSafeCellTemplate(template) {
+  for (const element of template.content.querySelectorAll("*")) {
+    if (UNSAFE_ELEMENTS.has(element.tagName)) {
+      return false;
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      if (/^on/i.test(name)) {
+        return false;
+      }
+      if (URL_ATTRIBUTES.has(name)) {
+        const allowData = name === "src" && DATA_URL_ELEMENTS.has(element.tagName);
+        if (!isSafeUrl(attribute.value, { allowData })) {
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}
+function collectCellTemplates(root) {
+  const templates = new Map;
+  const rejected = [];
+  const duplicates = [];
+  for (const element of root.querySelectorAll(":scope > template[data-cell]")) {
+    if (!(element instanceof HTMLTemplateElement)) {
+      continue;
+    }
+    const field = element.dataset.cell;
+    if (!field) {
+      continue;
+    }
+    if (!isSafeCellTemplate(element)) {
+      rejected.push({ field, template: element });
+      continue;
+    }
+    if (templates.has(field)) {
+      duplicates.push(field);
+    }
+    templates.set(field, element);
+  }
+  return { templates, rejected, duplicates };
+}
+function applyCellTemplate(target, template, value) {
+  const fragment = template.content.cloneNode(true);
+  const text = templateText(value);
+  for (const element of fragment.querySelectorAll(VALUE_BINDING)) {
+    element.textContent = text;
+  }
+  if (isScalar(value)) {
+    target.dataset.value = text;
+  } else {
+    target.removeAttribute("data-value");
+  }
+  target.replaceChildren(fragment);
+}
+
 // src/utils/columnWidth.js
 var MIN_COLUMN_WIDTH = 40;
 function getColumnMinWidth(th) {
@@ -2125,6 +2211,10 @@ class DataGrid extends base_element_default {
   #controller;
   #initialResult;
   #columns;
+  #cellTemplates;
+  #warnedTemplates;
+  #warnedUnmatchedTemplates;
+  #warnedDuplicateTemplates;
   #loadObserver;
   #lazyPending;
   #renderContext;
@@ -2154,6 +2244,10 @@ class DataGrid extends base_element_default {
     this.loading = false;
     this.error = null;
     this.#columns = [];
+    this.#cellTemplates = new Map;
+    this.#warnedTemplates = new WeakSet;
+    this.#warnedUnmatchedTemplates = new Set;
+    this.#warnedDuplicateTemplates = new Set;
     this.dataSource = null;
     this.table = null;
     this.scrollEl = document.createElement("div");
@@ -3126,6 +3220,7 @@ class DataGrid extends base_element_default {
   }
   async _connected() {
     this.#adoptDeclarativeTable();
+    this.#collectCellTemplates();
     this.table = this.querySelector("table");
     this.#wrapScroll();
     this.btnFirst = this.querySelector(".dg-btn-first");
@@ -3950,7 +4045,9 @@ class DataGrid extends base_element_default {
   }
   renderTable() {
     this.log("render table");
+    this.#collectCellTemplates();
     this.#columns = this.buildColumns();
+    this.#warnUnmatchedCellTemplates();
     this.runPlugins("beforeRender");
     this.#renderContext = "table";
     this.updateTableLabel();
@@ -4453,10 +4550,51 @@ class DataGrid extends base_element_default {
     dispatch(this, "rowRendered", { rowData: item, tr });
     return tr;
   }
+  #collectCellTemplates() {
+    const { templates, rejected, duplicates } = collectCellTemplates(this);
+    this.#cellTemplates = templates;
+    for (const { field, template } of rejected) {
+      if (this.#warnedTemplates.has(template)) {
+        continue;
+      }
+      this.#warnedTemplates.add(template);
+      console.warn(`data-grid: ignoring unsafe template[data-cell="${field}"]`);
+    }
+    for (const field of duplicates) {
+      if (this.#warnedDuplicateTemplates.has(field)) {
+        continue;
+      }
+      this.#warnedDuplicateTemplates.add(field);
+      this.log(`duplicate template for "${field}"; the last one wins`);
+    }
+  }
+  #warnUnmatchedCellTemplates() {
+    if (!this.#columns.length) {
+      return;
+    }
+    const fields = new Set;
+    for (const column of this.#columns) {
+      if (column.field && !column.attr && !column.virtual) {
+        fields.add(column.field);
+      }
+    }
+    for (const field of this.#cellTemplates.keys()) {
+      if (fields.has(field) || this.#warnedUnmatchedTemplates.has(field)) {
+        continue;
+      }
+      this.#warnedUnmatchedTemplates.add(field);
+      console.warn(`data-grid: no column found for template[data-cell="${field}"]`);
+    }
+  }
   renderDefaultCell(td, ctx) {
     const { column, row: item } = ctx;
     const field = column.field;
     if (!field || !item) {
+      return;
+    }
+    const template = this.#cellTemplates.get(field);
+    if (template) {
+      applyCellTemplate(td, template, item[field]);
       return;
     }
     const value = item[field] ?? "";
@@ -5824,18 +5962,11 @@ var COLLAPSED_ACTIONS_WIDTH = 48;
 var INLINE_ACTION_WIDTH = 64;
 var INLINE_ACTION_GAP = 4;
 var ACTIONS_CELL_PADDING = 16;
-var UNSAFE_URL_PROTOCOLS = new Set(["data:", "javascript:", "vbscript:"]);
 function normalizeActionHref(value) {
   if (value === null || value === undefined) {
     return null;
   }
-  const href = String(value);
-  try {
-    const protocol = new URL(href, document.baseURI).protocol.toLowerCase();
-    return UNSAFE_URL_PROTOCOLS.has(protocol) ? null : href;
-  } catch {
-    return null;
-  }
+  return isSafeUrl(value) ? String(value) : null;
 }
 function inlineActionsWidth(count) {
   if (count <= 0) {
