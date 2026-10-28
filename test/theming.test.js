@@ -40,7 +40,7 @@ test("grid-skinned selects share the component caret", () => {
         /data-grid select:where\(\.dg-skin, \.dg-filter-control, \.dg-editable\) \{[\s\S]*?appearance: none;/,
     );
     expect(coreCss).toMatch(
-        /data-grid \.dg-select-field:not\(\.dg-host-select\):after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/,
+        /data-grid :is\(\.dg-select-field:not\(\.dg-host-select\), \.dg-caret\):after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/,
     );
     // Physical LTR reserve, mirrored for [dir="rtl"] in _rtl.css (Bun CSS workaround)
     expect(coreCss).toContain("padding-right: 32px");
@@ -75,6 +75,18 @@ test("icon masks are defined once as overridable tokens", () => {
     for (const name of ["search", "actions", "disclosure", "details", "filter-text", "close"]) {
         expect(coreCss).toContain(`--dg-icon-${name}: url(`);
     }
+});
+
+test("inline action buttons and links share one box model", () => {
+    expect(coreCss).toMatch(
+        /data-grid \.dg-actions button\.dg-skin,\s*data-grid \.dg-actions a\.dg-skin \{\s*box-sizing: border-box;/,
+    );
+});
+
+test("the shared caret is reusable and sort glyphs share the label axis", () => {
+    expect(coreCss).toMatch(/\.dg-caret\)::?after/);
+    expect(coreCss).toMatch(/data-grid\[dir="rtl"\] \.dg-caret::?after/);
+    expect(coreCss).toMatch(/th\.dg-sortable > \.dg-sort,[\s\S]*?align-items:\s+center;/);
 });
 
 test("multi-select filters use a JS-positioned fixed floating panel", () => {

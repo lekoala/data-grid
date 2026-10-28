@@ -539,13 +539,17 @@ Common hooks: `.dg-head-columns th`, `.dg-sort-label`, `th.dg-sortable`, `.dg-so
 `.dg-selection-count`, `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`,
 `.dg-disclosure`, `.dg-disclosure-cell`, `.dg-details-dialog`, `.dg-details-panel`,
 `.dg-details-header`, `.dg-details-title`, `.dg-details-body`, `.dg-details-close`,
-`.dg-details-list`, `.dg-details-app`.
+`.dg-details-list`, `.dg-details-app`, `.dg-select-field`, `.dg-caret`.
 Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
 formatter default); the filter control inherits the same `text-align`, except
 the built-in boolean tri-state select keeps its option labels at `start` via
 `select.dg-filter-control[data-filter-mode="boolean"][data-align="start"]`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
+
+`.dg-caret` draws the shared caret on a positioned element, for custom editors
+or datalist inputs. Reserve space with `padding-right: 32px` on the control and
+hide the browser's native indicator (see `demo/actions.html`).
 
 ## Right-to-left
 

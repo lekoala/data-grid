@@ -550,7 +550,7 @@ data-grid .dg-select-field {
   max-inline-size: 100%;
 }
 
-data-grid :-webkit-any(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger):after {
+data-grid :-webkit-any(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger, .dg-caret):after {
   content: "";
   opacity: .65;
   border-bottom: 1.5px solid;
@@ -560,7 +560,7 @@ data-grid :-webkit-any(.dg-select-field:not(.dg-host-select), .dg-multiselect-tr
   transform: rotate(45deg);
 }
 
-data-grid :-moz-any(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger):after {
+data-grid :-moz-any(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger, .dg-caret):after {
   content: "";
   opacity: .65;
   border-bottom: 1.5px solid;
@@ -570,7 +570,7 @@ data-grid :-moz-any(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigg
   transform: rotate(45deg);
 }
 
-data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger):after {
+data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger, .dg-caret):after {
   content: "";
   opacity: .65;
   border-bottom: 1.5px solid;
@@ -580,7 +580,23 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger):af
   transform: rotate(45deg);
 }
 
-data-grid .dg-select-field:not(.dg-host-select):after {
+data-grid :-webkit-any(.dg-select-field:not(.dg-host-select), .dg-caret):after {
+  position: absolute;
+  pointer-events: none;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-70%)rotate(45deg);
+}
+
+data-grid :-moz-any(.dg-select-field:not(.dg-host-select), .dg-caret):after {
+  position: absolute;
+  pointer-events: none;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-70%)rotate(45deg);
+}
+
+data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret):after {
   position: absolute;
   pointer-events: none;
   top: 50%;
@@ -1013,6 +1029,7 @@ data-grid th.dg-sortable > .dg-sort, data-grid th.dg-sortable > .dg-sort:hover, 
   color: var(--dg-header-color);
   display: flex;
   font: inherit;
+  align-items:  center;
   gap: var(--dg-space-1);
   line-height: inherit;
   padding: var(--dg-cell-padding-block) var(--dg-cell-padding-inline);
@@ -1174,7 +1191,7 @@ data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
   padding-left: 32px;
 }
 
-data-grid[dir="rtl"] .dg-select-field:after {
+data-grid[dir="rtl"] .dg-select-field:after, data-grid[dir="rtl"] .dg-caret:after {
   left: 12px;
   right: auto;
 }
@@ -1347,6 +1364,7 @@ data-grid .dg-actions button, data-grid .dg-actions a {
 }
 
 data-grid .dg-actions button.dg-skin, data-grid .dg-actions a.dg-skin {
+  box-sizing: border-box;
   display: inline-flex;
   padding: 0 var(--dg-space-2);
   background-color: var(--dg-control-bg);

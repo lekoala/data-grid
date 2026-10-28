@@ -593,7 +593,7 @@ data-grid .dg-select-field {
 
 /* Shared caret geometry for disclosure controls; each component positions its
    own instance below (_multiselect.css for the multi-select trigger). */
-data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger)::after {
+data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger, .dg-caret)::after {
   content: "";
   width: 6px;
   height: 6px;
@@ -603,7 +603,7 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger)::a
   opacity: 0.65;
 }
 
-data-grid .dg-select-field:not(.dg-host-select)::after {
+data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret)::after {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -1070,6 +1070,7 @@ data-grid th.dg-sortable > .dg-sort:focus {
   box-shadow: none;
   color: var(--dg-header-color);
   display: flex;
+  align-items: center;
   font: inherit;
   gap: var(--dg-space-1);
   height: auto;

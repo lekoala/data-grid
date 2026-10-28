@@ -17,6 +17,7 @@ data-grid .dg-actions a {
 
 data-grid .dg-actions button.dg-skin,
 data-grid .dg-actions a.dg-skin {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;

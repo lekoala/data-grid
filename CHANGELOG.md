@@ -31,6 +31,9 @@ not documented.
   `--dg-icon-details`, `--dg-icon-filter-text` and `--dg-icon-close` expose the
   built-in pictograms as monochrome mask URLs. Override one on `data-grid` to
   swap a pictogram without a new JavaScript API.
+- `dg-caret` draws the shared select caret on a positioned element, for custom
+  editors or datalist inputs; the actions demo uses it to replace the native
+  datalist glyph.
 
 ### Changed
 
@@ -39,6 +42,9 @@ not documented.
   lets an application take over a row action (a full edit, for example) while
   uncanceled clicks keep navigating and Ctrl/Cmd+click keeps opening a new tab.
   See `demo/full-edit.html`.
+- Inline row action links share the button box model (`box-sizing: border-box`),
+  so an action rendered as `<a>` has the same dimensions as a `<button>`.
+- Sort indicators are vertically centered with the header label.
 
 ## [3.7.1] - 2026-10-23
 

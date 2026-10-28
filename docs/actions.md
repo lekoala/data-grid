@@ -132,6 +132,10 @@ without dispatching — including on `<a>` and custom renderers.
 `confirm` accepts a boolean (generic `areYouSure` label), a message string, or
 a resolver returning a message string (or `false` to skip confirmation).
 
+`class` is for host-provided styling: setting it removes the grid skin from
+that control, so the host CSS owns its border, background, dimensions and focus.
+Use `intent: "danger"` for the built-in danger colors instead of a custom class.
+
 ## Inline and collapsed presentation
 
 One or two actions render inline by default. More actions, or

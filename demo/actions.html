@@ -35,6 +35,13 @@
       max-width: 100%;
       font-size: 0.875em;
     }
+    /* Datalist editor: reuse the grid caret, drop Chromium's native glyph. */
+    #status-demo td.dg-caret input.dg-editable {
+      padding-right: 32px;
+    }
+    #status-demo td.dg-caret input.dg-editable::-webkit-calendar-picker-indicator {
+      display: none;
+    }
   </style>
 
   <script type="module">
@@ -57,7 +64,7 @@
           {
             name: "delete",
             label: "Delete",
-            class: "is-danger",
+            intent: "danger",
             confirm: true,
             href: "/delete/{id}",
             render: () => ({ html: "<l-i name='trash'></l-i>" }),
@@ -90,7 +97,7 @@
           {
             name: "delete",
             label: "Delete",
-            class: "is-danger",
+            intent: "danger",
             confirm: true,
             href: "/delete/{id}",
             render: () => ({ html: "<l-i name='trash'></l-i>" }),
@@ -168,6 +175,7 @@
           field: "tag",
           title: "Tag",
           width: 120,
+          cellClass: "dg-caret",
           editable: true,
           renderEditor({ value, commit, cancel }) {
             // A custom editor is an application-owned control: it only decides

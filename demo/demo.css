@@ -319,16 +319,6 @@ footer hr {
   text-align: center;
 }
 
-.is-danger {
-  background: #b42318;
-  color: #fff;
-}
-
-.is-danger:hover,
-.is-danger:focus {
-  background: #8f1d14;
-}
-
 /* Application-side conditional formatting: column.cellClass lands on body <td>
    elements and the application decides what every state looks like. The grid
    never picks business colors by itself. */

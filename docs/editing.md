@@ -115,6 +115,9 @@ The editor only owns its presentation. The grid keeps ownership of coercion,
 - `renderEditor` is used only when the column is `editable`; display unchanged
   (stays `format` / `renderCell` — the editor steps aside, it does not replace
   `renderCell`).
+- A datalist or custom dropdown can reuse the grid caret: set
+  `cellClass: "dg-caret"`, reserve `padding-right: 32px` and hide the native
+  picker indicator (see the `Tag` column in `demo/actions.html`).
 - The returned value follows the same `RenderContent` contract as `renderCell`.
 - `commit(value)` validates and commits the given value. It resolves to `true`
   when the change was accepted (model mutated and `edit` dispatched), `false`
