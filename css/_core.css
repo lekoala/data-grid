@@ -214,7 +214,10 @@ data-grid > .dg-frame > .dg-scroll {
 }
 
 /* Keyboard focus stays inside the viewport: an outer ring would be clipped by
-   the frame's overflow, which is hidden to keep the rounded corners. */
+   the frame's overflow, which is hidden to keep the rounded corners. Rows must
+   stay in normal flow (no `position: relative`): a positioned row paints its
+   background above this inset outline, so opaque rows would cut the ring into
+   one segment per row. */
 data-grid > .dg-frame > .dg-scroll:focus-visible {
   outline: var(--dg-focus-width) solid var(--dg-focus-color);
   outline-offset: calc(var(--dg-focus-width) * -1);
@@ -276,10 +279,6 @@ data-grid[data-loading] tbody {
 
 data-grid[data-loading]:not(:has(th)) .dg-footer {
   display: none;
-}
-
-data-grid tr {
-  position: relative;
 }
 
 data-grid th,
@@ -617,6 +616,14 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret)::after {
   top: 50%;
   transform: translateY(-70%) rotate(45deg);
   pointer-events: none;
+}
+
+/* .dg-caret replaces the native dropdown glyph, it does not add a second one:
+   Chromium shows the datalist list button on hover/focus and paints its display
+   through an internal hint, so only !important suppresses it. The [list] scope
+   keeps the calendar picker of date/time inputs. */
+data-grid .dg-caret [list]::-webkit-calendar-picker-indicator {
+  display: none !important;
 }
 
 data-grid input:where(.dg-skin).dg-search {
@@ -1027,9 +1034,10 @@ data-grid .dg-footer .dg-pagination > button.dg-skin {
   height: 2em;
 }
 
+/* Hover is a discrete wash, not an accent outline: the keyboard focus ring is
+   what marks the active control. The border stays neutral. */
 data-grid .dg-footer .dg-pagination > button.dg-skin:hover:not(:disabled) {
-  background-color: var(--dg-bg);
-  border-color: var(--dg-accent);
+  background-color: var(--dg-row-hover-bg);
   color: var(--dg-color);
 }
 

@@ -230,10 +230,6 @@ data-grid[data-loading]:not(:has(th)) .dg-footer {
   display: none;
 }
 
-data-grid tr {
-  position: relative;
-}
-
 data-grid th, data-grid td {
   box-sizing: border-box;
   empty-cells: show;
@@ -603,6 +599,10 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret):after {
   top: 50%;
   right: 12px;
   transform: translateY(-70%)rotate(45deg);
+}
+
+data-grid .dg-caret [list]::-webkit-calendar-picker-indicator {
+  display: none !important;
 }
 
 data-grid input:where(.dg-skin).dg-search {
@@ -1007,8 +1007,7 @@ data-grid .dg-footer .dg-pagination > button.dg-skin {
 }
 
 data-grid .dg-footer .dg-pagination > button.dg-skin:hover:not(:disabled) {
-  background-color: var(--dg-bg);
-  border-color: var(--dg-accent);
+  background-color: var(--dg-row-hover-bg);
   color: var(--dg-color);
 }
 

@@ -103,10 +103,32 @@ test("inline action buttons and links share one box model", () => {
     );
 });
 
+test("row backgrounds never paint over the viewport focus ring", () => {
+    // A positioned row paints its background above the scroll viewport's inset
+    // outline, which segments the ring on opaque rows. Rows stay in normal flow.
+    expect(coreCss).not.toMatch(/data-grid tr \{[^}]*position: relative;/);
+});
+
 test("the shared caret is reusable and sort glyphs share the label axis", () => {
     expect(coreCss).toMatch(/\.dg-caret\)::?after/);
     expect(coreCss).toMatch(/data-grid\[dir="rtl"\] \.dg-caret::?after/);
     expect(coreCss).toMatch(/th\.dg-sortable > \.dg-sort,[\s\S]*?align-items:\s+center;/);
+});
+
+test("the shared caret replaces the native datalist glyph", () => {
+    // Chromium shows its own list button on hover/focus and paints its display
+    // through an internal hint, so only !important suppresses it. The [list]
+    // scope leaves date/time pickers alone.
+    expect(coreCss).toMatch(/\.dg-caret \[list\]::-webkit-calendar-picker-indicator \{\s*display: none !important;/);
+});
+
+test("pager hover is a wash, the focus ring marks the active control", () => {
+    expect(coreCss).toMatch(
+        /\.dg-pagination > button\.dg-skin:hover:not\(:disabled\) \{[^}]*background-color: var\(--dg-row-hover-bg\);[^}]*\}/,
+    );
+    expect(coreCss).not.toMatch(
+        /\.dg-pagination > button\.dg-skin:hover:not\(:disabled\) \{[^}]*border-color: var\(--dg-accent\);/,
+    );
 });
 
 test("multi-select filters use a JS-positioned fixed floating panel", () => {

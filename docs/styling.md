@@ -595,9 +595,9 @@ the built-in boolean tri-state select keeps its option labels at `start` via
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
 
 `.dg-caret` draws the shared caret on a positioned element, for custom editors
-or datalist inputs. Reserve space with `padding-right: 32px` on the control and
-remove the browser's native list button (`appearance: none`, plus the
-`::-webkit-calendar-picker-indicator` fallback; see `demo/actions.html`).
+or datalist inputs. Reserve space with `padding-right: 32px` on the control; the
+grid removes the native datalist glyph of `[list]` inputs (date and time pickers
+keep theirs). See `demo/actions.html`.
 
 ## Right-to-left
 

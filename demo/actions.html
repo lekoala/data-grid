@@ -35,16 +35,11 @@
       max-width: 100%;
       font-size: 0.875em;
     }
-    /* Datalist editor: reuse the grid caret, drop Chromium's native glyph.
-       `appearance: none` removes the native list button in current Chrome;
-       the pseudo-element rule stays as a fallback for engines exposing it. */
+    /* Datalist editor: reuse the grid caret. The grid hides Chromium's native
+       list glyph for [list] inputs inside .dg-caret, so only the space it would
+       occupy has to be reserved here. */
     #status-demo td.dg-caret input.dg-editable {
       padding-right: 32px;
-      appearance: none;
-      -webkit-appearance: none;
-    }
-    #status-demo td.dg-caret input.dg-editable::-webkit-calendar-picker-indicator {
-      display: none;
     }
   </style>
 

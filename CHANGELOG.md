@@ -39,6 +39,16 @@ not documented.
   `.dg-filter-control`. `renderEditor` controls stay application-owned.
 - Filter-cell sizing applies to the grid's own wrappers only; custom filter
   controls no longer inherit `width: 100%` / `margin: 0`.
+- `.dg-caret` now suppresses Chromium's native datalist button itself, including
+  the glyph it draws on hover/focus, so consumers only reserve the caret space.
+  `[list]` scoping leaves date and time pickers untouched.
+- Pager arrows hover with the shared `--dg-row-hover-bg` wash and keep their
+  neutral border. The accent outline is reserved for keyboard focus, so a
+  hovered arrow no longer reads as focused or selected.
+- The scroll viewport's focus ring is no longer segmented by row backgrounds.
+  Body rows stay in normal flow, so an opaque row cannot paint over the inset
+  outline; default, opaque-stripe and selected rows all show one continuous
+  ring.
 - The scroll viewport focus ring is inset, so the frame's `overflow: hidden` no
   longer clips it.
 - The Actual CSS theme maps `--dg-focus-color` to `--focus` and
