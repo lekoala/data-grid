@@ -1894,7 +1894,7 @@ function updateMultiSelectSummary(root) {
 function createMultiSelect(column, options, relatedTh) {
   const doc = relatedTh.ownerDocument;
   const root = doc.createElement("div");
-  root.className = "dg-multiselect dg-filter-control";
+  root.className = "dg-multiselect dg-filter-control dg-skin";
   root.id = randstr("dg-filter-");
   root.dataset.name = column.field ?? "";
   root.dataset.filterMode = "multi";
@@ -4403,6 +4403,7 @@ class DataGrid extends base_element_default {
     const filter = isSelect ? this.#createSelectFilter(column, type) : this.#configureTextFilter(document.createElement("input"), column, type);
     filter.classList.add("dg-filter");
     filter.classList.add("dg-filter-control");
+    filter.classList.add("dg-skin");
     filter.dataset.filterMode = type;
     if (isPercentColumn(column)) {
       filter.dataset.percent = "true";
@@ -6496,6 +6497,7 @@ class EditableColumn extends base_plugin_default {
     input.autocomplete = "off";
     input.spellcheck = false;
     input.classList.add("dg-editable");
+    input.classList.add("dg-skin");
     input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
     input.dataset.field = field;
@@ -6532,6 +6534,7 @@ class EditableColumn extends base_plugin_default {
     const gridId = grid.getAttribute("id") ?? "";
     const select = document.createElement("select");
     select.classList.add("dg-editable");
+    select.classList.add("dg-skin");
     select.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     select.setAttribute("aria-label", column.title ?? field);
     select.dataset.field = field;
@@ -6573,6 +6576,7 @@ class EditableColumn extends base_plugin_default {
     const input = document.createElement("input");
     input.type = "checkbox";
     input.classList.add("dg-editable");
+    input.classList.add("dg-skin");
     input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
     input.dataset.field = field;

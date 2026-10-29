@@ -28,6 +28,38 @@ test("editable columns render an input with the row value", async () => {
     document.body.removeChild(inst);
 });
 
+test("native editors carry the grid skin marker, custom editors stay app-owned", async () => {
+    const inst = await makeReadyGrid(
+        {
+            columns: [
+                editableColumn,
+                { field: "status", editable: true, editableType: "select", editableOptions: ["open", "closed"] },
+                { field: "active", editable: true, editableType: "checkbox" },
+            ],
+        },
+        [{ id: 1, name: "a", status: "open", active: true }],
+    );
+    for (const control of inst.querySelectorAll("tbody .dg-editable")) {
+        expect(control.classList.contains("dg-skin")).toBe(true);
+    }
+    document.body.removeChild(inst);
+
+    const custom = await makeReadyGrid(
+        {
+            columns: [
+                customEditorColumn(({ value }) => {
+                    const input = document.createElement("input");
+                    input.value = value;
+                    return input;
+                }),
+            ],
+        },
+        [{ id: 1, name: "a" }],
+    );
+    expect(custom.querySelector("tbody td input").classList.contains("dg-skin")).toBe(false);
+    document.body.removeChild(custom);
+});
+
 test("blur commits and dispatches the edit event", async () => {
     const inst = await makeReadyGrid({ columns: [editableColumn] }, [{ id: 1, name: "a" }]);
     const input = inst.querySelector("tbody td input.dg-editable");

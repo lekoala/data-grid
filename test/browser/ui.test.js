@@ -484,6 +484,7 @@ test.skipIf(IS_WINDOWS)(
                         return {
                             outlineStyle: style.outlineStyle,
                             outlineWidth: style.outlineWidth,
+                            outlineOffset: style.outlineOffset,
                             boxShadow: style.boxShadow,
                         };
                     })())`,
@@ -491,6 +492,7 @@ test.skipIf(IS_WINDOWS)(
             );
             expect(focus.outlineStyle).toBe("solid");
             expect(focus.outlineWidth).toBe("2px");
+            expect(focus.outlineOffset).toBe("-2px");
             expect(focus.boxShadow).toBe("none");
         }
         expect(

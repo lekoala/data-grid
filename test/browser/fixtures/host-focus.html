@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Host focus ownership in header filters</title>
+  <!-- The host stylesheet loads before the grid stylesheet: the hard case for
+       host ownership. An equal-specificity grid rule would win by source order. -->
+  <style id="host-style">
+    .app-filter {
+      width: 140px;
+      border: 3px solid red;
+      border-radius: 7px;
+      background: white;
+      color: black;
+      padding: 2px 6px;
+    }
+    .app-filter:focus-visible {
+      outline: 3px solid blue;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 5px orange;
+    }
+  </style>
+  <link rel="stylesheet" href="/dist/data-grid.css" />
+  <script type="module">
+    import DataGrid, { ArrayDataSource } from "/dist/data-grid.js";
+
+    const grid = new DataGrid({
+      id: "host-focus-grid",
+      columns: [
+        {
+          field: "name",
+          title: "Name",
+          renderFilterCell(th) {
+            const input = document.createElement("input");
+            input.id = "app-filter";
+            input.type = "text";
+            // Structural filter class, but no dg-skin: the host keeps the skin
+            // and the focus indicator.
+            input.className = "dg-filter-control app-filter";
+            th.appendChild(input);
+          },
+        },
+      ],
+      dataSource: new ArrayDataSource([{ id: 1, name: "Ada" }]),
+      filterable: true,
+    });
+    document.body.appendChild(grid);
+    window.grid = grid;
+  </script>
+</head>
+<body></body>
+</html>

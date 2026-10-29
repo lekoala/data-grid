@@ -5,6 +5,47 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
+## [3.9.0] - 2026-10-29
+
+### Breaking / migration
+
+- `--dg-focus-ring` is removed. It held a translucent halo color; replace it with
+  the opaque `--dg-focus-color` (default `var(--dg-accent)`) and, when needed,
+  `--dg-focus-width` (default `2px`). Focus is now a solid outline instead of a
+  `box-shadow` halo, so it survives `forced-colors`. The default changes a 3px
+  soft halo into a 2px solid line; set `--dg-focus-width: 3px` to keep the old
+  thickness. `--dg-focus-color` must reach 3:1 against the grid surfaces and does
+  not have to equal `--dg-accent`.
+
+### Changed
+
+- Focus follows one geometry across grid-owned controls: fields, filters and
+  compact icon controls use an inset outline; discrete buttons with room around
+  them use an outer outline offset by `2px`; editable checkboxes use an outer
+  outline. The border keeps its shape and validation role and no longer turns
+  accent on focus.
+- Editable cells paint their focus with an outline instead of an inset
+  `box-shadow`, keeping keyboard focus visible in forced colors. An invalid cell
+  focuses in `--dg-danger-color` so the error signal stays at the point of
+  correction.
+- Sortable headers draw a full inset outline on `.dg-sort:focus-visible`. The
+  bottom accent bar and the `th.dg-sortable:focus-within` rule are gone, so an
+  application control in a custom header no longer lights up the column.
+- `dg-skin` is the single skin and focus ownership marker. Built-in filter
+  controls and native editors carry it; `.dg-filter-control` keeps its
+  structural/behavioral role and `.dg-editable` keeps the editing lifecycle. An
+  application control rendered by `renderFilterCell` that omits `dg-skin` keeps
+  its own border, dimensions, focus and box-shadow, even when it reuses
+  `.dg-filter-control`. `renderEditor` controls stay application-owned.
+- Filter-cell sizing applies to the grid's own wrappers only; custom filter
+  controls no longer inherit `width: 100%` / `margin: 0`.
+- The scroll viewport focus ring is inset, so the frame's `overflow: hidden` no
+  longer clips it.
+- The Actual CSS theme maps `--dg-focus-color` to `--focus` and
+  `--dg-focus-width` to `--focus-ring-width` (falling back to `2px`). The
+  Bootstrap theme uses `--bs-primary` as its opaque focus color instead of the
+  translucent `--bs-focus-ring-color`.
+
 ## [3.8.0] - 2026-10-28
 
 ### Added

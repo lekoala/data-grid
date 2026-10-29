@@ -28,7 +28,13 @@ data-grid {
   /* accent */
   --dg-accent: #2563eb;
   --dg-accent-soft: #e9effd;
-  --dg-focus-ring: rgb(37 99 235 / 20%);
+
+  /* Focus is a solid outline in its own color. Keep it opaque and legible
+     (3:1) against the grid surfaces: the accent is also used as ink for active
+     states, so a theme may need a separate focus color. The width token also
+     drives the inset, so a thicker ring stays inside its control. */
+  --dg-focus-color: var(--dg-accent);
+  --dg-focus-width: 2px;
 
   /* header */
   --dg-header-bg: #f8fafc;
@@ -207,9 +213,11 @@ data-grid > .dg-frame > .dg-scroll {
   border-radius: 0;
 }
 
+/* Keyboard focus stays inside the viewport: an outer ring would be clipped by
+   the frame's overflow, which is hidden to keep the rounded corners. */
 data-grid > .dg-frame > .dg-scroll:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: 2px;
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid.dg-snap-columns .dg-scroll {
@@ -456,9 +464,9 @@ data-grid .dg-clickable-cell {
   justify-content: center;
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable),
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable),
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid button:where(.dg-skin),
+data-grid input:where(.dg-skin),
+data-grid select:where(.dg-skin) {
   font: inherit;
 }
 
@@ -526,7 +534,7 @@ data-grid .dg-rotate {
   transform: rotate(-180deg);
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid button:where(.dg-skin) {
   background-color: var(--dg-control-bg);
   border: solid var(--dg-border-width) var(--dg-control-border-color);
   border-radius: var(--dg-radius);
@@ -544,11 +552,11 @@ data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable) {
   transition: background-color 120ms ease, border-color 120ms ease, box-shadow 120ms ease, color 120ms ease;
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):hover {
+data-grid button:where(.dg-skin):hover {
   background-color: var(--dg-row-hover-bg);
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):disabled:hover {
+data-grid button:where(.dg-skin):disabled:hover {
   background-color: var(--dg-control-bg);
   border-color: var(--dg-control-border-color);
 }
@@ -558,12 +566,12 @@ data-grid .dg-load-more[aria-disabled="true"] {
   opacity: 0.45;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable)[type="checkbox"] {
+data-grid input:where(.dg-skin)[type="checkbox"] {
   margin: 0;
   padding: 0;
 }
 
-data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"], [type="radio"]), select:where(.dg-skin, .dg-filter-control, .dg-editable)) {
+data-grid :where(input:where(.dg-skin):not([type="checkbox"], [type="radio"]), select:where(.dg-skin)) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
@@ -580,7 +588,7 @@ data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not([ty
    element also covers plugin-provided controls and future editable selects.
    The reserved space is a directional (inline-end) concern: physical LTR here,
    mirrored for [dir="rtl"] in _rtl.css. */
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid select:where(.dg-skin) {
   appearance: none;
   padding-right: 32px;
 }
@@ -611,53 +619,45 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret)::after {
   pointer-events: none;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable).dg-search {
+data-grid input:where(.dg-skin).dg-search {
   padding-left: calc(var(--dg-control-padding-inline) + 20px);
 }
 
-/* Form controls keep a full ring on keyboard focus */
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"]):focus-visible,
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
-  border-color: var(--dg-accent);
-  box-shadow: 0 0 0 3px var(--dg-focus-ring);
-  outline: 0;
+/* Keyboard focus is an inset outline: it survives forced colors (which drops
+   box-shadow), covers the border instead of bleeding into the next cell, and
+   leaves the border to shape and validation. */
+data-grid input:where(.dg-skin):not([type="checkbox"], [type="radio"]):focus-visible,
+data-grid select:where(.dg-skin):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-/* The global search shares the column-filter focus: a plain inset outline
-   with no halo ring. Placed after the generic rule so it wins at equal
-   specificity. */
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable).dg-search:focus-visible {
-  box-shadow: none;
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
-}
-
-/* Regular buttons: accent border only */
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
-  border-color: var(--dg-accent);
-  outline: 0;
+/* Discrete actions with room around them use an outer ring, like a standalone
+   button; the compact icon controls below keep their ring inside. */
+data-grid button:where(.dg-skin):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: 2px;
 }
 
 /* Small icon controls: an inset outline that stays inside the control */
-data-grid .dg-actions button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible,
-data-grid .dg-pagination button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible,
-data-grid .dg-disclosure:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
-  box-shadow: none;
+data-grid .dg-actions button:where(.dg-skin):focus-visible,
+data-grid .dg-pagination button:where(.dg-skin):focus-visible,
+data-grid .dg-disclosure.dg-skin:focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"], [type="radio"])::placeholder {
+data-grid input:where(.dg-skin):not([type="checkbox"], [type="radio"])::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"])[disabled],
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"]):disabled,
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable)[disabled],
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable):disabled,
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable)[disabled],
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):disabled {
+data-grid input:where(.dg-skin):not([type="checkbox"])[disabled],
+data-grid input:where(.dg-skin):not([type="checkbox"]):disabled,
+data-grid select:where(.dg-skin)[disabled],
+data-grid select:where(.dg-skin):disabled,
+data-grid button:where(.dg-skin)[disabled],
+data-grid button:where(.dg-skin):disabled {
   cursor: default;
   opacity: 0.45;
   pointer-events: none;
@@ -678,18 +678,22 @@ data-grid thead tr.dg-head-filters th {
   border-bottom: var(--dg-border-width) solid var(--dg-border-color);
 }
 
-data-grid thead tr.dg-head-filters th > * {
+/* Only the grid's own wrappers fill the cell. A custom filter control keeps
+   its own box: filling the cell stays an application decision. */
+data-grid thead tr.dg-head-filters th.dg-filter-cell > :is(.dg-text-field, .dg-select-field, .dg-multiselect) {
   width: 100%;
   margin: 0;
 }
 
 /* Filters belong to the grid, not to a form: the control fills its cell with
-   no box of its own, so the row reads as part of the table structure. */
+   no box of its own, so the row reads as part of the table structure. Only a
+   skinned control loses its box; an application-owned filter keeps its own
+   border, dimensions and focus. */
 data-grid thead tr.dg-head-filters th.dg-filter-cell {
   padding: 0;
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin {
   background-color: transparent;
   border: 0;
   border-radius: 0;
@@ -707,11 +711,11 @@ data-grid thead tr.dg-head-filters .dg-filter-control {
   width: 100%;
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control[data-align="start"] {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin[data-align="start"] {
   text-align: start;
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control::placeholder {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
@@ -738,7 +742,7 @@ data-grid .dg-text-field {
   data-grid
     thead
     tr.dg-head-filters
-    .dg-text-field:has(> input.dg-filter-control[placeholder=""]:not(:focus):placeholder-shown)::after {
+    .dg-text-field:has(> input.dg-filter-control.dg-skin[placeholder=""]:not(:focus):placeholder-shown)::after {
     content: "";
     width: 10px;
     height: 14px;
@@ -755,13 +759,13 @@ data-grid .dg-text-field {
   }
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control:hover {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin:hover {
   background-color: var(--dg-row-hover-bg);
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin:focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
   box-shadow: none;
 }
 
@@ -769,12 +773,12 @@ data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
    RTL mirror of the select padding lives here too, so the forced-colors reset
    wins over the [dir="rtl"] reserve swap in _rtl.css in both directions. */
 @media (forced-colors: active) {
-  data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+  data-grid select:where(.dg-skin) {
     appearance: auto;
     padding-right: var(--dg-control-padding-inline);
   }
 
-  data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+  data-grid[dir="rtl"] select:where(.dg-skin) {
     padding-right: var(--dg-control-padding-inline);
     padding-left: var(--dg-control-padding-inline);
   }
@@ -828,31 +832,40 @@ data-grid tbody td input.dg-editable:not([type="checkbox"]) {
 
 /* The control paints its own state (hover and focus here, invalid below);
    the cell stays neutral so editing never shows two stacked indicators.
-   Inset marks cannot be clipped by the cell overflow, whatever the column
-   width. Order matters: the tied hover, focus and invalid rules below win
-   from top to bottom. */
+   The focus ring is an outline, not an inset shadow: forced colors keeps the
+   outline and drops the shadow, and an inset mark cannot be clipped by the
+   cell overflow whatever the column width. Order matters: the tied hover,
+   focus and invalid rules below win from top to bottom. */
 data-grid tbody td input.dg-editable:not([type="checkbox"]):hover {
   box-shadow: inset 0 -1px 0 var(--dg-control-border-color);
 }
 
 data-grid tbody td input.dg-editable:not([type="checkbox"]):focus {
-  box-shadow: inset 0 0 0 2px var(--dg-accent);
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 /* A 16px box cannot take an inset ring: native-looking outer outline in the
-   grid accent instead, so it never stacks with the browser default. */
+   focus color instead, so it never stacks with the browser default. */
 data-grid tbody td input.dg-editable[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--dg-accent);
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
   outline-offset: 2px;
 }
 
 data-grid tbody td select.dg-editable:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--dg-accent);
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
   background-color: var(--dg-danger-bg);
   box-shadow: inset 0 0 0 1px var(--dg-danger-color);
+}
+
+/* An invalid cell keeps its danger signal at the point of correction: focus
+   reuses the danger color instead of the accent. */
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:focus {
+  outline-color: var(--dg-danger-color);
 }
 
 data-grid .dg-empty-row td,
@@ -1098,8 +1111,12 @@ data-grid th[data-align="end"] > .dg-sort:focus {
   justify-content: flex-end;
 }
 
-data-grid th.dg-sortable:focus-within {
-  box-shadow: inset 0 -2px 0 var(--dg-accent);
+/* Keyboard focus belongs to the sort button that has it, not to the whole
+   header: an application control in a custom header never lights up the
+   column, and the ring stays inside the cell (th clips its overflow). */
+data-grid th.dg-sortable > .dg-sort:focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 /* The sort glyph is drawn entirely in CSS, driven by the th state (data-sort):

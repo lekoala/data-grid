@@ -4236,6 +4236,9 @@ class DataGrid extends BaseElement {
             : this.#configureTextFilter(document.createElement("input"), column, type);
         filter.classList.add("dg-filter");
         filter.classList.add("dg-filter-control");
+        // Grid-owned skin and focus marker. An application filter rendered by
+        // renderFilterCell keeps its own classes unless it opts in with dg-skin.
+        filter.classList.add("dg-skin");
         // The resolved mode travels on the control: filterData() reads it to
         // map the input value onto the matching query operator.
         filter.dataset.filterMode = type;

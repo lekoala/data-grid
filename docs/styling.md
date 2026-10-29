@@ -20,7 +20,8 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-border-color`           | `#dbdcdd`               | outer structure + separators   |
 | `--dg-accent`                 | `#2563eb`               | interactive accent             |
 | `--dg-accent-soft`            | `#e9effd`               | subtle accent surface          |
-| `--dg-focus-ring`             | `rgb(37 99 235 / 20%)`  | focus ring                     |
+| `--dg-focus-color`            | `var(--dg-accent)`      | focus outline color            |
+| `--dg-focus-width`            | `2px`                   | focus outline thickness        |
 | `--dg-header-bg`              | `#f8fafc`               | header + footer background     |
 | `--dg-header-color`           | `var(--dg-muted-color)` | header text                    |
 | `--dg-filter-bg`              | `var(--dg-bg)`          | filter row background          |
@@ -65,6 +66,37 @@ The `mask` shorthand is applied on the consumer, never the default value: a
 token declared on the pseudo-element would shadow the value inherited from the
 host.
 
+## Focus
+
+Grid-owned controls share one focus language: a solid `outline` in
+`--dg-focus-color`, `--dg-focus-width` thick. Fields, filters and compact icon
+controls take an inset ring (`outline-offset: calc(var(--dg-focus-width) * -1)`);
+discrete buttons with room around them use an outer ring offset by `2px`;
+editable checkboxes use an outer ring. The border stays dedicated to shape and
+validation and does not turn accent on focus. Because the indicator is an
+outline, it survives forced colors, where `box-shadow` is removed.
+
+`--dg-focus-color` must stay opaque and reach 3:1 against the surfaces it sits
+on. `--dg-accent` is also used as ink for active states, so a theme whose accent
+is too light for a ring should provide a dedicated focus color.
+
+`--dg-focus-ring` was removed in 3.9.0. It held a translucent halo color;
+replace it with the opaque `--dg-focus-color` and, when needed,
+`--dg-focus-width`:
+
+```css
+/* Before 3.9.0 */
+data-grid {
+    --dg-focus-ring: rgb(37 99 235 / 20%);
+}
+
+/* 3.9.0 and later */
+data-grid {
+    --dg-focus-color: #2563eb;
+    --dg-focus-width: 2px;
+}
+```
+
 ## Host control classes
 
 Use the application's controls while keeping the grid's structural classes:
@@ -96,10 +128,12 @@ to override individual roles. Omitted roles follow the current global defaults;
 an empty string restores the grid skin for that role. Set the property to `null`
 to follow all defaults again. Properties assigned before element upgrade are supported.
 
-`Action.class` and `BulkAction.class` add classes to their role defaults. A control
-with host classes has no `dg-skin` marker: its border, background, radius, dimensions,
-intent colors, hover, disabled appearance and focus indicator belong to the host CSS.
-Provide a visible `:focus-visible` style, including in forced colors. Pagination
+`Action.class` and `BulkAction.class` add classes to their role defaults. `dg-skin`
+is the ownership marker: a control that carries it is painted by the grid (border,
+background, radius, dimensions, intent colors, hover, disabled appearance and
+focus). A control with host classes has no `dg-skin`; all of those properties,
+focus included, belong to the host CSS. Provide a visible `:focus-visible` style,
+including in forced colors. Pagination
 icons keep their geometry, but host buttons can choose their own width (for example
 `button: "btn icon-only sm"`). Search uses the host input's own padding and
 decoration. Its default placeholder
@@ -114,13 +148,22 @@ cells and the column model share the measured width.
 
 Classes are applied with `classList`, never interpolated into HTML.
 
-Filter controls and sort headers do not use these roles. Use `column.renderFilterCell`
-for application-owned filters. Built-in filter and editor controls retain their cell styling.
+Filter controls and sort headers do not use these roles. Built-in filter controls
+and native editors are grid-owned and carry `dg-skin`; `.dg-filter-control` marks
+filter structure and behavior, and `.dg-editable` marks the editing lifecycle and
+cell surface. Use `column.renderFilterCell` for application-owned filters: its
+content keeps its own border, dimensions and focus unless it adds `dg-skin`. A
+custom filter cell no longer inherits `width: 100%` / `margin: 0` from the grid;
+size it in the renderer. Controls returned by `column.renderEditor` are
+application-owned: the grid adds no `dg-skin`, and adding the structural
+`.dg-editable` class opts an editor into the cell editing surface (borderless box
+and focus outline).
 
 `--dg-border-width` changes structural borders and controls using the grid skin;
-focus outlines and pictograms keep their own strokes. On browsers supporting `color-mix()`,
-row separators use a 70% tint of `--dg-border-color`. Override `--dg-row-border-color`
-explicitly when the theme needs solid separators.
+focus outlines use `--dg-focus-width` and pictograms keep their own strokes. On
+browsers supporting `color-mix()`, row separators use a 70% tint of
+`--dg-border-color`. Override `--dg-row-border-color` explicitly when the theme
+needs solid separators.
 
 Style header typography through the public selectors `.dg-head-columns th` and
 `.dg-sort-label`, for example:
@@ -232,7 +275,10 @@ to `.dg-frame > .dg-topbar`, as the bar is no longer a sibling of the frame.
 ## Bootstrap theme
 
 `themes/bootstrap.css` maps the tokens onto Bootstrap 5 variables, including dark
-mode via `[data-bs-theme="dark"]`. Load it after `data-grid.css`:
+mode via `[data-bs-theme="dark"]`. Focus uses `--bs-primary` as an opaque color:
+Bootstrap's own `--bs-focus-ring-color` is a translucent halo and does not fit
+the solid outline. Override `--dg-focus-color` when a custom primary is too light
+for 3:1 against the surfaces. Load it after `data-grid.css`:
 
 ```html
 <link rel="stylesheet" href="dist/data-grid.css" />
@@ -244,7 +290,8 @@ mode via `[data-bs-theme="dark"]`. Load it after `data-grid.css`:
 `themes/actual.css` maps the grid tokens onto the Actual CSS design tokens. It
 keeps the grid's geometry and follows the light/dark values provided by Actual
 CSS through `--surface`, `--text`, `--border`, `--primary` and related tokens.
-Load it after `data-grid.css`:
+Focus follows Actual's own contract: `--dg-focus-color: var(--focus)` and
+`--dg-focus-width: var(--focus-ring-width, 2px)`. Load it after `data-grid.css`:
 
 ```html
 <link rel="stylesheet" href="dist/data-grid.css" />
@@ -544,12 +591,13 @@ Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
 formatter default); the filter control inherits the same `text-align`, except
 the built-in boolean tri-state select keeps its option labels at `start` via
-`select.dg-filter-control[data-filter-mode="boolean"][data-align="start"]`.
+`select.dg-filter-control.dg-skin[data-filter-mode="boolean"][data-align="start"]`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
 
 `.dg-caret` draws the shared caret on a positioned element, for custom editors
 or datalist inputs. Reserve space with `padding-right: 32px` on the control and
-hide the browser's native indicator (see `demo/actions.html`).
+remove the browser's native list button (`appearance: none`, plus the
+`::-webkit-calendar-picker-indicator` fallback; see `demo/actions.html`).
 
 ## Right-to-left
 

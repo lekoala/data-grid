@@ -13,7 +13,8 @@ data-grid {
      primary is too light for text routes its ink through --link. */
   --dg-accent: var(--link, var(--primary));
   --dg-accent-soft: color-mix(in oklab, var(--surface) var(--soft-bg-mix), var(--primary));
-  --dg-focus-ring: var(--focus);
+  --dg-focus-color: var(--focus);
+  --dg-focus-width: var(--focus-ring-width, 2px);
 
   /* Same header band as .table when a theme sets one. */
   --dg-header-bg: var(--table-header-bg, var(--surface-subtle));

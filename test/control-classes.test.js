@@ -59,7 +59,9 @@ test("late global defaults update connected controls without replacing them", as
         expect(control.classList.contains("dg-skin")).toBe(false);
     }
     expect(search.parentElement.classList.contains("dg-host-input")).toBe(true);
-    expect(grid.querySelector(".dg-filter-control").classList.contains("host-input")).toBe(false);
+    const filter = grid.querySelector(".dg-filter-control");
+    expect(filter.classList.contains("host-input")).toBe(false);
+    expect(filter.classList.contains("dg-skin")).toBe(true);
     DataGrid.setDefaultControlClasses(defaults);
     expect(next.classList.contains("dg-skin")).toBe(true);
     expect(next.classList.contains("host-btn")).toBe(false);

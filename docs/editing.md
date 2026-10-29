@@ -85,9 +85,10 @@ centered with `align: "center"`:
 ## Affordance
 
 Text inputs fill their cell, hint at their interactivity with an underline on
-hover and paint a full ring on focus; checkboxes show an outer outline on
-keyboard focus. The cell itself stays neutral, and a rejected value keeps its
-own invalid signal.
+hover and paint a full inset outline on focus; checkboxes show an outer outline
+on keyboard focus. The cell itself stays neutral, and a rejected value keeps its
+own invalid signal (the focused outline switches to `--dg-danger-color`). The
+outline survives forced colors, unlike a box-shadow.
 
 ## Custom editor
 
@@ -110,14 +111,21 @@ with an application-owned editor:
 ```
 
 The editor only owns its presentation. The grid keeps ownership of coercion,
-`column.validate` / `options.validate` and the cancelable `edit` event:
+`column.validate` / `options.validate` and the cancelable `edit` event. The editor
+also owns its focus and skin: the grid adds no `dg-skin` marker, so it paints no
+generic control skin. Add the structural `.dg-editable` class when the editor
+should use the grid's borderless cell surface, including its focus outline.
+
+The lifecycle contract stays shared:
 
 - `renderEditor` is used only when the column is `editable`; display unchanged
   (stays `format` / `renderCell` — the editor steps aside, it does not replace
   `renderCell`).
 - A datalist or custom dropdown can reuse the grid caret: set
-  `cellClass: "dg-caret"`, reserve `padding-right: 32px` and hide the native
-  picker indicator (see the `Tag` column in `demo/actions.html`).
+  `cellClass: "dg-caret"`, reserve `padding-right: 32px` and remove the native
+  list button (`appearance: none`, plus the
+  `::-webkit-calendar-picker-indicator` fallback for older engines). See the
+  `Tag` column in `demo/actions.html`.
 - The returned value follows the same `RenderContent` contract as `renderCell`.
 - `commit(value)` validates and commits the given value. It resolves to `true`
   when the change was accepted (model mutated and `edit` dispatched), `false`

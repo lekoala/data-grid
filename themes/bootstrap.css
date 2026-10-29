@@ -11,7 +11,9 @@ data-grid {
 
   --dg-accent: var(--bs-primary, #0d6efd);
   --dg-accent-soft: var(--bs-primary-bg-subtle, #cfe2ff);
-  --dg-focus-ring: var(--bs-focus-ring-color, rgb(13 110 253 / 25%));
+  /* An opaque focus line: Bootstrap's --bs-focus-ring-color is a translucent
+     halo. Override when a custom primary is too light for 3:1. */
+  --dg-focus-color: var(--bs-primary, #0d6efd);
 
   --dg-header-bg: var(--bs-tertiary-bg, #f8f9fa);
   --dg-header-color: var(--bs-emphasis-color, #212529);
@@ -42,7 +44,7 @@ data-grid {
 
   --dg-accent: var(--bs-primary, #6ea8fe);
   --dg-accent-soft: var(--bs-primary-bg-subtle, #031633);
-  --dg-focus-ring: var(--bs-focus-ring-color, rgb(110 168 254 / 25%));
+  --dg-focus-color: var(--bs-primary, #6ea8fe);
 
   --dg-header-bg: var(--bs-gray-800, #34373b);
   --dg-header-color: var(--bs-emphasis-color, #f8f9fa);

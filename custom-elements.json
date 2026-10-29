@@ -491,7 +491,10 @@
               "name": "--dg-accent-soft"
             },
             {
-              "name": "--dg-focus-ring"
+              "name": "--dg-focus-color"
+            },
+            {
+              "name": "--dg-focus-width"
             },
             {
               "name": "--dg-header-bg"

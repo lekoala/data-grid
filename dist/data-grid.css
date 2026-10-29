@@ -22,7 +22,8 @@ data-grid {
   --dg-border-color: #dbdcdd;
   --dg-accent: #2563eb;
   --dg-accent-soft: #e9effd;
-  --dg-focus-ring: #2563eb33;
+  --dg-focus-color: var(--dg-accent);
+  --dg-focus-width: 2px;
   --dg-header-bg: #f8fafc;
   --dg-header-color: var(--dg-muted-color);
   --dg-filter-bg: var(--dg-bg);
@@ -172,8 +173,8 @@ data-grid > .dg-frame > .dg-scroll {
 }
 
 data-grid > .dg-frame > .dg-scroll:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: 2px;
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid.dg-snap-columns .dg-scroll {
@@ -393,15 +394,15 @@ data-grid .dg-clickable-cell {
   left: 0;
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid button:where(.dg-skin) {
   font: inherit;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid input:where(.dg-skin) {
   font: inherit;
 }
 
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid select:where(.dg-skin) {
   font: inherit;
 }
 
@@ -463,7 +464,7 @@ data-grid .dg-rotate {
   transform: rotate(-180deg);
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid button:where(.dg-skin) {
   background-color: var(--dg-control-bg);
   border: solid var(--dg-border-width) var(--dg-control-border-color);
   border-radius: var(--dg-radius);
@@ -481,11 +482,11 @@ data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable) {
   transition: background-color .12s, border-color .12s, box-shadow .12s, color .12s;
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):hover {
+data-grid button:where(.dg-skin):hover {
   background-color: var(--dg-row-hover-bg);
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):disabled:hover {
+data-grid button:where(.dg-skin):disabled:hover {
   background-color: var(--dg-control-bg);
   border-color: var(--dg-control-border-color);
 }
@@ -495,12 +496,12 @@ data-grid .dg-load-more[aria-disabled="true"] {
   opacity: .45;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable)[type="checkbox"] {
+data-grid input:where(.dg-skin)[type="checkbox"] {
   margin: 0;
   padding: 0;
 }
 
-data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:-webkit-any([type="checkbox"], [type="radio"])), select:where(.dg-skin, .dg-filter-control, .dg-editable)) {
+data-grid :where(input:where(.dg-skin):not(:-webkit-any([type="checkbox"], [type="radio"])), select:where(.dg-skin)) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
@@ -513,7 +514,7 @@ data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:-w
   transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
-data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:-moz-any([type="checkbox"], [type="radio"])), select:where(.dg-skin, .dg-filter-control, .dg-editable)) {
+data-grid :where(input:where(.dg-skin):not(:-moz-any([type="checkbox"], [type="radio"])), select:where(.dg-skin)) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
@@ -526,7 +527,7 @@ data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:-m
   transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
-data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:is([type="checkbox"], [type="radio"])), select:where(.dg-skin, .dg-filter-control, .dg-editable)) {
+data-grid :where(input:where(.dg-skin):not(:is([type="checkbox"], [type="radio"])), select:where(.dg-skin)) {
   background-color: var(--dg-control-bg);
   color: currentColor;
   box-sizing: border-box;
@@ -539,7 +540,7 @@ data-grid :where(input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:is
   transition: background-color .12s, border-color .12s, box-shadow .12s;
 }
 
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid select:where(.dg-skin) {
   appearance: none;
   padding-right: 32px;
 }
@@ -604,97 +605,96 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret):after {
   transform: translateY(-70%)rotate(45deg);
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable).dg-search {
+data-grid input:where(.dg-skin).dg-search {
   padding-left: calc(var(--dg-control-padding-inline)  + 20px);
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"]):focus-visible {
-  border-color: var(--dg-accent);
-  box-shadow: 0 0 0 3px var(--dg-focus-ring);
-  outline: 0;
+data-grid input:where(.dg-skin):not(:-webkit-any([type="checkbox"], [type="radio"])):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
-  border-color: var(--dg-accent);
-  box-shadow: 0 0 0 3px var(--dg-focus-ring);
-  outline: 0;
+data-grid input:where(.dg-skin):not(:-moz-any([type="checkbox"], [type="radio"])):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable).dg-search:focus-visible {
-  box-shadow: none;
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+data-grid input:where(.dg-skin):not(:is([type="checkbox"], [type="radio"])):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
-  border-color: var(--dg-accent);
-  outline: 0;
+data-grid select:where(.dg-skin):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid .dg-actions button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
-  box-shadow: none;
+data-grid button:where(.dg-skin):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: 2px;
 }
 
-data-grid .dg-pagination button:where(.dg-skin, .dg-filter-control, .dg-editable):focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
-  box-shadow: none;
+data-grid .dg-actions button:where(.dg-skin):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid .dg-disclosure:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
-  box-shadow: none;
+data-grid .dg-pagination button:where(.dg-skin):focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:-webkit-any([type="checkbox"], [type="radio"]))::placeholder {
+data-grid .dg-disclosure.dg-skin:focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
+}
+
+data-grid input:where(.dg-skin):not(:-webkit-any([type="checkbox"], [type="radio"]))::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:-moz-any([type="checkbox"], [type="radio"]))::placeholder {
+data-grid input:where(.dg-skin):not(:-moz-any([type="checkbox"], [type="radio"]))::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not(:is([type="checkbox"], [type="radio"]))::placeholder {
+data-grid input:where(.dg-skin):not(:is([type="checkbox"], [type="radio"]))::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"])[disabled] {
+data-grid input:where(.dg-skin):not([type="checkbox"])[disabled] {
   cursor: default;
   opacity: .45;
   pointer-events: none;
 }
 
-data-grid input:where(.dg-skin, .dg-filter-control, .dg-editable):not([type="checkbox"]):disabled {
+data-grid input:where(.dg-skin):not([type="checkbox"]):disabled {
   cursor: default;
   opacity: .45;
   pointer-events: none;
 }
 
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable)[disabled] {
+data-grid select:where(.dg-skin)[disabled] {
   cursor: default;
   opacity: .45;
   pointer-events: none;
 }
 
-data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable):disabled {
+data-grid select:where(.dg-skin):disabled {
   cursor: default;
   opacity: .45;
   pointer-events: none;
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable)[disabled] {
+data-grid button:where(.dg-skin)[disabled] {
   cursor: default;
   opacity: .45;
   pointer-events: none;
 }
 
-data-grid button:where(.dg-skin, .dg-filter-control, .dg-editable):disabled {
+data-grid button:where(.dg-skin):disabled {
   cursor: default;
   opacity: .45;
   pointer-events: none;
@@ -715,7 +715,17 @@ data-grid thead tr.dg-head-filters th {
   border-bottom: var(--dg-border-width) solid var(--dg-border-color);
 }
 
-data-grid thead tr.dg-head-filters th > * {
+data-grid thead tr.dg-head-filters th.dg-filter-cell > :-webkit-any(.dg-text-field, .dg-select-field, .dg-multiselect) {
+  width: 100%;
+  margin: 0;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell > :-moz-any(.dg-text-field, .dg-select-field, .dg-multiselect) {
+  width: 100%;
+  margin: 0;
+}
+
+data-grid thead tr.dg-head-filters th.dg-filter-cell > :is(.dg-text-field, .dg-select-field, .dg-multiselect) {
   width: 100%;
   margin: 0;
 }
@@ -724,7 +734,7 @@ data-grid thead tr.dg-head-filters th.dg-filter-cell {
   padding: 0;
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin {
   box-sizing: border-box;
   box-shadow: none;
   color: var(--dg-color);
@@ -742,11 +752,11 @@ data-grid thead tr.dg-head-filters .dg-filter-control {
   margin: 0;
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control[data-align="start"] {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin[data-align="start"] {
   text-align: start;
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control::placeholder {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin::placeholder {
   color: var(--dg-muted-color);
   opacity: 1;
 }
@@ -758,7 +768,7 @@ data-grid .dg-text-field {
 }
 
 @supports selector(:has(*)) {
-  data-grid thead tr.dg-head-filters .dg-text-field:has( > input.dg-filter-control[placeholder=""]:not(:focus):placeholder-shown):after {
+  data-grid thead tr.dg-head-filters .dg-text-field:has( > input.dg-filter-control.dg-skin[placeholder=""]:not(:focus):placeholder-shown):after {
     content: "";
     color: var(--dg-muted-color);
     opacity: .65;
@@ -775,23 +785,23 @@ data-grid .dg-text-field {
   }
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control:hover {
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin:hover {
   background-color: var(--dg-row-hover-bg);
 }
 
-data-grid thead tr.dg-head-filters .dg-filter-control:focus-visible {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+data-grid thead tr.dg-head-filters .dg-filter-control.dg-skin:focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
   box-shadow: none;
 }
 
 @media (forced-colors: active) {
-  data-grid select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+  data-grid select:where(.dg-skin) {
     appearance: auto;
     padding-right: var(--dg-control-padding-inline);
   }
 
-  data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+  data-grid[dir="rtl"] select:where(.dg-skin) {
     padding-right: var(--dg-control-padding-inline);
     padding-left: var(--dg-control-padding-inline);
   }
@@ -834,21 +844,27 @@ data-grid tbody td input.dg-editable:not([type="checkbox"]):hover {
 }
 
 data-grid tbody td input.dg-editable:not([type="checkbox"]):focus {
-  box-shadow: inset 0 0 0 2px var(--dg-accent);
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid tbody td input.dg-editable[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--dg-accent);
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
   outline-offset: 2px;
 }
 
 data-grid tbody td select.dg-editable:focus-visible {
-  box-shadow: inset 0 0 0 2px var(--dg-accent);
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
   background-color: var(--dg-danger-bg);
   box-shadow: inset 0 0 0 1px var(--dg-danger-color);
+}
+
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:focus {
+  outline-color: var(--dg-danger-color);
 }
 
 data-grid .dg-empty-row td, data-grid .dg-error-row td {
@@ -1049,8 +1065,9 @@ data-grid th[data-align="end"] > .dg-sort, data-grid th[data-align="end"] > .dg-
   justify-content: flex-end;
 }
 
-data-grid th.dg-sortable:focus-within {
-  box-shadow: inset 0 -2px 0 var(--dg-accent);
+data-grid th.dg-sortable > .dg-sort:focus-visible {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid .dg-sort-indicator {
@@ -1182,7 +1199,7 @@ data-grid[dir="rtl"] .dg-selection-count {
   margin-right: 0;
 }
 
-data-grid[dir="rtl"] select:where(.dg-skin, .dg-filter-control, .dg-editable) {
+data-grid[dir="rtl"] select:where(.dg-skin) {
   padding-right: var(--dg-control-padding-inline);
   padding-left: 32px;
 }
@@ -1193,7 +1210,7 @@ data-grid[dir="rtl"] .dg-select-field:after, data-grid[dir="rtl"] .dg-caret:afte
 }
 
 @supports selector(:has(*)) {
-  data-grid[dir="rtl"] thead tr.dg-head-filters .dg-text-field:has( > input.dg-filter-control[placeholder=""]:not(:focus):placeholder-shown):after {
+  data-grid[dir="rtl"] thead tr.dg-head-filters .dg-text-field:has( > input.dg-filter-control.dg-skin[placeholder=""]:not(:focus):placeholder-shown):after {
     left: 12px;
     right: auto;
   }
@@ -1302,13 +1319,13 @@ data-grid .dg-multiselect-trigger {
   padding: 0;
 }
 
-data-grid .dg-multiselect-trigger:focus-visible {
+data-grid .dg-multiselect-trigger.dg-skin:focus-visible {
   outline: 0;
 }
 
-data-grid thead tr.dg-head-filters .dg-multiselect:has( > .dg-multiselect-trigger:focus-visible) {
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+data-grid thead tr.dg-head-filters .dg-multiselect.dg-skin:has( > .dg-multiselect-trigger:focus-visible) {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
   box-shadow: none;
 }
 
@@ -1498,15 +1515,15 @@ data-grid button.dg-skin[data-intent="danger"]:hover, data-grid a.dg-skin[data-i
 
 data-grid .dg-actions-menu button.dg-skin:focus-visible {
   background-color: var(--dg-row-hover-bg);
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
   border-color: #0000;
 }
 
 data-grid .dg-actions-menu a.dg-skin:focus-visible {
   background-color: var(--dg-row-hover-bg);
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
   border-color: #0000;
 }
 
@@ -1773,8 +1790,8 @@ data-grid .dg-details-close:hover {
 
 data-grid .dg-details-close:focus-visible {
   box-shadow: none;
-  outline: 2px solid var(--dg-accent);
-  outline-offset: -2px;
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
 data-grid .dg-details-list {

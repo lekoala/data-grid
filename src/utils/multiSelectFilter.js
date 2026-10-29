@@ -71,7 +71,7 @@ export function updateMultiSelectSummary(root) {
 export function createMultiSelect(column, options, relatedTh) {
     const doc = relatedTh.ownerDocument;
     const root = doc.createElement("div");
-    root.className = "dg-multiselect dg-filter-control";
+    root.className = "dg-multiselect dg-filter-control dg-skin";
     // Filter-row contract: the id prefix collects the control in
     // filterData()/clearFilters(), data-name binds it to the column.
     root.id = randstr("dg-filter-");

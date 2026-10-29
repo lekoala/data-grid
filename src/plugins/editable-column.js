@@ -82,6 +82,9 @@ class EditableColumn extends BasePlugin {
         input.autocomplete = "off";
         input.spellcheck = false;
         input.classList.add("dg-editable");
+        // Native editors are grid-owned: dg-skin is the skin/focus marker.
+        // Application editors returned by renderEditor stay app-owned.
+        input.classList.add("dg-skin");
         input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
         input.setAttribute("aria-label", column.title ?? field);
         input.dataset.field = field;
@@ -149,6 +152,7 @@ class EditableColumn extends BasePlugin {
         const gridId = grid.getAttribute("id") ?? "";
         const select = document.createElement("select");
         select.classList.add("dg-editable");
+        select.classList.add("dg-skin");
         select.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
         select.setAttribute("aria-label", column.title ?? field);
         select.dataset.field = field;
@@ -217,6 +221,7 @@ class EditableColumn extends BasePlugin {
         const input = document.createElement("input");
         input.type = "checkbox";
         input.classList.add("dg-editable");
+        input.classList.add("dg-skin");
         input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
         input.setAttribute("aria-label", column.title ?? field);
         input.dataset.field = field;
