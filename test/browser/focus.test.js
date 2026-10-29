@@ -109,6 +109,35 @@ test.skipIf(IS_WINDOWS)(
     TIMEOUT,
 );
 
+test.skipIf(IS_WINDOWS)(
+    "the scroll viewport is a Tab stop only while it can scroll",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/${FIXTURE}`);
+        await waitFor(v, "window.grid && window.grid.rows.length > 0");
+        const tabStop = 'document.querySelector("#local-grid .dg-scroll").tabIndex';
+
+        // The fixture grid fits its content: an empty Tab stop would only add
+        // a focus ring around a region with nothing to scroll.
+        await waitFor(v, `${tabStop} === -1`);
+        expect(await read(v, tabStop)).toBe(-1);
+
+        // A short frame makes the viewport scroll: it joins the Tab sequence
+        // for native keyboard scrolling.
+        await v.evaluate('window.grid.style.height = "12rem"');
+        await waitFor(v, `${tabStop} === 0`);
+        expect(await read(v, tabStop)).toBe(0);
+
+        // Lifting the constraint leaves the Tab sequence again. -1 keeps the
+        // programmatic focus used when a progressive chunk ends.
+        await v.evaluate('window.grid.style.height = ""');
+        await waitFor(v, `${tabStop} === -1`);
+        await v.evaluate('document.querySelector("#local-grid .dg-scroll").focus()');
+        expect(await read(v, 'document.activeElement === document.querySelector("#local-grid .dg-scroll")')).toBe(true);
+    },
+    TIMEOUT,
+);
+
 test.skipIf(!IS_CHROME_BACKEND)(
     "editable focus survives forced colors and keeps the invalid signal",
     async () => {

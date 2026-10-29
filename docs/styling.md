@@ -472,7 +472,9 @@ columns: [
 Declarative tables use `data-frozen="start"` or `data-frozen="end"`. Enable proximity-based horizontal
 snapping with `snapColumns: true` or the `snap-columns` attribute. The scroll
 viewport remains native and keyboard-scrollable; the grid does not intercept
-arrow keys. See `demo/frozen.html`.
+arrow keys. It is a Tab stop only while it actually scrolls (vertically or
+horizontally), so a grid that fits adds no empty focus stop. See
+`demo/frozen.html`.
 
 ## Cell annotations and popovers
 

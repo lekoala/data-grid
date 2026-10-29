@@ -343,10 +343,12 @@ data-source change still replaces the whole body.
 
 The `.dg-frame` owns the outer border and radius. Its `.dg-scroll` viewport
 contains the table and anchors the sticky header (including the filter row).
-The footer sits after the viewport and stays visible outside its scroll. This is
-the default behavior — as soon as the grid is given a constrained height, the
-viewport takes the remaining space and its chrome stays visible while rows
-scroll:
+The footer sits after the viewport and stays visible outside its scroll. The
+viewport is a Tab stop only while it actually scrolls (vertically or
+horizontally); otherwise it stays programmatically focusable without adding an
+empty focus stop. This is the default behavior — as soon as the grid is given a
+constrained height, the viewport takes the remaining space and its chrome stays
+visible while rows scroll:
 
 ```css
 .results-grid {

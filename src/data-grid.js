@@ -660,6 +660,9 @@ class DataGrid extends BaseElement {
     #loadObserver;
     /** @type {Boolean} */
     #lazyPending;
+
+    /** @type {ResizeObserver|null} */
+    #scrollObserver;
     /** @type {import("./core/base-plugin.js").RenderContext|null} */
     #renderContext;
     /** Number of records the current body DOM renders, or null when the body
@@ -847,6 +850,9 @@ class DataGrid extends BaseElement {
 
         /** @type {IntersectionObserver|null} */
         this.#loadObserver = null;
+
+        /** @type {ResizeObserver|null} */
+        this.#scrollObserver = null;
 
         /** @type {Boolean} */
         this.#lazyPending = false;
@@ -1845,6 +1851,7 @@ class DataGrid extends BaseElement {
         this.runPlugins("afterRender", this.#renderContext);
         this.queueFrozenSync();
         this.removeAttribute("data-empty");
+        this.#syncScrollTabStop();
 
         dispatch(this, "bodyRendered");
     }
@@ -2357,7 +2364,6 @@ class DataGrid extends BaseElement {
         if (!scroll) {
             scroll = document.createElement("div");
             scroll.className = "dg-scroll";
-            scroll.tabIndex = 0;
             // After adoption the supplied table is still a direct host child.
             const table = /** @type {HTMLTableElement|null} */ (
                 frame.querySelector(":scope > table") ?? this.querySelector(":scope > table")
@@ -2369,7 +2375,6 @@ class DataGrid extends BaseElement {
             }
         } else {
             scroll.className = "dg-scroll";
-            scroll.tabIndex = 0;
         }
         // A declarative topbar belongs to the frame, above the viewport:
         // normalize its zones even when nothing else needs the topbar.
@@ -2389,11 +2394,42 @@ class DataGrid extends BaseElement {
         }
     }
 
+    /**
+     * The viewport is a Tab stop only while it can actually scroll: a focus
+     * ring around a region with nothing to scroll is noise. `-1` keeps the
+     * programmatic focus used when a progressive chunk ends. Layout changes
+     * that no render causes are observed separately.
+     */
+    #syncScrollTabStop() {
+        const scroll = this.scrollEl;
+        if (!scroll) {
+            return;
+        }
+        const scrollable = scroll.scrollHeight > scroll.clientHeight || scroll.scrollWidth > scroll.clientWidth;
+        scroll.tabIndex = scrollable ? 0 : -1;
+    }
+
+    /**
+     * Watch the viewport and the table: the viewport box follows the frame
+     * (topbar wrap, footer, window resize), the table box follows rows,
+     * columns and column resizing.
+     */
+    #observeScrollability() {
+        this.#scrollObserver?.disconnect();
+        this.#scrollObserver = new ResizeObserver(() => this.#syncScrollTabStop());
+        this.#scrollObserver.observe(this.scrollEl);
+        if (this.table) {
+            this.#scrollObserver.observe(this.table);
+        }
+        this.#syncScrollTabStop();
+    }
+
     async _connected() {
         this.#adoptDeclarativeTable();
         this.#collectCellTemplates();
         this.table = this.querySelector("table");
         this.#wrapScroll();
+        this.#observeScrollability();
         this.btnFirst = this.querySelector(".dg-btn-first");
         this.btnPrev = this.querySelector(".dg-btn-prev");
         this.btnNext = this.querySelector(".dg-btn-next");
@@ -2441,6 +2477,8 @@ class DataGrid extends BaseElement {
     _disconnected() {
         this.#loadObserver?.disconnect();
         this.#loadObserver = null;
+        this.#scrollObserver?.disconnect();
+        this.#scrollObserver = null;
         this.#controller?.abort();
         // Cancel any pending per-input debounce before it can fire on a
         // detached element. The state itself survives: a debounced function
@@ -3747,6 +3785,7 @@ class DataGrid extends BaseElement {
         this.renderFooter();
         this.runPlugins("afterRender", this.#renderContext);
         this.queueFrozenSync();
+        this.#syncScrollTabStop();
     }
 
     /**
@@ -4423,6 +4462,7 @@ class DataGrid extends BaseElement {
             this.setAttribute("data-empty", "");
         }
 
+        this.#syncScrollTabStop();
         dispatch(this, "bodyRendered");
     }
 

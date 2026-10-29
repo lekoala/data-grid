@@ -282,9 +282,13 @@ test("options.caption creates a real table caption", async () => {
     document.body.removeChild(inst);
 });
 
-test("the scroll viewport is focusable and only becomes a named region with a business label", async () => {
+test("the scroll viewport is a programmatic focus target and only becomes a named region with a business label", async () => {
     const unnamed = await makeReadyGrid({ columns: [{ field: "name" }] });
-    expect(unnamed.scrollEl.tabIndex).toBe(0);
+    // No layout in happy-dom, hence no scroll extent: the viewport stays out of
+    // the Tab sequence but remains focusable programmatically (chunk fallback).
+    expect(unnamed.scrollEl.tabIndex).toBe(-1);
+    unnamed.scrollEl.focus();
+    expect(document.activeElement).toBe(unnamed.scrollEl);
     expect(unnamed.scrollEl.hasAttribute("role")).toBe(false);
     document.body.removeChild(unnamed);
 
@@ -292,6 +296,35 @@ test("the scroll viewport is focusable and only becomes a named region with a bu
     expect(named.scrollEl.getAttribute("role")).toBe("region");
     expect(named.scrollEl.getAttribute("aria-label")).toBe("Customers");
     document.body.removeChild(named);
+});
+
+test("the scroll viewport only takes a Tab stop while it can scroll", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }] });
+    const scroll = inst.scrollEl;
+    const size = (scrollHeight, clientHeight, scrollWidth = 0, clientWidth = 0) => {
+        Object.defineProperty(scroll, "scrollHeight", { configurable: true, value: scrollHeight });
+        Object.defineProperty(scroll, "clientHeight", { configurable: true, value: clientHeight });
+        Object.defineProperty(scroll, "scrollWidth", { configurable: true, value: scrollWidth });
+        Object.defineProperty(scroll, "clientWidth", { configurable: true, value: clientWidth });
+    };
+
+    size(100, 100, 100, 100);
+    inst.renderBody();
+    expect(scroll.tabIndex).toBe(-1);
+
+    size(220, 100, 100, 100);
+    inst.renderBody();
+    expect(scroll.tabIndex).toBe(0);
+
+    size(100, 100, 220, 100);
+    inst.renderBody();
+    expect(scroll.tabIndex).toBe(0);
+
+    size(100, 100, 100, 100);
+    inst.renderBody();
+    expect(scroll.tabIndex).toBe(-1);
+
+    document.body.removeChild(inst);
 });
 
 test("table inherits the host aria-labelledby / aria-label when there is no caption", async () => {

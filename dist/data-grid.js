@@ -2223,6 +2223,7 @@ class DataGrid extends base_element_default {
   #warnedDuplicateTemplates;
   #loadObserver;
   #lazyPending;
+  #scrollObserver;
   #renderContext;
   #renderedCount;
   #frozenFrame;
@@ -2268,6 +2269,7 @@ class DataGrid extends base_element_default {
     this.searchInput = null;
     this.headerRow = null;
     this.#loadObserver = null;
+    this.#scrollObserver = null;
     this.#lazyPending = false;
     this.#renderContext = null;
     this.#renderedCount = null;
@@ -2865,6 +2867,7 @@ class DataGrid extends base_element_default {
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
     this.removeAttribute("data-empty");
+    this.#syncScrollTabStop();
     dispatch(this, "bodyRendered");
   }
   #updateMoreButton() {
@@ -3223,7 +3226,6 @@ class DataGrid extends base_element_default {
     if (!scroll) {
       scroll = document.createElement("div");
       scroll.className = "dg-scroll";
-      scroll.tabIndex = 0;
       const table = frame.querySelector(":scope > table") ?? this.querySelector(":scope > table");
       const footer = frame.querySelector(":scope > .dg-footer");
       frame.insertBefore(scroll, footer ?? frame.firstChild);
@@ -3232,7 +3234,6 @@ class DataGrid extends base_element_default {
       }
     } else {
       scroll.className = "dg-scroll";
-      scroll.tabIndex = 0;
     }
     if (this.querySelector(":scope > .dg-topbar, :scope > .dg-frame > .dg-topbar")) {
       this.ensureTopbar();
@@ -3247,11 +3248,29 @@ class DataGrid extends base_element_default {
       this.table = table;
     }
   }
+  #syncScrollTabStop() {
+    const scroll = this.scrollEl;
+    if (!scroll) {
+      return;
+    }
+    const scrollable = scroll.scrollHeight > scroll.clientHeight || scroll.scrollWidth > scroll.clientWidth;
+    scroll.tabIndex = scrollable ? 0 : -1;
+  }
+  #observeScrollability() {
+    this.#scrollObserver?.disconnect();
+    this.#scrollObserver = new ResizeObserver(() => this.#syncScrollTabStop());
+    this.#scrollObserver.observe(this.scrollEl);
+    if (this.table) {
+      this.#scrollObserver.observe(this.table);
+    }
+    this.#syncScrollTabStop();
+  }
   async _connected() {
     this.#adoptDeclarativeTable();
     this.#collectCellTemplates();
     this.table = this.querySelector("table");
     this.#wrapScroll();
+    this.#observeScrollability();
     this.btnFirst = this.querySelector(".dg-btn-first");
     this.btnPrev = this.querySelector(".dg-btn-prev");
     this.btnNext = this.querySelector(".dg-btn-next");
@@ -3286,6 +3305,8 @@ class DataGrid extends base_element_default {
   _disconnected() {
     this.#loadObserver?.disconnect();
     this.#loadObserver = null;
+    this.#scrollObserver?.disconnect();
+    this.#scrollObserver = null;
     this.#controller?.abort();
     for (const input of this.querySelectorAll("input")) {
       const state = textInputState.get(input);
@@ -4084,6 +4105,7 @@ class DataGrid extends base_element_default {
     this.renderFooter();
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
+    this.#syncScrollTabStop();
   }
   updateTableLabel() {
     const table = this.table;
@@ -4520,6 +4542,7 @@ class DataGrid extends base_element_default {
     } else {
       this.setAttribute("data-empty", "");
     }
+    this.#syncScrollTabStop();
     dispatch(this, "bodyRendered");
   }
   #renderDataRow(item, rowIndex) {

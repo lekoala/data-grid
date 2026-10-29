@@ -49,6 +49,11 @@ not documented.
   Body rows stay in normal flow, so an opaque row cannot paint over the inset
   outline; default, opaque-stripe and selected rows all show one continuous
   ring.
+- The scroll viewport is a Tab stop only while it actually scrolls, vertically
+  or horizontally. It stays programmatically focusable (`tabIndex = -1`) for the
+  progressive-chunk fallback, and a grid that fits no longer adds an empty focus
+  stop. Viewport and table resizes (window, column resize, late content) update
+  the state.
 - The scroll viewport focus ring is inset, so the frame's `overflow: hidden` no
   longer clips it.
 - The Actual CSS theme maps `--dg-focus-color` to `--focus` and
