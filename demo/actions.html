@@ -35,11 +35,11 @@
       max-width: 100%;
       font-size: 0.875em;
     }
-    /* Datalist editor: reuse the grid caret. The grid hides Chromium's native
-       list glyph for [list] inputs inside .dg-caret, so only the space it would
-       occupy has to be reserved here. */
-    #status-demo td.dg-caret input.dg-editable {
-      padding-right: 32px;
+    /* The native datalist indicator is placed on the text line box, so the
+       page's 1.5 leading offsets it by half-leading (~4px). A 1em line box
+       centers it, at the cost of ~1px on the text baseline. */
+    #status-demo td.dg-editable-col input[list] {
+      line-height: 1;
     }
   </style>
 
@@ -174,7 +174,6 @@
           field: "tag",
           title: "Tag",
           width: 120,
-          cellClass: "dg-caret",
           editable: true,
           renderEditor({ value, commit, cancel }) {
             // A custom editor is an application-owned control: it only decides

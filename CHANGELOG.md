@@ -16,6 +16,10 @@ not documented.
   soft halo into a 2px solid line; set `--dg-focus-width: 3px` to keep the old
   thickness. `--dg-focus-color` must reach 3:1 against the grid surfaces and does
   not have to equal `--dg-accent`.
+- `.dg-caret` is removed. It painted the select caret on a `datalist` editor,
+  which presented a free-text field as a closed list. Drop
+  `cellClass: "dg-caret"` and the reserved `padding-right`; the browser's native
+  list indicator is no longer suppressed.
 
 ### Changed
 
@@ -39,9 +43,6 @@ not documented.
   `.dg-filter-control`. `renderEditor` controls stay application-owned.
 - Filter-cell sizing applies to the grid's own wrappers only; custom filter
   controls no longer inherit `width: 100%` / `margin: 0`.
-- `.dg-caret` now suppresses Chromium's native datalist button itself, including
-  the glyph it draws on hover/focus, so consumers only reserve the caret space.
-  `[list]` scoping leaves date and time pickers untouched.
 - Pager arrows hover with the shared `--dg-row-hover-bg` wash and keep their
   neutral border. The accent outline is reserved for keyboard focus, so a
   hovered arrow no longer reads as focused or selected.

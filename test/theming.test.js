@@ -47,7 +47,7 @@ test("the scroll viewport lets wheel input chain to the page", () => {
 test("grid-skinned selects share the component caret", () => {
     expect(coreCss).toMatch(/data-grid select:where\(\.dg-skin\) \{[\s\S]*?appearance: none;/);
     expect(coreCss).toMatch(
-        /data-grid :is\(\.dg-select-field:not\(\.dg-host-select\), \.dg-caret\):after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/,
+        /data-grid \.dg-select-field:not\(\.dg-host-select\)::?after \{[\s\S]*?transform: translateY\(-70%\)rotate\(45deg\)/,
     );
     // Physical LTR reserve, mirrored for [dir="rtl"] in _rtl.css (Bun CSS workaround)
     expect(coreCss).toContain("padding-right: 32px");
@@ -109,17 +109,15 @@ test("row backgrounds never paint over the viewport focus ring", () => {
     expect(coreCss).not.toMatch(/data-grid tr \{[^}]*position: relative;/);
 });
 
-test("the shared caret is reusable and sort glyphs share the label axis", () => {
-    expect(coreCss).toMatch(/\.dg-caret\)::?after/);
-    expect(coreCss).toMatch(/data-grid\[dir="rtl"\] \.dg-caret::?after/);
+test("the shared caret is an internal select and disclosure hook", () => {
+    // A datalist editor is free text: painting the select caret on it promises
+    // a closed list. The class is gone, not kept for a hypothetical dropdown.
+    expect(coreCss).not.toContain("dg-caret");
     expect(coreCss).toMatch(/th\.dg-sortable > \.dg-sort,[\s\S]*?align-items:\s+center;/);
 });
 
-test("the shared caret replaces the native datalist glyph", () => {
-    // Chromium shows its own list button on hover/focus and paints its display
-    // through an internal hint, so only !important suppresses it. The [list]
-    // scope leaves date/time pickers alone.
-    expect(coreCss).toMatch(/\.dg-caret \[list\]::-webkit-calendar-picker-indicator \{\s*display: none !important;/);
+test("a datalist editor keeps the browser's native indicator", () => {
+    expect(coreCss).not.toContain("::-webkit-calendar-picker-indicator");
 });
 
 test("pager hover is a wash, the focus ring marks the active control", () => {

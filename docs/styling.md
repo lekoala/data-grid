@@ -588,7 +588,7 @@ Common hooks: `.dg-head-columns th`, `.dg-sort-label`, `th.dg-sortable`, `.dg-so
 `.dg-selection-count`, `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`,
 `.dg-disclosure`, `.dg-disclosure-cell`, `.dg-details-dialog`, `.dg-details-panel`,
 `.dg-details-header`, `.dg-details-title`, `.dg-details-body`, `.dg-details-close`,
-`.dg-details-list`, `.dg-details-app`, `.dg-select-field`, `.dg-caret`.
+`.dg-details-list`, `.dg-details-app`, `.dg-select-field`.
 Column alignment lands on header, body, and filter cells as
 `th[data-align="start|center|end"]` / `td[data-align=...]` (explicit `align` or
 formatter default); the filter control inherits the same `text-align`, except
@@ -596,10 +596,10 @@ the built-in boolean tri-state select keeps its option labels at `start` via
 `select.dg-filter-control.dg-skin[data-filter-mode="boolean"][data-align="start"]`.
 Actions use `[data-intent="danger"]` / `[data-intent="primary"]`.
 
-`.dg-caret` draws the shared caret on a positioned element, for custom editors
-or datalist inputs. Reserve space with `padding-right: 32px` on the control; the
-grid removes the native datalist glyph of `[list]` inputs (date and time pickers
-keep theirs). See `demo/actions.html`.
+`.dg-select-field` draws the shared caret on a positioned wrapper, for
+`select`-driven editors; reserve space with `padding-right: 32px` on the
+control. A `datalist` input keeps the browser's native indicator and gets no
+caret, so it keeps reading as a free-text field. See `demo/actions.html`.
 
 ## Right-to-left
 

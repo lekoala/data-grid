@@ -121,10 +121,9 @@ The lifecycle contract stays shared:
 - `renderEditor` is used only when the column is `editable`; display unchanged
   (stays `format` / `renderCell` — the editor steps aside, it does not replace
   `renderCell`).
-- A datalist or custom dropdown can reuse the grid caret: set
-  `cellClass: "dg-caret"` and reserve `padding-right: 32px` on the control. The
-  grid removes the native list glyph of `[list]` inputs (date and time pickers
-  keep theirs). See the `Tag` column in `demo/actions.html`.
+- A datalist editor stays a text field: keep the browser's native list
+  indicator and add no caret of your own. The select caret belongs to
+  `select`-driven editors. See the `Tag` column in `demo/actions.html`.
 - The returned value follows the same `RenderContent` contract as `renderCell`.
 - `commit(value)` validates and commits the given value. It resolves to `true`
   when the change was accepted (model mutated and `edit` dispatched), `false`

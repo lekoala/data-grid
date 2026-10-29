@@ -44,11 +44,6 @@ data-grid[dir="rtl"] .dg-select-field::after {
   left: 12px;
 }
 
-data-grid[dir="rtl"] .dg-caret::after {
-  right: auto;
-  left: 12px;
-}
-
 /* Mirror of the text-filter I-beam in _core.css: the glyph sits at the
    inline-start side. It reserves no inline space, so the input keeps the
    base padding and its text stays on the column's alignment edge. */

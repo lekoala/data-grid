@@ -599,8 +599,10 @@ data-grid .dg-select-field {
 }
 
 /* Shared caret geometry for disclosure controls; each component positions its
-   own instance below (_multiselect.css for the multi-select trigger). */
-data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger, .dg-caret)::after {
+   own instance below (_multiselect.css for the multi-select trigger). A datalist
+   editor is not one of them: it keeps the browser's native indicator, so a
+   free-text field never reads as a closed select. */
+data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger)::after {
   content: "";
   width: 6px;
   height: 6px;
@@ -610,20 +612,12 @@ data-grid :is(.dg-select-field:not(.dg-host-select), .dg-multiselect-trigger, .d
   opacity: 0.65;
 }
 
-data-grid :is(.dg-select-field:not(.dg-host-select), .dg-caret)::after {
+data-grid .dg-select-field:not(.dg-host-select)::after {
   position: absolute;
   right: 12px;
   top: 50%;
   transform: translateY(-70%) rotate(45deg);
   pointer-events: none;
-}
-
-/* .dg-caret replaces the native dropdown glyph, it does not add a second one:
-   Chromium shows the datalist list button on hover/focus and paints its display
-   through an internal hint, so only !important suppresses it. The [list] scope
-   keeps the calendar picker of date/time inputs. */
-data-grid .dg-caret [list]::-webkit-calendar-picker-indicator {
-  display: none !important;
 }
 
 data-grid input:where(.dg-skin).dg-search {
