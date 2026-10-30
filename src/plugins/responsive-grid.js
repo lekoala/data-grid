@@ -81,6 +81,11 @@ class ResponsiveGrid extends BasePlugin {
             this.#unblockTimeout = null;
         }
         this.#scheduleResize.cancel();
+        // Reconnection needs a fresh observation even at the same width; a
+        // cancelled unblock timer must not leave resize permanently blocked.
+        this.#observerBlocked = false;
+        this.#lastEntry = null;
+        this.#lastProcessedWidth = null;
     }
 
     /**

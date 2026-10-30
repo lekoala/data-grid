@@ -531,6 +531,11 @@ Notes:
 class="dg-details-dialog">`, a direct child of the grid (never inside
 `.dg-scroll`), so it inherits the grid tokens in the top layer.
 
+The [Customers demo](../demo/customers.html) uses demo-scoped CSS to dock this
+same dialog to the inline end, mirror it in RTL, and fit the available viewport
+on narrow screens. It retains the native modal, close control and scrollable
+body; drawer positioning does not require another `detailsDisplay` value.
+
 ```html
 <dialog class="dg-details-dialog" aria-labelledby="…">
   <button class="dg-details-close" type="button" aria-label="Close dialog"></button>

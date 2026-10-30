@@ -5659,6 +5659,9 @@ class ResponsiveGrid extends base_plugin_default {
       this.#unblockTimeout = null;
     }
     this.#scheduleResize.cancel();
+    this.#observerBlocked = false;
+    this.#lastEntry = null;
+    this.#lastProcessedWidth = null;
   }
   responsiveChanged(enabled) {
     this.#lastProcessedWidth = null;

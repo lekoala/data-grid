@@ -56,6 +56,22 @@ test("responsive restores columns when space comes back", async () => {
     document.body.removeChild(inst);
 });
 
+test("responsive processes the same width after disconnect and restores table visibility", async () => {
+    const inst = await makeReadyGrid({ columns: COLS });
+    forceResize(inst, 200);
+    const hidden = hiddenFields(inst);
+    const disconnected = new Promise((resolve) => inst.addEventListener("disconnected", resolve, { once: true }));
+    inst.remove();
+    await disconnected;
+    const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));
+    document.body.append(inst);
+    await connected;
+    forceResize(inst, 200);
+    expect(inst.table.style.visibility).toBe("visible");
+    expect(hiddenFields(inst)).toEqual(hidden);
+    inst.remove();
+});
+
 test("responsive can be disabled and re-enabled at the same width", async () => {
     const inst = await makeReadyGrid({ columns: COLS });
     inst.setAttribute("responsive", "");

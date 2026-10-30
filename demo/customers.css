@@ -106,6 +106,44 @@
   border: 0;
   min-block-size: 0;
 }
+/* Demo-only drawer appearance: the plugin still owns a native modal dialog,
+   its close control, accessible title and scrollable record sheet. */
+.customers-record-drawer .dg-details-dialog {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: auto;
+  margin: 0;
+  box-sizing: border-box;
+  inline-size: min(32rem, 100%);
+  max-inline-size: 100%;
+  block-size: 100vh;
+  max-block-size: 100vh;
+  border-radius: 0;
+  border-top: 0;
+  border-bottom: 0;
+  border-right: 0;
+}
+.customers-record-drawer[dir="rtl"] .dg-details-dialog {
+  right: auto;
+  left: 0;
+  border-left: 0;
+  border-right: var(--dg-border-width) solid var(--dg-border-color);
+}
+.customers-record-navigation { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.customers-record-navigation [data-record-position] { flex-basis: 100%; margin: 0 0 0.5rem; font-weight: 600; }
+.customers-record-navigation button {
+  border: var(--dg-border-width) solid var(--dg-control-border-color);
+  border-radius: var(--dg-radius);
+  padding: 0.45rem 0.75rem;
+  background: var(--dg-control-bg);
+  color: var(--dg-control-color);
+}
+.customers-record-navigation button:disabled { opacity: 0.5; cursor: default; }
+@supports (height: 100svh) {
+  .customers-record-drawer .dg-details-dialog { block-size: 100svh; max-block-size: 100svh; }
+}
 @media (forced-colors: active) {
   .customers-demo button:focus-visible, .customers-demo summary:focus-visible,
   .customers-demo select:focus-visible, .customers-demo input:focus-visible { outline-color: Highlight; }

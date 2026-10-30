@@ -160,3 +160,80 @@ test("name and native disclosure open the same read-only sheet without a recursi
     expect(dialog.textContent).toContain(name);
     expect(grid.getSelectionState()).toEqual(selection);
 });
+
+test("customer record navigation stays on the loaded page and preserves selection", async () => {
+    const grid = await open();
+    grid.selectRow(grid.rows[0]);
+    const selected = grid.getSelectionState();
+    let queryChanges = 0;
+    grid.addEventListener("querychange", () => queryChanges++);
+    grid.querySelector(".customer-name").click();
+    const previous = () => grid.querySelector('[data-record-step="-1"]');
+    const next = () => grid.querySelector('[data-record-step="1"]');
+    const position = () => grid.querySelector("[data-record-position]").textContent;
+    expect(position()).toBe("1 of 10 on this page");
+    expect(previous().disabled).toBe(true);
+    for (let i = 1; i < 10; i++) {
+        next().click();
+        expect(position()).toBe(`${i + 1} of 10 on this page`);
+        expect(grid.getPlugin("RowDetails").isExpanded(String(grid.rows[i].id))).toBe(true);
+    }
+    expect(next().disabled).toBe(true);
+    next().click();
+    expect(position()).toBe("10 of 10 on this page");
+    previous().click();
+    expect(position()).toBe("9 of 10 on this page");
+    expect(grid.page).toBe(1);
+    expect(queryChanges).toBe(0);
+    expect(grid.getSelectionState()).toEqual(selected);
+    expect(grid.querySelectorAll("dialog[open]").length).toBe(1);
+});
+
+test("changing records or query invalidates detached navigation callbacks", async () => {
+    const grid = await open();
+    grid.querySelector(".customer-name").click();
+    const oldNext = grid.querySelector('[data-record-step="1"]');
+    oldNext.click();
+    grid.querySelector('[data-record-step="-1"]').click();
+    oldNext.click();
+    expect(grid.querySelector("[data-record-position]").textContent).toBe("1 of 10 on this page");
+    for (const query of [
+        { page: 2 },
+        { sort: [{ field: "name", direction: "desc" }] },
+        { filters: { status: { operator: "eq", value: "trial" } } },
+    ]) {
+        await grid.setQuery(query);
+        expect(grid.querySelector("dialog[open]")).toBeNull();
+        oldNext.click();
+        expect(grid.querySelector("dialog[open]")).toBeNull();
+        grid.querySelector(".customer-name").click();
+        expect(grid.querySelector("[data-record-position]").textContent).toBe("1 of 10 on this page");
+    }
+    await grid.refresh();
+    expect(grid.querySelector("dialog[open]")).toBeNull();
+});
+
+test("progressive record navigation describes loaded rows without loading another chunk", async () => {
+    const grid = await open();
+    let loads = 0;
+    grid.setAttribute("pager", "more");
+    grid.dataSource = {
+        async load(query) {
+            loads++;
+            return { rows: [{ id: `loaded-${query.page}`, name: `Loaded ${query.page}` }], total: null, hasMore: true };
+        },
+    };
+    await grid.refresh();
+    grid.querySelector(".customer-name").click();
+    expect(grid.querySelector("[data-record-position]").textContent).toBe("1 of 1 loaded results");
+    expect(grid.querySelector('[data-record-step="1"]').disabled).toBe(true);
+    const before = loads;
+    grid.querySelector('[data-record-step="1"]').click();
+    expect(loads).toBe(before);
+    await grid.loadMore();
+    expect(grid.querySelector("dialog[open]")).toBeNull();
+    grid.querySelector(".customer-name").click();
+    grid.querySelector('[data-record-step="1"]').click();
+    expect(grid.querySelector("[data-record-position]").textContent).toBe("2 of 2 loaded results");
+    expect(loads).toBe(before + 1);
+});

@@ -218,6 +218,20 @@ Behavior and limits:
 batteries-included entry registers it. Without the plugin the option is inert
 and responsive keeps its own toggle.
 
+### Customer inspector recipe
+
+The [Customers demo](../demo/customers.html) styles this native modal as a side
+drawer and adds Previous/Next buttons through application-owned `rowDetails`
+content. The buttons call `expand(rowKey)` and traverse `grid.rows` by stable
+keys: positions describe the current page, or loaded results with `pager="more"`.
+They never load another page or change row selection.
+
+The demo keeps its original return-focus target while moving between records.
+It closes inspection on query changes, reloads, accepted body renders, and
+disconnection. Detached navigation buttons cannot reopen an obsolete session.
+This cleanup is application policy; the plugin's default snapshot behavior
+described above still applies to other grids.
+
 ### Combining responsive columns and a dialog
 
 In dialog mode `ResponsiveGrid` yields its disclosure control to `RowDetails`

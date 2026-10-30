@@ -9,6 +9,8 @@ not documented.
 
 ### Added
 
+- Customers demo uses a modal side drawer with Previous/Next navigation among
+  loaded records, safe focus return, and inspection cleanup on query or data changes.
 - Column `summary: "sum" | "avg"` displays server-provided `meta.aggregates`
   in a generated semantic table footer, with numeric formatting, column
   visibility, reordering, and frozen columns. Sources own calculation and scope.
@@ -29,6 +31,8 @@ not documented.
 
 ### Fixed
 
+- Responsive grids reprocess their width after reconnecting, so cancelled resize
+  work cannot leave the table hidden at the same viewport width.
 - A data source that ignores cancellation can no longer commit a late response
   after the grid disconnects. Pending loading state is cleared on disconnect.
 

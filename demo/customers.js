@@ -41,6 +41,8 @@ export function mountCustomers(root) {
     let searchReturn = null;
     let detailsReturn = null;
     let focusFrame = null;
+    let openDetailsKey = null;
+    let navigatingDetails = false;
 
     const columns = [
         {
@@ -56,6 +58,7 @@ export function mountCustomers(root) {
                 button.className = "customer-name";
                 button.textContent = row.name;
                 button.addEventListener("click", () => {
+                    if (pending || grid.loading) return;
                     detailsReturn = button;
                     grid.getPlugin("RowDetails").expand(String(row.id));
                 });
@@ -128,11 +131,79 @@ export function mountCustomers(root) {
         filterable: true,
         responsive: true,
         detailsDisplay: "dialog",
+        rowDetails: ({ rowKey }) => createRecordNavigation(rowKey),
         bulkActions: [{ name: "preview", label: "Preview action scope" }],
     });
     grid.lang = "en-US";
     grid.setAttribute("aria-label", "Customers");
-    grid.classList.add("customers-floating-actions");
+    grid.classList.add("customers-floating-actions", "customers-record-drawer");
+
+    function createRecordNavigation(rowKey) {
+        const index = grid.rows.findIndex((row) => String(row.id) === rowKey);
+        if (index < 0) return null;
+        const source = grid.dataSource;
+        const nav = doc.createElement("nav");
+        nav.className = "customers-record-navigation";
+        nav.setAttribute("aria-label", "Browse loaded customers");
+        const position = doc.createElement("p");
+        position.dataset.recordPosition = "";
+        position.tabIndex = -1;
+        position.setAttribute("role", "status");
+        position.setAttribute("aria-live", "polite");
+        const label = doc.createElement("bdi");
+        label.textContent = `${index + 1} of ${grid.rows.length} ${grid.options.pager === "more" ? "loaded results" : "on this page"}`;
+        position.append(label);
+        nav.append(position);
+        for (const [step, label] of [
+            [-1, "Previous"],
+            [1, "Next"],
+        ]) {
+            const button = doc.createElement("button");
+            button.type = "button";
+            button.dataset.recordStep = String(step);
+            button.textContent = label;
+            button.setAttribute("aria-label", `${label} customer`);
+            button.disabled = index + step < 0 || index + step >= grid.rows.length;
+            button.addEventListener("click", () => {
+                // Detached application content must never reopen an obsolete sheet.
+                if (
+                    button.matches(":disabled") ||
+                    !button.isConnected ||
+                    !grid.isConnected ||
+                    pending ||
+                    grid.loading ||
+                    openDetailsKey !== rowKey ||
+                    grid.dataSource !== source
+                )
+                    return;
+                const current = grid.rows.findIndex((row) => String(row.id) === rowKey);
+                const next = current < 0 ? null : grid.rows[current + step];
+                if (!next) return;
+                navigatingDetails = true;
+                try {
+                    grid.getPlugin("RowDetails").expand(String(next.id));
+                } finally {
+                    navigatingDetails = false;
+                }
+                const controls = grid.querySelector(".customers-record-navigation");
+                const nextButton = controls?.querySelector(`[data-record-step="${step}"]`);
+                const focus =
+                    nextButton && !nextButton.matches(":disabled")
+                        ? nextButton
+                        : controls?.querySelector("[data-record-position]");
+                focus?.focus();
+            });
+            nav.append(button);
+        }
+        return nav;
+    }
+
+    function closeRecord() {
+        if (openDetailsKey === null) return;
+        // Query/response changes may remove the original row. Use a stable target.
+        detailsReturn = focusSearch;
+        grid.getPlugin("RowDetails").collapse(openDetailsKey);
+    }
 
     function canFocus(target) {
         return (
@@ -247,9 +318,18 @@ export function mountCustomers(root) {
         }
     }
 
+    function updateResultCount() {
+        count.textContent = pending
+            ? "Updating results…"
+            : grid.total == null
+              ? `${grid.rows.length} loaded results · total unknown`
+              : `${grid.total} matching customers`;
+    }
+
     listen(grid, "querychange", () => {
+        closeRecord();
         pending = true;
-        count.textContent = "Updating results…";
+        updateResultCount();
         updatePills();
         updateSelection();
     });
@@ -259,18 +339,17 @@ export function mountCustomers(root) {
         (event) => {
             if (!event.target.matches(".dg-search")) return;
             // A pending search edit is already a new intent, even before debounce commits it.
-            pending = true;
-            count.textContent = "Updating results…";
+            pending = event.target.value !== grid.query.search || grid.loading;
+            if (pending) closeRecord();
+            updateResultCount();
             updateSelection();
         },
         true,
     );
     listen(grid, "bodyRendered", () => {
+        closeRecord();
         pending = false;
-        count.textContent =
-            grid.total == null
-                ? `${grid.rows.length} loaded results · total unknown`
-                : `${grid.total} matching customers`;
+        updateResultCount();
         updatePills();
         updateSelection();
         updateView();
@@ -281,10 +360,13 @@ export function mountCustomers(root) {
         updateSelection();
     });
     listen(grid, "selectionChange", updateSelection);
-    // Search/topbar rebuilds and reconnect can replace the plugin's bar. Observe
-    // structure only; our class/hidden changes cannot schedule another callback.
-    const toolbarObserver = new MutationObserver(updateFloatingActions);
-    toolbarObserver.observe(grid, { childList: true, subtree: true });
+    // Rebuilds can replace the toolbar; a reload also ends the demo's inspection
+    // session. Class/hidden changes cannot schedule another observer callback.
+    const gridObserver = new MutationObserver(() => {
+        updateFloatingActions();
+        if (grid.isConnected && grid.loading) closeRecord();
+    });
+    gridObserver.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-loading"] });
     listen(grid, "columnVisibility", updateView);
     listen(extend, "click", () => grid.selectAllMatching());
     listen(clear, "click", () => grid.clearSelection());
@@ -300,8 +382,29 @@ export function mountCustomers(root) {
             `${target}. Mode: ${selection.mode}. Scope: search ${JSON.stringify(query.search)}, filters ${JSON.stringify(query.filters)}. Preview only; no records changed.`;
     });
 
+    listen(
+        grid,
+        "click",
+        (event) => {
+            const button = event.target.closest(".dg-row-details-toggle-control");
+            if (!button || button.closest("data-grid") !== grid) return;
+            if (pending || grid.loading) {
+                event.preventDefault();
+                event.stopPropagation();
+                return;
+            }
+            detailsReturn = button;
+        },
+        true,
+    );
     listen(grid, "rowDetailsToggle", (event) => {
-        if (event.detail.expanded || !detailsReturn) return;
+        openDetailsKey = event.detail.expanded ? String(event.detail.rowKey) : null;
+        if (event.detail.expanded) {
+            if (focusFrame != null) cancelAnimationFrame(focusFrame);
+            focusFrame = null;
+            return;
+        }
+        if (navigatingDetails) return;
         const target = detailsReturn;
         detailsReturn = null;
         if (focusFrame != null) cancelAnimationFrame(focusFrame);
@@ -309,6 +412,12 @@ export function mountCustomers(root) {
             focusFrame = null;
             if (grid.isConnected && !grid.querySelector("dialog[open]")) restore(target);
         });
+    });
+    listen(grid, "disconnected", () => {
+        openDetailsKey = null;
+        detailsReturn = null;
+        if (focusFrame != null) cancelAnimationFrame(focusFrame);
+        focusFrame = null;
     });
 
     function enterSearch(remember = false) {
@@ -376,7 +485,9 @@ export function mountCustomers(root) {
         grid,
         destroy() {
             controller.abort();
-            toolbarObserver.disconnect();
+            gridObserver.disconnect();
+            openDetailsKey = null;
+            detailsReturn = null;
             if (focusFrame != null) cancelAnimationFrame(focusFrame);
             grid.remove();
         },
