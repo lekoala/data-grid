@@ -23,6 +23,8 @@ const query: QueryState = {
 
 void query;
 
+new DataGrid().selectAllMatching();
+
 const remoteSource = new FetchDataSource("/api/users", {
     fetch: { cache: "no-store", credentials: "same-origin" },
     cacheBust: true,

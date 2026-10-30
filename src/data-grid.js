@@ -3398,6 +3398,19 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Select every row matching the current search and filters, without fetching
+     * off-page rows. Clears exclusions; does nothing in single-select mode.
+     * @public
+     */
+    selectAllMatching() {
+        if (this.options.singleSelect) {
+            return;
+        }
+        this.#selection = { mode: "all", ids: new Set(), except: new Set() };
+        this.#selectionChanged();
+    }
+
+    /**
      * Reset the selection and refresh the UI.
      * @public
      */

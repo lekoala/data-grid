@@ -29,6 +29,84 @@ function toggle(input) {
     change(input);
 }
 
+test("selectAllMatching replaces explicit keys and exclusions without changing query or options", async () => {
+    const inst = await makeReadyGrid({ selectable: true, pageSize: 10 });
+    inst.selectRow(inst.rows[0]);
+    const query = inst.query;
+    let events = 0;
+    inst.addEventListener("selectionChange", () => events++);
+
+    inst.selectAllMatching();
+    expect(inst.getSelectionState()).toEqual({ mode: "all", ids: new Set(), except: new Set() });
+    expect(inst.options.selectVisibleOnly).toBe(true);
+    expect(inst.query).toEqual(query);
+    expect(inst.rows.length).toBe(10);
+    expect(events).toBe(1);
+
+    inst.deselectRow(inst.rows[0]);
+    expect(inst.getSelectionState().except.size).toBe(1);
+    inst.selectAllMatching();
+    expect(inst.getSelectionState().except.size).toBe(0);
+    await inst.setQuery({ page: 2 });
+    expect(inst.isRowSelected(inst.rows[0])).toBe(true);
+    await inst.setQuery({ search: "row1" });
+    expect(inst.getSelectionState().mode).toBe("explicit");
+    inst.remove();
+});
+
+test("selectAllMatching works with an unknown total without requesting more rows", async () => {
+    const inst = await makeReadyGrid({ selectable: true, pager: "more", bulkActions: [{ name: "preview" }] });
+    let loads = 0;
+    inst.dataSource = {
+        async load() {
+            loads++;
+            return { rows: rows.slice(0, 3), total: null, hasMore: true };
+        },
+    };
+    await inst.refresh();
+    const before = loads;
+    inst.selectAllMatching();
+    expect(inst.total).toBeNull();
+    expect(loads).toBe(before);
+    expect(inst.getSelectionState().mode).toBe("all");
+    expect(inst.querySelector(".dg-bulk-actions button").disabled).toBe(false);
+    inst.remove();
+});
+
+test("selectAllMatching is silent in single-select mode, with or without a selected row", async () => {
+    const inst = await makeReadyGrid({ singleSelect: true });
+    for (const selected of [false, true]) {
+        if (selected) inst.selectRow(inst.rows[0]);
+        const before = inst.getSelectionState();
+        let events = 0;
+        const listener = () => events++;
+        inst.addEventListener("selectionChange", listener);
+        inst.selectAllMatching();
+        expect(inst.getSelectionState()).toEqual(before);
+        expect(events).toBe(0);
+        inst.removeEventListener("selectionChange", listener);
+    }
+    inst.remove();
+});
+
+test("the page header replaces off-page keys and unchecking clears the entire selection", async () => {
+    const inst = await makeReadyGrid({ selectable: true, pageSize: 10 });
+    inst.selectRow(inst.rows[0]);
+    await inst.setQuery({ page: 2 });
+    const header = inst.querySelector(".dg-select-all");
+    header.checked = true;
+    change(header);
+    expect(inst.getSelectionState().ids).toEqual(new Set(rows.slice(10, 20).map((row) => String(row.id))));
+    inst.selectRow(rows[0]);
+    header.checked = false;
+    change(header);
+    expect(inst.getSelectionState().ids.size).toBe(0);
+    inst.selectAllMatching();
+    inst.selectAll();
+    expect(inst.getSelectionState().mode).toBe("explicit");
+    inst.remove();
+});
+
 test("selection survives a page change", async () => {
     const inst = await makeReadyGrid({ columns: [{ field: "name" }], selectable: true, pageSize: 10 });
 

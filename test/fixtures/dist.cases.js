@@ -8,6 +8,9 @@ test("dist bundle exports the v3 API", () => {
     expect(customElements.get("data-grid")).toBe(DataGrid);
     expect(new DataGrid()).toBeInstanceOf(DataGrid);
     expect(document.createElement("data-grid")).toBeInstanceOf(DataGrid);
+    const grid = new DataGrid();
+    grid.selectAllMatching();
+    expect(grid.getSelectionState().mode).toBe("all");
 });
 
 test("dist bundle omits legacy touch and spinner plugins", () => {

@@ -3864,6 +3864,13 @@ class DataGrid extends base_element_default {
     }
     this.#selectionChanged();
   }
+  selectAllMatching() {
+    if (this.options.singleSelect) {
+      return;
+    }
+    this.#selection = { mode: "all", ids: new Set, except: new Set };
+    this.#selectionChanged();
+  }
   clearSelection() {
     this.#selection = { mode: "explicit", ids: new Set, except: new Set };
     this.#selectionChanged();

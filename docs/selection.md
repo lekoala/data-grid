@@ -20,6 +20,27 @@ select-all across server pages only needs the keys of the rows you want to
 exclude. With `selectVisibleOnly: true` (default) it only selects the visible
 page as an explicit `ids` set.
 
+`selectAllMatching()` explicitly selects every matching result regardless of
+`selectVisibleOnly`, without fetching off-page rows or requiring a known total.
+It clears explicit keys and exclusions. With `singleSelect: true` it does nothing
+and emits no selection event. `selectAll()` retains its existing behavior.
+
+The header checkbox is not cumulative across pages: with `selectVisibleOnly: true`,
+checking it replaces the selection with current-page keys. Unchecking it clears
+the entire selection, including keys from other pages. Individual row selections
+can still accumulate across page changes. In `pager="more"`, current rows means
+all loaded results, not just the latest chunk.
+
+All-results selection is a query-based intent, not a frozen snapshot of IDs.
+The backend evaluates search and filters when executing the action and applies
+`except`; pagination and sort must not restrict that population. Applications
+requiring a fixed snapshot must supply their own backend contract.
+
+For progressive selection, keep `selectVisibleOnly: true`, select the page first,
+then offer an explicit button calling `selectAllMatching()`. The
+[Customers demo](../demo/customers.html) composes that invitation outside the core,
+including unknown totals and exclusions.
+
 Row keys come from the `rowKey` option (`"id"` by default), either a field name
 or a function `(row) => key`.
 
@@ -49,6 +70,7 @@ grid.selectRow(row, index)
 grid.deselectRow(row, index)
 grid.toggleRow(row, index)
 grid.selectAll()                // visible page, or everything when selectVisibleOnly is false
+grid.selectAllMatching()        // all matching rows; no-op in single-select mode
 grid.clearSelection()
 ```
 

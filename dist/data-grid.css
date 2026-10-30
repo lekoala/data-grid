@@ -1051,6 +1051,7 @@ data-grid th.dg-sortable > .dg-sort:focus-visible {
 
 data-grid .dg-sort-indicator {
   color: var(--dg-muted-color);
+  opacity: .55;
   position: relative;
   flex: none;
   block-size: 12px;
@@ -1099,6 +1100,24 @@ data-grid th[data-sort="desc"] .dg-sort-indicator:after {
 
 data-grid th[aria-sort] .dg-sort-indicator {
   color: var(--dg-accent);
+  opacity: 1;
+}
+
+data-grid .dg-sort:hover .dg-sort-indicator, data-grid .dg-sort:focus-within .dg-sort-indicator {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  data-grid .dg-sort-indicator {
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  data-grid .dg-sort-indicator, data-grid th[aria-sort] .dg-sort-indicator {
+    color: buttontext;
+    opacity: 1;
+  }
 }
 
 data-grid .dg-boolean {

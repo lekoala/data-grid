@@ -1125,6 +1125,7 @@ data-grid th.dg-sortable > .dg-sort:focus-visible {
    the indicator element stays empty and the JS only manages the state. */
 data-grid .dg-sort-indicator {
   color: var(--dg-muted-color);
+  opacity: 0.55;
   flex: none;
   inline-size: 12px;
   block-size: 12px;
@@ -1177,6 +1178,26 @@ data-grid th[data-sort="desc"] .dg-sort-indicator::after {
 
 data-grid th[aria-sort] .dg-sort-indicator {
   color: var(--dg-accent);
+  opacity: 1;
+}
+
+data-grid .dg-sort:hover .dg-sort-indicator,
+data-grid .dg-sort:focus-within .dg-sort-indicator {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  data-grid .dg-sort-indicator {
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  data-grid .dg-sort-indicator,
+  data-grid th[aria-sort] .dg-sort-indicator {
+    color: ButtonText;
+    opacity: 1;
+  }
 }
 
 /* The boolean mark is drawn entirely in CSS from data-value: the span stays

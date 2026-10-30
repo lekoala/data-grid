@@ -27,6 +27,9 @@ test("injects the stylesheet and registers the element from a single script", as
     // Minified standalone class names are not stable; test the upgrade with
     // instanceof, never with `gridCtor.name`.
     expect(document.createElement("data-grid") instanceof gridCtor).toBe(true);
+    const grid = document.createElement("data-grid");
+    grid.selectAllMatching();
+    expect(grid.getSelectionState().mode).toBe("all");
 });
 
 test("re-evaluating the bundle stays idempotent", async () => {

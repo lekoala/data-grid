@@ -505,6 +505,7 @@ response protection).
 | `isRowSelected(row)`                                     | whether a row is selected                       |
 | `selectRow(row)` / `deselectRow(row)` / `toggleRow(row)` | row selection                                   |
 | `selectAll()` / `clearSelection()`                       | select/reset the selection                      |
+| `selectAllMatching()`                                    | select all matching results, clearing exclusions |
 | `getSelection(...keys)`                                  | page-local selected rows                        |
 | `setSearch(value)` / `clearSearch()`                     | set / clear the global search                   |
 | `updateRow(rowKey, patch)` / `removeRow(rowKey)`         | mutate / remove a row (see `docs/actions.md`)   |

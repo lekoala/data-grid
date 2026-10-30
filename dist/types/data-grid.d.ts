@@ -1152,6 +1152,12 @@ declare class DataGrid extends BaseElement {
      */
     selectAll(): void;
     /**
+     * Select every row matching the current search and filters, without fetching
+     * off-page rows. Clears exclusions; does nothing in single-select mode.
+     * @public
+     */
+    selectAllMatching(): void;
+    /**
      * Reset the selection and refresh the UI.
      * @public
      */

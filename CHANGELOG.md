@@ -5,6 +5,21 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
+## Unreleased
+
+### Added
+
+- `selectAllMatching()` selects all results matching search and filters without
+  changing `selectVisibleOnly` or loading off-page rows. It clears exclusions and
+  does nothing in single-select mode.
+- Customers demo composing status pills, display preferences, keyboard search,
+  record details, and progressive selection using public APIs.
+
+### Changed
+
+- Neutral sort indicators are quieter, with full visibility on hover, keyboard
+  focus, active sort, touch devices, and in forced-colors mode.
+
 ## [3.9.0] - 2026-10-29
 
 ### Breaking / migration
