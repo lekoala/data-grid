@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Data Grid Demo — Server aggregates</title>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+  </head>
+  <body>
+    <main>
+      <div data-demo-nav></div>
+      <h1>Server aggregates</h1>
+      <p>The server calculates MRR and seats sums, and average health, over all matching customers before pagination.
+        Search or filter the table to change that population. Selection and page changes do not change these totals.</p>
+      <p>Missing values appear as —. A zero is a real value. This example needs the Bun demo server.</p>
+      <label><input type="checkbox" id="show-health" checked /> Show health column</label>
+      <div id="aggregate-demo"></div>
+    </main>
+    <script type="module">
+      import { DataGrid, FetchDataSource } from "../data-grid.js";
+      import { renderDemoNav } from "./nav.js";
+      renderDemoNav();
+      const grid = new DataGrid({
+        id: "revenue-grid",
+        dataSource: new FetchDataSource("/api/revenue"),
+        caption: "Customer revenue. Footer: MRR and seats sums, health average over all matching customers.",
+        pageSize: 10,
+        searchable: true,
+        searchPlaceholder: "Search customers",
+        sortable: true,
+        filterable: true,
+        selectable: true,
+        responsive: true,
+        columns: [
+          { field: "customer", title: "Customer", width: 140, minWidth: 140, frozen: "start" },
+          { field: "status", title: "Status", width: 180, minWidth: 140, filterType: "select",
+            filterList: [{ value: "active", text: "Active" }, { value: "trial", text: "Trial" }] },
+          { field: "seats", title: "Seats", width: 160, minWidth: 120, format: "number", summary: "sum" },
+          { field: "health", title: "Health", width: 160, minWidth: 120, format: "number", summary: "avg",
+            formatOptions: { style: "percent", maximumFractionDigits: 2 } },
+          { field: "mrr", title: "MRR", width: 130, minWidth: 130, frozen: "end", format: "number", summary: "sum",
+            formatOptions: { style: "currency", currency: "USD" } },
+        ],
+      });
+      grid.lang = "en-US";
+      document.querySelector("#show-health").addEventListener("change", (event) => {
+        if (event.target.checked) grid.showColumn("health");
+        else grid.hideColumn("health");
+      });
+      document.querySelector("#aggregate-demo").append(grid);
+    </script>
+  </body>
+</html>

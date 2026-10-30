@@ -2864,6 +2864,7 @@ class DataGrid extends base_element_default {
     tbody.appendChild(fragment);
     this.#renderedCount = this.rows.length;
     this.paginate();
+    this.#renderAggregates();
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
     this.removeAttribute("data-empty");
@@ -3308,6 +3309,9 @@ class DataGrid extends base_element_default {
     this.#scrollObserver?.disconnect();
     this.#scrollObserver = null;
     this.#controller?.abort();
+    this.#requestSeq++;
+    this.loading = false;
+    this.removeAttribute("data-loading");
     for (const input of this.querySelectorAll("input")) {
       const state = textInputState.get(input);
       state?.apply.cancel();
@@ -3541,6 +3545,8 @@ class DataGrid extends base_element_default {
       return;
     }
     return this.load().finally(() => {
+      if (!this.isConnected)
+        return;
       this.configureUi();
       this.classList.add("dg-initialized");
       this.fireEvents = true;
@@ -4110,6 +4116,7 @@ class DataGrid extends base_element_default {
     this.updateTableLabel();
     this.renderHeader();
     this.renderFooter();
+    this.#renderAggregates();
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
     this.#syncScrollTabStop();
@@ -4542,6 +4549,7 @@ class DataGrid extends base_element_default {
     }
     this.#renderedCount = this.hasDataError || !this.rows.length ? null : this.rows.length;
     this.paginate();
+    this.#renderAggregates();
     this.runPlugins("afterRender", this.#renderContext);
     this.queueFrozenSync();
     if (this.hasDataError || this.rows.length) {
@@ -4551,6 +4559,40 @@ class DataGrid extends base_element_default {
     }
     this.#syncScrollTabStop();
     dispatch(this, "bodyRendered");
+  }
+  #renderAggregates() {
+    const table = this.table;
+    if (!table)
+      return;
+    const aggregates = this.meta?.aggregates;
+    const columns = this.getColumns().filter((column) => !column.attr);
+    const summaries = new Set(columns.filter((column) => !column.virtual && column.field && (column.summary === "sum" || column.summary === "avg")));
+    if (this.hasDataError || !aggregates || typeof aggregates !== "object" || Array.isArray(aggregates) || !summaries.size) {
+      table.tFoot?.remove();
+      return;
+    }
+    const headers = new Map([...this.headerRow?.cells ?? []].map((cell) => [cell.dataset.columnId, cell.id]));
+    const footer = document.createElement("tfoot");
+    const row = footer.insertRow();
+    for (const column of columns) {
+      const cell = this.#createColumnCell("td", column);
+      const headerId = headers.get(this.getColumnId(column));
+      if (headerId)
+        cell.setAttribute("headers", headerId);
+      if (summaries.has(column)) {
+        const field = column.field;
+        const value = Object.hasOwn(aggregates, field) ? aggregates[field] : null;
+        cell.textContent = typeof value === "number" && Number.isFinite(value) ? formatValue(value, "number", column.format === "number" ? column.formatOptions : undefined, {
+          grid: this,
+          column
+        }) : "—";
+      }
+      row.appendChild(cell);
+    }
+    if (table.tFoot)
+      table.replaceChild(footer, table.tFoot);
+    else
+      table.appendChild(footer);
   }
   #renderDataRow(item, rowIndex) {
     const tr = document.createElement("tr");

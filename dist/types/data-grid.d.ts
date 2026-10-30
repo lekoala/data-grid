@@ -68,7 +68,7 @@ export type Column = {
      */
     minWidth?: number;
     /**
-     * - horizontal alignment of the column's header, body, and filter control, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
+     * - horizontal alignment of header, body, aggregate and filter cells, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
      */
     align?: "start" | "center" | "end" | null;
     /**
@@ -79,6 +79,10 @@ export type Column = {
      * - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
      */
     formatOptions?: DateFormatOptions | NumberFormatOptions;
+    /**
+     * - display a numeric aggregate from meta.aggregates[field] in a generated tfoot; the source calculates it over all matching results before pagination
+     */
+    summary?: "sum" | "avg";
     /**
      * - class to set on the column (target body or header with th.class or td.class)
      */
@@ -611,7 +615,8 @@ declare class DataGrid extends BaseElement {
      */
     total: number | null;
     /**
-     * Meta information returned by the data source
+     * Meta information returned by the data source. `meta.aggregates` maps
+     * data fields to numeric values for columns configured with `summary`.
      * @public
      * @type {Record<string, any>}
      */

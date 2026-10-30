@@ -881,6 +881,17 @@ data-grid .dg-scroll > table > tbody > tr:last-child > td {
   border-bottom: 0;
 }
 
+data-grid .dg-scroll > table > tfoot > tr > td {
+  border-top: var(--dg-border-width) solid var(--dg-border-color);
+  background-color: var(--dg-bg);
+  background-image: linear-gradient(var(--dg-header-bg), var(--dg-header-bg));
+  font-weight: 600;
+}
+
+data-grid tfoot [data-frozen="start"], data-grid tfoot [data-frozen="end"] {
+  z-index: 2;
+}
+
 data-grid tbody tr:nth-child(2n) {
   --dg-row-current-bg: var(--dg-row-stripe-bg);
 }

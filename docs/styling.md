@@ -211,6 +211,16 @@ is a progressive enhancement: browsers without `position: sticky` on
 > **page** scrolls (`[sticky]`, header only) — is reserved and not yet
 > implemented in v3.
 
+## Aggregate footer
+
+Columns with `summary: "sum"` or `summary: "avg"` display values from
+`meta.aggregates` in the table's `<tfoot>`, sharing column alignment, visibility,
+widths, and frozen offsets. See [the source contract](server-data.md#column-aggregates).
+
+Style the semantic `tfoot` element or its cells; no extra class or theme token is
+needed. The default uses `--dg-bg`, `--dg-header-bg`, and the existing border
+color. Frozen cells keep an opaque base and sit above scrolling footer cells.
+The pagination bar remains `.dg-footer`, outside the table.
 
 ## Topbar composition
 

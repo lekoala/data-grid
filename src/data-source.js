@@ -52,7 +52,7 @@ import { normalizeBoolean } from "./utils/formatValue.js";
  * @property {Array<Record<string, any>>} rows
  * @property {Number|null} [total] Number of rows matching the current query (used for pagination). Null or absent in pager "more" mode when the backend skips COUNT(*)
  * @property {Boolean} [hasMore] Authoritative continuation signal for pager "more" mode (LIMIT+1 style). Wins over total when both are present
- * @property {Record<string, any>} [meta] Additional information (ex: total unfiltered)
+ * @property {Record<string, any> & {aggregates?: Record<string, number|null>}} [meta] Additional information, including source-calculated aggregates over all matching rows before pagination
  */
 
 /**

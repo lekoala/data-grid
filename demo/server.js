@@ -14,6 +14,16 @@ const rows = Array.from({ length: ROWS_COUNT }, (_, i) => ({
     company: COMPANIES[i % COMPANIES.length],
 }));
 
+// Source-owned financial sample; aggregation is intentionally server-side.
+const revenueRows = Array.from({ length: 64 }, (_, i) => ({
+    id: i + 1,
+    customer: `Customer ${i + 1}`,
+    status: i % 3 === 0 ? "trial" : "active",
+    mrr: i % 7 === 0 ? 0 : 149 + ((i * 173) % 2400),
+    seats: (i * 7) % 180,
+    health: i % 13 === 0 ? null : ((i * 17) % 101) / 100,
+}));
+
 // In-memory overrides for the edit action
 const overrides = new Map();
 
@@ -113,6 +123,29 @@ export async function handleApi(req, url) {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Headers": "*",
     };
+
+    if (url.pathname === "/api/revenue") {
+        if (req.method !== "GET") return new NativeResponse("Method not allowed", { status: 405, headers });
+        const query = decodeQuery(url.searchParams);
+        const matching = applySearch(applyFilters(revenueRows, query.filters), query.search);
+        let mrr = 0;
+        let seats = 0;
+        let health = 0;
+        let healthCount = 0;
+        for (const row of matching) {
+            mrr += row.mrr;
+            seats += row.seats;
+            if (row.health != null) {
+                health += row.health;
+                healthCount++;
+            }
+        }
+        return NativeResponse.json({
+            rows: paginate(applySort(matching, query.sort), query.page, query.pageSize),
+            total: matching.length,
+            meta: { aggregates: { mrr, seats, health: healthCount ? health / healthCount : null } },
+        }, { headers });
+    }
 
     if (url.pathname === "/api/errors") {
         return new NativeResponse("Internal server error", { status: 500, headers });

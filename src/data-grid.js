@@ -106,9 +106,10 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {String} [title] - the title to display in the header (defaults to "field" if not set)
  * @property {Number} [width] - the preferred width of the column (auto otherwise); a user resize commits back into this value at runtime (SaveState module)
  * @property {Number} [minWidth] - the column is never compressed below this width
- * @property {"start"|"center"|"end"|null} [align] - horizontal alignment of the column's header, body, and filter control, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
+ * @property {"start"|"center"|"end"|null} [align] - horizontal alignment of header, body, aggregate and filter cells, defaults to the formatter default when `format` is set (e.g. `number` -> `end`, `boolean` -> `center`)
  * @property {"boolean"|"date"|"datetime"|"number"|null} [format] - built-in value formatter (boolean | date | datetime | number). Use renderCell for custom DOM rendering.
  * @property {DateFormatOptions|NumberFormatOptions} [formatOptions] - Intl options for the `format` formatter, after applying the formatter defaults and convenience inferences
+ * @property {"sum"|"avg"} [summary] - display a numeric aggregate from meta.aggregates[field] in a generated tfoot; the source calculates it over all matching results before pagination
  * @property {String} [class] - class to set on the column (target body or header with th.class or td.class)
  * @property {String|((ctx: CellContext) => String|null|undefined)} [cellClass] - class(es) for body cells only, evaluated per row at render time. Unlike `class`, never applied to header or filter cells
  * @property {String} [attr] - don't render the column and set a matching attribute on the row with the value of the field. The attribute name is developer-controlled but the value comes from row data, so event-handler names (e.g. `attr: "onclick"`) and non-string values are refused during column normalization
@@ -757,7 +758,8 @@ class DataGrid extends BaseElement {
         this.total = 0;
 
         /**
-         * Meta information returned by the data source
+         * Meta information returned by the data source. `meta.aggregates` maps
+         * data fields to numeric values for columns configured with `summary`.
          * @public
          * @type {Record<string, any>}
          */
@@ -1848,6 +1850,7 @@ class DataGrid extends BaseElement {
         this.#renderedCount = this.rows.length;
 
         this.paginate();
+        this.#renderAggregates();
         this.runPlugins("afterRender", this.#renderContext);
         this.queueFrozenSync();
         this.removeAttribute("data-empty");
@@ -2260,8 +2263,8 @@ class DataGrid extends BaseElement {
      * `<th data-field>` row defines the columns (it wins over
      * `options.columns`); when no explicit data source exists, the
      * declarative `<tbody>` becomes the local ArrayDataSource dataset.
-     * Any author-provided `<tfoot>` is discarded: the pager footer lives in
-     * `.dg-frame > .dg-footer`, outside the table. Idempotent: the adopted
+     * Any author-provided `<tfoot>` is discarded: aggregate footers are generated
+     * from result metadata; the pager lives outside the table. Idempotent: the adopted
      * table is marked `data-dg-table` and is never re-parsed or re-seeded.
      */
     #adoptDeclarativeTable() {
@@ -2318,8 +2321,8 @@ class DataGrid extends BaseElement {
         }
 
         // Ownership: the declarative header row is consumed once, the grid
-        // installs its own tbody (replacing any user-provided one). An author
-        // tfoot is always discarded: the footer lives outside the table.
+        // installs its own tbody (replacing any user-provided one). Author
+        // tfoot is discarded; only result metadata owns aggregate cells.
         supplied.querySelector("thead > tr:first-child")?.remove();
         if (generated) {
             const tbody = generated.querySelector("tbody");
@@ -2480,6 +2483,11 @@ class DataGrid extends BaseElement {
         this.#scrollObserver?.disconnect();
         this.#scrollObserver = null;
         this.#controller?.abort();
+        // A custom source may ignore AbortSignal and resolve after removal.
+        // Invalidate the whole intent, including its commit and finally paths.
+        this.#requestSeq++;
+        this.loading = false;
+        this.removeAttribute("data-loading");
         // Cancel any pending per-input debounce before it can fire on a
         // detached element. The state itself survives: a debounced function
         // is reusable after cancel(), so a reconnected input keeps working
@@ -2824,6 +2832,7 @@ class DataGrid extends BaseElement {
             return;
         }
         return this.load().finally(() => {
+            if (!this.isConnected) return;
             this.configureUi();
 
             this.classList.add("dg-initialized"); //acts as a flag to prevent unnecessary server calls down the chain.
@@ -2934,8 +2943,8 @@ class DataGrid extends BaseElement {
         const cell = document.createElement(tag);
         cell.dataset.columnId = this.getColumnId(column);
         applyColumnDefinition(cell, column);
-        // Alignment is shared by header, body, and filter cells; `data-format`
-        // stays a body-only theming hook for the rendered cell.
+        // Alignment is shared by header, body, aggregate, and filter cells;
+        // `data-format` identifies formatted data and aggregate cells.
         const align = getColumnAlign(column);
         if (align) {
             cell.dataset.align = align;
@@ -3796,6 +3805,7 @@ class DataGrid extends BaseElement {
         this.updateTableLabel();
         this.renderHeader();
         this.renderFooter();
+        this.#renderAggregates();
         this.runPlugins("afterRender", this.#renderContext);
         this.queueFrozenSync();
         this.#syncScrollTabStop();
@@ -4465,6 +4475,7 @@ class DataGrid extends BaseElement {
         this.#renderedCount = this.hasDataError || !this.rows.length ? null : this.rows.length;
 
         this.paginate();
+        this.#renderAggregates();
 
         this.runPlugins("afterRender", this.#renderContext);
         this.queueFrozenSync();
@@ -4477,6 +4488,53 @@ class DataGrid extends BaseElement {
 
         this.#syncScrollTabStop();
         dispatch(this, "bodyRendered");
+    }
+
+    /** Render source-provided aggregates; never derive them from the page's rows. */
+    #renderAggregates() {
+        const table = this.table;
+        if (!table) return;
+        const aggregates = this.meta?.aggregates;
+        const columns = this.getColumns().filter((column) => !column.attr);
+        const summaries = new Set(
+            columns.filter(
+                (column) => !column.virtual && column.field && (column.summary === "sum" || column.summary === "avg"),
+            ),
+        );
+        if (
+            this.hasDataError ||
+            !aggregates ||
+            typeof aggregates !== "object" ||
+            Array.isArray(aggregates) ||
+            !summaries.size
+        ) {
+            table.tFoot?.remove();
+            return;
+        }
+
+        const headers = new Map([...(this.headerRow?.cells ?? [])].map((cell) => [cell.dataset.columnId, cell.id]));
+        const footer = document.createElement("tfoot");
+        const row = footer.insertRow();
+        for (const column of columns) {
+            const cell = this.#createColumnCell("td", column);
+            const headerId = headers.get(this.getColumnId(column));
+            if (headerId) cell.setAttribute("headers", headerId);
+            if (summaries.has(column)) {
+                const field = /** @type {string} */ (column.field);
+                const value = Object.hasOwn(aggregates, field) ? aggregates[field] : null;
+                // Missing, nonnumeric and nonfinite values are unavailable, never zero.
+                cell.textContent =
+                    typeof value === "number" && Number.isFinite(value)
+                        ? formatValue(value, "number", column.format === "number" ? column.formatOptions : undefined, {
+                              grid: this,
+                              column,
+                          })
+                        : "—";
+            }
+            row.appendChild(cell);
+        }
+        if (table.tFoot) table.replaceChild(footer, table.tFoot);
+        else table.appendChild(footer);
     }
 
     /**

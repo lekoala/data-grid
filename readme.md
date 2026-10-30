@@ -535,6 +535,7 @@ response protection).
 | `align`                                 | `String`             | header and cell alignment: `start` / `center` / `end`                   |
 | `format`                                | `String`             | formatter: `"boolean"` / `"date"` / `"datetime"` / `"number"`           |
 | `formatOptions`                         | `Object`             | options for `Intl.DateTimeFormat` / `Intl.NumberFormat`                 |
+| `summary` | `"sum" \| "avg"` | display source-provided aggregates in the table footer |
 | `editable` / `editableType`             | `Boolean` / `String` | inline editing (see `docs/editing.md`)                                  |
 | `renderEditor`                          | `(ctx) => content`   | application-owned editor for `editable` columns (see `docs/editing.md`) |
 | `validate`                              | `Function`           | `(value, ctx) => true \| "error message"`                               |

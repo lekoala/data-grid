@@ -153,7 +153,7 @@
             {
               "kind": "field",
               "name": "meta",
-              "description": "Meta information returned by the data source"
+              "description": "Meta information returned by the data source. `meta.aggregates` maps data fields to numeric values for columns configured with `summary`."
             },
             {
               "kind": "field",

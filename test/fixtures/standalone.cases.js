@@ -32,6 +32,20 @@ test("injects the stylesheet and registers the element from a single script", as
     expect(grid.getSelectionState().mode).toBe("all");
 });
 
+test("standalone renders source-provided aggregates", async () => {
+    await loadStandalone();
+    const Grid = customElements.get("data-grid");
+    const grid = new Grid({
+        columns: [{ field: "amount", summary: "sum", format: "number" }],
+        initialResult: { rows: [{ amount: 1 }], total: 10, meta: { aggregates: { amount: 42 } } },
+    });
+    const ready = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    document.body.append(grid);
+    await ready;
+    expect(grid.querySelector("tfoot td").textContent).toBe("42");
+    grid.remove();
+});
+
 test("re-evaluating the bundle stays idempotent", async () => {
     await loadStandalone();
     await loadStandalone();

@@ -13,6 +13,25 @@ afterAll(() => {
     server.stop();
 });
 
+test("revenue aggregates cover filtered rows before pagination and define empty sums and averages", async () => {
+    const all = await (await Bun.fetch(`${base}/api/revenue?pageSize=100`)).json();
+    const page = await (await Bun.fetch(`${base}/api/revenue?page=2&pageSize=5`)).json();
+    expect(page.rows).toHaveLength(5);
+    expect(page.meta.aggregates).toEqual(all.meta.aggregates);
+    const filtered = await (
+        await Bun.fetch(`${base}/api/revenue?pageSize=100&filters[status][operator]=eq&filters[status][value]=trial`)
+    ).json();
+    expect(filtered.total).toBeLessThan(all.total);
+    expect(filtered.rows.every((row) => row.status === "trial")).toBe(true);
+    expect(filtered.meta.aggregates.mrr).toBe(filtered.rows.reduce((sum, row) => sum + row.mrr, 0));
+    expect(filtered.meta.aggregates.seats).toBe(filtered.rows.reduce((sum, row) => sum + row.seats, 0));
+    const health = filtered.rows.filter((row) => row.health != null).map((row) => row.health);
+    expect(filtered.meta.aggregates.health).toBeCloseTo(health.reduce((sum, value) => sum + value, 0) / health.length);
+    const empty = await (await Bun.fetch(`${base}/api/revenue?search=does-not-exist`)).json();
+    expect(empty.rows).toEqual([]);
+    expect(empty.meta.aggregates).toEqual({ mrr: 0, seats: 0, health: null });
+});
+
 test("paginates with page and pageSize", async () => {
     const res = await Bun.fetch(`${base}/api/users?page=2&pageSize=5`);
     expect(res.status).toBe(200);

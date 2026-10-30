@@ -9,6 +9,12 @@ not documented.
 
 ### Added
 
+- Column `summary: "sum" | "avg"` displays server-provided `meta.aggregates`
+  in a generated semantic table footer, with numeric formatting, column
+  visibility, reordering, and frozen columns. Sources own calculation and scope.
+- Server aggregates demo with a financial-data endpoint illustrating filtered
+  totals before pagination.
+
 - `selectAllMatching()` selects all results matching search and filters without
   changing `selectVisibleOnly` or loading off-page rows. It clears exclusions and
   does nothing in single-select mode.
@@ -20,6 +26,11 @@ not documented.
 
 - Neutral sort indicators are quieter, with full visibility on hover, keyboard
   focus, active sort, touch devices, and in forced-colors mode.
+
+### Fixed
+
+- A data source that ignores cancellation can no longer commit a late response
+  after the grid disconnects. Pending loading state is cleared on disconnect.
 
 ## [3.9.0] - 2026-10-29
 

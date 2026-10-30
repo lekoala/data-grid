@@ -29,6 +29,63 @@ const grid = new DataGrid({
 });
 ```
 
+## Column aggregates
+
+Configure `summary: "sum"` or `summary: "avg"` on a data column to display a
+source-provided number in a generated `<tfoot>`. This is independent of the
+pagination controls outside the table:
+
+```js
+columns: [
+    { field: "customer" },
+    { field: "mrr", summary: "sum", format: "number",
+      formatOptions: { style: "currency", currency: "USD" } },
+    { field: "health", summary: "avg", format: "number",
+      formatOptions: { style: "percent", maximumFractionDigits: 2 } },
+]
+```
+
+The backend independently configures and calculates these operations. The grid
+does not send the column definitions or calculate aggregates from its page:
+
+```json
+{
+    "rows": [{ "customer": "Example", "mrr": 459, "health": 0.81 }],
+    "total": 64,
+    "meta": { "aggregates": { "mrr": 48553, "health": 0.5728 } }
+}
+```
+
+- Values describe **all matching rows after search and filters, before
+  pagination**. Page, sort, and row selection do not change that scope.
+- Keys are data fields; structural reconciliation uses the column's stable ID.
+  Virtual plugin columns remain empty and row-attribute columns have no cell.
+- Only finite JSON numbers are displayed. `0` is a value; `null`, missing keys,
+  numeric strings, booleans, and other invalid values render `—`.
+- A missing, null, scalar, or array `meta.aggregates` removes the footer. An
+  object, including `{}`, displays a footer if at least one data column has a
+  supported summary; missing values appear as placeholders.
+- For no matches, the backend can return sums of `0` and an average of `null`.
+  The grid never invents those values, nor derives an unknown total from them.
+- Aggregates use numeric formatting. For `format: "number"`, they share the
+  column's `formatOptions`; otherwise they use the default number formatter.
+  Row `transform`, `renderCell`, templates, editors, and `cellClass` do not run
+  for aggregate cells. Column alignment and visibility still apply.
+- `pager="more"` sources must return the **complete matching aggregates on each
+  chunk**. New metadata replaces old metadata; omitting aggregates removes the
+  footer. The grid never adds page/chunk totals together.
+- Footer values follow accepted response metadata, including refresh, source
+  changes and cancellation. A failed replacement hides the old footer; a failed
+  append retains the accepted rows and their aggregates.
+
+Footer cells retain their column-header association. The first version displays
+values without SUM/AVG labels; describe the operations and scope in the table's
+caption or nearby application text, as in the
+[server aggregates demo](../demo/aggregates.html).
+
+Author-supplied declarative `<tfoot>` elements are still discarded. This feature
+does not introduce footer templates or automatic `ArrayDataSource` aggregation.
+
 ## Query serialization
 
 The current `QueryState` is the single source of truth:
