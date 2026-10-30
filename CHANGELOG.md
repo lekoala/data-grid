@@ -13,7 +13,8 @@ not documented.
   changing `selectVisibleOnly` or loading off-page rows. It clears exclusions and
   does nothing in single-select mode.
 - Customers demo composing status pills, display preferences, keyboard search,
-  record details, and progressive selection using public APIs.
+  record details, progressive selection, and contextual floating bulk actions
+  using public APIs.
 
 ### Changed
 

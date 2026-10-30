@@ -112,6 +112,159 @@ test.skipIf(IS_WINDOWS)(
 );
 
 test.skipIf(IS_WINDOWS)(
+    "floating customer actions restore focus on action clearing and preserve unrelated focus",
+    async () => {
+        await using v = view();
+        await open(v);
+        expect(await read(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`)).toBe(true);
+        await v.click('#customers-grid tbody input[type="checkbox"]');
+        await waitFor(v, `!${GRID}.querySelector('.dg-bulk-actions').hidden`);
+        await v.evaluate(`${GRID}.addEventListener('bulkAction', () => ${GRID}.clearSelection(), { once: true })`);
+        await v.evaluate(`${GRID}.querySelector('.dg-bulk-actions button').focus()`);
+        await v.press("Space");
+        await waitFor(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`);
+        expect(await read(v, "document.activeElement.matches('[data-search-focus]')")).toBe(true);
+
+        await v.evaluate(`(() => {
+            const grid = ${GRID};
+            grid.selectAllMatching();
+            grid.querySelector('.dg-search').focus();
+            grid.clearSelection();
+        })()`);
+        expect(await read(v, "document.activeElement.matches('.dg-search')")).toBe(true);
+        await v.evaluate(`(async () => {
+            const grid = ${GRID};
+            grid.selectAllMatching();
+            grid.querySelector('.dg-bulk-actions button').focus();
+            await grid.setQuery({ filters: { status: { operator: 'eq', value: 'trial' } } });
+        })()`);
+        await waitFor(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`);
+        expect(await read(v, "document.activeElement.matches('[data-search-focus]')")).toBe(true);
+
+        // The same source may shrink its known population without a query change.
+        await v.evaluate(`(async () => {
+            const grid = ${GRID};
+            grid.selectAllMatching();
+            grid.querySelector('.dg-bulk-actions button').focus();
+            grid.dataSource.load = async () => ({ rows: [], total: 0 });
+            await grid.refresh();
+        })()`);
+        await waitFor(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`);
+        expect(await read(v, "document.activeElement.matches('[data-search-focus]')")).toBe(true);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "floating actions retain unknown-total scope and synchronize after reconnect",
+    async () => {
+        await using v = view();
+        await open(v);
+        await v.evaluate(`(async () => {
+            const grid = ${GRID};
+            grid.setAttribute('pager', 'more');
+            grid.dataSource = { async load() {
+                return { rows: [{ id: 'remote-1', name: 'Remote customer' }], total: null, hasMore: false };
+            } };
+            await grid.refresh();
+            grid.selectAllMatching();
+        })()`);
+        await waitFor(v, `!${GRID}.querySelector('.dg-bulk-actions').hidden`);
+        expect(await read(v, `${GRID}.querySelector('.dg-selection-count').hidden`)).toBe(true);
+        await v.evaluate(`(async () => {
+            const grid = ${GRID};
+            const parent = grid.parentNode;
+            const disconnected = new Promise(resolve => grid.addEventListener('disconnected', resolve, { once: true }));
+            grid.remove();
+            await disconnected;
+            const connected = new Promise(resolve => grid.addEventListener('connected', resolve, { once: true }));
+            parent.append(grid);
+            await connected;
+        })()`);
+        await waitFor(v, `!${GRID}.querySelector('.dg-bulk-actions').hidden`);
+        expect(await read(v, `${GRID}.querySelectorAll('.dg-bulk-actions').length`)).toBe(1);
+        await v.evaluate(`${GRID}.clearSelection()`);
+        await waitFor(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(!IS_CHROME_BACKEND)(
+    "floating customer actions preserve layout and remain reachable on narrow LTR and RTL grids",
+    async () => {
+        await using v = view();
+        await open(v);
+        await v.cdp("Emulation.setDeviceMetricsOverride", {
+            width: 390,
+            height: 844,
+            deviceScaleFactor: 1,
+            mobile: true,
+        });
+        for (const direction of ["ltr", "rtl"]) {
+            await v.evaluate(`(() => {
+                document.documentElement.dir = '${direction}';
+                ${GRID}.dir = '${direction}';
+                ${GRID}.style.blockSize = '28rem';
+            })()`);
+            await waitFor(v, `${GRID}.querySelector('td.dg-responsive-hidden')`);
+            await v.evaluate(`${GRID}.scrollIntoView({ block: 'start' })`);
+            const before = await read(v, `${GRID}.querySelector('tbody tr').getBoundingClientRect().top`);
+            await v.evaluate(`${GRID}.selectAll()`);
+            await waitFor(v, `!${GRID}.querySelector('.dg-bulk-actions').hidden`);
+            const after = await read(v, `${GRID}.querySelector('tbody tr').getBoundingClientRect().top`);
+            expect(Math.abs(after - before)).toBeLessThan(1);
+            await waitFor(
+                v,
+                `(() => {
+                const bar = ${GRID}.querySelector('.dg-bulk-actions');
+                const rect = bar.getBoundingClientRect();
+                const button = bar.querySelector('button');
+                const b = button.getBoundingClientRect();
+                return rect.left >= 0 && rect.right <= innerWidth &&
+                    rect.top >= ${GRID}.querySelector('.dg-footer').getBoundingClientRect().bottom &&
+                    button.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2));
+            })()`,
+            );
+            await v.evaluate(`${GRID}.clearSelection()`);
+        }
+
+        await v.evaluate(`${GRID}.setAttribute('searchable', 'false')`);
+        await waitFor(v, `${GRID}.classList.contains('customers-actions-only')`);
+        expect(await read(v, `${GRID}.querySelector('.dg-topbar').getBoundingClientRect().height < 1`)).toBe(true);
+        await v.evaluate(`${GRID}.setAttribute('searchable', 'true')`);
+        await waitFor(v, `!${GRID}.classList.contains('customers-actions-only')`);
+        expect(await read(v, `${GRID}.querySelector('.dg-search').getClientRects().length > 0`)).toBe(true);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "the customer floating presentation does not hide another grid's permanent empty toolbar",
+    async () => {
+        await using v = view();
+        await open(v);
+        await v.evaluate(`(async () => {
+            const { DataGrid, ArrayDataSource } = await import('/data-grid.js');
+            const grid = new DataGrid({
+                id: 'ordinary-grid', columns: [{ field: 'name' }], selectable: true,
+                dataSource: new ArrayDataSource([{ id: 'other', name: 'Other customer' }]),
+                bulkActions: [{ name: 'preview', label: 'Ordinary action' }],
+            });
+            const ready = new Promise(resolve => grid.addEventListener('connected', resolve, { once: true }));
+            document.querySelector('[data-customers-demo]').append(grid);
+            await ready;
+            ${GRID}.selectAllMatching();
+        })()`);
+        expect(await read(v, "document.querySelector('#ordinary-grid .dg-bulk-actions').hidden")).toBe(false);
+        expect(
+            await read(v, "document.querySelector('#ordinary-grid .dg-bulk-actions').getClientRects().length > 0"),
+        ).toBe(true);
+        expect(await read(v, "document.querySelector('#ordinary-grid .dg-bulk-actions button').disabled")).toBe(true);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
     "both customer detail entry points keep selection and render a plain name in the sheet",
     async () => {
         await using v = view();

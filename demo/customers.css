@@ -50,8 +50,21 @@
 [dir="rtl"] .customers-view-panel { right: auto; left: 0; }
 .customers-view-panel label { display: flex; align-items: center; gap: 0.5rem; }
 .customers-view-panel fieldset { display: grid; gap: 0.4rem; border: 0; padding: 0; margin: 0; }
-.customers-selection { min-block-size: 3.5rem; margin-block: 0.5rem; }
-.customers-selection [hidden] { display: none; }
+.customers-selection {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  min-block-size: 3.5rem;
+  margin-block: 0.5rem;
+}
+.customers-selection [data-selection-scope] { display: flex; align-items: center; min-block-size: 3rem; }
+/* Preserve invitation slots even when inactive; visibility also removes their
+   controls from keyboard navigation without moving the table on selection. */
+.customers-selection [hidden] { display: block; visibility: hidden; }
+@media (max-width: 48rem) {
+  .customers-selection { grid-template-columns: minmax(0, 1fr) auto; }
+  .customers-selection [data-selection-scope] { grid-column: 1 / -1; }
+  .customers-selection button { font-size: 0.875rem; }
+}
 .customers-feedback { margin-block: 1.5rem; padding: 1rem; border: 1px solid #c6d3e1; border-radius: 0.65rem; background: white; }
 .customers-feedback h2 { font-size: 1rem; }
 .customers-feedback p { margin: 0; overflow-wrap: anywhere; }
@@ -65,6 +78,34 @@
 .customer-health-track { display: block; block-size: 0.25rem; background: #dce5ee; border-radius: 1rem; overflow: hidden; }
 .customer-health-fill { display: block; block-size: 100%; background: #40856a; }
 .customers-no-bars .customer-health-track { display: none; }
+/* Reserve space independently of selection: the bar never covers the pager or
+   moves rows when it appears. Its containing block is the existing grid host. */
+.customers-floating-actions { padding-bottom: 4.5rem; }
+.customers-floating-actions .dg-bulk-actions {
+  position: absolute;
+  right: 0.75rem;
+  bottom: 0.5rem;
+  z-index: 6;
+  box-sizing: border-box;
+  max-inline-size: calc(100% - 1.5rem);
+  padding: 0.75rem;
+  border: var(--dg-border-width) solid var(--dg-border-color);
+  border-radius: var(--dg-radius);
+  background: var(--dg-bg);
+  box-shadow: 0 6px 20px rgb(18 38 63 / 18%);
+}
+.customers-floating-actions[dir="rtl"] .dg-bulk-actions { right: auto; left: 0.75rem; }
+.customers-floating-actions .dg-bulk-actions[hidden] { display: none; }
+.customers-floating-actions .dg-bulk-actions button { max-inline-size: 100%; }
+.customers-floating-start-only > .dg-frame > .dg-topbar > .dg-topbar-start { display: contents; }
+/* Without search or other controls, remove the chrome of the now empty topbar.
+   The presence of the absolute bar means :empty cannot identify this state. */
+.customers-actions-only > .dg-frame > .dg-topbar {
+  padding: 0;
+  gap: 0;
+  border: 0;
+  min-block-size: 0;
+}
 @media (forced-colors: active) {
   .customers-demo button:focus-visible, .customers-demo summary:focus-visible,
   .customers-demo select:focus-visible, .customers-demo input:focus-visible { outline-color: Highlight; }

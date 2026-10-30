@@ -132,6 +132,7 @@ export function mountCustomers(root) {
     });
     grid.lang = "en-US";
     grid.setAttribute("aria-label", "Customers");
+    grid.classList.add("customers-floating-actions");
 
     function canFocus(target) {
         return (
@@ -152,7 +153,34 @@ export function mountCustomers(root) {
         button.hidden = hidden;
     }
 
+    function hasActionableSelection() {
+        const selection = grid.getSelectionState();
+        return selection.mode === "all"
+            ? grid.total == null || grid.total > selection.except.size
+            : selection.ids.size > 0;
+    }
+
+    function updateFloatingActions() {
+        if (!grid.isConnected) return;
+        const bar = grid.querySelector(".dg-bulk-actions");
+        if (!bar) return;
+        const actionable = hasActionableSelection();
+        // Count visibility is not selection state: all-results mode may have no total.
+        if (!actionable && bar.contains(doc.activeElement)) restore(focusSearch);
+        bar.hidden = !actionable;
+        bar.setAttribute("role", "group");
+        bar.setAttribute("aria-label", "Selected customer actions");
+
+        const topbar = bar.closest(".dg-topbar");
+        const start = topbar?.querySelector(":scope > .dg-topbar-start");
+        const end = topbar?.querySelector(":scope > .dg-topbar-end");
+        const startOnly = start?.childNodes.length === 1 && start.firstChild === bar;
+        grid.classList.toggle("customers-floating-start-only", Boolean(startOnly));
+        grid.classList.toggle("customers-actions-only", Boolean(startOnly && !end?.hasChildNodes()));
+    }
+
     function updateSelection() {
+        updateFloatingActions();
         const selection = grid.getSelectionState();
         const all = selection.mode === "all";
         const any = all || selection.ids.size > 0;
@@ -253,6 +281,10 @@ export function mountCustomers(root) {
         updateSelection();
     });
     listen(grid, "selectionChange", updateSelection);
+    // Search/topbar rebuilds and reconnect can replace the plugin's bar. Observe
+    // structure only; our class/hidden changes cannot schedule another callback.
+    const toolbarObserver = new MutationObserver(updateFloatingActions);
+    toolbarObserver.observe(grid, { childList: true, subtree: true });
     listen(grid, "columnVisibility", updateView);
     listen(extend, "click", () => grid.selectAllMatching());
     listen(clear, "click", () => grid.clearSelection());
@@ -328,6 +360,14 @@ export function mountCustomers(root) {
     );
     listen(grid, "focusout", (event) => {
         if (event.target.matches(".dg-search")) searchReturn = null;
+        // A refresh can disable the focused action before bodyRendered hides its bar.
+        if (
+            grid.isConnected &&
+            event.target.closest(".dg-bulk-actions") &&
+            !event.relatedTarget &&
+            !hasActionableSelection()
+        )
+            restore(focusSearch);
     });
     updatePills();
     find("[data-customer-grid]").replaceChildren(grid);
@@ -336,6 +376,7 @@ export function mountCustomers(root) {
         grid,
         destroy() {
             controller.abort();
+            toolbarObserver.disconnect();
             if (focusFrame != null) cancelAnimationFrame(focusFrame);
             grid.remove();
         },

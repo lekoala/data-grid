@@ -79,6 +79,25 @@ test("loaded-results invitation updates on append and never fabricates an unknow
     expect(find("[data-selection-scope]").textContent).toContain("2 loaded results");
     grid.selectAllMatching();
     expect(find("[data-selection-scope]").textContent).toBe("All matching results selected.");
+    expect(grid.querySelector(".dg-bulk-actions").hidden).toBe(false);
+    expect(grid.querySelector(".dg-selection-count").hidden).toBe(true);
+});
+
+test("floating customer actions keep their DOM and hide when known selection becomes empty", async () => {
+    const grid = await open();
+    const bar = grid.querySelector(".dg-bulk-actions");
+    const button = bar.querySelector("button");
+    expect(bar.hidden).toBe(true);
+    grid.selectRow(grid.rows[0]);
+    expect(bar.hidden).toBe(false);
+    grid.clearSelection();
+    expect(bar.hidden).toBe(true);
+    grid.selectAllMatching();
+    expect(bar.hidden).toBe(false);
+    for (const row of grid.dataSource.rows) grid.deselectRow(row);
+    expect(bar.hidden).toBe(true);
+    expect(bar.querySelector("button")).toBe(button);
+    expect(grid.querySelectorAll(".dg-bulk-actions").length).toBe(1);
 });
 
 test("a pending page does not advertise the previous rows as the selected current page", async () => {
