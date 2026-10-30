@@ -1,4 +1,5 @@
 import { ArrayDataSource, DataGrid } from "../data-grid.js";
+import { applyFilters, applySearch } from "../src/data-source.js";
 
 const STATUSES = [
     ["active", "Active"],
@@ -15,6 +16,7 @@ export function customerRows() {
         name: `${NAMES[i % NAMES.length]}${i < NAMES.length ? "" : ` ${i + 1}`}`,
         company: COMPANIES[i % COMPANIES.length],
         email: `customer${i + 1}@example.com`,
+        plan: ["Starter", "Growth", "Scale", "Enterprise"][i % 4],
         status: STATUSES[i % STATUSES.length][0],
         mrr: i % 9 === 0 ? 0 : 149 + ((i * 173) % 2400),
         seats: i % 11 === 0 ? 0 : 1 + ((i * 7) % 180),
@@ -36,6 +38,11 @@ export function mountCustomers(root) {
     const count = find("[data-result-count]");
     const density = find("[data-density]");
     const bars = find("[data-bars]");
+    const filterToggle = find("[data-toggle-filters]");
+    const searchTools = find(".customers-tools");
+    const selectionBanner = find(".customers-selection");
+    const actionLayer = doc.createElement("span");
+    actionLayer.className = "customers-action-layer";
     const sample = customerRows();
     let pending = true;
     let searchReturn = null;
@@ -43,14 +50,14 @@ export function mountCustomers(root) {
     let focusFrame = null;
     let openDetailsKey = null;
     let navigatingDetails = false;
+    let actionVersion = 0;
 
     const columns = [
         {
             field: "name",
             title: "Customer",
-            width: 220,
+            width: 200,
             frozen: "start",
-            position: "start",
             renderCell: ({ row, tr }) => {
                 if (!tr) return row.name;
                 const button = doc.createElement("button");
@@ -62,15 +69,40 @@ export function mountCustomers(root) {
                     detailsReturn = button;
                     grid.getPlugin("RowDetails").expand(String(row.id));
                 });
-                return button;
+                const person = doc.createElement("span");
+                person.className = "customer-person";
+                const avatar = doc.createElement("span");
+                avatar.className = "customer-avatar";
+                avatar.setAttribute("aria-hidden", "true");
+                avatar.dataset.tone = String(row.name.charCodeAt(0) % 5);
+                avatar.textContent = row.name
+                    .split(/\s+/)
+                    .slice(0, 2)
+                    .map((part) => part[0])
+                    .join("");
+                person.append(avatar, button);
+                return person;
             },
         },
-        { field: "company", title: "Company", width: 210 },
+        { field: "company", title: "Company", width: 160 },
         { field: "email", title: "Email", width: 230, hidden: true },
+        {
+            field: "plan",
+            title: "Plan",
+            width: 120,
+            renderCell: ({ value }) => {
+                if (value == null) return "";
+                const badge = doc.createElement("span");
+                badge.className = "customer-plan";
+                badge.dataset.plan = value;
+                badge.textContent = value;
+                return badge;
+            },
+        },
         {
             field: "status",
             title: "Status",
-            width: 130,
+            width: 110,
             filterType: "select",
             filterList: STATUSES.map(([value, text]) => ({ value, text })),
             renderCell: ({ value }) => {
@@ -84,36 +116,28 @@ export function mountCustomers(root) {
         {
             field: "mrr",
             title: "MRR",
-            width: 130,
+            width: 150,
             align: "end",
             format: "number",
             formatOptions: { style: "currency", currency: "USD", maximumFractionDigits: 0 },
+            renderCell: (ctx) => renderMetric(ctx, 2600),
         },
-        { field: "seats", title: "Seats", width: 90, align: "end", format: "number" },
+        {
+            field: "seats",
+            title: "Seats",
+            width: 130,
+            align: "end",
+            format: "number",
+            renderCell: (ctx) => renderMetric(ctx, 180),
+        },
         {
             field: "health",
             title: "Health",
-            width: 110,
+            width: 150,
             align: "end",
             format: "number",
             formatOptions: { style: "percent", maximumFractionDigits: 0 },
-            renderCell: ({ value, column, tr }) => {
-                if (value == null) return "—";
-                const text = new Intl.NumberFormat("en-US", column.formatOptions).format(value);
-                if (!tr) return text;
-                const cell = doc.createElement("span");
-                cell.className = "customer-health";
-                cell.textContent = text;
-                const track = doc.createElement("span");
-                track.className = "customer-health-track";
-                track.setAttribute("aria-hidden", "true");
-                const fill = doc.createElement("span");
-                fill.className = "customer-health-fill";
-                fill.style.width = `${Math.max(0, Math.min(1, value)) * 100}%`;
-                track.append(fill);
-                cell.append(track);
-                return cell;
-            },
+            renderCell: (ctx) => renderMetric(ctx, 1),
         },
     ];
     const grid = new DataGrid({
@@ -125,18 +149,48 @@ export function mountCustomers(root) {
         pageSize: 10,
         selectable: true,
         selectVisibleOnly: true,
+        autohidePager: false,
         searchable: true,
         searchPlaceholder: "Search customers",
         sortable: true,
-        filterable: true,
+        filterable: false,
         responsive: true,
         detailsDisplay: "dialog",
         rowDetails: ({ rowKey }) => createRecordNavigation(rowKey),
-        bulkActions: [{ name: "preview", label: "Preview action scope" }],
+        bulkActions: [
+            { name: "export", label: "Export" },
+            { name: "copy", label: "Copy" },
+            {
+                name: "delete",
+                label: "Delete",
+                intent: "danger",
+                confirm: "Delete selected customers from this local demo?",
+            },
+        ],
     });
     grid.lang = "en-US";
     grid.setAttribute("aria-label", "Customers");
     grid.classList.add("customers-floating-actions", "customers-record-drawer");
+
+    function renderMetric({ value, column, tr }, maximum) {
+        if (value == null) return "—";
+        const text = new Intl.NumberFormat("en-US", column.formatOptions).format(value);
+        if (!tr) return text;
+        const metric = doc.createElement("span");
+        metric.className = "customer-metric";
+        const track = doc.createElement("span");
+        track.className = "customer-metric-track";
+        track.setAttribute("aria-hidden", "true");
+        const fill = doc.createElement("span");
+        fill.className = "customer-metric-fill";
+        fill.style.width = `${Math.max(0, Math.min(1, value / maximum)) * 100}%`;
+        track.append(fill);
+        const label = doc.createElement("span");
+        label.className = "customer-metric-value";
+        label.textContent = text;
+        metric.append(label, track);
+        return metric;
+    }
 
     function createRecordNavigation(rowKey) {
         const index = grid.rows.findIndex((row) => String(row.id) === rowKey);
@@ -220,7 +274,13 @@ export function mountCustomers(root) {
     }
 
     function hideButton(button, hidden) {
-        if (hidden && button === doc.activeElement) restore(focusSearch);
+        if (hidden && button === doc.activeElement) {
+            const target =
+                button === extend && hasActionableSelection()
+                    ? grid.querySelector(".dg-bulk-actions button[data-action]:not(:disabled)")
+                    : focusSearch;
+            restore(target);
+        }
         button.hidden = hidden;
     }
 
@@ -235,19 +295,54 @@ export function mountCustomers(root) {
         if (!grid.isConnected) return;
         const bar = grid.querySelector(".dg-bulk-actions");
         if (!bar) return;
+        const footer = grid.querySelector(":scope > .dg-frame > .dg-footer");
+        if (!footer) return;
+        if (actionLayer.parentElement !== footer) footer.append(actionLayer);
+        if (bar.parentElement !== actionLayer) actionLayer.append(bar);
         const actionable = hasActionableSelection();
         // Count visibility is not selection state: all-results mode may have no total.
         if (!actionable && bar.contains(doc.activeElement)) restore(focusSearch);
         bar.hidden = !actionable;
         bar.setAttribute("role", "group");
         bar.setAttribute("aria-label", "Selected customer actions");
+        if (clear.parentElement !== bar) bar.append(clear);
+        const badge = bar.querySelector(".dg-selection-count");
+        if (badge && !badge.querySelector(".customer-selected-label")) {
+            const label = doc.createElement("span");
+            label.className = "customer-selected-label";
+            label.setAttribute("aria-hidden", "true");
+            label.textContent = " selected";
+            badge.append(label);
+        }
+        let unknown = bar.querySelector(".customer-all-selected");
+        if (!unknown) {
+            unknown = doc.createElement("span");
+            unknown.className = "customer-all-selected";
+            unknown.textContent = "All matching";
+            bar.prepend(unknown);
+        }
+        unknown.hidden = grid.getSelectionState().mode !== "all" || grid.total != null;
+        if (bar.firstElementChild !== selectionBanner) bar.prepend(selectionBanner);
+    }
 
-        const topbar = bar.closest(".dg-topbar");
-        const start = topbar?.querySelector(":scope > .dg-topbar-start");
+    function syncWorkspaceControls() {
+        const topbar = grid.querySelector(":scope > .dg-frame > .dg-topbar");
         const end = topbar?.querySelector(":scope > .dg-topbar-end");
-        const startOnly = start?.childNodes.length === 1 && start.firstChild === bar;
-        grid.classList.toggle("customers-floating-start-only", Boolean(startOnly));
-        grid.classList.toggle("customers-actions-only", Boolean(startOnly && !end?.hasChildNodes()));
+        if (!end) return;
+        const field = end.querySelector(".dg-search-field");
+        if (field) {
+            if (end.firstElementChild !== field) end.prepend(field);
+            field.querySelector(".dg-search").setAttribute("aria-keyshortcuts", "/");
+            if (!field.querySelector(".customer-search-shortcut")) {
+                const hint = doc.createElement("kbd");
+                hint.className = "customer-search-shortcut";
+                hint.textContent = "/";
+                hint.setAttribute("aria-hidden", "true");
+                field.append(hint);
+            }
+        }
+        if (searchTools.parentElement !== end) end.append(searchTools);
+        filterToggle.setAttribute("aria-pressed", String(grid.options.filterable));
     }
 
     function updateSelection() {
@@ -260,7 +355,7 @@ export function mountCustomers(root) {
         hideButton(extend, pending || all || !allCurrent || !moreMatches);
         hideButton(clear, !any);
         extend.textContent =
-            grid.total == null ? "Select all matching results" : `Select all ${grid.total} matching results`;
+            grid.total == null ? "Select all matching results" : `Select all ${grid.total} matching`;
         if (pending || !any) {
             scope.textContent = "";
         } else if (all) {
@@ -269,6 +364,12 @@ export function mountCustomers(root) {
             const loaded = grid.options.pager === "more" ? "loaded results" : "rows on this page";
             scope.textContent = allCurrent ? `All ${grid.rows.length} ${loaded} selected.` : "";
         }
+        selectionBanner.classList.toggle("customers-selection-active", !pending && any && (all || allCurrent));
+        scope.classList.toggle("dg-visually-hidden", !all && allCurrent);
+        grid.querySelector(".dg-bulk-actions")?.classList.toggle(
+            "customers-bulk-expanded",
+            !pending && any && (all || allCurrent),
+        );
     }
 
     const pillButtons = [];
@@ -276,7 +377,13 @@ export function mountCustomers(root) {
         const button = doc.createElement("button");
         button.type = "button";
         button.dataset.status = value;
-        button.textContent = `${label} ${value ? sample.filter((row) => row.status === value).length : sample.length}`;
+        const text = doc.createElement("span");
+        text.className = "customer-pill-label";
+        text.textContent = label;
+        const number = doc.createElement("span");
+        number.className = "customer-pill-count";
+        number.textContent = String(value ? sample.filter((row) => row.status === value).length : sample.length);
+        button.append(text, number);
         listen(button, "click", () => {
             const filters = { ...grid.query.filters };
             if (value) filters.status = { operator: "eq", value };
@@ -309,24 +416,31 @@ export function mountCustomers(root) {
 
     function updatePills() {
         const status = grid.query.filters.status;
+        const population = grid.dataSource instanceof ArrayDataSource ? grid.dataSource.rows : sample;
         for (const button of pillButtons) {
             const active =
                 button.dataset.status === ""
                     ? !status
                     : status?.operator === "eq" && String(status.value) === button.dataset.status;
             button.setAttribute("aria-pressed", String(active));
+            button.querySelector(".customer-pill-count").textContent = String(
+                button.dataset.status
+                    ? population.filter((row) => row.status === button.dataset.status).length
+                    : population.length,
+            );
         }
     }
 
     function updateResultCount() {
         count.textContent = pending
-            ? "Updating results…"
+            ? "Updating…"
             : grid.total == null
               ? `${grid.rows.length} loaded results · total unknown`
-              : `${grid.total} matching customers`;
+              : `${grid.total} records`;
     }
 
     listen(grid, "querychange", () => {
+        actionVersion++;
         closeRecord();
         pending = true;
         updateResultCount();
@@ -363,6 +477,7 @@ export function mountCustomers(root) {
     // Rebuilds can replace the toolbar; a reload also ends the demo's inspection
     // session. Class/hidden changes cannot schedule another observer callback.
     const gridObserver = new MutationObserver(() => {
+        syncWorkspaceControls();
         updateFloatingActions();
         if (grid.isConnected && grid.loading) closeRecord();
     });
@@ -372,14 +487,71 @@ export function mountCustomers(root) {
     listen(clear, "click", () => grid.clearSelection());
     listen(density, "change", () => grid.setAttribute("density", density.value));
     listen(bars, "change", () => root.classList.toggle("customers-no-bars", !bars.checked));
-    listen(grid, "bulkAction", (event) => {
+    listen(filterToggle, "click", () => {
+        grid.toggleAttribute("filterable", !grid.options.filterable);
+        filterToggle.setAttribute("aria-pressed", String(grid.options.filterable));
+    });
+    listen(grid, "bulkAction", async (event) => {
+        const version = ++actionVersion;
         const { selection, query } = event.detail;
         const target =
             selection.mode === "all"
                 ? `All matching customers, excluding ${selection.except.size}`
                 : `${selection.ids.size} explicit customer keys`;
-        find("[data-action-feedback]").textContent =
-            `${target}. Mode: ${selection.mode}. Scope: search ${JSON.stringify(query.search)}, filters ${JSON.stringify(query.filters)}. Preview only; no records changed.`;
+        const feedback = find("[data-action-feedback]");
+        const description = `${target}. Mode: ${selection.mode}. Scope: search ${JSON.stringify(query.search)}, filters ${JSON.stringify(query.filters)}.`;
+        find("[data-demo-notes]").open = true;
+        feedback.textContent = description;
+        if (!(grid.dataSource instanceof ArrayDataSource)) {
+            feedback.textContent += " This action requires the local sample source.";
+            return;
+        }
+        const matching =
+            selection.mode === "all"
+                ? applySearch(applyFilters(grid.dataSource.rows, query.filters), query.search).filter(
+                      (row) => !selection.except.has(String(row.id)),
+                  )
+                : grid.dataSource.rows.filter((row) => selection.ids.has(String(row.id)));
+        if (event.detail.name === "delete") {
+            const ids = new Set(matching.map((row) => row.id));
+            grid.dataSource.rows = grid.dataSource.rows.filter((row) => !ids.has(row.id));
+            grid.clearSelection();
+            grid.refresh();
+            feedback.textContent += ` Deleted ${matching.length} local sample records.`;
+            return;
+        }
+        const fields = columns.map((column) => column.field);
+        const csv = [fields, ...matching.map((row) => fields.map((field) => row[field]))]
+            .map((values) =>
+                values
+                    .map((value) => {
+                        let text = String(value ?? "");
+                        if (typeof value === "string" && /^[=+\-@\t\r]/.test(text)) text = `'${text}`;
+                        return `"${text.replaceAll('"', '""')}"`;
+                    })
+                    .join(","),
+            )
+            .join("\r\n");
+        if (event.detail.name === "export") {
+            const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+            const link = doc.createElement("a");
+            link.href = url;
+            link.download = "customers.csv";
+            doc.body.append(link);
+            link.click();
+            link.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            feedback.textContent += ` Exported ${matching.length} records as CSV.`;
+        } else if (event.detail.name === "copy") {
+            try {
+                await navigator.clipboard.writeText(csv);
+                if (grid.isConnected && version === actionVersion && !controller.signal.aborted)
+                    feedback.textContent = `${description} Copied ${matching.length} records as CSV.`;
+            } catch {
+                if (grid.isConnected && version === actionVersion && !controller.signal.aborted)
+                    feedback.textContent = `${description} Clipboard access is unavailable; use Export instead.`;
+            }
+        }
     });
 
     listen(
@@ -414,6 +586,7 @@ export function mountCustomers(root) {
         });
     });
     listen(grid, "disconnected", () => {
+        actionVersion++;
         openDetailsKey = null;
         detailsReturn = null;
         if (focusFrame != null) cancelAnimationFrame(focusFrame);
@@ -427,7 +600,6 @@ export function mountCustomers(root) {
         search.focus();
         return true;
     }
-    listen(focusSearch, "click", () => enterSearch());
     listen(doc, "keydown", (event) => {
         if (
             event.key !== "/" ||
@@ -484,6 +656,7 @@ export function mountCustomers(root) {
     return {
         grid,
         destroy() {
+            actionVersion++;
             controller.abort();
             gridObserver.disconnect();
             openDetailsKey = null;

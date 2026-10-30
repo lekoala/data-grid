@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from "bun:test";
+import { afterEach, expect, spyOn, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { mountCustomers } from "../demo/customers.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
@@ -9,12 +9,20 @@ import { change } from "./helpers.js";
 
 let demo;
 let root;
+let downloadClick;
 afterEach(() => {
+    downloadClick?.mockRestore();
     demo?.destroy();
     root?.remove();
 });
 
 async function open() {
+    // happy-dom follows download links as page navigation. A real browser saves
+    // the file instead; keep that unsupported harness behavior out of shared state.
+    const nativeClick = HTMLAnchorElement.prototype.click;
+    downloadClick = spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function () {
+        if (!this.hasAttribute("download")) nativeClick.call(this);
+    });
     DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ BulkActions, ResponsiveGrid, RowDetails, SelectableRows });
     const html = await Bun.file(new URL("../demo/customers.html", import.meta.url)).text();
@@ -53,7 +61,7 @@ test("customer selection invitation and action feedback distinguish page and glo
     grid.deselectRow(grid.rows[0]);
     expect(find("[data-select-matching]").hidden).toBe(true);
     expect(find("[data-selection-scope]").textContent).toContain("excluding 1");
-    grid.querySelector(".dg-bulk-actions button").click();
+    grid.querySelector(".dg-bulk-actions button[data-action]").click();
     expect(find("[data-action-feedback]").textContent).toContain("Mode: all");
     expect(find("[data-action-feedback]").textContent).toContain("excluding 1");
     find("[data-clear-selection]").click();
@@ -86,7 +94,7 @@ test("loaded-results invitation updates on append and never fabricates an unknow
 test("floating customer actions keep their DOM and hide when known selection becomes empty", async () => {
     const grid = await open();
     const bar = grid.querySelector(".dg-bulk-actions");
-    const button = bar.querySelector("button");
+    const button = bar.querySelector("button[data-action]");
     expect(bar.hidden).toBe(true);
     grid.selectRow(grid.rows[0]);
     expect(bar.hidden).toBe(false);
@@ -96,7 +104,7 @@ test("floating customer actions keep their DOM and hide when known selection bec
     expect(bar.hidden).toBe(false);
     for (const row of grid.dataSource.rows) grid.deselectRow(row);
     expect(bar.hidden).toBe(true);
-    expect(bar.querySelector("button")).toBe(button);
+    expect(bar.querySelector("button[data-action]")).toBe(button);
     expect(grid.querySelectorAll(".dg-bulk-actions").length).toBe(1);
 });
 
@@ -153,7 +161,7 @@ test("name and native disclosure open the same read-only sheet without a recursi
     let dialog = grid.querySelector("dialog[open]");
     expect(dialog.textContent).toContain(name);
     expect(dialog.querySelector(".customer-name")).toBeNull();
-    expect(dialog.querySelector(".customer-health-track")).toBeNull();
+    expect(dialog.querySelector(".customer-metric-track")).toBeNull();
     grid.getPlugin("RowDetails").collapse(String(grid.rows[0].id));
     grid.querySelector(".dg-row-details-toggle-control").click();
     dialog = grid.querySelector("dialog[open]");
@@ -236,4 +244,83 @@ test("progressive record navigation describes loaded rows without loading anothe
     grid.querySelector('[data-record-step="1"]').click();
     expect(grid.querySelector("[data-record-position]").textContent).toBe("2 of 2 loaded results");
     expect(loads).toBe(before + 1);
+});
+
+test("customer actions copy all filtered matches with exclusions and delete only confirmed local targets", async () => {
+    const grid = await open();
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    const confirm = window.confirm;
+    let copied = "";
+    Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+            async writeText(value) {
+                copied = value;
+            },
+        },
+    });
+    try {
+        await grid.setQuery({ filters: { status: { operator: "eq", value: "active" } } });
+        grid.selectAllMatching();
+        const excluded = grid.rows[0];
+        grid.deselectRow(excluded);
+        grid.querySelector('[data-action="copy"]').click();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(copied.split("\r\n").length).toBe(16);
+        expect(copied).not.toContain(`"${excluded.name}"`);
+        const last = grid.dataSource.rows.filter((row) => row.status === "active").at(-1);
+        expect(copied).toContain(`"${last.name}"`);
+        expect(find("[data-action-feedback]").textContent).toContain("Copied 15 records");
+        window.confirm = () => false;
+        grid.querySelector('[data-action="delete"]').click();
+        expect(grid.dataSource.rows.length).toBe(64);
+        window.confirm = () => true;
+        const rendered = new Promise((resolve) => grid.addEventListener("bodyRendered", resolve, { once: true }));
+        grid.querySelector('[data-action="delete"]').click();
+        await rendered;
+        expect(grid.dataSource.rows.length).toBe(49);
+        expect(grid.total).toBe(1);
+        expect(grid.rows[0].id).toBe(excluded.id);
+        expect(grid.getSelectionState().ids.size).toBe(0);
+        expect(find('button[data-status="active"] .customer-pill-count').textContent).toBe("1");
+    } finally {
+        window.confirm = confirm;
+        if (clipboard) Object.defineProperty(navigator, "clipboard", clipboard);
+        else Reflect.deleteProperty(navigator, "clipboard");
+    }
+});
+
+test("a late clipboard completion cannot update feedback after another query or demo teardown", async () => {
+    const grid = await open();
+    const clipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+    let finish;
+    Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+            writeText() {
+                return new Promise((resolve) => {
+                    finish = resolve;
+                });
+            },
+        },
+    });
+    try {
+        grid.selectRow(grid.rows[0]);
+        grid.querySelector('[data-action="copy"]').click();
+        const feedback = find("[data-action-feedback]");
+        const before = feedback.textContent;
+        await grid.setQuery({ page: 2 });
+        finish();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(feedback.textContent).toBe(before);
+        grid.querySelector('[data-action="copy"]').click();
+        const beforeDestroy = feedback.textContent;
+        demo.destroy();
+        finish();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(feedback.textContent).toBe(beforeDestroy);
+    } finally {
+        if (clipboard) Object.defineProperty(navigator, "clipboard", clipboard);
+        else Reflect.deleteProperty(navigator, "clipboard");
+    }
 });

@@ -74,7 +74,10 @@ test.skipIf(!IS_CHROME_BACKEND)(
             mobile: true,
         });
         for (const direction of ["ltr", "rtl"]) {
-            await v.evaluate(`document.documentElement.dir = '${direction}'`);
+            await v.evaluate(`(() => {
+                document.documentElement.dir = '${direction}';
+                ${GRID}.setAttribute('dir', '${direction}');
+            })()`);
             await v.evaluate("document.querySelector('.customers-view').open = true");
             await waitFor(
                 v,
@@ -99,9 +102,9 @@ test.skipIf(IS_WINDOWS)(
         await v.evaluate("document.querySelector('[data-select-matching]').focus()");
         await v.press("Space");
         await waitFor(v, `${GRID}.getSelectionState().mode === 'all'`);
-        expect(await read(v, "document.activeElement.matches('[data-search-focus]')")).toBe(true);
+        expect(await read(v, "document.activeElement.matches('.dg-bulk-actions button[data-action]')")).toBe(true);
         await v.click('#customers-grid tbody input[type="checkbox"]');
-        await v.click("#customers-grid .dg-bulk-actions button");
+        await v.click("#customers-grid .dg-bulk-actions button[data-action]");
         expect(await read(v, "document.querySelector('[data-action-feedback]').textContent")).toContain("excluding 1");
         await v.click('[data-status-pills] button[data-status="trial"]');
         await waitFor(v, `${GRID}.query.filters.status?.value === 'trial' && !${GRID}.loading`);
@@ -120,7 +123,7 @@ test.skipIf(IS_WINDOWS)(
         await v.click('#customers-grid tbody input[type="checkbox"]');
         await waitFor(v, `!${GRID}.querySelector('.dg-bulk-actions').hidden`);
         await v.evaluate(`${GRID}.addEventListener('bulkAction', () => ${GRID}.clearSelection(), { once: true })`);
-        await v.evaluate(`${GRID}.querySelector('.dg-bulk-actions button').focus()`);
+        await v.evaluate(`${GRID}.querySelector('.dg-bulk-actions button[data-action]').focus()`);
         await v.press("Space");
         await waitFor(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`);
         expect(await read(v, "document.activeElement.matches('[data-search-focus]')")).toBe(true);
@@ -135,7 +138,7 @@ test.skipIf(IS_WINDOWS)(
         await v.evaluate(`(async () => {
             const grid = ${GRID};
             grid.selectAllMatching();
-            grid.querySelector('.dg-bulk-actions button').focus();
+            grid.querySelector('.dg-bulk-actions button[data-action]').focus();
             await grid.setQuery({ filters: { status: { operator: 'eq', value: 'trial' } } });
         })()`);
         await waitFor(v, `${GRID}.querySelector('.dg-bulk-actions').hidden`);
@@ -145,7 +148,7 @@ test.skipIf(IS_WINDOWS)(
         await v.evaluate(`(async () => {
             const grid = ${GRID};
             grid.selectAllMatching();
-            grid.querySelector('.dg-bulk-actions button').focus();
+            grid.querySelector('.dg-bulk-actions button[data-action]').focus();
             grid.dataSource.load = async () => ({ rows: [], total: 0 });
             await grid.refresh();
         })()`);
@@ -209,7 +212,7 @@ test.skipIf(!IS_CHROME_BACKEND)(
             await waitFor(v, `${GRID}.querySelector('td.dg-responsive-hidden')`);
             await v.evaluate(`${GRID}.scrollIntoView({ block: 'start' })`);
             const before = await read(v, `${GRID}.querySelector('tbody tr').getBoundingClientRect().top`);
-            await v.evaluate(`${GRID}.selectAll()`);
+            await v.evaluate(`${GRID}.selectRow(${GRID}.rows[0])`);
             await waitFor(v, `!${GRID}.querySelector('.dg-bulk-actions').hidden`);
             const after = await read(v, `${GRID}.querySelector('tbody tr').getBoundingClientRect().top`);
             expect(Math.abs(after - before)).toBeLessThan(1);
@@ -218,10 +221,11 @@ test.skipIf(!IS_CHROME_BACKEND)(
                 `(() => {
                 const bar = ${GRID}.querySelector('.dg-bulk-actions');
                 const rect = bar.getBoundingClientRect();
-                const button = bar.querySelector('button');
+                const button = bar.querySelector('button[data-action]');
                 const b = button.getBoundingClientRect();
                 return rect.left >= 0 && rect.right <= innerWidth &&
-                    rect.top >= ${GRID}.querySelector('.dg-footer').getBoundingClientRect().bottom &&
+                    rect.top >= ${GRID}.querySelector('.dg-scroll').getBoundingClientRect().top &&
+                    rect.bottom <= ${GRID}.querySelector('.dg-footer').getBoundingClientRect().top &&
                     button.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2));
             })()`,
             );
@@ -229,11 +233,69 @@ test.skipIf(!IS_CHROME_BACKEND)(
         }
 
         await v.evaluate(`${GRID}.setAttribute('searchable', 'false')`);
-        await waitFor(v, `${GRID}.classList.contains('customers-actions-only')`);
-        expect(await read(v, `${GRID}.querySelector('.dg-topbar').getBoundingClientRect().height < 1`)).toBe(true);
+        await waitFor(v, `!${GRID}.querySelector('.dg-search')`);
+        expect(await read(v, `${GRID}.querySelector('.customers-view').getClientRects().length > 0`)).toBe(true);
         await v.evaluate(`${GRID}.setAttribute('searchable', 'true')`);
         await waitFor(v, `!${GRID}.classList.contains('customers-actions-only')`);
         expect(await read(v, `${GRID}.querySelector('.dg-search').getClientRects().length > 0`)).toBe(true);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(!IS_CHROME_BACKEND)(
+    "the CRM uses one search with an inline shortcut, horizontal metrics and a centered selection bar",
+    async () => {
+        await using v = view();
+        await open(v);
+        expect(await read(v, `${GRID}.querySelectorAll('.dg-search').length`)).toBe(1);
+        expect(await read(v, "document.querySelectorAll('button[data-search-focus]').length")).toBe(0);
+        await waitFor(
+            v,
+            `(() => {
+            const controls = ${GRID}.querySelector('.dg-topbar').getBoundingClientRect();
+            const table = ${GRID}.querySelector('.dg-scroll').getBoundingClientRect();
+            return Math.abs(controls.bottom - table.top) < 1;
+        })()`,
+        );
+        expect(await read(v, `${GRID}.querySelector('.dg-search-field .customer-search-shortcut').textContent`)).toBe(
+            "/",
+        );
+        await waitFor(
+            v,
+            `(() => {
+            const metric = ${GRID}.querySelector('tbody [data-column-id="health"] .customer-metric');
+            const bar = metric.querySelector('.customer-metric-track').getBoundingClientRect();
+            const value = metric.querySelector('.customer-metric-value').getBoundingClientRect();
+            return bar.top < value.bottom && bar.bottom > value.top && value.right <= bar.left;
+        })()`,
+        );
+        const tableTop = await read(v, `${GRID}.querySelector('.dg-scroll').getBoundingClientRect().top`);
+        await v.click("#customers-grid .dg-select-all");
+        await waitFor(
+            v,
+            `${GRID}.querySelector('.customers-selection').classList.contains('customers-selection-active')`,
+        );
+        await waitFor(
+            v,
+            `(() => {
+            const grid = ${GRID}.getBoundingClientRect();
+            const bar = ${GRID}.querySelector('.dg-bulk-actions').getBoundingClientRect();
+            return Math.abs((bar.left + bar.right) / 2 - (grid.left + grid.right) / 2) < 2;
+        })()`,
+        );
+        expect(await read(v, `${GRID}.querySelectorAll('.dg-bulk-actions button[data-action]').length`)).toBe(3);
+        await waitFor(
+            v,
+            `(() => {
+            const banner = ${GRID}.querySelector('.customers-selection');
+            const table = ${GRID}.querySelector('.dg-scroll').getBoundingClientRect();
+            return ${GRID}.querySelector('.dg-bulk-actions').contains(banner) && Math.abs(table.top - ${tableTop}) < 1;
+        })()`,
+        );
+        await v.click("#customers-grid [data-toggle-filters]");
+        await waitFor(v, `!${GRID}.querySelector('tr.dg-head-filters').hidden`);
+        await v.click("#customers-grid [data-toggle-filters]");
+        await waitFor(v, `${GRID}.querySelector('tr.dg-head-filters').hidden`);
     },
     TIMEOUT,
 );
@@ -259,7 +321,9 @@ test.skipIf(IS_WINDOWS)(
         expect(
             await read(v, "document.querySelector('#ordinary-grid .dg-bulk-actions').getClientRects().length > 0"),
         ).toBe(true);
-        expect(await read(v, "document.querySelector('#ordinary-grid .dg-bulk-actions button').disabled")).toBe(true);
+        expect(
+            await read(v, "document.querySelector('#ordinary-grid .dg-bulk-actions button[data-action]').disabled"),
+        ).toBe(true);
     },
     TIMEOUT,
 );

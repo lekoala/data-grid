@@ -14,44 +14,50 @@
   <body>
     <main class="customers-demo" data-customers-demo>
       <div data-demo-nav></div>
-      <header class="customers-heading">
-        <div><p class="customers-eyebrow">Workspace / CRM</p><h1>Customers</h1></div>
-        <button type="button" data-search-focus>Search customers <kbd>/</kbd></button>
-      </header>
-      <p>Local sample data. Explore filters, record sheets, and selection across pages.
-        Open a customer to browse this page in a side drawer; Previous and Next stay within loaded results.</p>
-      <div class="customers-controls">
-        <div class="customers-pills" data-status-pills role="group" aria-label="Filter by status"></div>
-        <details class="customers-view">
-          <summary>View</summary>
-          <div class="customers-view-panel">
-            <label>Density
-              <select data-density>
-                <option value="compact">Compact</option>
-                <option value="default">Default</option>
-                <option value="comfortable">Relaxed</option>
-              </select>
-            </label>
-            <label><input type="checkbox" data-bars checked /> Inline health bars</label>
-            <fieldset data-column-settings><legend>Columns</legend></fieldset>
-            <small>Display preferences apply to this visit.</small>
+      <section class="customers-workspace" aria-label="Customer workspace">
+        <header class="customers-heading">
+          <h1 tabindex="-1" data-search-focus>Customers</h1>
+          <span class="customers-record-count" data-result-count>64 records</span>
+        </header>
+        <div class="customers-controls">
+          <div class="customers-pills" data-status-pills role="group" aria-label="Filter by status"></div>
+          <div class="customers-tools">
+            <button type="button" data-toggle-filters aria-pressed="false">Filter</button>
+            <details class="customers-view">
+              <summary>View</summary>
+              <div class="customers-view-panel">
+                <label>Density
+                  <select data-density>
+                    <option value="compact">Compact</option>
+                    <option value="default">Default</option>
+                    <option value="comfortable">Relaxed</option>
+                  </select>
+                </label>
+                <label><input type="checkbox" data-bars checked /> Inline data bars</label>
+                <fieldset data-column-settings><legend>Columns</legend></fieldset>
+                <small>Display preferences apply to this visit.</small>
+              </div>
+            </details>
           </div>
-        </details>
-      </div>
-      <p class="customers-note">Pill counts describe the full sample, independent of search.</p>
-      <div class="customers-selection">
-        <span data-selection-scope role="status" aria-live="polite"></span>
-        <button type="button" data-select-matching hidden>Select all matching results</button>
-        <button type="button" data-clear-selection hidden>Clear selection</button>
-      </div>
-      <p data-result-count></p>
-      <div data-customer-grid></div>
-      <p class="customers-note">The header checkbox replaces selection with this page; unchecking clears
-        selection on every page. Select individual rows to keep keys across pages.</p>
-      <section class="customers-feedback" aria-labelledby="action-feedback-title">
-        <h2 id="action-feedback-title">Action feedback</h2>
-        <p data-action-feedback role="status">Select customers, then preview an action's scope.</p>
+        </div>
+        <div class="customers-selection">
+          <span data-selection-scope role="status" aria-live="polite"></span>
+          <button type="button" data-select-matching hidden>Select all matching results</button>
+          <button type="button" data-clear-selection aria-label="Clear selection" title="Clear selection" hidden>×</button>
+        </div>
+        <div data-customer-grid></div>
       </section>
+      <details class="customers-demo-notes" data-demo-notes>
+        <summary>About this demo &amp; action feedback</summary>
+        <p>Local sample data. Open a customer to browse this page in a side drawer.
+          Previous and Next stay within loaded results. Pill counts describe the full sample, independent of search.</p>
+        <p class="customers-note">The header checkbox replaces selection with this page; unchecking clears
+          selection on every page. Select individual rows to keep keys across pages.</p>
+        <section class="customers-feedback" aria-labelledby="action-feedback-title">
+          <h2 id="action-feedback-title">Action feedback</h2>
+          <p data-action-feedback role="status">Select customers, then export, copy, or delete the local records.</p>
+        </section>
+      </details>
     </main>
     <script type="module">
       import { mountCustomers } from "./customers.js";

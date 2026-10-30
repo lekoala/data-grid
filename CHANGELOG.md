@@ -26,6 +26,10 @@ not documented.
 
 ### Changed
 
+- Customers demo uses a compact card, colored status/plan badges, avatars, one
+  search field with an inline `/` hint, value-first aligned data bars, and a
+  centered dark selection toolbar with local CSV export/copy/delete actions.
+
 - Neutral sort indicators are quieter, with full visibility on hover, keyboard
   focus, active sort, touch devices, and in forced-colors mode.
 
