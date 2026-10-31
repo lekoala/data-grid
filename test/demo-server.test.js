@@ -22,6 +22,8 @@ test("revenue aggregates cover filtered rows before pagination and define empty 
         await Bun.fetch(`${base}/api/revenue?pageSize=100&filters[status][operator]=eq&filters[status][value]=trial`)
     ).json();
     expect(filtered.total).toBeLessThan(all.total);
+    // The reference sums below need the whole filtered population on one page.
+    expect(filtered.rows).toHaveLength(filtered.total);
     expect(filtered.rows.every((row) => row.status === "trial")).toBe(true);
     expect(filtered.meta.aggregates.mrr).toBe(filtered.rows.reduce((sum, row) => sum + row.mrr, 0));
     expect(filtered.meta.aggregates.seats).toBe(filtered.rows.reduce((sum, row) => sum + row.seats, 0));

@@ -126,6 +126,30 @@ test("a summary needs a configured data column; unknown summary names are inert"
     expect(footer(virtual)).toBeNull();
 });
 
+test("aggregate cells declare their numeric format, not the column format", async () => {
+    const grid = await make({
+        columns: [{ field: "name", format: "date" }, { field: "created", format: "date", summary: "sum" }, COLUMNS[1]],
+        initialResult: { ...RESULT, meta: { aggregates: { created: 3, mrr: 48553 } } },
+    });
+    expect(cell(grid, "name").hasAttribute("data-format")).toBe(false);
+    expect(cell(grid, "created").dataset.format).toBe("number");
+    expect(cell(grid, "created").textContent).toBe("3");
+    expect(cell(grid, "mrr").dataset.format).toBe("number");
+    expect(grid.querySelector("tbody td[data-column-id='name']").dataset.format).toBe("date");
+});
+
+test("the footer hides while no summary column is visible and returns with one", async () => {
+    const grid = await make({ columns: [COLUMNS[0], COLUMNS[1], { field: "id", attr: "data-id", summary: "sum" }] });
+    expect(footer(grid).hidden).toBe(false);
+    grid.hideColumn("mrr");
+    expect(footer(grid).hidden).toBe(true);
+    await grid.refresh();
+    expect(footer(grid).hidden).toBe(true);
+    grid.showColumn("mrr");
+    expect(footer(grid).hidden).toBe(false);
+    expect(cell(grid, "mrr").textContent).toBe("$48,553.00");
+});
+
 test("generated aggregates replace an author footer without accepting its contents", async () => {
     DataGrid.unregisterPlugins();
     const grid = new DataGrid({ columns: [COLUMNS[1]], initialResult: RESULT });

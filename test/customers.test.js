@@ -80,9 +80,11 @@ test("loaded-results invitation updates on append and never fabricates an unknow
     await grid.refresh();
     grid.selectAll();
     expect(find("[data-selection-scope]").textContent).toContain("1 loaded results");
-    expect(find("[data-select-matching]").textContent).toBe("Select all matching results");
+    expect(find("[data-select-matching]").textContent).toBe("Select all matching");
     await grid.loadMore();
-    expect(find("[data-select-matching]").hidden).toBe(true);
+    // One of two loaded results: the partial selection can still be extended.
+    expect(find("[data-selection-scope]").textContent).toBe("1 selected.");
+    expect(find("[data-select-matching]").hidden).toBe(false);
     grid.selectAll();
     expect(find("[data-selection-scope]").textContent).toContain("2 loaded results");
     grid.selectAllMatching();
@@ -121,8 +123,9 @@ test("a pending page does not advertise the previous rows as the selected curren
     expect(find("[data-selection-scope]").textContent).toBe("");
     finish({ rows: [{ id: "new-page", name: "New page" }], total: 64 });
     await loading;
-    expect(find("[data-select-matching]").hidden).toBe(true);
+    expect(find("[data-selection-scope]").textContent).not.toContain("on this page");
     grid.selectAll();
+    expect(find("[data-selection-scope]").textContent).toBe("All 1 rows on this page selected.");
     expect(find("[data-select-matching]").hidden).toBe(false);
 });
 

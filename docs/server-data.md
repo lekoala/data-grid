@@ -64,7 +64,8 @@ does not send the column definitions or calculate aggregates from its page:
   numeric strings, booleans, and other invalid values render `—`.
 - A missing, null, scalar, or array `meta.aggregates` removes the footer. An
   object, including `{}`, displays a footer if at least one data column has a
-  supported summary; missing values appear as placeholders.
+  supported summary; missing values appear as placeholders. The footer is
+  hidden while every summary column is hidden, and returns with one of them.
 - For no matches, the backend can return sums of `0` and an average of `null`.
   The grid never invents those values, nor derives an unknown total from them.
 - Aggregates use numeric formatting. For `format: "number"`, they share the

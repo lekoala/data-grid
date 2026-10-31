@@ -410,6 +410,18 @@ function normalizeRowAttribute(column) {
 }
 
 /**
+ * Whether a column displays a source aggregate in the generated footer.
+ * Virtual and row-attribute columns never do.
+ * @param {Column} column
+ * @returns {boolean}
+ */
+function isSummaryColumn(column) {
+    return Boolean(
+        !column.virtual && !column.attr && column.field && (column.summary === "sum" || column.summary === "avg"),
+    );
+}
+
+/**
  * Defaults shared by the instance getter and the static inspection API.
  * Mutable collection values are copied by createDefaultOptions().
  * @type {Record<string, any>}
@@ -2944,7 +2956,8 @@ class DataGrid extends BaseElement {
         cell.dataset.columnId = this.getColumnId(column);
         applyColumnDefinition(cell, column);
         // Alignment is shared by header, body, aggregate, and filter cells;
-        // `data-format` identifies formatted data and aggregate cells.
+        // `data-format` identifies formatted data cells; aggregate cells
+        // override it with their own numeric format.
         const align = getColumnAlign(column);
         if (align) {
             cell.dataset.align = align;
@@ -3010,8 +3023,17 @@ class DataGrid extends BaseElement {
             }
         }
         this.#syncSpanningCells();
+        this.#syncAggregateVisibility();
         this.renderFooter();
         this.queueFrozenSync();
+    }
+
+    /** A footer without a visible summary carries no data: hide it with its columns. */
+    #syncAggregateVisibility() {
+        const footer = this.table?.tFoot;
+        if (footer) {
+            footer.hidden = !this.getColumns().some((column) => isSummaryColumn(column) && !isColumnHidden(column));
+        }
     }
 
     /** Keep auxiliary full-width rows aligned with the visible column list. */
@@ -4496,11 +4518,7 @@ class DataGrid extends BaseElement {
         if (!table) return;
         const aggregates = this.meta?.aggregates;
         const columns = this.getColumns().filter((column) => !column.attr);
-        const summaries = new Set(
-            columns.filter(
-                (column) => !column.virtual && column.field && (column.summary === "sum" || column.summary === "avg"),
-            ),
-        );
+        const summaries = new Set(columns.filter(isSummaryColumn));
         if (
             this.hasDataError ||
             !aggregates ||
@@ -4519,7 +4537,10 @@ class DataGrid extends BaseElement {
             const cell = this.#createColumnCell("td", column);
             const headerId = headers.get(this.getColumnId(column));
             if (headerId) cell.setAttribute("headers", headerId);
+            // Aggregates are always formatted as numbers, whatever the column format.
+            delete cell.dataset.format;
             if (summaries.has(column)) {
+                cell.dataset.format = "number";
                 const field = /** @type {string} */ (column.field);
                 const value = Object.hasOwn(aggregates, field) ? aggregates[field] : null;
                 // Missing, nonnumeric and nonfinite values are unavailable, never zero.
@@ -4535,6 +4556,7 @@ class DataGrid extends BaseElement {
         }
         if (table.tFoot) table.replaceChild(footer, table.tFoot);
         else table.appendChild(footer);
+        this.#syncAggregateVisibility();
     }
 
     /**

@@ -2044,6 +2044,9 @@ function normalizeRowAttribute(column) {
   }
   column.attr = attr;
 }
+function isSummaryColumn(column) {
+  return Boolean(!column.virtual && !column.attr && column.field && (column.summary === "sum" || column.summary === "avg"));
+}
 var DEFAULT_OPTIONS = {
   controlClasses: null,
   id: null,
@@ -3635,8 +3638,15 @@ class DataGrid extends base_element_default {
       }
     }
     this.#syncSpanningCells();
+    this.#syncAggregateVisibility();
     this.renderFooter();
     this.queueFrozenSync();
+  }
+  #syncAggregateVisibility() {
+    const footer = this.table?.tFoot;
+    if (footer) {
+      footer.hidden = !this.getColumns().some((column) => isSummaryColumn(column) && !isColumnHidden(column));
+    }
   }
   #syncSpanningCells() {
     const colspan = Math.max(1, this.columnsLength(true));
@@ -4566,7 +4576,7 @@ class DataGrid extends base_element_default {
       return;
     const aggregates = this.meta?.aggregates;
     const columns = this.getColumns().filter((column) => !column.attr);
-    const summaries = new Set(columns.filter((column) => !column.virtual && column.field && (column.summary === "sum" || column.summary === "avg")));
+    const summaries = new Set(columns.filter(isSummaryColumn));
     if (this.hasDataError || !aggregates || typeof aggregates !== "object" || Array.isArray(aggregates) || !summaries.size) {
       table.tFoot?.remove();
       return;
@@ -4579,7 +4589,9 @@ class DataGrid extends base_element_default {
       const headerId = headers.get(this.getColumnId(column));
       if (headerId)
         cell.setAttribute("headers", headerId);
+      delete cell.dataset.format;
       if (summaries.has(column)) {
+        cell.dataset.format = "number";
         const field = column.field;
         const value = Object.hasOwn(aggregates, field) ? aggregates[field] : null;
         cell.textContent = typeof value === "number" && Number.isFinite(value) ? formatValue(value, "number", column.format === "number" ? column.formatOptions : undefined, {
@@ -4593,6 +4605,7 @@ class DataGrid extends base_element_default {
       table.replaceChild(footer, table.tFoot);
     else
       table.appendChild(footer);
+    this.#syncAggregateVisibility();
   }
   #renderDataRow(item, rowIndex) {
     const tr = document.createElement("tr");

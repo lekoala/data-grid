@@ -182,6 +182,10 @@ body {
   --dg-row-hover-bg: #faf9ff;
   --dg-control-border-color: #e6e6ee;
 }
+/* The View panel (topbar) and the floating action bar (anchored in .dg-footer)
+   overflow the frame, so its clipping is lifted. The scroll viewport still
+   clips the table horizontally, but the rounded corners below no longer clip
+   descendants: footer and table backgrounds must stay inside them. */
 .customers-workspace data-grid > .dg-frame {
   overflow: visible;
   border: 0;
@@ -249,34 +253,18 @@ body {
 .customers-workspace th {
   font-weight: 500;
 }
+/* The selection announcer is read, never shown: the floating bar shows the count. */
+[data-selection-scope] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+/* The selection summary stays hidden until it joins the floating bar. */
 .customers-selection {
-  box-sizing: border-box;
-  display: none;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 0.4rem;
-  flex: 0 0 100%;
-  min-inline-size: 0;
-  padding: 0.2rem 0.4rem 0.5rem;
-  border-bottom: 1px solid #4c4a55;
-  font-size: 0.75rem;
-  white-space: normal;
-  color: #eeedf6;
-}
-.customers-selection-active {
-  display: flex;
-  background: transparent;
-}
-.customers-selection button {
-  border: 0;
-  border-radius: 0.2rem;
-  padding: 0;
-  background: transparent;
-  color: #675bd8;
-  font: inherit;
-}
-.customers-selection [hidden] {
   display: none;
 }
 .customers-demo-notes {
@@ -430,16 +418,16 @@ body {
   inline-size: max-content;
   box-sizing: border-box;
   max-inline-size: 100%;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.65rem;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.15rem;
+  padding: 0.4rem 0.4rem 0.3rem;
   border: 1px solid #29292f;
-  border-radius: 2rem;
+  border-radius: 0.85rem;
   background: #202025;
   color: white;
   box-shadow: 0 8px 24px rgb(25 22 40 / 22%);
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   white-space: nowrap;
 }
 .customers-action-layer {
@@ -451,25 +439,63 @@ body {
   inline-size: max-content;
   max-inline-size: calc(100% - 1.5rem);
 }
-.customers-floating-actions .dg-bulk-actions.customers-bulk-expanded {
-  border-radius: 1rem;
+.customers-floating-actions .dg-bulk-actions[hidden] {
+  display: none;
+}
+/* First line: what is selected, and how to extend it. */
+.customers-floating-actions .dg-bulk-actions .customers-selection {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 0.15rem 0.5rem;
+  padding: 0 0.5rem 0.3rem;
+  border-bottom: 1px solid #38373f;
+  font-size: 0.75rem;
+  color: #a9a7b6;
+}
+.customers-floating-actions .dg-selection-count {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #a9a7b6;
+  font-size: inherit;
+}
+.customers-floating-actions .dg-selection-count > [aria-hidden="true"]:first-child,
+.customers-floating-actions .customer-all-selected {
+  color: white;
+  font-weight: 600;
+}
+.customers-floating-actions[dir="rtl"] .dg-selection-count {
+  margin: 0;
+}
+.customers-floating-actions .customer-all-selected[hidden],
+.customers-floating-actions .customers-selection [hidden] {
+  display: none;
 }
 .customers-floating-actions .dg-bulk-actions .customers-selection button {
+  border-radius: 0.2rem;
   padding: 0;
   color: #c5bcff;
-  font: inherit;
 }
 .customers-floating-actions .dg-bulk-actions .customers-selection button:hover {
   background: transparent;
   text-decoration: underline;
 }
-.customers-floating-actions .dg-bulk-actions[hidden] {
-  display: none;
+/* Second line: the actions, closed by the clear control. */
+.customers-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.15rem;
 }
 .customers-floating-actions .dg-bulk-actions button {
   border: 0;
-  border-radius: 0.35rem;
-  padding: 0.3rem 0.4rem;
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.55rem;
   background: transparent;
   color: #f3f2f8;
   font: inherit;
@@ -490,19 +516,19 @@ body {
   display: inline-grid;
   place-items: center;
   flex: none;
-  inline-size: 1.75rem;
-  block-size: 1.75rem;
-  border: 0;
-  border-radius: 50%;
+  inline-size: 1.6rem;
+  block-size: 1.6rem;
   margin-left: 0.4rem;
   padding: 0;
-  font-size: 1.1rem;
+  border-radius: 50%;
+  color: #a9a7b6;
+  font-size: 1rem;
   line-height: 1;
 }
 .customers-floating-actions .dg-bulk-actions [data-clear-selection]::before {
   content: "";
   position: absolute;
-  left: -0.4rem;
+  left: -0.3rem;
   top: 50%;
   transform: translateY(-50%);
   inline-size: 1px;
@@ -515,26 +541,7 @@ body {
 }
 .customers-floating-actions[dir="rtl"] .dg-bulk-actions [data-clear-selection]::before {
   left: auto;
-  right: -0.4rem;
-}
-.customers-floating-actions .dg-selection-count {
-  min-inline-size: 0;
-  margin: 0 0.35rem 0 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: white;
-  font-size: inherit;
-  font-weight: 600;
-}
-.customers-floating-actions[dir="rtl"] .dg-selection-count {
-  margin: 0 0 0 0.35rem;
-}
-.customers-floating-actions .customer-all-selected {
-  font-weight: 600;
-}
-.customers-floating-actions .customer-all-selected[hidden] {
-  display: none;
+  right: -0.3rem;
 }
 @media (max-width: 48rem) {
   .customers-demo {
@@ -563,15 +570,11 @@ body {
   .customers-workspace [data-toggle-filters] {
     padding: 0.4rem 0.55rem;
   }
-  .customers-selection {
-    align-content: center;
-  }
   .customers-floating-actions .dg-bulk-actions {
-    gap: 0.2rem;
     font-size: 0.75rem;
   }
   .customers-floating-actions .dg-bulk-actions button {
-    padding: 0.3rem;
+    padding: 0.25rem 0.4rem;
   }
 }
 /* Demo-only drawer appearance: the plugin still owns a native modal dialog,

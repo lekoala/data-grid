@@ -9,26 +9,23 @@ not documented.
 
 ### Added
 
-- Customers demo uses a modal side drawer with Previous/Next navigation among
-  loaded records, safe focus return, and inspection cleanup on query or data changes.
 - Column `summary: "sum" | "avg"` displays server-provided `meta.aggregates`
   in a generated semantic table footer, with numeric formatting, column
   visibility, reordering, and frozen columns. Sources own calculation and scope.
-- Server aggregates demo with a financial-data endpoint illustrating filtered
-  totals before pagination.
-
+  The footer is hidden while no summary column is visible.
 - `selectAllMatching()` selects all results matching search and filters without
   changing `selectVisibleOnly` or loading off-page rows. It clears exclusions and
   does nothing in single-select mode.
-- Customers demo composing status pills, display preferences, keyboard search,
-  record details, progressive selection, and contextual floating bulk actions
-  using public APIs.
+- Server aggregates demo with a financial-data endpoint illustrating filtered
+  totals before pagination.
+- Customers demo composing a compact card, status pills, display preferences,
+  one search field with an inline `/` shortcut, value-first data bars, a modal
+  record drawer with Previous/Next navigation among loaded records, progressive
+  selection, and a centered two-line floating toolbar (selection count with a
+  "select all" link, then local CSV export/copy/delete actions), using public
+  APIs only.
 
 ### Changed
-
-- Customers demo uses a compact card, colored status/plan badges, avatars, one
-  search field with an inline `/` hint, value-first aligned data bars, and a
-  centered dark selection toolbar with local CSV export/copy/delete actions.
 
 - Neutral sort indicators are quieter, with full visibility on hover, keyboard
   focus, active sort, touch devices, and in forced-colors mode.

@@ -41,7 +41,10 @@ export function mountCustomers(root) {
     const filterToggle = find("[data-toggle-filters]");
     const searchTools = find(".customers-tools");
     const selectionBanner = find(".customers-selection");
-    const actionLayer = doc.createElement("span");
+    const allSelected = find(".customer-all-selected");
+    const actionRow = doc.createElement("div");
+    actionRow.className = "customers-action-row";
+    const actionLayer = doc.createElement("div");
     actionLayer.className = "customers-action-layer";
     const sample = customerRows();
     let pending = true;
@@ -67,7 +70,7 @@ export function mountCustomers(root) {
                 button.addEventListener("click", () => {
                     if (pending || grid.loading) return;
                     detailsReturn = button;
-                    grid.getPlugin("RowDetails").expand(String(row.id));
+                    grid.getPlugin("RowDetails").expand(keyOf(row));
                 });
                 const person = doc.createElement("span");
                 person.className = "customer-person";
@@ -192,8 +195,12 @@ export function mountCustomers(root) {
         return metric;
     }
 
+    function keyOf(row) {
+        return String(grid.resolveRowKey(row, grid.rows.indexOf(row)));
+    }
+
     function createRecordNavigation(rowKey) {
-        const index = grid.rows.findIndex((row) => String(row.id) === rowKey);
+        const index = grid.rows.findIndex((row) => keyOf(row) === rowKey);
         if (index < 0) return null;
         const source = grid.dataSource;
         const nav = doc.createElement("nav");
@@ -230,12 +237,12 @@ export function mountCustomers(root) {
                     grid.dataSource !== source
                 )
                     return;
-                const current = grid.rows.findIndex((row) => String(row.id) === rowKey);
+                const current = grid.rows.findIndex((row) => keyOf(row) === rowKey);
                 const next = current < 0 ? null : grid.rows[current + step];
                 if (!next) return;
                 navigatingDetails = true;
                 try {
-                    grid.getPlugin("RowDetails").expand(String(next.id));
+                    grid.getPlugin("RowDetails").expand(keyOf(next));
                 } finally {
                     navigatingDetails = false;
                 }
@@ -270,7 +277,9 @@ export function mountCustomers(root) {
     }
 
     function restore(target) {
-        (canFocus(target) ? target : focusSearch).focus();
+        // The heading fallback sits at the top of the page: keep the reading position.
+        if (target !== focusSearch && canFocus(target)) target.focus();
+        else focusSearch.focus({ preventScroll: true });
     }
 
     function hideButton(button, hidden) {
@@ -305,24 +314,30 @@ export function mountCustomers(root) {
         bar.hidden = !actionable;
         bar.setAttribute("role", "group");
         bar.setAttribute("aria-label", "Selected customer actions");
-        if (clear.parentElement !== bar) bar.append(clear);
-        const badge = bar.querySelector(".dg-selection-count");
-        if (badge && !badge.querySelector(".customer-selected-label")) {
+        // Two stacked lines, each sized to its content: the selection summary,
+        // then the actions closed by the clear control. A rebuilt toolbar brings
+        // fresh action buttons that replace the previous ones.
+        const actions = bar.querySelectorAll(":scope > button[data-action]");
+        if (actions.length) actionRow.replaceChildren(...actions, clear);
+        if (bar.firstElementChild !== selectionBanner) bar.prepend(selectionBanner);
+        if (selectionBanner.nextElementSibling !== actionRow) selectionBanner.after(actionRow);
+        // A rebuilt toolbar brings a fresh badge; the banner may still hold the old one.
+        const badge =
+            bar.querySelector(":scope > .dg-selection-count") ?? selectionBanner.querySelector(".dg-selection-count");
+        if (!badge) return;
+        for (const stale of selectionBanner.querySelectorAll(".dg-selection-count")) {
+            if (stale !== badge) stale.remove();
+        }
+        if (badge.parentElement !== selectionBanner) selectionBanner.prepend(badge);
+        // The visually hidden scope is the single selection announcer.
+        badge.setAttribute("aria-live", "off");
+        if (!badge.querySelector(".customer-selected-label")) {
             const label = doc.createElement("span");
             label.className = "customer-selected-label";
             label.setAttribute("aria-hidden", "true");
             label.textContent = " selected";
             badge.append(label);
         }
-        let unknown = bar.querySelector(".customer-all-selected");
-        if (!unknown) {
-            unknown = doc.createElement("span");
-            unknown.className = "customer-all-selected";
-            unknown.textContent = "All matching";
-            bar.prepend(unknown);
-        }
-        unknown.hidden = grid.getSelectionState().mode !== "all" || grid.total != null;
-        if (bar.firstElementChild !== selectionBanner) bar.prepend(selectionBanner);
     }
 
     function syncWorkspaceControls() {
@@ -351,25 +366,21 @@ export function mountCustomers(root) {
         const all = selection.mode === "all";
         const any = all || selection.ids.size > 0;
         const allCurrent = grid.rows.length > 0 && grid.rows.every((row, index) => grid.isRowSelected(row, index));
-        const moreMatches = grid.total == null || grid.total > grid.rows.length;
-        hideButton(extend, pending || all || !allCurrent || !moreMatches);
+        const moreMatches = grid.total == null || grid.total > selection.ids.size;
+        hideButton(extend, pending || all || !any || !moreMatches);
         hideButton(clear, !any);
-        extend.textContent =
-            grid.total == null ? "Select all matching results" : `Select all ${grid.total} matching`;
+        allSelected.hidden = !all || grid.total != null;
+        extend.textContent = grid.total == null ? "Select all matching" : `Select all ${grid.total} records`;
         if (pending || !any) {
             scope.textContent = "";
         } else if (all) {
             scope.textContent = `All matching results selected${selection.except.size ? `, excluding ${selection.except.size}` : ""}.`;
-        } else {
+        } else if (allCurrent) {
             const loaded = grid.options.pager === "more" ? "loaded results" : "rows on this page";
-            scope.textContent = allCurrent ? `All ${grid.rows.length} ${loaded} selected.` : "";
+            scope.textContent = `All ${grid.rows.length} ${loaded} selected.`;
+        } else {
+            scope.textContent = `${selection.ids.size} selected.`;
         }
-        selectionBanner.classList.toggle("customers-selection-active", !pending && any && (all || allCurrent));
-        scope.classList.toggle("dg-visually-hidden", !all && allCurrent);
-        grid.querySelector(".dg-bulk-actions")?.classList.toggle(
-            "customers-bulk-expanded",
-            !pending && any && (all || allCurrent),
-        );
     }
 
     const pillButtons = [];
@@ -473,7 +484,11 @@ export function mountCustomers(root) {
         count.textContent = "Customers could not be loaded.";
         updateSelection();
     });
-    listen(grid, "selectionChange", updateSelection);
+    listen(grid, "selectionChange", () => {
+        // A pending copy must not describe a selection the user has since changed.
+        actionVersion++;
+        updateSelection();
+    });
     // Rebuilds can replace the toolbar; a reload also ends the demo's inspection
     // session. Class/hidden changes cannot schedule another observer callback.
     const gridObserver = new MutationObserver(() => {
@@ -641,11 +656,13 @@ export function mountCustomers(root) {
     );
     listen(grid, "focusout", (event) => {
         if (event.target.matches(".dg-search")) searchReturn = null;
-        // A refresh can disable the focused action before bodyRendered hides its bar.
+        // A refresh can disable or detach the focused action before bodyRendered
+        // hides its bar. A click on inert space also has no relatedTarget: leave it.
         if (
             grid.isConnected &&
             event.target.closest(".dg-bulk-actions") &&
             !event.relatedTarget &&
+            (event.target.matches(":disabled") || !event.target.isConnected) &&
             !hasActionableSelection()
         )
             restore(focusSearch);

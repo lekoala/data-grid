@@ -99,6 +99,20 @@ test.skipIf(IS_WINDOWS)(
         await open(v);
         await v.click("#customers-grid .dg-select-all");
         await waitFor(v, "!document.querySelector('[data-select-matching]').hidden");
+        // The visually hidden scope is the only live region announcing the selection.
+        expect(await read(v, `${GRID}.querySelector('.dg-selection-count').getAttribute('aria-live')`)).toBe("off");
+        expect(await read(v, "document.querySelector('[data-selection-scope]').textContent")).toBe(
+            "All 10 rows on this page selected.",
+        );
+        expect(await read(v, "document.querySelector('[data-select-matching]').textContent")).toBe(
+            "Select all 64 records",
+        );
+        await v.click('#customers-grid tbody input[type="checkbox"]');
+        await waitFor(v, "document.querySelector('[data-selection-scope]').textContent === '9 selected.'");
+        // A partial selection can be extended too.
+        expect(await read(v, "document.querySelector('[data-select-matching]').hidden")).toBe(false);
+        await v.click('#customers-grid tbody input[type="checkbox"]');
+        await waitFor(v, "document.querySelector('[data-selection-scope]').textContent.startsWith('All 10')");
         await v.evaluate("document.querySelector('[data-select-matching]').focus()");
         await v.press("Space");
         await waitFor(v, `${GRID}.getSelectionState().mode === 'all'`);
@@ -236,7 +250,7 @@ test.skipIf(!IS_CHROME_BACKEND)(
         await waitFor(v, `!${GRID}.querySelector('.dg-search')`);
         expect(await read(v, `${GRID}.querySelector('.customers-view').getClientRects().length > 0`)).toBe(true);
         await v.evaluate(`${GRID}.setAttribute('searchable', 'true')`);
-        await waitFor(v, `!${GRID}.classList.contains('customers-actions-only')`);
+        await waitFor(v, `${GRID}.querySelector('.dg-search')`);
         expect(await read(v, `${GRID}.querySelector('.dg-search').getClientRects().length > 0`)).toBe(true);
     },
     TIMEOUT,
@@ -273,7 +287,13 @@ test.skipIf(!IS_CHROME_BACKEND)(
         await v.click("#customers-grid .dg-select-all");
         await waitFor(
             v,
-            `${GRID}.querySelector('.customers-selection').classList.contains('customers-selection-active')`,
+            `(() => {
+            // Two lines: the selection summary above the actions.
+            const summary = ${GRID}.querySelector('.dg-bulk-actions .customers-selection').getBoundingClientRect();
+            const action = ${GRID}.querySelector('.dg-bulk-actions button[data-action]').getBoundingClientRect();
+            const count = ${GRID}.querySelector('.customers-selection .dg-selection-count');
+            return summary.height > 0 && summary.bottom <= action.top && count?.getClientRects().length > 0;
+        })()`,
         );
         await waitFor(
             v,
