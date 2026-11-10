@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="importmap">
+    { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+  </script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <title>bulk actions browser fixture</title>
+  <!-- Absolute paths: this fixture is served by demo/server.js from the repo root. -->
+  <link rel="stylesheet" href="/dist/data-grid.css" />
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #f4f4f5; }
+    section { margin-block: 24px 48px; }
+    .spacer { block-size: 40vh; display: grid; place-items: center; color: #52525b; border: 1px dashed #ccc; }
+    .scroll-parent { block-size: 420px; overflow: auto; border: 2px solid #c4b5fd; padding: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Floating bulk actions fixture</h1>
+  <div class="spacer">content above</div>
+  <section>
+    <h2>Page scroll, 50 rows</h2>
+    <div id="page"></div>
+  </section>
+  <section>
+    <h2>Fixed height (internal scroll)</h2>
+    <div id="fixed" style="block-size: 360px; display: flex; flex-direction: column"></div>
+  </section>
+  <section>
+    <h2>autohidePager, 5 rows (pager removed)</h2>
+    <div id="short"></div>
+  </section>
+  <section>
+    <h2>autohidePager, 40 rows on one page</h2>
+    <div id="single"></div>
+  </section>
+  <section>
+    <h2>Inside a scrolling parent</h2>
+    <div class="scroll-parent"><div id="nested"></div></div>
+  </section>
+  <div class="spacer">content below</div>
+
+  <script type="module">
+    import { ArrayDataSource, DataGrid } from "/data-grid.js";
+
+    const rows = (n) =>
+      Array.from({ length: n }, (_, i) => ({ id: i + 1, name: `Customer ${i + 1}`, city: ["Brussels", "Lyon", "Ghent"][i % 3] }));
+
+    function mount(id, count, options = {}) {
+      const grid = new DataGrid({
+        columns: [{ field: "id", title: "#" }, { field: "name", title: "Name" }, { field: "city", title: "City" }],
+        dataSource: new ArrayDataSource(rows(count)),
+        selectable: true,
+        initialQuery: { pageSize: 50 },
+        bulkActions: [
+          { name: "export", label: "Export" },
+          { name: "delete", label: "Delete", intent: "danger" },
+        ],
+        ...options,
+      });
+      grid.id = `grid-${id}`;
+      document.getElementById(id).replaceChildren(grid);
+      return grid;
+    }
+
+    const grids = {
+      page: mount("page", 120),
+      fixed: mount("fixed", 120, { initialQuery: { pageSize: 25 }, autoheight: false }),
+      short: mount("short", 5, { autohidePager: true }),
+      single: mount("single", 40, { autohidePager: true }),
+      nested: mount("nested", 120, { initialQuery: { pageSize: 25 } }),
+    };
+    window.grids = grids;
+
+  </script>
+</body>
+</html>

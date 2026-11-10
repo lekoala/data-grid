@@ -127,19 +127,53 @@ grid.addEventListener("rowClick", (ev) => {
 
 ## Bulk actions
 
-`bulkActions` adds a permanent bar with one button per action. A
-`.dg-selection-count` badge shows the plain selected count and is hidden while
-nothing is selected; the buttons are disabled when the selection is empty.
-The badge announces `selectedCount` ("3 selected") through a live region while
-staying visually language-neutral.
+`bulkActions` adds one button per action to a bar that floats over the grid
+while a selection exists:
 
-With `pager="more"` and an unknown total, an all-results selection keeps the
-buttons enabled and hides the count badge, since its size cannot be computed.
+```text
+[☑ 25  Select all 120 | Export  Archive  Delete | ×]
+```
+
+- The bar is hidden while nothing is selected and takes no room in the layout.
+- It follows the page (or any scrolling ancestor, or the grid's own scroll
+  viewport) and never leaves the grid's bounds.
+- At the end of the rows it rests on the footer, between the range and the
+  pager. When the footer has no room for it (narrow grids) or no footer is
+  shown (`autohidePager`), it rests below the table instead.
+- The count shows a pictogram and the plain number; it announces
+  `selectedCount` ("3 selected") through a live region.
+- The clear button (`clearSelection`) and <kbd>Escape</kbd> inside the bar empty
+  the selection. Focus then returns to the row checkbox last toggled, the header
+  checkbox, or the scroll viewport, whichever is on screen, without scrolling.
+
+`bulkActionsDisplay: "inline"` (attribute `bulk-actions-display`, initial-only)
+keeps the previous presentation: a permanent topbar bar with disabled buttons
+while the selection is empty.
+
+### Select all matching
+
+`selectMatching: true` (attribute `select-matching`) offers to extend a fully
+selected page to every result matching the current search and filters:
+
+- the prompt appears only once every row of the current page is selected and
+  more results match, never while a new page is loading;
+- it reads `selectAllResults` ("Select all 120"), or `selectAllMatching` when
+  the total is unknown;
+- activating it calls `selectAllMatching()` and keeps the focus in the bar.
+
+It is opt-in because the result is a `mode: "all"` selection: the bulk action
+handler receives the query and the excluded keys, not a list of keys, and must
+apply the action server-side. Without it, the selection is always an explicit
+list of keys unless `selectVisibleOnly` is `false`.
+
+With an unknown total, an all-results selection keeps the buttons enabled and
+shows `allSelected` instead of a count, since its size cannot be computed.
 Explicit selections still show their known count.
 
 ```js
 const grid = new DataGrid({
     selectable: true,
+    selectMatching: true,
     bulkActions: [
         { name: "archive", label: "Archive", intent: "danger" },
     ],

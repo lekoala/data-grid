@@ -219,7 +219,7 @@ test("a declarative topbar with only a start zone still mounts the search", asyn
 test("bulk actions mount into a declarative topbar without a start zone", async () => {
     const { topbar } = declarativeTopbar();
     const inst = await makeReadyGrid(
-        { selectable: true, bulkActions: [{ name: "archive", label: "Archive" }] },
+        { selectable: true, bulkActions: [{ name: "archive", label: "Archive" }], bulkActionsDisplay: "inline" },
         rows,
         topbar,
     );

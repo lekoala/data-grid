@@ -29,6 +29,11 @@ data-grid[dir="rtl"] .dg-search-icon {
   right: var(--dg-control-padding-inline);
 }
 
+data-grid[dir="rtl"] > .dg-bulk-layer .dg-selection-count::before {
+  margin-right: 0;
+  margin-left: 0.4em;
+}
+
 data-grid[dir="rtl"] .dg-selection-count {
   margin-right: 0;
   margin-left: 0.5rem;

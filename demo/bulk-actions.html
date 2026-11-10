@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" class="no-js">
+  <head>
+    <script type="importmap">
+      { "imports": { "@lekoala/floating": "/node_modules/@lekoala/floating/src/floating.js" } }
+    </script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Data Grid Demo - Bulk actions</title>
+
+    <link rel="modulepreload" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js" />
+    <script type="module" src="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.js"></script>
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>▦</text></svg>" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/last-icon@2/last-icon.css" />
+    <link rel="stylesheet" href="../dist/data-grid.css" />
+    <link rel="stylesheet" href="demo.css" />
+
+    <script type="module">
+      import { ArrayDataSource, DataGrid } from "../data-grid.js";
+
+      const cities = ["Brussels", "Lyon", "Ghent", "Lille", "Liège"];
+      const rows = Array.from({ length: 120 }, (_, i) => ({
+        id: i + 1,
+        name: `Customer ${i + 1}`,
+        city: cities[i % cities.length],
+        orders: (i * 37) % 90,
+      }));
+
+      const bulkActions = [
+        { name: "export", label: "Export" },
+        { name: "archive", label: "Archive" },
+        { name: "delete", label: "Delete", intent: "danger", confirm: true },
+      ];
+
+      function describe(selection) {
+        return selection.mode === "all"
+          ? `all matching rows${selection.except.size ? `, except ${selection.except.size}` : ""}`
+          : `${selection.ids.size} row(s): ${[...selection.ids].slice(0, 8).join(", ")}${selection.ids.size > 8 ? "…" : ""}`;
+      }
+
+      function mount(id, count, options = {}) {
+        const grid = new DataGrid({
+          columns: [
+            { field: "id", title: "#", width: 72 },
+            { field: "name", title: "Name" },
+            { field: "city", title: "City" },
+            { field: "orders", title: "Orders", format: "number" },
+          ],
+          dataSource: new ArrayDataSource(rows.slice(0, count)),
+          selectable: true,
+          bulkActions,
+          ...options,
+        });
+        const output = document.querySelector(`[data-output="${id}"]`);
+        grid.addEventListener("bulkAction", (event) => {
+          output.textContent = `${event.detail.name} → ${describe(event.detail.selection)}`;
+        });
+        document.getElementById(id).replaceChildren(grid);
+      }
+
+      mount("bulk-matching", 120, { selectMatching: true, initialQuery: { pageSize: 25 } });
+      mount("bulk-page", 120, { initialQuery: { pageSize: 25 } });
+      mount("bulk-single", 8, { autohidePager: true });
+      mount("bulk-inline", 120, { bulkActionsDisplay: "inline" });
+    </script>
+  </head>
+
+  <body>
+    <header>
+      <h1>Data Grid</h1>
+      <p><em>Standalone data grid web component</em></p>
+    </header>
+    <main>
+      <div data-demo-nav></div>
+      <script type="module">
+        import { renderDemoNav } from "./nav.js";
+        renderDemoNav();
+      </script>
+
+      <h2>Bulk actions</h2>
+
+      <p>
+        Bulk actions float over the grid while a selection exists. The bar follows the page or the scroll viewport, stays
+        inside the grid, and rests on the footer at the end of the rows. <kbd>Escape</kbd> inside the bar clears the
+        selection.
+      </p>
+
+      <h3>With "select all matching"</h3>
+      <p>
+        <code>selectMatching: true</code>: once the whole page is selected, the bar offers to extend the selection to
+        every matching row. The handler then receives <code>mode: "all"</code> with exclusions, not a list of keys.
+      </p>
+      <div class="demo-grid"><div id="bulk-matching"></div></div>
+      <p><output data-output="bulk-matching">Select rows, then run an action.</output></p>
+
+      <h3>Current page only (default)</h3>
+      <p>Without <code>selectMatching</code>, the selection is always an explicit list of row keys.</p>
+      <div class="demo-grid"><div id="bulk-page"></div></div>
+      <p><output data-output="bulk-page">Select rows, then run an action.</output></p>
+
+      <h3>Single page, pager hidden</h3>
+      <p>With <code>autohidePager</code> and no footer, the bar rests below the table.</p>
+      <div class="demo-grid"><div id="bulk-single"></div></div>
+      <p><output data-output="bulk-single">Select rows, then run an action.</output></p>
+
+      <h3>Inline</h3>
+      <p><code>bulkActionsDisplay: "inline"</code> keeps the actions in the topbar, always visible.</p>
+      <div class="demo-grid"><div id="bulk-inline"></div></div>
+      <p><output data-output="bulk-inline">Select rows, then run an action.</output></p>
+    </main>
+    <footer>
+      <hr />
+      Made with <l-i name="heart" set="em"></l-i> in <l-i name="be" set="fl"></l-i> by <a href="https://www.lekoala.be">LeKoala</a>
+    </footer>
+  </body>
+</html>

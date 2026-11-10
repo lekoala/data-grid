@@ -64,6 +64,9 @@
               "name": "select-visible-only"
             },
             {
+              "name": "select-matching"
+            },
+            {
               "name": "row-click"
             },
             {
@@ -119,6 +122,9 @@
             },
             {
               "name": "pager"
+            },
+            {
+              "name": "bulk-actions-display"
             },
             {
               "name": "show-page-size"
@@ -590,6 +596,9 @@
             },
             {
               "name": "--dg-icon-close"
+            },
+            {
+              "name": "--dg-icon-selection"
             }
           ]
         }

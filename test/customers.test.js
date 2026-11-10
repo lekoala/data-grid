@@ -52,24 +52,29 @@ test("customer pills preserve unrelated filters and follow the column's filter s
     expect(grid.query.filters.status).toBeUndefined();
 });
 
-test("customer selection invitation and action feedback distinguish page and global scope", async () => {
+const extend = () => demo.grid.querySelector(".dg-select-matching");
+const clear = () => demo.grid.querySelector(".dg-clear-selection");
+const visibleCount = () => demo.grid.querySelector('.dg-selection-count [aria-hidden="true"]').textContent;
+
+test("customer selection extension and action feedback distinguish page and global scope", async () => {
     const grid = await open();
     grid.selectAll();
-    expect(find("[data-select-matching]").hidden).toBe(false);
-    expect(find("[data-selection-scope]").textContent).toContain("10 rows on this page");
-    find("[data-select-matching]").click();
+    expect(extend().hidden).toBe(false);
+    expect(extend().textContent).toBe("Select all 64");
+    expect(visibleCount()).toBe("10");
+    extend().click();
     grid.deselectRow(grid.rows[0]);
-    expect(find("[data-select-matching]").hidden).toBe(true);
-    expect(find("[data-selection-scope]").textContent).toContain("excluding 1");
+    expect(extend().hidden).toBe(true);
+    expect(visibleCount()).toBe("63");
     grid.querySelector(".dg-bulk-actions button[data-action]").click();
     expect(find("[data-action-feedback]").textContent).toContain("Mode: all");
     expect(find("[data-action-feedback]").textContent).toContain("excluding 1");
-    find("[data-clear-selection]").click();
-    expect(find("[data-clear-selection]").hidden).toBe(true);
-    expect(find("[data-selection-scope]").textContent).toBe("");
+    clear().click();
+    expect(grid.getSelectionState().mode).toBe("explicit");
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(true);
 });
 
-test("loaded-results invitation updates on append and never fabricates an unknown total", async () => {
+test("loaded-results extension follows appends and never fabricates an unknown total", async () => {
     const grid = await open();
     grid.setAttribute("pager", "more");
     grid.dataSource = {
@@ -79,33 +84,32 @@ test("loaded-results invitation updates on append and never fabricates an unknow
     };
     await grid.refresh();
     grid.selectAll();
-    expect(find("[data-selection-scope]").textContent).toContain("1 loaded results");
-    expect(find("[data-select-matching]").textContent).toBe("Select all matching");
+    expect(extend().textContent).toBe("Select all matching");
     await grid.loadMore();
-    // One of two loaded results: the partial selection can still be extended.
-    expect(find("[data-selection-scope]").textContent).toBe("1 selected.");
-    expect(find("[data-select-matching]").hidden).toBe(false);
+    // One of two loaded results: the page is no longer fully selected.
+    expect(visibleCount()).toBe("1");
+    expect(extend().hidden).toBe(true);
     grid.selectAll();
-    expect(find("[data-selection-scope]").textContent).toContain("2 loaded results");
+    expect(extend().hidden).toBe(false);
     grid.selectAllMatching();
-    expect(find("[data-selection-scope]").textContent).toBe("All matching results selected.");
-    expect(grid.querySelector(".dg-bulk-actions").hidden).toBe(false);
-    expect(grid.querySelector(".dg-selection-count").hidden).toBe(true);
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(false);
+    expect(visibleCount()).toBe("All selected");
 });
 
-test("floating customer actions keep their DOM and hide when known selection becomes empty", async () => {
+test("the customer demo themes the built-in bar without restructuring it", async () => {
     const grid = await open();
     const bar = grid.querySelector(".dg-bulk-actions");
     const button = bar.querySelector("button[data-action]");
-    expect(bar.hidden).toBe(true);
+    expect(bar.parentElement.matches(".dg-bulk-layer")).toBe(true);
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(true);
     grid.selectRow(grid.rows[0]);
-    expect(bar.hidden).toBe(false);
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(false);
     grid.clearSelection();
-    expect(bar.hidden).toBe(true);
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(true);
     grid.selectAllMatching();
-    expect(bar.hidden).toBe(false);
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(false);
     for (const row of grid.dataSource.rows) grid.deselectRow(row);
-    expect(bar.hidden).toBe(true);
+    expect(grid.querySelector(".dg-bulk-layer").hidden).toBe(true);
     expect(bar.querySelector("button[data-action]")).toBe(button);
     expect(grid.querySelectorAll(".dg-bulk-actions").length).toBe(1);
 });
@@ -119,14 +123,11 @@ test("a pending page does not advertise the previous rows as the selected curren
         });
     const loading = grid.setQuery({ page: 2 });
     grid.selectAll();
-    expect(find("[data-select-matching]").hidden).toBe(true);
-    expect(find("[data-selection-scope]").textContent).toBe("");
+    expect(extend().hidden).toBe(true);
     finish({ rows: [{ id: "new-page", name: "New page" }], total: 64 });
     await loading;
-    expect(find("[data-selection-scope]").textContent).not.toContain("on this page");
     grid.selectAll();
-    expect(find("[data-selection-scope]").textContent).toBe("All 1 rows on this page selected.");
-    expect(find("[data-select-matching]").hidden).toBe(false);
+    expect(extend().hidden).toBe(false);
 });
 
 test("View settings compose explicit visibility, density and bars without changing query or selection", async () => {

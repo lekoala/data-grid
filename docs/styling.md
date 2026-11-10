@@ -48,7 +48,8 @@ Override them on `data-grid` (or globally with `data-grid { ... }`):
 | `--dg-icon-disclosure`        | inline SVG              | disclosure chevron             |
 | `--dg-icon-details`           | inline SVG              | dialog row details eye         |
 | `--dg-icon-filter-text`       | inline SVG              | text filter hint icon          |
-| `--dg-icon-close`             | inline SVG              | dialog close button icon       |
+| `--dg-icon-close`             | inline SVG              | close icon (dialog, selection) |
+| `--dg-icon-selection`         | inline SVG              | floating selection count icon  |
 
 Icon tokens hold a monochrome mask URL, painted with `currentColor`. Override one
 on `data-grid` to swap a pictogram; the defaults are inline SVG data URIs.
@@ -224,10 +225,11 @@ The pagination bar remains `.dg-footer`, outside the table.
 
 ## Topbar composition
 
-`searchable` and `bulkActions` share a `.dg-topbar` that lives inside
+`searchable` and inline `bulkActions` share a `.dg-topbar` that lives inside
 `.dg-frame`, above the scroll viewport: frame = [topbar][scroll >
 table][footer] with a single shared border. No topbar is created for grids
-without search, bulk actions or declarative topbar content.
+without search, inline bulk actions or declarative topbar content. Floating
+bulk actions (the default) live outside the frame, see below.
 
 Provide your own commands declaratively; missing zones are created and free
 content moves into `.dg-topbar-start`, while the search input lands in
@@ -244,7 +246,7 @@ content moves into `.dg-topbar-start`, while the search input lands in
 
 | Zone | Default content |
 |------|-----------------|
-| `.dg-topbar-start` | Bulk actions, selection count, application commands |
+| `.dg-topbar-start` | Inline bulk actions, selection count, application commands |
 | `.dg-topbar-end` | Summary, custom filters, global search |
 
 ## One visible title
@@ -412,12 +414,33 @@ data-grid td.is-muted .dg-boolean { color: var(--dg-muted-color); }
 `column.cellClass` is evaluated once per row at render time and only lands on
 body cells (`column.class` stays the structural, header + body hook).
 
-## Selection badge
+## Selection bar
 
-`bulkActions` renders a `.dg-selection-count` badge that shows the plain count,
-hidden while nothing is selected. It carries `role="status"` and announces
-`selectedCount` through a `.dg-visually-hidden` text, so the visible UI needs
-no translation.
+`bulkActions` renders a `.dg-selection-count` that shows the plain count. It
+carries `role="status"` and announces `selectedCount` through a
+`.dg-visually-hidden` text, so the visible count needs no translation.
+
+The floating bar is a `.dg-bulk-actions` group inside a sticky `.dg-bulk-layer`,
+a sibling of `.dg-frame` sharing its grid cell. It is themed with the grid
+tokens (`--dg-bg`, `--dg-border-color`, `--dg-radius`, `--dg-accent`, and the
+control tokens for its buttons), so re-scoping them on `.dg-bulk-actions`
+recolors the bar alone:
+
+```css
+data-grid .dg-bulk-actions {
+    --dg-bg: #202025;
+    --dg-color: #f3f2f8;
+    --dg-border-color: #38373f;
+    --dg-control-color: #f3f2f8;
+    --dg-control-bg: transparent;
+    --dg-control-border-color: transparent;
+}
+```
+
+The count pictogram is `--dg-icon-selection`; the clear button reuses
+`--dg-icon-close`. `.dg-select-matching` and `.dg-clear-selection` are the
+extension prompt and the clear button. Its placement is measured by the plugin;
+do not position the layer yourself. Inline bars keep the topbar badge.
 
 `.dg-visually-hidden` is the component's screen-reader-only utility, paired
 with an `aria-hidden` visible counterpart.
@@ -600,7 +623,7 @@ load the Actual dialog runtime.
 Common hooks: `.dg-head-columns th`, `.dg-sort-label`, `th.dg-sortable`, `.dg-sort`,
 `.dg-sort-indicator`, `.dg-boolean`, `.dg-filter`, `.dg-actions`, `.dg-footer`,
 `.dg-topbar`, `.dg-topbar-start`, `.dg-topbar-end`, `.dg-search`, `.dg-bulk-actions`,
-`.dg-selection-count`, `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`,
+`.dg-selection-count`, `.dg-select-matching`, `.dg-clear-selection`, `.dg-visually-hidden`, `.dg-menu`, `.dg-responsive-hidden`,
 `.dg-disclosure`, `.dg-disclosure-cell`, `.dg-details-dialog`, `.dg-details-panel`,
 `.dg-details-header`, `.dg-details-title`, `.dg-details-body`, `.dg-details-close`,
 `.dg-details-list`, `.dg-details-app`, `.dg-select-field`.

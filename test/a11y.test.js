@@ -247,6 +247,7 @@ test("the pagination group exposes the page context and the selection badge is a
             columns: [{ field: "name", title: "Name" }],
             selectable: true,
             bulkActions: [{ name: "archive", label: "Archive" }],
+            bulkActionsDisplay: "inline",
         },
         [{ id: 7, name: "Alice" }],
         { SelectableRows, BulkActions },

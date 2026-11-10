@@ -409,6 +409,10 @@ export type Options = {
      */
     selectVisibleOnly: boolean;
     /**
+     * Offer "select all matching" in the floating bulk bar once the whole page is selected; the resulting `mode: "all"` selection must be supported by the bulk action handler (BulkActions module)
+     */
+    selectMatching: boolean;
+    /**
      * Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
      */
     singleSelect: boolean;
@@ -428,6 +432,10 @@ export type Options = {
      * Bulk actions applied to the current selection (BulkActions module)
      */
     bulkActions?: BulkAction[];
+    /**
+     * Show bulk actions in a bar floating over the grid while a selection exists ("floating", default) or in the topbar ("inline", BulkActions module). Initial-only.
+     */
+    bulkActionsDisplay?: "floating" | "inline";
     /**
      * Compute column sizes based on given data (Autosize module)
      */
@@ -554,6 +562,26 @@ export type Labels = {
     selectedCount: string;
     selectAll: string;
     selectRow: string;
+    /**
+     * - accessible name of the floating bulk actions bar
+     */
+    selectionActions: string;
+    /**
+     * - floating bar prompt extending a full page to every match, with {total}
+     */
+    selectAllResults: string;
+    /**
+     * - same prompt when the total is unknown
+     */
+    selectAllMatching: string;
+    /**
+     * - floating bar count for an all-results selection without a known total
+     */
+    allSelected: string;
+    /**
+     * - accessible name of the floating bar clear button
+     */
+    clearSelection: string;
     toggleActions: string;
     showDetails: string;
     hideDetails: string;

@@ -1126,6 +1126,11 @@ var DEFAULT_LABELS = {
   selectedCount: "{count} selected",
   selectAll: "Select all rows",
   selectRow: "Select {row}",
+  selectionActions: "Selection actions",
+  selectAllResults: "Select all {total}",
+  selectAllMatching: "Select all matching",
+  allSelected: "All selected",
+  clearSelection: "Clear selection",
   toggleActions: "Toggle row actions",
   showDetails: "Show details for {row}",
   hideDetails: "Hide details for {row}",
@@ -2068,11 +2073,13 @@ var DEFAULT_OPTIONS = {
   collapseActions: false,
   selectable: false,
   selectVisibleOnly: true,
+  selectMatching: false,
   singleSelect: false,
   rowClick: "action",
   rowKey: "id",
   rowLabel: null,
   bulkActions: [],
+  bulkActionsDisplay: "floating",
   resizable: false,
   autosize: false,
   enterMovesDown: false,
@@ -2121,6 +2128,7 @@ var OPTION_ATTRIBUTES = {
   selectable: { type: "boolean" },
   "single-select": { option: "singleSelect", type: "boolean" },
   "select-visible-only": { option: "selectVisibleOnly", type: "boolean" },
+  "select-matching": { option: "selectMatching", type: "boolean" },
   "row-click": {
     option: "rowClick",
     parse: (value) => parseEnumAttribute(value, ["action", "select", "none"], "action")
@@ -2143,6 +2151,10 @@ var OPTION_ATTRIBUTES = {
   autoheight: { type: "boolean" },
   "autohide-pager": { option: "autohidePager", type: "boolean" },
   pager: { parse: (value) => parseEnumAttribute(value, ["pages", "more"], "pages") },
+  "bulk-actions-display": {
+    option: "bulkActionsDisplay",
+    parse: (value) => parseEnumAttribute(value, ["floating", "inline"], "floating")
+  },
   "show-page-size": { option: "showPageSize", type: "boolean" },
   debug: { type: "boolean" },
   dir: { type: "string" },
@@ -2152,7 +2164,7 @@ var INITIAL_ATTRIBUTES = {
   page: { type: "integer" },
   "page-size": { type: "integer" }
 };
-var INITIAL_ONLY_ATTRIBUTES = new Set(["loading", "details-display"]);
+var INITIAL_ONLY_ATTRIBUTES = new Set(["loading", "details-display", "bulk-actions-display"]);
 function createDefaultOptions() {
   return {
     ...DEFAULT_OPTIONS,
@@ -5388,6 +5400,13 @@ class BulkActions extends base_plugin_default {
     this.countVisible = null;
     this.countStatus = null;
     this.buttons = null;
+    this.layer = null;
+    this.observer = null;
+    this.loadingObserver = null;
+    this.matchingButton = null;
+    this.clearButton = null;
+    this.lastToggle = null;
+    this.staleRows = false;
   }
   connected() {
     const grid = this.grid;
@@ -5444,8 +5463,10 @@ class BulkActions extends base_plugin_default {
       bar.appendChild(button);
       this.buttons.push(button);
     }
-    const table = grid.querySelector("table");
-    if (table) {
+    const frame = grid.querySelector(":scope > .dg-frame");
+    if (grid.options.bulkActionsDisplay !== "inline" && frame) {
+      this.#mountFloating(frame, bar);
+    } else if (grid.querySelector("table")) {
       const start = grid.ensureTopbar().querySelector(":scope > .dg-topbar-start");
       start.appendChild(bar);
     } else {
@@ -5456,13 +5477,153 @@ class BulkActions extends base_plugin_default {
   }
   disconnected() {
     this.grid.removeEventListener("selectionChange", this);
+    this.grid.removeEventListener("change", this);
+    this.grid.removeEventListener("querychange", this);
+    this.lastToggle = null;
+    this.staleRows = false;
+    this.observer?.disconnect();
+    this.observer = null;
+    this.loadingObserver?.disconnect();
+    this.loadingObserver = null;
+    this.grid.scrollEl?.style.removeProperty("padding-bottom");
+    const frame = this.grid.querySelector(":scope > .dg-frame");
+    frame?.style.removeProperty("margin-bottom");
+    this.grid.classList.remove("dg-bulk-floating");
+    this.layer?.remove();
+    this.layer = null;
     this.bar?.remove();
+  }
+  #mountFloating(frame, bar) {
+    const grid = this.grid;
+    const layer = document.createElement("div");
+    layer.className = "dg-bulk-layer";
+    layer.hidden = true;
+    bar.setAttribute("role", "group");
+    const matching = document.createElement("button");
+    matching.type = "button";
+    matching.className = "dg-select-matching";
+    matching.hidden = true;
+    matching.addEventListener("click", (event) => {
+      event.stopPropagation();
+      this.buttons?.find((button) => !button.disabled)?.focus();
+      grid.selectAllMatching();
+    });
+    this.countEl?.after(matching, separator());
+    this.matchingButton = matching;
+    const clear = document.createElement("button");
+    clear.type = "button";
+    clear.className = "dg-clear-selection";
+    clear.addEventListener("click", (event) => {
+      event.stopPropagation();
+      grid.clearSelection();
+    });
+    bar.append(separator(), clear);
+    this.clearButton = clear;
+    bar.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        event.preventDefault();
+        event.stopPropagation();
+        grid.clearSelection();
+      }
+    });
+    grid.addEventListener("change", this);
+    grid.addEventListener("querychange", this);
+    this.loadingObserver = new MutationObserver(() => this.render());
+    this.loadingObserver.observe(grid, { attributes: true, attributeFilter: ["data-loading"] });
+    layer.appendChild(bar);
+    frame.after(layer);
+    this.grid.classList.add("dg-bulk-floating");
+    this.layer = layer;
+    const footer = this.grid.footerEl;
+    this.observer = new ResizeObserver(() => this.#syncFloating());
+    this.observer.observe(layer);
+    if (footer) {
+      this.observer.observe(footer);
+    }
+  }
+  #syncFloating() {
+    const layer = this.layer;
+    const bar = this.bar;
+    const grid = this.grid;
+    const frame = grid.querySelector(":scope > .dg-frame");
+    const scroll = grid.scrollEl;
+    if (!layer || !bar || !frame || !scroll) {
+      return;
+    }
+    scroll.style.removeProperty("padding-bottom");
+    frame.style.removeProperty("margin-bottom");
+    if (layer.hidden) {
+      layer.style.removeProperty("margin-bottom");
+      return;
+    }
+    const barRect = bar.getBoundingClientRect();
+    const frameBottom = frame.getBoundingClientRect().bottom;
+    const footer = grid.footerEl;
+    const footerRect = footer && !footer.hidden ? footer.getBoundingClientRect() : null;
+    const gap = 12;
+    if (footer && footerRect && this.#fitsFooter(footer, barRect, gap)) {
+      const lift = 8;
+      const rise = barRect.height + lift - footerRect.height;
+      const cell = scroll.querySelector("tbody td");
+      const room = cell ? Number.parseFloat(getComputedStyle(cell).paddingBottom) || 0 : 0;
+      layer.style.setProperty("margin-bottom", `${frameBottom - footerRect.bottom + lift}px`);
+      if (rise > room) {
+        scroll.style.setProperty("padding-bottom", `${rise}px`);
+      }
+      return;
+    }
+    layer.style.setProperty("margin-bottom", "0px");
+    frame.style.setProperty("margin-bottom", `${barRect.height + 8}px`);
+  }
+  #fitsFooter(footer, barRect, gap) {
+    const start = barRect.left - gap;
+    const end = barRect.right + gap;
+    for (const el of footer.querySelectorAll("*")) {
+      const leaf = el.matches("button, input, select, textarea") || [...el.childNodes].some((node) => node.nodeType === Node.TEXT_NODE && node.textContent?.trim());
+      if (!leaf) {
+        continue;
+      }
+      const rect = el.getBoundingClientRect();
+      if (rect.width && rect.right > start && rect.left < end) {
+        return false;
+      }
+    }
+    return true;
   }
   onselectionChange() {
     this.render();
   }
+  onquerychange() {
+    this.staleRows = true;
+    this.render();
+  }
+  onchange(event) {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.closest("tbody .dg-selectable")) {
+      this.lastToggle = target;
+    }
+  }
+  #focusReturn() {
+    const grid = this.grid;
+    const scroll = grid.scrollEl?.getBoundingClientRect();
+    const top = Math.max(0, scroll?.top ?? 0);
+    const bottom = Math.min(window.innerHeight, scroll?.bottom ?? window.innerHeight);
+    const headerBottom = grid.querySelector("thead")?.getBoundingClientRect().bottom ?? top;
+    for (const target of [this.lastToggle, grid.querySelector(".dg-select-all")]) {
+      if (!(target instanceof HTMLElement) || !grid.contains(target) || target.matches(":disabled")) {
+        continue;
+      }
+      const rect = target.getBoundingClientRect();
+      const visibleTop = target.closest("tbody") ? Math.max(top, headerBottom) : top;
+      if (rect.width && rect.top >= visibleTop && rect.bottom <= bottom) {
+        return target;
+      }
+    }
+    return grid.scrollEl;
+  }
   afterRender(context) {
     if (context === "body") {
+      this.staleRows = false;
       this.render();
     }
   }
@@ -5474,17 +5635,49 @@ class BulkActions extends base_plugin_default {
       return;
     }
     const grid = this.grid;
+    const labels = grid.labels;
     const selection = grid.getSelectionState();
     const count = selection.mode === "all" ? grid.total == null ? null : Math.max(0, grid.total - selection.except.size) : selection.ids.size;
-    this.countEl.hidden = count === null || count === 0;
-    if (this.countVisible && this.countStatus) {
-      this.countVisible.textContent = count === null ? "" : `${count}`;
-      this.countStatus.textContent = count === null ? "" : grid.formatLabel(grid.labels.selectedCount, { count });
+    if (this.layer && count === 0 && this.bar.contains(document.activeElement)) {
+      this.#focusReturn()?.focus({ preventScroll: true });
     }
     for (const button of this.buttons) {
       button.disabled = count === 0;
     }
+    if (!this.layer) {
+      this.countEl.hidden = count === null || count === 0;
+      if (this.countVisible && this.countStatus) {
+        this.countVisible.textContent = count === null ? "" : `${count}`;
+        this.countStatus.textContent = count === null ? "" : grid.formatLabel(labels.selectedCount, { count });
+      }
+      return;
+    }
+    this.countEl.hidden = false;
+    if (this.countVisible && this.countStatus) {
+      this.countVisible.textContent = count === null ? labels.allSelected : `${count}`;
+      this.countStatus.textContent = count === null ? labels.allSelected : grid.formatLabel(labels.selectedCount, { count });
+    }
+    this.bar.setAttribute("aria-label", labels.selectionActions);
+    if (this.clearButton) {
+      this.clearButton.setAttribute("aria-label", labels.clearSelection);
+      this.clearButton.title = labels.clearSelection;
+    }
+    if (this.matchingButton) {
+      const rows = grid.rows;
+      const pageSelected = grid.options.selectMatching && !this.staleRows && !grid.loading && selection.mode !== "all" && !grid.options.singleSelect && rows.length > 0 && rows.every((row, index) => grid.isRowSelected(row, index));
+      const more = grid.total == null || grid.total > selection.ids.size;
+      this.matchingButton.hidden = !(pageSelected && more);
+      this.matchingButton.textContent = grid.total == null ? labels.selectAllMatching : grid.formatLabel(labels.selectAllResults, { total: grid.total });
+    }
+    this.layer.hidden = count === 0;
+    this.#syncFloating();
   }
+}
+function separator() {
+  const span = document.createElement("span");
+  span.className = "dg-bulk-separator";
+  span.setAttribute("aria-hidden", "true");
+  return span;
 }
 var bulk_actions_default = BulkActions;
 

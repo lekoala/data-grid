@@ -4,7 +4,7 @@ All UI labels are plain strings and should normally be configured before grids
 are created. Labels are
 expressed as full phrases: `pageRange` uses `{from}`, `{to}` and `{total}`
 placeholders, `pageStatus` uses `{page}` and `{pages}`, `resultCount` and
-`selectedCount` use `{count}`.
+`selectedCount` use `{count}`, `selectAllResults` uses `{total}`.
 
 ## Visible and accessible UI
 
@@ -16,7 +16,7 @@ search placeholder uses the translated `search` label followed by an ellipsis.
 ```
 
 ```text
-[ 3 ] [Archive] [Delete]
+[☑ 3 | Archive  Delete | ×]
 ```
 
 Labels describe visible content and the accessibility layer (`aria-label`,
@@ -25,6 +25,10 @@ Labels describe visible content and the accessibility layer (`aria-label`,
 - `pageRange` — visible range, defaults to the symbolic `{from}–{to} / {total}`
 - `pageStatus` — accessible page context (`Page 1 of 20`), never visible
 - `selectedCount` — the selected count announced by the live badge
+- `selectionActions`, `clearSelection` — accessible names of the floating bar
+  and its clear button
+- `selectAllResults` (`{total}`), `selectAllMatching`, `allSelected` — visible
+  text of the opt-in `selectMatching` prompt and of an all-results count
 - `search` — accessible name and default search placeholder (with an ellipsis)
 - `gotoPage`, `gotoFirstPage`, ... — accessible names
 
@@ -98,7 +102,8 @@ Available locales: `en`, `fr`, `nl`, `de`, `es`, `it`, `pt-BR`, `pt-PT`,
 Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `pageRange`, `pageStatus`, `resultCount`,
 `loadMore`, `loadedCount`, `loadedCountUnknown`,
-`selectedCount`, `selectAll`, `selectRow`, `toggleActions`, `resizeColumn`,
+`selectedCount`, `selectAll`, `selectRow`, `selectionActions`, `selectAllResults`,
+`selectAllMatching`, `allSelected`, `clearSelection`, `toggleActions`, `resizeColumn`,
 `showDetails`, `hideDetails`, `showHiddenColumns`, `hideHiddenColumns`, `search`,
 `noData`, `noResults`, `loading`, `areYouSure`, `networkError`, `booleanTrue`, `booleanFalse`,
 `closeDialog`.

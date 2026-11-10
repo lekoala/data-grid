@@ -394,6 +394,7 @@ test("bulkActions render a permanent bar and dispatch bulkAction", async () => {
         selectable: true,
         pageSize: 10,
         bulkActions: [{ name: "archive", label: "Archive" }],
+        bulkActionsDisplay: "inline",
     });
 
     const bar = inst.querySelector(".dg-bulk-actions");

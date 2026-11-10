@@ -182,8 +182,7 @@ body {
   --dg-row-hover-bg: #faf9ff;
   --dg-control-border-color: #e6e6ee;
 }
-/* The View panel (topbar) and the floating action bar (anchored in .dg-footer)
-   overflow the frame, so its clipping is lifted. The scroll viewport still
+/* The View panel (topbar) overflows the frame, so its clipping is lifted. The scroll viewport still
    clips the table horizontally, but the rounded corners below no longer clip
    descendants: footer and table backgrounds must stay inside them. */
 .customers-workspace data-grid > .dg-frame {
@@ -252,20 +251,6 @@ body {
 }
 .customers-workspace th {
   font-weight: 500;
-}
-/* The selection announcer is read, never shown: the floating bar shows the count. */
-[data-selection-scope] {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-/* The selection summary stays hidden until it joins the floating bar. */
-.customers-selection {
-  display: none;
 }
 .customers-demo-notes {
   margin-block: 1.25rem;
@@ -399,6 +384,31 @@ body {
   background: #8a7ce1;
   border-radius: inherit;
 }
+/* Demo-only appearance of the built-in floating bulk bar: grid tokens are
+   re-scoped to the bar, so the plugin keeps its structure and behavior. */
+.customers-floating-actions .dg-bulk-actions {
+  --dg-bg: #202025;
+  --dg-color: #f3f2f8;
+  --dg-muted-color: #a9a7b6;
+  --dg-border-color: #38373f;
+  --dg-accent: #c5bcff;
+  --dg-focus-color: #d6ceff;
+  --dg-control-bg: transparent;
+  --dg-control-border-color: transparent;
+  --dg-control-color: #f3f2f8;
+  --dg-row-hover-bg: #38373f;
+  color: var(--dg-color);
+  font-size: 0.8125rem;
+  box-shadow: 0 8px 24px rgb(25 22 40 / 22%);
+}
+.customers-floating-actions .dg-bulk-actions button[data-intent="danger"] {
+  border-color: transparent;
+  background-color: transparent;
+  color: #ff858d;
+}
+.customers-floating-actions .dg-clear-selection:hover {
+  background-color: #38373f;
+}
 .customer-metric-value {
   text-align: end;
 }
@@ -407,141 +417,6 @@ body {
 }
 .customers-no-bars .customer-metric {
   grid-template-columns: minmax(0, 1fr);
-}
-/* The action pill overlays the table above the unchanged pager. */
-.customers-floating-actions {
-  padding-bottom: 0;
-}
-.customers-floating-actions .dg-bulk-actions {
-  --dg-focus-color: #d6ceff;
-  position: relative;
-  inline-size: max-content;
-  box-sizing: border-box;
-  max-inline-size: 100%;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.15rem;
-  padding: 0.4rem 0.4rem 0.3rem;
-  border: 1px solid #29292f;
-  border-radius: 0.85rem;
-  background: #202025;
-  color: white;
-  box-shadow: 0 8px 24px rgb(25 22 40 / 22%);
-  font-size: 0.8125rem;
-  white-space: nowrap;
-}
-.customers-action-layer {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 0.5rem);
-  transform: translateX(-50%);
-  z-index: 6;
-  inline-size: max-content;
-  max-inline-size: calc(100% - 1.5rem);
-}
-.customers-floating-actions .dg-bulk-actions[hidden] {
-  display: none;
-}
-/* First line: what is selected, and how to extend it. */
-.customers-floating-actions .dg-bulk-actions .customers-selection {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: baseline;
-  gap: 0.15rem 0.5rem;
-  padding: 0 0.5rem 0.3rem;
-  border-bottom: 1px solid #38373f;
-  font-size: 0.75rem;
-  color: #a9a7b6;
-}
-.customers-floating-actions .dg-selection-count {
-  min-inline-size: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: #a9a7b6;
-  font-size: inherit;
-}
-.customers-floating-actions .dg-selection-count > [aria-hidden="true"]:first-child,
-.customers-floating-actions .customer-all-selected {
-  color: white;
-  font-weight: 600;
-}
-.customers-floating-actions[dir="rtl"] .dg-selection-count {
-  margin: 0;
-}
-.customers-floating-actions .customer-all-selected[hidden],
-.customers-floating-actions .customers-selection [hidden] {
-  display: none;
-}
-.customers-floating-actions .dg-bulk-actions .customers-selection button {
-  border-radius: 0.2rem;
-  padding: 0;
-  color: #c5bcff;
-}
-.customers-floating-actions .dg-bulk-actions .customers-selection button:hover {
-  background: transparent;
-  text-decoration: underline;
-}
-/* Second line: the actions, closed by the clear control. */
-.customers-action-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  gap: 0.15rem;
-}
-.customers-floating-actions .dg-bulk-actions button {
-  border: 0;
-  border-radius: 0.4rem;
-  padding: 0.25rem 0.55rem;
-  background: transparent;
-  color: #f3f2f8;
-  font: inherit;
-}
-.customers-floating-actions .dg-bulk-actions button:hover {
-  background: #38373f;
-}
-.customers-floating-actions .dg-bulk-actions button:focus-visible {
-  outline: 2px solid #d6ceff;
-  outline-offset: 2px;
-}
-.customers-floating-actions .dg-bulk-actions button[data-intent="danger"] {
-  background: transparent;
-  color: #ff858d;
-}
-.customers-floating-actions .dg-bulk-actions [data-clear-selection] {
-  position: relative;
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  inline-size: 1.6rem;
-  block-size: 1.6rem;
-  margin-left: 0.4rem;
-  padding: 0;
-  border-radius: 50%;
-  color: #a9a7b6;
-  font-size: 1rem;
-  line-height: 1;
-}
-.customers-floating-actions .dg-bulk-actions [data-clear-selection]::before {
-  content: "";
-  position: absolute;
-  left: -0.3rem;
-  top: 50%;
-  transform: translateY(-50%);
-  inline-size: 1px;
-  block-size: 1rem;
-  background: #4c4a55;
-}
-.customers-floating-actions[dir="rtl"] .dg-bulk-actions [data-clear-selection] {
-  margin-left: 0;
-  margin-right: 0.4rem;
-}
-.customers-floating-actions[dir="rtl"] .dg-bulk-actions [data-clear-selection]::before {
-  left: auto;
-  right: -0.3rem;
 }
 @media (max-width: 48rem) {
   .customers-demo {
@@ -569,12 +444,6 @@ body {
   .customers-workspace .customers-view summary,
   .customers-workspace [data-toggle-filters] {
     padding: 0.4rem 0.55rem;
-  }
-  .customers-floating-actions .dg-bulk-actions {
-    font-size: 0.75rem;
-  }
-  .customers-floating-actions .dg-bulk-actions button {
-    padding: 0.25rem 0.4rem;
   }
 }
 /* Demo-only drawer appearance: the plugin still owns a native modal dialog,

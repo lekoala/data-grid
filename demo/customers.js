@@ -32,20 +32,11 @@ export function mountCustomers(root) {
         target.addEventListener(type, handler, { signal: controller.signal, capture });
     const find = (selector) => root.querySelector(selector);
     const focusSearch = find("[data-search-focus]");
-    const scope = find("[data-selection-scope]");
-    const extend = find("[data-select-matching]");
-    const clear = find("[data-clear-selection]");
     const count = find("[data-result-count]");
     const density = find("[data-density]");
     const bars = find("[data-bars]");
     const filterToggle = find("[data-toggle-filters]");
     const searchTools = find(".customers-tools");
-    const selectionBanner = find(".customers-selection");
-    const allSelected = find(".customer-all-selected");
-    const actionRow = doc.createElement("div");
-    actionRow.className = "customers-action-row";
-    const actionLayer = doc.createElement("div");
-    actionLayer.className = "customers-action-layer";
     const sample = customerRows();
     let pending = true;
     let searchReturn = null;
@@ -152,6 +143,7 @@ export function mountCustomers(root) {
         pageSize: 10,
         selectable: true,
         selectVisibleOnly: true,
+        selectMatching: true,
         autohidePager: false,
         searchable: true,
         searchPlaceholder: "Search customers",
@@ -282,64 +274,6 @@ export function mountCustomers(root) {
         else focusSearch.focus({ preventScroll: true });
     }
 
-    function hideButton(button, hidden) {
-        if (hidden && button === doc.activeElement) {
-            const target =
-                button === extend && hasActionableSelection()
-                    ? grid.querySelector(".dg-bulk-actions button[data-action]:not(:disabled)")
-                    : focusSearch;
-            restore(target);
-        }
-        button.hidden = hidden;
-    }
-
-    function hasActionableSelection() {
-        const selection = grid.getSelectionState();
-        return selection.mode === "all"
-            ? grid.total == null || grid.total > selection.except.size
-            : selection.ids.size > 0;
-    }
-
-    function updateFloatingActions() {
-        if (!grid.isConnected) return;
-        const bar = grid.querySelector(".dg-bulk-actions");
-        if (!bar) return;
-        const footer = grid.querySelector(":scope > .dg-frame > .dg-footer");
-        if (!footer) return;
-        if (actionLayer.parentElement !== footer) footer.append(actionLayer);
-        if (bar.parentElement !== actionLayer) actionLayer.append(bar);
-        const actionable = hasActionableSelection();
-        // Count visibility is not selection state: all-results mode may have no total.
-        if (!actionable && bar.contains(doc.activeElement)) restore(focusSearch);
-        bar.hidden = !actionable;
-        bar.setAttribute("role", "group");
-        bar.setAttribute("aria-label", "Selected customer actions");
-        // Two stacked lines, each sized to its content: the selection summary,
-        // then the actions closed by the clear control. A rebuilt toolbar brings
-        // fresh action buttons that replace the previous ones.
-        const actions = bar.querySelectorAll(":scope > button[data-action]");
-        if (actions.length) actionRow.replaceChildren(...actions, clear);
-        if (bar.firstElementChild !== selectionBanner) bar.prepend(selectionBanner);
-        if (selectionBanner.nextElementSibling !== actionRow) selectionBanner.after(actionRow);
-        // A rebuilt toolbar brings a fresh badge; the banner may still hold the old one.
-        const badge =
-            bar.querySelector(":scope > .dg-selection-count") ?? selectionBanner.querySelector(".dg-selection-count");
-        if (!badge) return;
-        for (const stale of selectionBanner.querySelectorAll(".dg-selection-count")) {
-            if (stale !== badge) stale.remove();
-        }
-        if (badge.parentElement !== selectionBanner) selectionBanner.prepend(badge);
-        // The visually hidden scope is the single selection announcer.
-        badge.setAttribute("aria-live", "off");
-        if (!badge.querySelector(".customer-selected-label")) {
-            const label = doc.createElement("span");
-            label.className = "customer-selected-label";
-            label.setAttribute("aria-hidden", "true");
-            label.textContent = " selected";
-            badge.append(label);
-        }
-    }
-
     function syncWorkspaceControls() {
         const topbar = grid.querySelector(":scope > .dg-frame > .dg-topbar");
         const end = topbar?.querySelector(":scope > .dg-topbar-end");
@@ -358,29 +292,6 @@ export function mountCustomers(root) {
         }
         if (searchTools.parentElement !== end) end.append(searchTools);
         filterToggle.setAttribute("aria-pressed", String(grid.options.filterable));
-    }
-
-    function updateSelection() {
-        updateFloatingActions();
-        const selection = grid.getSelectionState();
-        const all = selection.mode === "all";
-        const any = all || selection.ids.size > 0;
-        const allCurrent = grid.rows.length > 0 && grid.rows.every((row, index) => grid.isRowSelected(row, index));
-        const moreMatches = grid.total == null || grid.total > selection.ids.size;
-        hideButton(extend, pending || all || !any || !moreMatches);
-        hideButton(clear, !any);
-        allSelected.hidden = !all || grid.total != null;
-        extend.textContent = grid.total == null ? "Select all matching" : `Select all ${grid.total} records`;
-        if (pending || !any) {
-            scope.textContent = "";
-        } else if (all) {
-            scope.textContent = `All matching results selected${selection.except.size ? `, excluding ${selection.except.size}` : ""}.`;
-        } else if (allCurrent) {
-            const loaded = grid.options.pager === "more" ? "loaded results" : "rows on this page";
-            scope.textContent = `All ${grid.rows.length} ${loaded} selected.`;
-        } else {
-            scope.textContent = `${selection.ids.size} selected.`;
-        }
     }
 
     const pillButtons = [];
@@ -456,7 +367,6 @@ export function mountCustomers(root) {
         pending = true;
         updateResultCount();
         updatePills();
-        updateSelection();
     });
     listen(
         grid,
@@ -467,7 +377,6 @@ export function mountCustomers(root) {
             pending = event.target.value !== grid.query.search || grid.loading;
             if (pending) closeRecord();
             updateResultCount();
-            updateSelection();
         },
         true,
     );
@@ -476,30 +385,24 @@ export function mountCustomers(root) {
         pending = false;
         updateResultCount();
         updatePills();
-        updateSelection();
         updateView();
     });
     listen(grid, "loadError", () => {
         pending = true;
         count.textContent = "Customers could not be loaded.";
-        updateSelection();
     });
     listen(grid, "selectionChange", () => {
         // A pending copy must not describe a selection the user has since changed.
         actionVersion++;
-        updateSelection();
     });
     // Rebuilds can replace the toolbar; a reload also ends the demo's inspection
     // session. Class/hidden changes cannot schedule another observer callback.
     const gridObserver = new MutationObserver(() => {
         syncWorkspaceControls();
-        updateFloatingActions();
         if (grid.isConnected && grid.loading) closeRecord();
     });
     gridObserver.observe(grid, { childList: true, subtree: true, attributes: true, attributeFilter: ["data-loading"] });
     listen(grid, "columnVisibility", updateView);
-    listen(extend, "click", () => grid.selectAllMatching());
-    listen(clear, "click", () => grid.clearSelection());
     listen(density, "change", () => grid.setAttribute("density", density.value));
     listen(bars, "change", () => root.classList.toggle("customers-no-bars", !bars.checked));
     listen(filterToggle, "click", () => {
@@ -656,16 +559,6 @@ export function mountCustomers(root) {
     );
     listen(grid, "focusout", (event) => {
         if (event.target.matches(".dg-search")) searchReturn = null;
-        // A refresh can disable or detach the focused action before bodyRendered
-        // hides its bar. A click on inert space also has no relatedTarget: leave it.
-        if (
-            grid.isConnected &&
-            event.target.closest(".dg-bulk-actions") &&
-            !event.relatedTarget &&
-            (event.target.matches(":disabled") || !event.target.isConnected) &&
-            !hasActionableSelection()
-        )
-            restore(focusSearch);
     });
     updatePills();
     find("[data-customer-grid]").replaceChildren(grid);

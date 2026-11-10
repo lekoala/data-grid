@@ -227,6 +227,7 @@ test("bulk actions bar lives inside the topbar start", async () => {
         searchable: true,
         selectable: true,
         bulkActions: [{ name: "archive", label: "Archive" }],
+        bulkActionsDisplay: "inline",
     });
 
     const bar = inst.querySelector(".dg-bulk-actions");

@@ -276,11 +276,13 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {Boolean} resizable Make columns resizable (ColumnResizer module)
  * @property {Boolean} selectable Allow multi-selecting rows with a checkboxes (SelectableRows module)
  * @property {Boolean} selectVisibleOnly Select all only selects visible rows (SelectableRows module)
+ * @property {Boolean} selectMatching Offer "select all matching" in the floating bulk bar once the whole page is selected; the resulting `mode: "all"` selection must be supported by the bulk action handler (BulkActions module)
  * @property {Boolean} singleSelect Enables single row select with radio buttons - no need to set selectable (SelectableRows module)
  * @property {"action"|"select"|"none"} [rowClick] What a click on a data row does: "action" runs the row's default action (RowActions), "select" toggles the row selection, "none" disables row clicks
  * @property {String | ((row: Row) => String | Number)} [rowKey] The field name or a function resolving a stable row key (defaults to "id")
  * @property {String | ((row: Row, index: Number) => String) | null} [rowLabel] Field name or a resolver for the human-readable label of a row, used for accessible control names (falls back to rowKey, then index)
  * @property {BulkAction[]} [bulkActions] Bulk actions applied to the current selection (BulkActions module)
+ * @property {"floating"|"inline"} [bulkActionsDisplay] Show bulk actions in a bar floating over the grid while a selection exists ("floating", default) or in the topbar ("inline", BulkActions module). Initial-only.
  * @property {Boolean} autosize Compute column sizes based on given data (Autosize module)
  * @property {Boolean} enterMovesDown Enter commits and moves the editing focus one row down in the same column (EditableColumn module)
  * @property {Boolean} autoheight Adjust height so that it matches table size (FixedHeight module)
@@ -326,6 +328,11 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {String} selectedCount
  * @property {String} selectAll
  * @property {String} selectRow
+ * @property {String} selectionActions - accessible name of the floating bulk actions bar
+ * @property {String} selectAllResults - floating bar prompt extending a full page to every match, with {total}
+ * @property {String} selectAllMatching - same prompt when the total is unknown
+ * @property {String} allSelected - floating bar count for an all-results selection without a known total
+ * @property {String} clearSelection - accessible name of the floating bar clear button
  * @property {String} toggleActions
  * @property {String} showDetails
  * @property {String} hideDetails
@@ -447,11 +454,13 @@ const DEFAULT_OPTIONS = {
     collapseActions: false,
     selectable: false,
     selectVisibleOnly: true,
+    selectMatching: false,
     singleSelect: false,
     rowClick: "action",
     rowKey: "id",
     rowLabel: null,
     bulkActions: [],
+    bulkActionsDisplay: "floating",
     resizable: false,
     autosize: false,
     enterMovesDown: false,
@@ -506,6 +515,7 @@ const OPTION_ATTRIBUTES = {
     selectable: { type: "boolean" },
     "single-select": { option: "singleSelect", type: "boolean" },
     "select-visible-only": { option: "selectVisibleOnly", type: "boolean" },
+    "select-matching": { option: "selectMatching", type: "boolean" },
     "row-click": {
         option: "rowClick",
         parse: (value) => parseEnumAttribute(value, ["action", "select", "none"], "action"),
@@ -528,6 +538,10 @@ const OPTION_ATTRIBUTES = {
     autoheight: { type: "boolean" },
     "autohide-pager": { option: "autohidePager", type: "boolean" },
     pager: { parse: (value) => parseEnumAttribute(value, ["pages", "more"], "pages") },
+    "bulk-actions-display": {
+        option: "bulkActionsDisplay",
+        parse: (value) => parseEnumAttribute(value, ["floating", "inline"], "floating"),
+    },
     "show-page-size": { option: "showPageSize", type: "boolean" },
     debug: { type: "boolean" },
     dir: { type: "string" },
@@ -541,7 +555,7 @@ const INITIAL_ATTRIBUTES = {
 };
 
 /** Option attributes that become immutable at the first connection. */
-const INITIAL_ONLY_ATTRIBUTES = new Set(["loading", "details-display"]);
+const INITIAL_ONLY_ATTRIBUTES = new Set(["loading", "details-display", "bulk-actions-display"]);
 
 /**
  * @returns {Record<string, any>}

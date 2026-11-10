@@ -760,6 +760,7 @@ test("bulk actions stay actionable for an all-results selection with an unknown 
         columns: [{ field: "name" }],
         dataSource: ds,
         bulkActions: [{ name: "archive" }],
+        bulkActionsDisplay: "inline",
         selectVisibleOnly: false,
     });
     const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));

@@ -146,7 +146,7 @@ test.skipIf(IS_WINDOWS)(
             v,
             "document.querySelector('#filters-demo select[data-name=plan]') && " +
                 "document.querySelector('#filters-demo select[data-name=verified]') && " +
-                "document.querySelectorAll('#selection-actions-demo .dg-bulk-actions button').length === 3",
+                "document.querySelectorAll('#selection-actions-demo .dg-bulk-actions button[data-action]').length === 3",
         );
 
         const controls = JSON.parse(
@@ -157,7 +157,7 @@ test.skipIf(IS_WINDOWS)(
                         .map((option) => [option.value, option.text]),
                     verified: [...document.querySelector('#filters-demo select[data-name=verified]').options]
                         .map((option) => [option.value, option.text]),
-                    intents: [...document.querySelectorAll('#selection-actions-demo .dg-bulk-actions button')]
+                    intents: [...document.querySelectorAll('#selection-actions-demo .dg-bulk-actions button[data-action]')]
                         .map((button) => button.dataset.intent ?? 'default'),
                 })`,
             ),

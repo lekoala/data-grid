@@ -16,22 +16,38 @@ not documented.
 - `selectAllMatching()` selects all results matching search and filters without
   changing `selectVisibleOnly` or loading off-page rows. It clears exclusions and
   does nothing in single-select mode.
+- Bulk actions float over the grid while a selection exists: a sticky bar,
+  hidden when the selection is empty, that stays inside the grid, rests on the
+  footer at the end of the rows (or below the table when the footer is absent
+  or too narrow) and never covers a row. It shows the count with a
+  `--dg-icon-selection` pictogram, a clear button and handles <kbd>Escape</kbd>,
+  returning focus to an on-screen control in the grid.
+- `selectMatching` (attribute `select-matching`) opts into a "Select all N"
+  prompt once the whole page is selected; it emits a `mode: "all"` selection.
+- `bulkActionsDisplay: "floating" | "inline"` (attribute
+  `bulk-actions-display`, initial-only).
+- Labels `selectionActions`, `selectAllResults`, `selectAllMatching`,
+  `allSelected` and `clearSelection`, translated in every shipped locale.
+- Bulk actions demo, with and without the "select all matching" prompt.
 - Server aggregates demo with a financial-data endpoint illustrating filtered
   totals before pagination.
 - Customers demo composing a compact card, status pills, display preferences,
   one search field with an inline `/` shortcut, value-first data bars, a modal
-  record drawer with Previous/Next navigation among loaded records, progressive
-  selection, and a centered two-line floating toolbar (selection count with a
-  "select all" link, then local CSV export/copy/delete actions), using public
-  APIs only.
+  record drawer with Previous/Next navigation among loaded records, and a dark
+  theme of the built-in floating bulk bar with progressive selection and local
+  CSV export/copy/delete actions, using public APIs only.
 
 ### Changed
 
+- **Visual default change:** `bulkActions` now render the floating bar. Set
+  `bulkActionsDisplay: "inline"` to keep the permanent topbar bar.
 - Neutral sort indicators are quieter, with full visibility on hover, keyboard
   focus, active sort, touch devices, and in forced-colors mode.
 
 ### Fixed
 
+- `autohidePager` hides the footer again: its display rule no longer overrides
+  the `hidden` attribute.
 - Responsive grids reprocess their width after reconnecting, so cancelled resize
   work cannot leave the table hidden at the same viewport width.
 - A data source that ignores cancellation can no longer commit a late response

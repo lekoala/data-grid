@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "flat-type-hierarchy",
+        "value": "*",
+        "files": [
+          "demo/bulk-actions.html"
+        ],
+        "createdAt": "2026-11-10T17:48:32.251Z",
+        "reason": "Claude: demo page inherits the shared demo/demo.css heading scale used by every other demo page; no page-specific type styles"
+      }
+    ]
+  }
+}

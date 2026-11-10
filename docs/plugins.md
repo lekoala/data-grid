@@ -83,7 +83,7 @@ The core creates the `<th>`/`<td>` and their structural attributes
 | Plugin             | Option                        | What it does                                                               |
 |--------------------|-------------------------------|----------------------------------------------------------------------------|
 | `SelectableRows`   | `selectable` / `singleSelect` | checkbox/radio selection column                                            |
-| `BulkActions`      | `bulkActions`                 | bulk action bar for the selection                                          |
+| `BulkActions`      | `bulkActions`                 | floating (or inline) bulk action bar for the selection                     |
 | `RowActions`       | `actions`                     | inline actions; native popover menu when supported                         |
 | `ResponsiveGrid`   | `responsive`                  | hide/show columns by priority when the grid runs out of room               |
 | `RowDetails`       | `rowDetails`                  | expandable application-rendered content below a row                        |
