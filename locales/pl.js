@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "Zaznacz wszystkie ({total})",
     selectAllMatching: "Zaznacz wszystkie wyniki",
     allSelected: "Zaznaczono wszystko",
+    allSelectedExcept: "Zaznaczono wszystko z wyjątkiem {count}",
     clearSelection: "Wyczyść zaznaczenie",
     toggleActions: "Pokaż akcje wiersza",
     showDetails: "Pokaż szczegóły {row}",

@@ -582,6 +582,10 @@ export type Labels = {
      */
     allSelected: string;
     /**
+     * - all-results selection with {count} excluded rows and no known total
+     */
+    allSelectedExcept: string;
+    /**
      * - accessible name of the floating bar clear button
      */
     clearSelection: string;

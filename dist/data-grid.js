@@ -1130,6 +1130,7 @@ var DEFAULT_LABELS = {
   selectAllResults: "Select all {total}",
   selectAllMatching: "Select all matching",
   allSelected: "All selected",
+  allSelectedExcept: "All selected except {count}",
   clearSelection: "Clear selection",
   toggleActions: "Toggle row actions",
   showDetails: "Show details for {row}",
@@ -2466,16 +2467,16 @@ class DataGrid extends base_element_default {
       meta.textContent = this.#loadedCountText();
       return;
     }
-    meta.textContent = "";
-    const range = this.querySelector(".dg-page-range");
-    if (!range) {
-      return;
-    }
     const total = this.total ?? 0;
     const page = this.#query.page || 1;
     const high = Math.min(page * this.#query.pageSize, total);
     const low = total ? (page - 1) * this.#query.pageSize + 1 : 0;
-    range.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
+    const text = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
+    meta.textContent = this.options.showPageSize ? "" : text;
+    const range = this.querySelector(".dg-page-range");
+    if (range) {
+      range.textContent = text;
+    }
   }
   updatePageStatus() {
     const pagination = this.querySelector(".dg-pagination");
@@ -3019,6 +3020,7 @@ class DataGrid extends base_element_default {
   showPageSizeChanged() {
     this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
     this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
+    this.updateMetaLabel();
   }
   responsiveChanged() {
     this.runPlugins("responsiveChanged", this.options.responsive);
@@ -5654,8 +5656,9 @@ class BulkActions extends base_plugin_default {
     }
     this.countEl.hidden = false;
     if (this.countVisible && this.countStatus) {
-      this.countVisible.textContent = count === null ? labels.allSelected : `${count}`;
-      this.countStatus.textContent = count === null ? labels.allSelected : grid.formatLabel(labels.selectedCount, { count });
+      const allLabel = selection.except.size ? grid.formatLabel(labels.allSelectedExcept, { count: selection.except.size }) : labels.allSelected;
+      this.countVisible.textContent = count === null ? allLabel : `${count}`;
+      this.countStatus.textContent = count === null ? allLabel : grid.formatLabel(labels.selectedCount, { count });
     }
     this.bar.setAttribute("aria-label", labels.selectionActions);
     if (this.clearButton) {

@@ -332,6 +332,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {String} selectAllResults - floating bar prompt extending a full page to every match, with {total}
  * @property {String} selectAllMatching - same prompt when the total is unknown
  * @property {String} allSelected - floating bar count for an all-results selection without a known total
+ * @property {String} allSelectedExcept - all-results selection with {count} excluded rows and no known total
  * @property {String} clearSelection - accessible name of the floating bar clear button
  * @property {String} toggleActions
  * @property {String} showDetails
@@ -1161,18 +1162,18 @@ class DataGrid extends BaseElement {
             return;
         }
         // Classic pagination always carries a finite total (see applyResult);
-        // the fallback only satisfies the type checker. The range is the face
-        // of the page size control: the window over the results.
-        meta.textContent = "";
-        const range = this.querySelector(".dg-page-range");
-        if (!range) {
-            return;
-        }
+        // the fallback only satisfies the type checker. Keep the results
+        // window visible as plain text when the page size control is hidden.
         const total = this.total ?? 0;
         const page = this.#query.page || 1;
         const high = Math.min(page * this.#query.pageSize, total);
         const low = total ? (page - 1) * this.#query.pageSize + 1 : 0;
-        range.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
+        const text = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
+        meta.textContent = this.options.showPageSize ? "" : text;
+        const range = this.querySelector(".dg-page-range");
+        if (range) {
+            range.textContent = text;
+        }
     }
 
     /**
@@ -2055,6 +2056,7 @@ class DataGrid extends BaseElement {
     showPageSizeChanged() {
         this.selectPerPage?.toggleAttribute("hidden", !this.options.showPageSize);
         this.selectPerPage?.closest(".dg-select-field")?.toggleAttribute("hidden", !this.options.showPageSize);
+        this.updateMetaLabel();
     }
 
     responsiveChanged() {

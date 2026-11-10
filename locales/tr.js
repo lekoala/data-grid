@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "{total} sonucun tümünü seç",
     selectAllMatching: "Eşleşenlerin tümünü seç",
     allSelected: "Tümü seçildi",
+    allSelectedExcept: "{count} hariç tümü seçildi",
     clearSelection: "Seçimi temizle",
     toggleActions: "Satır eylemlerini göster",
     showDetails: "{row} ayrıntılarını göster",

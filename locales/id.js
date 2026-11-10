@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "Pilih semua {total}",
     selectAllMatching: "Pilih semua hasil",
     allSelected: "Semua dipilih",
+    allSelectedExcept: "Semua dipilih kecuali {count}",
     clearSelection: "Hapus pilihan",
     toggleActions: "Tampilkan aksi baris",
     showDetails: "Tampilkan detail {row}",

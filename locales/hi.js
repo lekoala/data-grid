@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "सभी {total} चुनें",
     selectAllMatching: "सभी मेल खाते परिणाम चुनें",
     allSelected: "सभी चयनित",
+    allSelectedExcept: "{count} को छोड़कर सभी चयनित",
     clearSelection: "चयन हटाएँ",
     toggleActions: "पंक्ति क्रियाएँ दिखाएँ",
     showDetails: "{row} का विवरण दिखाएँ",

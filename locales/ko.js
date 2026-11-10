@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "{total}개 모두 선택",
     selectAllMatching: "일치하는 항목 모두 선택",
     allSelected: "모두 선택됨",
+    allSelectedExcept: "{count}개를 제외하고 모두 선택됨",
     clearSelection: "선택 해제",
     toggleActions: "행 작업 표시",
     showDetails: "{row} 세부 정보 표시",

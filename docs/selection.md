@@ -168,6 +168,8 @@ list of keys unless `selectVisibleOnly` is `false`.
 
 With an unknown total, an all-results selection keeps the buttons enabled and
 shows `allSelected` instead of a count, since its size cannot be computed.
+If rows are deselected, it shows `allSelectedExcept` ("All selected except {count}")
+with the number of exclusions, and returns to `allSelected` when they are selected again.
 Explicit selections still show their known count.
 
 ```js

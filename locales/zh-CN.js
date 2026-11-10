@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "选择全部 {total} 项",
     selectAllMatching: "选择所有匹配项",
     allSelected: "已全选",
+    allSelectedExcept: "已全选，排除 {count} 项",
     clearSelection: "清除选择",
     toggleActions: "显示行操作",
     showDetails: "显示 {row} 的详细信息",

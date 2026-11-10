@@ -44,10 +44,34 @@ test("the page-size select and its caret wrapper toggle together", async () => {
     const field = select.closest(".dg-select-field");
     expect(select.hidden).toBe(true);
     expect(field.hidden).toBe(true);
+    expect(inst.querySelector(".dg-meta").textContent).toBe("1–10 of 30");
 
     inst.setAttribute("show-page-size", "");
     expect(select.hidden).toBe(false);
     expect(field.hidden).toBe(false);
+    expect(inst.querySelector(".dg-meta").textContent).toBe("");
+    removeGrid(inst);
+});
+
+test("the results window stays visible when page size is hidden and restored", async () => {
+    const inst = await makeReadyGrid();
+    const meta = inst.querySelector(".dg-meta");
+    const field = inst.selectPerPage.closest(".dg-select-field");
+    const range = field.querySelector(".dg-page-range");
+    expect(field.hidden).toBe(false);
+    expect(meta.textContent).toBe("");
+    expect(range.textContent).toBe("1–10 of 30");
+
+    inst.setAttribute("show-page-size", "false");
+    expect(field.hidden).toBe(true);
+    expect(meta.textContent).toBe("1–10 of 30");
+
+    await inst.setQuery({ page: 2 });
+    expect(meta.textContent).toBe("11–20 of 30");
+    inst.setAttribute("show-page-size", "true");
+    expect(field.hidden).toBe(false);
+    expect(meta.textContent).toBe("");
+    expect(range.textContent).toBe("11–20 of 30");
     removeGrid(inst);
 });
 

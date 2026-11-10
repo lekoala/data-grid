@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "Seleccionar los {total}",
     selectAllMatching: "Seleccionar todos los resultados",
     allSelected: "Todo seleccionado",
+    allSelectedExcept: "Todo seleccionado excepto {count}",
     clearSelection: "Borrar selección",
     toggleActions: "Mostrar acciones de fila",
     showDetails: "Mostrar detalles de {row}",

@@ -373,9 +373,12 @@ class BulkActions extends BasePlugin {
 
         this.countEl.hidden = false;
         if (this.countVisible && this.countStatus) {
-            this.countVisible.textContent = count === null ? labels.allSelected : `${count}`;
+            const allLabel = selection.except.size
+                ? grid.formatLabel(labels.allSelectedExcept, { count: selection.except.size })
+                : labels.allSelected;
+            this.countVisible.textContent = count === null ? allLabel : `${count}`;
             this.countStatus.textContent =
-                count === null ? labels.allSelected : grid.formatLabel(labels.selectedCount, { count });
+                count === null ? allLabel : grid.formatLabel(labels.selectedCount, { count });
         }
         this.bar.setAttribute("aria-label", labels.selectionActions);
         if (this.clearButton) {

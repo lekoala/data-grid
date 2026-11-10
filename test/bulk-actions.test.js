@@ -139,6 +139,31 @@ test("an unknown total keeps the extension and an all selection actionable witho
     expect(visibleCount(inst)).toBe("All selected");
     expect(statusCount(inst)).toBe("All selected");
     expect(inst.querySelector('button[data-action="archive"]').disabled).toBe(false);
+
+    toggleFirst(inst);
+    expect(inst.getSelectionState().except.size).toBe(1);
+    expect(visibleCount(inst)).toBe("All selected except 1");
+    expect(statusCount(inst)).toBe("All selected except 1");
+    expect(inst.querySelector('button[data-action="archive"]').disabled).toBe(false);
+
+    inst.deselectRow(inst.rows[1]);
+    expect(visibleCount(inst)).toBe("All selected except 2");
+    expect(statusCount(inst)).toBe("All selected except 2");
+    const previous = DataGrid.getLabels();
+    try {
+        DataGrid.setLabels({ allSelectedExcept: "Tout sauf {count}" });
+        inst.updateLabels();
+        expect(visibleCount(inst)).toBe("Tout sauf 2");
+        expect(statusCount(inst)).toBe("Tout sauf 2");
+    } finally {
+        DataGrid.setLabels(previous);
+    }
+
+    inst.selectRow(inst.rows[1]);
+    toggleFirst(inst);
+    expect(inst.getSelectionState().except.size).toBe(0);
+    expect(visibleCount(inst)).toBe("All selected");
+    expect(statusCount(inst)).toBe("All selected");
     inst.remove();
 });
 

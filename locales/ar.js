@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "تحديد كل النتائج ({total})",
     selectAllMatching: "تحديد كل النتائج المطابقة",
     allSelected: "تم تحديد الكل",
+    allSelectedExcept: "تم تحديد الكل باستثناء {count}",
     clearSelection: "مسح التحديد",
     toggleActions: "إظهار إجراءات الصف",
     showDetails: "إظهار تفاصيل {row}",

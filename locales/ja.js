@@ -20,6 +20,7 @@ const labels = {
     selectAllResults: "{total} 件すべてを選択",
     selectAllMatching: "一致する項目をすべて選択",
     allSelected: "すべて選択済み",
+    allSelectedExcept: "{count} 件を除いてすべて選択済み",
     clearSelection: "選択を解除",
     toggleActions: "行のアクションを表示",
     showDetails: "{row} の詳細を表示",

@@ -4,7 +4,7 @@ All UI labels are plain strings and should normally be configured before grids
 are created. Labels are
 expressed as full phrases: `pageRange` uses `{from}`, `{to}` and `{total}`,
 `pageStatus` uses `{page}` and `{pages}`, `resultCount` and `selectedCount` use
-`{count}`, `selectAllResults` uses `{total}`.
+`{count}`, `allSelectedExcept` uses `{count}` for exclusions, and `selectAllResults` uses `{total}`.
 
 ## Visible and accessible UI
 
@@ -12,6 +12,7 @@ The footer shows the results window, `pageRange`, as the face of the page size
 select: what is shown, out of how many, and the control to change how many per
 page. Navigation stays symbolic: arrows and a page number input. The global
 search placeholder uses the translated `search` label followed by an ellipsis.
+When `showPageSize` is false, the results window stays visible as plain text in the footer.
 
 ```text
 [1–10 of 198 ⌄]                              |< <  [1]  > >|
@@ -32,6 +33,7 @@ Labels describe visible content and the accessibility layer (`aria-label`,
   and its clear button
 - `selectAllResults` (`{total}`), `selectAllMatching`, `allSelected` — visible
   text of the opt-in `selectMatching` prompt and of an all-results count
+- `allSelectedExcept` (`{count}`) — all-results selection with exclusions and an unknown total
 - `search` — accessible name and default search placeholder (with an ellipsis)
 - `gotoPage`, `gotoFirstPage`, ... — accessible names
 
@@ -105,7 +107,7 @@ Available labels: `itemsPerPage`, `gotoPage`, `gotoFirstPage`, `gotoPrevPage`,
 `gotoNextPage`, `gotoLastPage`, `pageRange`, `pageStatus`, `resultCount`,
 `loadMore`, `loadedCount`, `loadedCountUnknown`,
 `selectedCount`, `selectAll`, `selectRow`, `selectionActions`, `selectAllResults`,
-`selectAllMatching`, `allSelected`, `clearSelection`, `toggleActions`, `resizeColumn`,
+`selectAllMatching`, `allSelected`, `allSelectedExcept`, `clearSelection`, `toggleActions`, `resizeColumn`,
 `showDetails`, `hideDetails`, `showHiddenColumns`, `hideHiddenColumns`, `search`,
 `noData`, `noResults`, `loading`, `areYouSure`, `networkError`, `booleanTrue`, `booleanFalse`,
 `closeDialog`.
