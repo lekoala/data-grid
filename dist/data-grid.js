@@ -1117,9 +1117,9 @@ var DEFAULT_LABELS = {
   gotoPrevPage: "Go to previous page",
   gotoNextPage: "Go to next page",
   gotoLastPage: "Go to last page",
-  pageRange: "{from}–{to} / {total}",
+  pageRange: "{from}–{to} of {total}",
   pageStatus: "Page {page} of {pages}",
-  resultCount: "{count} items",
+  resultCount: "Total: {count}",
   loadMore: "Load more",
   loadedCount: "{count} of {total}",
   loadedCountUnknown: "{count}",
@@ -2344,6 +2344,7 @@ class DataGrid extends base_element_default {
     <div class="dg-footer-controls">
     <div class="dg-page-nav">
       <span class="dg-select-field">
+        <span class="dg-page-range"></span>
         <select class="dg-select-per-page"></select>
       </span>
     </div>
@@ -2465,17 +2466,16 @@ class DataGrid extends base_element_default {
       meta.textContent = this.#loadedCountText();
       return;
     }
+    meta.textContent = "";
+    const range = this.querySelector(".dg-page-range");
+    if (!range) {
+      return;
+    }
     const total = this.total ?? 0;
     const page = this.#query.page || 1;
-    let high = page * this.#query.pageSize;
-    let low = high - this.#query.pageSize + 1;
-    if (high > total) {
-      high = total;
-    }
-    if (!total) {
-      low = 0;
-    }
-    meta.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
+    const high = Math.min(page * this.#query.pageSize, total);
+    const low = total ? (page - 1) * this.#query.pageSize + 1 : 0;
+    range.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
   }
   updatePageStatus() {
     const pagination = this.querySelector(".dg-pagination");
@@ -5714,7 +5714,7 @@ class FixedHeight extends base_plugin_default {
       return;
     }
     spacerRow.hidden = true;
-    spacerRow.removeAttribute("height");
+    spacerRow.style.removeProperty("height");
     if (grid.total != null && grid.query.pageSize > grid.total) {
       return;
     }
@@ -5726,7 +5726,7 @@ class FixedHeight extends base_plugin_default {
     }
     const spacerHeight = this.missingPageHeight();
     if (spacerHeight > 0) {
-      spacerRow.setAttribute("height", String(Math.ceil(spacerHeight)));
+      spacerRow.style.setProperty("height", `${spacerHeight}px`);
       spacerRow.hidden = false;
     }
   }
@@ -6077,9 +6077,8 @@ class ResponsiveGrid extends base_plugin_default {
     if (!footer) {
       return;
     }
-    const realFooterWidth = [...footer.querySelectorAll(":scope > div")].reduce((result, div) => {
-      return result + div.offsetWidth;
-    }, 0);
+    const items = footer.querySelectorAll(":scope > div:not(.dg-footer-controls), :scope > .dg-footer-controls > *");
+    const realFooterWidth = [...items].reduce((result, item) => result + item.offsetWidth, 0);
     const availableFooterWidth = footer.offsetWidth - realFooterWidth;
     if (realFooterWidth > size) {
       footer.classList.add("dg-footer-compact");

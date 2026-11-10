@@ -39,6 +39,15 @@ not documented.
 
 ### Changed
 
+- **Visual default change:** the footer groups the results window and the
+  page size into one control, `[1–10 of 198 ⌄]`: `pageRange` (now worded with
+  "of" in every locale) is the face of the native page size select, laid
+  transparent over it. The pager keeps its buttons and page input; on narrow
+  grids the window and the navigation wrap instead of overflowing.
+- `resultCount` defaults to `Total: {count}` in every locale; it is the result
+  count announced after a load.
+- The compact responsive footer keeps the page input (`< [1] >`) and drops the
+  first/last buttons, instead of hiding the page input.
 - **Visual default change:** `bulkActions` now render the floating bar. Set
   `bulkActionsDisplay: "inline"` to keep the permanent topbar bar.
 - Neutral sort indicators are quieter, with full visibility on hover, keyboard
@@ -46,6 +55,10 @@ not documented.
 
 ### Fixed
 
+- The last page keeps the exact height of a full page: the spacer row is no
+  longer rounded up, which grew the table by up to 1px when rows measure
+  fractional pixels (zoom, display scaling, fonts).
+- Pager arrows point along the reading direction in RTL grids.
 - `autohidePager` hides the footer again: its display rule no longer overrides
   the `hidden` attribute.
 - Responsive grids reprocess their width after reconnecting, so cancelled resize

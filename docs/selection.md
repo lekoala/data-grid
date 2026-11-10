@@ -137,8 +137,8 @@ while a selection exists:
 - The bar is hidden while nothing is selected and takes no room in the layout.
 - It follows the page (or any scrolling ancestor, or the grid's own scroll
   viewport) and never leaves the grid's bounds.
-- At the end of the rows it rests on the footer, between the range and the
-  pager. When the footer has no room for it (narrow grids) or no footer is
+- At the end of the rows it rests on the footer, between the results window
+  and the pager. When the footer has no room for it (narrow grids) or no footer is
   shown (`autohidePager`), it rests below the table instead.
 - The count shows a pictogram and the plain number; it announces
   `selectedCount` ("3 selected") through a live region.

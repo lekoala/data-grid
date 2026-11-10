@@ -175,3 +175,29 @@ test("a custom data source returning a numeric string total paginates normally",
     expect(next.disabled).toBe(false);
     removeGrid(inst);
 });
+
+test("the footer shows the results window on the page size control and a plain page input", async () => {
+    const inst = await makeReadyGrid();
+    const meta = inst.querySelector(".dg-meta");
+    const range = inst.querySelector(".dg-page-nav .dg-page-range");
+    const pagination = inst.querySelector(".dg-pagination");
+    // The range is the face of the page size select; the meta line stays empty.
+    expect(range.textContent).toBe("1–10 of 30");
+    expect(range.nextElementSibling).toBe(inst.selectPerPage);
+    expect(meta.textContent).toBe("");
+    // The page input sits between previous and next.
+    expect(inst.inputPage.parentElement).toBe(pagination);
+    expect(inst.inputPage.previousElementSibling.matches(".dg-btn-prev")).toBe(true);
+    expect(inst.inputPage.nextElementSibling.matches(".dg-btn-next")).toBe(true);
+    expect(pagination.getAttribute("aria-label")).toBe("Page 1 of 3");
+
+    await inst.setQuery({ page: 2 });
+    expect(pagination.getAttribute("aria-label")).toBe("Page 2 of 3");
+    expect(range.textContent).toBe("11–20 of 30");
+
+    await inst.setQuery({ search: "row1" });
+    // row1, row10..row19
+    expect(range.textContent).toBe("1–10 of 11");
+    expect(pagination.getAttribute("aria-label")).toBe("Page 1 of 2");
+    removeGrid(inst);
+});

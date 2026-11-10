@@ -37,8 +37,8 @@ test("options are registered", () => {
 
 function resetLabels() {
     DataGrid.setLabels({
-        pageRange: "{from}–{to} / {total}",
-        resultCount: "{count} items",
+        pageRange: "{from}–{to} of {total}",
+        resultCount: "Total: {count}",
         selectedCount: "{count} selected",
         noData: "No data",
     });
@@ -47,24 +47,18 @@ function resetLabels() {
 test("it can set labels", async () => {
     DataGrid.setLabels({
         pageRange: "{from} - {to} of {total} rows",
-        resultCount: "{count} rows",
     });
 
     const inst = makeInst();
-    document.body.appendChild(inst);
-
-    await new Promise((resolve) => {
-        setTimeout(() => {
-            try {
-                expect(inst.textContent.includes("rows")).toBeTruthy();
-                expect(inst.textContent.includes("items")).toBeFalsy();
-            } finally {
-                resolve();
-            }
-        }, 50);
-    });
-    document.body.removeChild(inst);
-    resetLabels();
+    const connected = new Promise((resolve) => inst.addEventListener("connected", resolve, { once: true }));
+    try {
+        document.body.appendChild(inst);
+        await connected;
+        expect(inst.querySelector(".dg-page-range").textContent).toBe("0 - 0 of 0 rows");
+    } finally {
+        document.body.removeChild(inst);
+        resetLabels();
+    }
 });
 
 test("connected instances update labels only when explicitly requested", async () => {

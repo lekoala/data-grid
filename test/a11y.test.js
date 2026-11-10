@@ -49,7 +49,7 @@ test("a persistent role=status live region announces loading / results / empty /
 
     resolveLoad();
     await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(status().textContent).toBe("1 items");
+    expect(status().textContent).toBe("Total: 1");
     document.body.removeChild(inst);
 });
 

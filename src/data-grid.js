@@ -319,7 +319,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "" };
  * @property {String} gotoPrevPage
  * @property {String} gotoNextPage
  * @property {String} gotoLastPage
- * @property {String} pageRange
+ * @property {String} pageRange - visible results window, the face of the page size control, with {from}, {to} and {total}
  * @property {String} pageStatus
  * @property {String} resultCount
  * @property {String} loadMore - progressive pager button ("more" mode)
@@ -983,6 +983,7 @@ class DataGrid extends BaseElement {
     <div class="dg-footer-controls">
     <div class="dg-page-nav">
       <span class="dg-select-field">
+        <span class="dg-page-range"></span>
         <select class="dg-select-per-page"></select>
       </span>
     </div>
@@ -1160,24 +1161,24 @@ class DataGrid extends BaseElement {
             return;
         }
         // Classic pagination always carries a finite total (see applyResult);
-        // the fallback only satisfies the type checker.
+        // the fallback only satisfies the type checker. The range is the face
+        // of the page size control: the window over the results.
+        meta.textContent = "";
+        const range = this.querySelector(".dg-page-range");
+        if (!range) {
+            return;
+        }
         const total = this.total ?? 0;
         const page = this.#query.page || 1;
-        let high = page * this.#query.pageSize;
-        let low = high - this.#query.pageSize + 1;
-        if (high > total) {
-            high = total;
-        }
-        if (!total) {
-            low = 0;
-        }
-        meta.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
+        const high = Math.min(page * this.#query.pageSize, total);
+        const low = total ? (page - 1) * this.#query.pageSize + 1 : 0;
+        range.textContent = this.formatLabel(this.labels.pageRange, { from: low, to: high, total });
     }
 
     /**
      * Reflect the current page and page count on the pagination group label.
-     * The page context stays accessible-only: the visible footer already shows
-     * the range (`.dg-meta`) and the page control itself.
+     * The page context stays accessible-only: the visible footer shows the
+     * results window and the page input itself.
      */
     updatePageStatus() {
         const pagination = this.querySelector(".dg-pagination");

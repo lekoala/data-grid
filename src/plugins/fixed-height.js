@@ -53,7 +53,7 @@ class FixedHeight extends BasePlugin {
             return;
         }
         spacerRow.hidden = true;
-        spacerRow.removeAttribute("height");
+        spacerRow.style.removeProperty("height");
 
         // A single-page result follows its natural content height. An unknown
         // total (pager "more" without COUNT(*)) never takes this shortcut.
@@ -67,9 +67,11 @@ class FixedHeight extends BasePlugin {
         if (!grid.options.autoheight) {
             return;
         }
+        // Exact, not rounded: rows can measure fractional pixels (zoom, display
+        // scaling, fonts), and rounding up would grow the last page by up to 1px.
         const spacerHeight = this.missingPageHeight();
         if (spacerHeight > 0) {
-            spacerRow.setAttribute("height", String(Math.ceil(spacerHeight)));
+            spacerRow.style.setProperty("height", `${spacerHeight}px`);
             spacerRow.hidden = false;
         }
     }

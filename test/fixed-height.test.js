@@ -46,6 +46,23 @@ test("a one-row last page receives only its missing page height", async () => {
     const spacer = grid.querySelector("tbody tr.dg-spacer-row");
     expect(grid.querySelectorAll("tbody tr.dg-data-row:not([hidden])")).toHaveLength(1);
     expect(spacer.hidden).toBe(false);
-    expect(spacer.getAttribute("height")).toBe("180");
+    expect(spacer.style.height).toBe("180px");
+    document.body.removeChild(grid);
+});
+
+test("a fractional row height is filled exactly, never rounded up", async () => {
+    const rows = Array.from({ length: 11 }, (_, index) => ({ name: `Row ${index + 1}` }));
+    const grid = await makeReadyGrid(rows);
+
+    await grid.setQuery({ page: 2 });
+
+    // Zoom or display scaling can measure rows in fractional pixels.
+    const dataRow = grid.querySelector("tbody tr.dg-data-row");
+    dataRow.getBoundingClientRect = () => ({ height: 40.984375 });
+    grid.getPlugin("FixedHeight").updateSpacerRow();
+
+    const spacer = grid.querySelector("tbody tr.dg-spacer-row");
+    expect(spacer.style.height).toBe(`${9 * 40.984375}px`);
+    expect(spacer.hasAttribute("height")).toBe(false);
     document.body.removeChild(grid);
 });

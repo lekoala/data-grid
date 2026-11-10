@@ -1,3 +1,21 @@
+/* RTL pager: arrows point along the reading direction. */
+data-grid[dir="rtl"] .dg-pagination > button > :is(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
+}
+
+data-grid[dir="rtl"] .dg-pagination > button.dg-rotate > :is(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
+}
+
+data-grid[dir="rtl"] .dg-footer .dg-page-nav {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+data-grid[dir="rtl"] .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select) {
+  padding: 0 0.5em 0 calc(12px + 6px + 0.5em);
+}
+
 data-grid[dir="rtl"] .dg-footer .dg-meta {
   margin-left: auto;
   margin-right: 0;

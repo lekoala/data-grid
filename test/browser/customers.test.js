@@ -377,3 +377,45 @@ test.skipIf(IS_WINDOWS)(
     },
     TIMEOUT,
 );
+
+test.skipIf(!IS_CHROME_BACKEND)(
+    "a narrow responsive footer turns compact and keeps the page position between previous and next",
+    async () => {
+        await using v = view();
+        await open(v);
+        const state = `(() => {
+            const footer = ${GRID}.footerEl;
+            const shown = (selector) => footer.querySelector(selector).getClientRects().length > 0;
+            return JSON.stringify({
+                compact: footer.classList.contains('dg-footer-compact'),
+                first: shown('.dg-btn-first'),
+                last: shown('.dg-btn-last'),
+                prev: shown('.dg-btn-prev'),
+                next: shown('.dg-btn-next'),
+                position: shown('.dg-input-page'),
+            });
+        })()`;
+        expect(JSON.parse(await read(v, state)).compact).toBe(false);
+        // A longer total guarantees the footer cannot fit on one narrow line.
+        await v.evaluate(`(() => {
+            ${GRID}.constructor.setLabels({ pageRange: '{from}–{to} of {total} matching customer records' });
+            ${GRID}.updateLabels();
+        })()`);
+        await v.cdp("Emulation.setDeviceMetricsOverride", {
+            width: 300,
+            height: 844,
+            deviceScaleFactor: 1,
+            mobile: true,
+        });
+        await waitFor(v, `${GRID}.footerEl.classList.contains('dg-footer-compact')`);
+        expect(JSON.parse(await read(v, state))).toEqual({
+            compact: true,
+            first: false,
+            last: false,
+            prev: true,
+            next: true,
+            position: true,
+        });
+    },
+    TIMEOUT,
+);

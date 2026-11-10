@@ -9,7 +9,7 @@ const labels = {
     gotoLastPage: "अंतिम पृष्ठ",
     pageRange: "{from}–{to} / {total}",
     pageStatus: "पृष्ठ {page} / {pages}",
-    resultCount: "आइटम: {count}",
+    resultCount: "कुल: {count}",
     loadMore: "और लोड करें",
     loadedCount: "{count} / {total}",
     loadedCountUnknown: "{count}",

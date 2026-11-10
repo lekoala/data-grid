@@ -2,17 +2,19 @@
 
 All UI labels are plain strings and should normally be configured before grids
 are created. Labels are
-expressed as full phrases: `pageRange` uses `{from}`, `{to}` and `{total}`
-placeholders, `pageStatus` uses `{page}` and `{pages}`, `resultCount` and
-`selectedCount` use `{count}`, `selectAllResults` uses `{total}`.
+expressed as full phrases: `pageRange` uses `{from}`, `{to}` and `{total}`,
+`pageStatus` uses `{page}` and `{pages}`, `resultCount` and `selectedCount` use
+`{count}`, `selectAllResults` uses `{total}`.
 
 ## Visible and accessible UI
 
-Pagination and selection counts use numbers and structure by default. The global
+The footer shows the results window, `pageRange`, as the face of the page size
+select: what is shown, out of how many, and the control to change how many per
+page. Navigation stays symbolic: arrows and a page number input. The global
 search placeholder uses the translated `search` label followed by an ellipsis.
 
 ```text
-1–10 / 198     [10⌄]   ‹ ‹ [1] › ›
+[1–10 of 198 ⌄]                              |< <  [1]  > >|
 ```
 
 ```text
@@ -22,8 +24,9 @@ search placeholder uses the translated `search` label followed by an ellipsis.
 Labels describe visible content and the accessibility layer (`aria-label`,
 `title` and live regions):
 
-- `pageRange` — visible range, defaults to the symbolic `{from}–{to} / {total}`
-- `pageStatus` — accessible page context (`Page 1 of 20`), never visible
+- `pageRange` — visible results window on the page size select (`1–10 of 198`)
+- `resultCount` — result count announced after a load (`Total: 198`)
+- `pageStatus` — accessible page context (`Page 1 of 20`) of the navigation group
 - `selectedCount` — the selected count announced by the live badge
 - `selectionActions`, `clearSelection` — accessible names of the floating bar
   and its clear button
@@ -35,12 +38,11 @@ Labels describe visible content and the accessibility layer (`aria-label`,
 `setLabels()` changes the shared labels used by new grids. It does not track or
 refresh connected instances.
 
-An explicit override can still bring the wording back on screen:
+An override can name what the grid holds:
 
 ```js
 DataGrid.setLabels({
-    pageRange: "{from} - {to} of {total} rows",
-    resultCount: "{count} rows",
+    pageRange: "{from}–{to} of {total} customers",
 });
 ```
 

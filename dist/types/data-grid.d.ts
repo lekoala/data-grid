@@ -544,6 +544,9 @@ export type Labels = {
     gotoPrevPage: string;
     gotoNextPage: string;
     gotoLastPage: string;
+    /**
+     * - visible results window, the face of the page size control, with {from}, {to} and {total}
+     */
     pageRange: string;
     pageStatus: string;
     resultCount: string;
@@ -760,8 +763,8 @@ declare class DataGrid extends BaseElement {
     updateMetaLabel(): void;
     /**
      * Reflect the current page and page count on the pagination group label.
-     * The page context stays accessible-only: the visible footer already shows
-     * the range (`.dg-meta`) and the page control itself.
+     * The page context stays accessible-only: the visible footer shows the
+     * results window and the page input itself.
      */
     updatePageStatus(): void;
     /**

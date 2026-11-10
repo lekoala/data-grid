@@ -661,8 +661,10 @@ data-grid .dg-skip-icon::after {
   left: 0.3125em;
 }
 
-data-grid .dg-rotate {
-  transform: rotate(-180deg);
+/* Backward pager arrows reuse the forward pictogram, turned around. Only the
+   pictogram turns, so the button keeps its real corners and focus ring. */
+data-grid .dg-rotate > :is(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
 }
 
 data-grid button:where(.dg-skin) {
@@ -1150,12 +1152,64 @@ data-grid .dg-footer .dg-input-page.dg-skin {
   block-size: 2em;
 }
 
-/* Right-hand block: page-size selector + navigation group, geometrically
-   centered as peers. */
-data-grid .dg-footer .dg-footer-controls {
-  display: flex;
+/* Results window, "1–10 of 36 ▾": the range is the face of the page size
+   control. The native select is laid transparent over it, so the menu, the
+   mobile picker and the keyboard stay native; the wrapper shows hover and the
+   focus ring. A host-styled select stays visible, with the range beside it. */
+data-grid .dg-footer .dg-page-nav {
+  order: -1;
+  margin-right: auto;
+}
+
+data-grid .dg-footer .dg-page-range {
+  color: var(--dg-color);
+  font-size: 0.875em;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field.dg-host-select {
   align-items: center;
-  gap: 1em;
+  gap: 0.5em;
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select) {
+  box-sizing: border-box;
+  align-items: center;
+  block-size: 2em;
+  padding: 0 calc(12px + 6px + 0.5em) 0 0.5em;
+  border-radius: var(--dg-radius);
+  cursor: pointer;
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select):hover {
+  background-color: var(--dg-row-hover-bg);
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select):focus-within {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select) > .dg-select-per-page.dg-skin {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+data-grid .dg-footer .dg-meta:empty {
+  display: none;
+}
+
+/* The page-size selector and the navigation group wrap as direct footer
+   items: on a narrow grid the total and the selector share the first line,
+   the navigation takes the second. */
+data-grid .dg-footer .dg-footer-controls {
+  display: contents;
 }
 
 data-grid .dg-footer .dg-pagination {
@@ -1206,7 +1260,8 @@ data-grid .dg-footer.dg-footer-compact .dg-meta {
   display: none;
 }
 
-data-grid .dg-footer.dg-footer-compact .dg-input-page {
+/* Compact: the position stays, first and last go. */
+data-grid .dg-footer.dg-footer-compact .dg-pagination > button:is(.dg-btn-first, .dg-btn-last) {
   display: none;
 }
 

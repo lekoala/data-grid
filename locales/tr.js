@@ -9,7 +9,7 @@ const labels = {
     gotoLastPage: "Son sayfa",
     pageRange: "{from}–{to} / {total}",
     pageStatus: "Sayfa {page} / {pages}",
-    resultCount: "Öğeler: {count}",
+    resultCount: "Toplam: {count}",
     loadMore: "Daha fazla yükle",
     loadedCount: "{count} / {total}",
     loadedCountUnknown: "{count}",

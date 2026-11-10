@@ -425,10 +425,13 @@ class ResponsiveGrid extends BasePlugin {
         if (!footer) {
             return;
         }
-        const realFooterWidth = /** @type {HTMLElement[]} */ ([...footer.querySelectorAll(":scope > div")]).reduce(
-            (result, div) => {
-                return result + div.offsetWidth;
-            },
+        // The controls wrapper is display: contents, so measure its children,
+        // which are the actual footer items.
+        const items = footer.querySelectorAll(
+            ":scope > div:not(.dg-footer-controls), :scope > .dg-footer-controls > *",
+        );
+        const realFooterWidth = /** @type {HTMLElement[]} */ ([...items]).reduce(
+            (result, item) => result + item.offsetWidth,
             0,
         );
         const availableFooterWidth = footer.offsetWidth - realFooterWidth;

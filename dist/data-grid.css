@@ -582,8 +582,16 @@ data-grid .dg-skip-icon:after {
   left: .3125em;
 }
 
-data-grid .dg-rotate {
-  transform: rotate(-180deg);
+data-grid .dg-rotate > :-webkit-any(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
+}
+
+data-grid .dg-rotate > :-moz-any(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
+}
+
+data-grid .dg-rotate > :is(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
 }
 
 data-grid button:where(.dg-skin) {
@@ -1099,10 +1107,57 @@ data-grid .dg-footer .dg-select-per-page.dg-skin, data-grid .dg-footer .dg-input
   block-size: 2em;
 }
 
-data-grid .dg-footer .dg-footer-controls {
-  display: flex;
+data-grid .dg-footer .dg-page-nav {
+  order: -1;
+  margin-right: auto;
+}
+
+data-grid .dg-footer .dg-page-range {
+  color: var(--dg-color);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  font-size: .875em;
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field.dg-host-select {
   align-items:  center;
-  gap: 1em;
+  gap: .5em;
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select) {
+  box-sizing: border-box;
+  border-radius: var(--dg-radius);
+  cursor: pointer;
+  align-items:  center;
+  block-size: 2em;
+  padding: 0 calc(18px + .5em) 0 .5em;
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select):hover {
+  background-color: var(--dg-row-hover-bg);
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select):focus-within {
+  outline: var(--dg-focus-width) solid var(--dg-focus-color);
+  outline-offset: calc(var(--dg-focus-width) * -1);
+}
+
+data-grid .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select) > .dg-select-per-page.dg-skin {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+data-grid .dg-footer .dg-meta:empty {
+  display: none;
+}
+
+data-grid .dg-footer .dg-footer-controls {
+  display: contents;
 }
 
 data-grid .dg-footer .dg-pagination {
@@ -1146,7 +1201,23 @@ data-grid .dg-footer .dg-meta {
   font-size: .875em;
 }
 
-data-grid .dg-footer.dg-footer-compact .dg-meta, data-grid .dg-footer.dg-footer-compact .dg-input-page, data-grid.dg-pager-more .dg-footer .dg-pagination, data-grid.dg-pager-more .dg-footer .dg-page-nav {
+data-grid .dg-footer.dg-footer-compact .dg-meta {
+  display: none;
+}
+
+data-grid .dg-footer.dg-footer-compact .dg-pagination > button:-webkit-any(.dg-btn-first, .dg-btn-last) {
+  display: none;
+}
+
+data-grid .dg-footer.dg-footer-compact .dg-pagination > button:-moz-any(.dg-btn-first, .dg-btn-last) {
+  display: none;
+}
+
+data-grid .dg-footer.dg-footer-compact .dg-pagination > button:is(.dg-btn-first, .dg-btn-last) {
+  display: none;
+}
+
+data-grid.dg-pager-more .dg-footer .dg-pagination, data-grid.dg-pager-more .dg-footer .dg-page-nav {
   display: none;
 }
 
@@ -1305,6 +1376,39 @@ data-grid .dg-pagination > button {
 }
 
 /* css/_rtl.css */
+data-grid[dir="rtl"] .dg-pagination > button > :-webkit-any(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
+}
+
+data-grid[dir="rtl"] .dg-pagination > button > :-moz-any(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
+}
+
+data-grid[dir="rtl"] .dg-pagination > button > :is(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1)) rotate(180deg);
+}
+
+data-grid[dir="rtl"] .dg-pagination > button.dg-rotate > :-webkit-any(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
+}
+
+data-grid[dir="rtl"] .dg-pagination > button.dg-rotate > :-moz-any(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
+}
+
+data-grid[dir="rtl"] .dg-pagination > button.dg-rotate > :is(.dg-nav-icon, .dg-skip-icon) {
+  transform: translate(-50%, -50%) scale(var(--dg-icon-scale, 1));
+}
+
+data-grid[dir="rtl"] .dg-footer .dg-page-nav {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+data-grid[dir="rtl"] .dg-footer .dg-page-nav > .dg-select-field:not(.dg-host-select) {
+  padding: 0 .5em 0 calc(18px + .5em);
+}
+
 data-grid[dir="rtl"] .dg-footer .dg-meta {
   text-align: right;
   margin-left: auto;

@@ -9,7 +9,7 @@ const labels = {
     gotoLastPage: "마지막 페이지",
     pageRange: "{from}–{to} / {total}",
     pageStatus: "{page} / {pages} 페이지",
-    resultCount: "항목: {count}",
+    resultCount: "합계: {count}",
     loadMore: "더 불러오기",
     loadedCount: "{count} / {total}개",
     loadedCountUnknown: "{count}개",
