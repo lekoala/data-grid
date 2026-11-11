@@ -55,6 +55,8 @@ not documented.
 
 ### Fixed
 
+- The compact footer keeps the results window visible when `showPageSize` is
+  false, and preserves the loaded count in `pager: "more"` mode.
 - The last page keeps the exact height of a full page: the spacer row is no
   longer rounded up, which grew the table by up to 1px when rows measure
   fractional pixels (zoom, display scaling, fonts).

@@ -1201,10 +1201,6 @@ data-grid .dg-footer .dg-meta {
   font-size: .875em;
 }
 
-data-grid .dg-footer.dg-footer-compact .dg-meta {
-  display: none;
-}
-
 data-grid .dg-footer.dg-footer-compact .dg-pagination > button:-webkit-any(.dg-btn-first, .dg-btn-last) {
   display: none;
 }

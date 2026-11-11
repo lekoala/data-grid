@@ -1256,10 +1256,6 @@ data-grid .dg-footer .dg-meta {
   white-space: nowrap;
 }
 
-data-grid .dg-footer.dg-footer-compact .dg-meta {
-  display: none;
-}
-
 /* Compact: the position stays, first and last go. */
 data-grid .dg-footer.dg-footer-compact .dg-pagination > button:is(.dg-btn-first, .dg-btn-last) {
   display: none;
