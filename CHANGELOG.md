@@ -7,6 +7,8 @@ not documented.
 
 ## Unreleased
 
+## [3.10.0] - 2026-11-11
+
 ### Added
 
 - Column `summary: "sum" | "avg"` displays server-provided `meta.aggregates`
