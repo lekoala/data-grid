@@ -689,7 +689,9 @@ filter/sort helpers as the client.
 ## Translations
 
 All UI labels are plain strings, configurable through `setLabels()`,
-`loadLabels()` or the shipped `locales/*` modules. See
+`loadLabels()` or the shipped `locales/*` modules. For one grid, place a
+`<script type="application/json" data-labels>` with partial label overrides directly inside
+`<data-grid>`. It is read once on initial connection; missing keys use shared labels. See
 [docs/translations.md](docs/translations.md).
 
 ## Browser Support

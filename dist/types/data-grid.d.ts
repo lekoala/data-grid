@@ -733,6 +733,7 @@ declare class DataGrid extends BaseElement {
     static getDefaultControlClasses(): ControlClasses;
     static template(): string;
     /**
+     * UI labels, with initial child script[data-labels] overrides over shared labels.
      * @public
      * @returns {Labels}
      */

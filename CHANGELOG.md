@@ -7,6 +7,15 @@ not documented.
 
 ## Unreleased
 
+### Added
+
+- Initial per-grid label overrides through a direct child
+  `<script type="application/json" data-labels>`, with shared-label fallback and validated string values.
+
+### Fixed
+
+- `updateLabels()` can be called before the grid's first connection.
+
 ## [3.10.0] - 2026-11-11
 
 ### Added

@@ -647,6 +647,9 @@ function normalizeSelectionOptions(options) {
 /**
  */
 class DataGrid extends BaseElement {
+    /** Undefined until the initial declarative labels have been read.
+     * @type {Partial<Labels>|null|undefined} */
+    #instanceLabels;
     /** @type {Record<string, any>} */
     #optionDefaults;
     /** @type {String} */
@@ -1013,11 +1016,37 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * UI labels, with initial child script[data-labels] overrides over shared labels.
      * @public
      * @returns {Labels}
      */
     get labels() {
-        return labels;
+        return this.#instanceLabels ? { ...labels, ...this.#instanceLabels } : labels;
+    }
+
+    /** Read the initial declaration once, including when it is absent or invalid. */
+    #readInstanceLabels() {
+        if (this.#instanceLabels !== undefined) {
+            return;
+        }
+        this.#instanceLabels = null;
+        const script = this.querySelector(':scope > script[type="application/json"][data-labels]');
+        if (!script) {
+            return;
+        }
+        try {
+            const value = JSON.parse(script.textContent || "");
+            if (!value || typeof value !== "object" || Array.isArray(value)) {
+                throw new Error("Expected a labels object");
+            }
+            const entries = Object.entries(value).filter(([key]) => Object.hasOwn(labels, key));
+            if (entries.some(([, text]) => typeof text !== "string")) {
+                console.warn("data-grid: data-labels values must be strings; invalid values ignored");
+            }
+            this.#instanceLabels = Object.fromEntries(entries.filter(([, text]) => typeof text === "string"));
+        } catch {
+            console.warn("data-grid: data-labels must contain a JSON object; using shared labels");
+        }
     }
 
     /**
@@ -1118,7 +1147,9 @@ class DataGrid extends BaseElement {
             button.setAttribute("aria-label", label);
             button.setAttribute("title", label);
         }
-        this.#setNoData(this.tbody);
+        if (this.tbody) {
+            this.#setNoData(this.tbody);
+        }
         this.updateMetaLabel();
         this.updatePageStatus();
         this.#updateMoreButton();
@@ -2457,6 +2488,7 @@ class DataGrid extends BaseElement {
     }
 
     async _connected() {
+        this.#readInstanceLabels();
         this.#adoptDeclarativeTable();
         this.#collectCellTemplates();
         this.table = this.querySelector("table");

@@ -190,7 +190,8 @@
             },
             {
               "kind": "getter",
-              "name": "labels"
+              "name": "labels",
+              "description": "UI labels, with initial child script[data-labels] overrides over shared labels."
             },
             {
               "kind": "method",

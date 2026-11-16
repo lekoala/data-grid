@@ -48,6 +48,35 @@ DataGrid.setLabels({
 });
 ```
 
+## Labels for one grid
+
+A direct child JSON script overrides shared labels for one grid, without application JavaScript:
+
+```html
+<data-grid searchable>
+    <script type="application/json" data-labels>
+        {
+            "search": "Find a customer",
+            "noData": "No customers",
+            "pageRange": "{from}–{to} of {total} customers"
+        }
+    </script>
+</data-grid>
+```
+
+The declaration is read once during initial connection. Editing or adding the script later,
+including after reconnection, does not reload it. Missing keys use the current shared labels;
+after `setLabels()`, call `grid.updateLabels()` to refresh the UI while preserving local overrides.
+
+The JSON must be an object. Only known label keys with string values are retained, including
+empty strings. Invalid JSON or a non-object falls back to shared labels with a console warning;
+invalid values are ignored with a warning. Unknown keys are ignored.
+
+When generating this script on the server, use JSON encoding safe for an HTML script element.
+Escape `<` as `\u003C` so a label containing `</script>` cannot terminate the element.
+In PHP/Twig, use the `JSON_HEX_TAG`, `JSON_HEX_AMP`, `JSON_HEX_APOS` and `JSON_HEX_QUOT`
+flags with `json_encode`, and apply `raw` only to that encoded output.
+
 ## Placeholders are not labels
 
 The default `searchPlaceholder: null` resolves to the current `search` label plus
