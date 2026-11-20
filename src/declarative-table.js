@@ -106,6 +106,10 @@ export function parseDeclarativeTable(table) {
         if (th.dataset.filterPlaceholder !== undefined) {
             column.filterPlaceholder = th.dataset.filterPlaceholder;
         }
+        // The leading option always clears the filter, so markup names only its label.
+        if (th.dataset.firstFilterOption !== undefined) {
+            column.firstFilterOption = { value: "", text: th.dataset.firstFilterOption };
+        }
         if (th.dataset.responsive !== undefined) {
             const responsive = Number(th.dataset.responsive);
             if (Number.isFinite(responsive)) {

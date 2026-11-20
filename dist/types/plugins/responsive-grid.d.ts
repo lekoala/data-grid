@@ -7,7 +7,7 @@ export type ResponsiveLayout = {
     items: ResponsiveItem[];
     visible: ResponsiveItem[];
     preferredWidth: (th: HTMLElement) => number;
-    requiredWidth: (visibleItems: ResponsiveItem[]) => number;
+    requiredWidth: (visibleItems: ResponsiveItem[], withToggle?: boolean) => number;
     isColumnHidden: (column: import("../data-grid.js").Column | null) => boolean;
 };
 /**

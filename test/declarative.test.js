@@ -212,6 +212,32 @@ test("data-filter-placeholder becomes the text filter placeholder", async () => 
     removeGrid(inst);
 });
 
+test("data-first-filter-option labels the empty select option", async () => {
+    const inst = await makeDeclarativeGrid(
+        `
+<table>
+    <thead><tr>
+        <th data-field="name">Name</th>
+        <th data-field="stage" data-filter="select" data-first-filter-option="All stages">Stage</th>
+    </tr></thead>
+    <tbody>
+        <tr data-row-key="1"><td>Atlas</td><td>Design</td></tr>
+        <tr data-row-key="2"><td>Ridge</td><td>Delivered</td></tr>
+    </tbody>
+</table>
+`,
+        { filterable: true },
+    );
+
+    expect(inst.options.columns[1].firstFilterOption).toEqual({ value: "", text: "All stages" });
+    const select = inst.querySelector('thead tr.dg-head-filters select[data-name="stage"]');
+    const values = Array.from(select.options, (option) => option.value);
+    expect(values.filter((value) => value === "")).toHaveLength(1);
+    expect(select.options[0].value).toBe("");
+    expect(select.options[0].textContent).toBe("All stages");
+    removeGrid(inst);
+});
+
 test("data-wrap configures wrapping for an individual column", async () => {
     const inst = await makeDeclarativeGrid(
         `

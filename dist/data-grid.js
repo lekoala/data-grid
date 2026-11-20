@@ -728,6 +728,9 @@ function parseDeclarativeTable(table) {
     if (th.dataset.filterPlaceholder !== undefined) {
       column.filterPlaceholder = th.dataset.filterPlaceholder;
     }
+    if (th.dataset.firstFilterOption !== undefined) {
+      column.firstFilterOption = { value: "", text: th.dataset.firstFilterOption };
+    }
     if (th.dataset.responsive !== undefined) {
       const responsive = Number(th.dataset.responsive);
       if (Number.isFinite(responsive)) {
@@ -6009,7 +6012,7 @@ class ResponsiveGrid extends base_plugin_default {
       return null;
     }
     const size = width ?? (this.#lastEntry ? this.#entryWidth(this.#lastEntry) : null);
-    if (size === null) {
+    if (size === null || size === 0) {
       return null;
     }
     if (size === this.#lastProcessedWidth) {
@@ -6047,9 +6050,9 @@ class ResponsiveGrid extends base_plugin_default {
     }).reduce((result, th) => {
       return result + preferredWidth(th);
     }, 0);
-    const requiredWidth = (visibleItems) => {
+    const requiredWidth = (visibleItems, withToggle = items.some(({ column }) => column?.responsiveHidden)) => {
       let total = fixedWidth;
-      if (grid.options.responsiveToggle && !this.#sharesDisclosure() && items.some(({ column }) => column?.responsiveHidden)) {
+      if (withToggle && grid.options.responsiveToggle && !this.#sharesDisclosure()) {
         total += RESPONSIVE_TOGGLE_WIDTH;
       }
       for (const { th } of visibleItems) {
@@ -6087,12 +6090,12 @@ class ResponsiveGrid extends base_plugin_default {
       }
     } else {
       const restorable = items.filter(({ column }) => column?.responsiveHidden).reverse();
-      for (const { th, column } of restorable) {
+      for (const [index, { th, column }] of restorable.entries()) {
         if (!column?.field) {
           continue;
         }
-        const width = preferredWidth(th);
-        if (requiredWidth(visible) + width > size - RESTORE_HYSTERESIS) {
+        const toggleStays = index < restorable.length - 1;
+        if (requiredWidth([...visible, { th, column }], toggleStays) > size - RESTORE_HYSTERESIS) {
           break;
         }
         grid.setColProp(column.field, "responsiveHidden", false);

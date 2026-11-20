@@ -56,6 +56,36 @@ test("responsive restores columns when space comes back", async () => {
     document.body.removeChild(inst);
 });
 
+test("a hidden grid (zero width) keeps its responsive state", async () => {
+    // A closed dialog or an inactive tab reports a zero inline size: it says
+    // nothing about the room the grid will have once shown again.
+    const inst = await makeReadyGrid({ columns: COLS });
+    forceResize(inst, 1000);
+    forceResize(inst, 0);
+    expect(hiddenFields(inst)).toEqual([]);
+    forceResize(inst, 300);
+    expect(hiddenFields(inst)).toEqual(["c", "d"]);
+    forceResize(inst, 0);
+    expect(hiddenFields(inst)).toEqual(["c", "d"]);
+    document.body.removeChild(inst);
+});
+
+test("restoring the last hidden column does not reserve the toggle width", async () => {
+    // 4 x 100 fits in 420 with no toggle: growing back to 420 must give the
+    // same columns as starting at 420, whatever width came before.
+    const fresh = await makeReadyGrid({ columns: COLS });
+    forceResize(fresh, 420);
+    expect(hiddenFields(fresh)).toEqual([]);
+    document.body.removeChild(fresh);
+
+    const inst = await makeReadyGrid({ columns: COLS });
+    forceResize(inst, 390);
+    expect(hiddenFields(inst)).toEqual(["d"]);
+    forceResize(inst, 420);
+    expect(hiddenFields(inst)).toEqual([]);
+    document.body.removeChild(inst);
+});
+
 test("responsive processes the same width after disconnect and restores table visibility", async () => {
     const inst = await makeReadyGrid({ columns: COLS });
     forceResize(inst, 200);

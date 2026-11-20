@@ -124,7 +124,8 @@ declarative cell presentation; the grid owns subsequent rendering. `caption`,
 ```
 
 `<th data-field>` declares a column: `title` is the cell text, and
-`data-sortable`, `data-filterable`, `data-filter`, `data-responsive`,
+`data-sortable`, `data-filterable`, `data-filter`, `data-filter-placeholder`,
+`data-first-filter-option` (label of the empty select option), `data-responsive`,
 `data-hidden`, `data-editable`, `data-editable-type`, `data-transform`,
 `data-format`, `data-align`, `data-width` (preferred width) and
 `data-min-width` (never compress below)
@@ -549,8 +550,9 @@ response protection).
 | `cellClass`                             | `String \| Function` | body cells only, per row: string or `(ctx) => class`                    |
 
 Select filters always include an option with `value: ""`, so `filterList` can contain only business values. Use
-`firstFilterOption` to customize its label (for example, `All plans`); an explicit `text: ""` remains empty. This
-automatic option applies only to filters, not to editing controls.
+`firstFilterOption` to customize its label (for example, `All plans`); an explicit `text: ""` remains empty. A
+declarative table sets the label with `data-first-filter-option="All plans"` on the `<th>`. This automatic option
+applies only to filters, not to editing controls.
 
 Column sizing follows three notions: `minWidth` is a floor the column is never
 compressed below, `width` is a preferred width, and a column without a preferred

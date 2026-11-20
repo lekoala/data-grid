@@ -9,7 +9,7 @@ import { createSpanningRow } from "../utils/spanningRow.js";
  * @property {ResponsiveItem[]} items
  * @property {ResponsiveItem[]} visible
  * @property {(th: HTMLElement) => Number} preferredWidth
- * @property {(visibleItems: ResponsiveItem[]) => Number} requiredWidth
+ * @property {(visibleItems: ResponsiveItem[], withToggle?: Boolean) => Number} requiredWidth
  * @property {(column: import("../data-grid.js").Column|null) => Boolean} isColumnHidden
  */
 
@@ -254,7 +254,9 @@ class ResponsiveGrid extends BasePlugin {
         // Check inlineSize (width) and not blockSize (height). An explicit
         // width also keeps behavior tests independent of observer internals.
         const size = width ?? (this.#lastEntry ? this.#entryWidth(this.#lastEntry) : null);
-        if (size === null) {
+        // A grid that is not rendered (closed dialog, inactive tab) reports no
+        // width: keep the current state and wait for a real measurement.
+        if (size === null || size === 0) {
             return null;
         }
         // The state is idempotent for a given width: skip duplicate evaluations
@@ -334,13 +336,12 @@ class ResponsiveGrid extends BasePlugin {
             .reduce((result, th) => {
                 return result + preferredWidth(/** @type {HTMLElement} */ (th));
             }, 0);
-        const requiredWidth = (/** @type {ResponsiveItem[]} */ visibleItems) => {
+        const requiredWidth = (
+            /** @type {ResponsiveItem[]} */ visibleItems,
+            withToggle = items.some(({ column }) => column?.responsiveHidden),
+        ) => {
             let total = fixedWidth;
-            if (
-                grid.options.responsiveToggle &&
-                !this.#sharesDisclosure() &&
-                items.some(({ column }) => column?.responsiveHidden)
-            ) {
+            if (withToggle && grid.options.responsiveToggle && !this.#sharesDisclosure()) {
                 total += RESPONSIVE_TOGGLE_WIDTH;
             }
             for (const { th } of visibleItems) {
@@ -400,12 +401,14 @@ class ResponsiveGrid extends BasePlugin {
             // Room is available: restore columns in reverse priority order while
             // they fit.
             const restorable = items.filter(({ column }) => column?.responsiveHidden).reverse();
-            for (const { th, column } of restorable) {
+            for (const [index, { th, column }] of restorable.entries()) {
                 if (!column?.field) {
                     continue;
                 }
-                const width = preferredWidth(th);
-                if (requiredWidth(visible) + width > size - RESTORE_HYSTERESIS) {
+                // Restoring the last hidden column also removes the toggle, so
+                // its width only counts while other columns stay hidden.
+                const toggleStays = index < restorable.length - 1;
+                if (requiredWidth([...visible, { th, column }], toggleStays) > size - RESTORE_HYSTERESIS) {
                     break;
                 }
                 grid.setColProp(column.field, "responsiveHidden", false);

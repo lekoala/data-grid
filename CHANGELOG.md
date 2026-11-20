@@ -5,6 +5,20 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
+## [Unreleased]
+
+### Added
+
+- `data-first-filter-option` on a declarative `<th>` labels the empty option of its select filter
+  (`firstFilterOption`), so a script-free table can show "All stages" instead of a blank choice.
+
+### Fixed
+
+- Responsive columns no longer collapse while the grid is not rendered: a zero-width observation (closed dialog,
+  inactive tab) keeps the current state instead of hiding every hideable column.
+- Restoring the last hidden responsive column no longer reserves the toggle width it removes, so growing back to a
+  width shows the same columns as starting at that width.
+
 ## [3.10.1] - 2026-11-16
 
 ### Added
