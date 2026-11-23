@@ -5,7 +5,7 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
-## [Unreleased]
+## [3.10.3] - 2026-11-26
 
 ### Added
 
@@ -18,7 +18,7 @@ not documented.
 - The native 16px size, accent color, focus ring and invalid paint of grid checkboxes apply only while they carry
   `dg-skin`; a host-classed checkbox owns them.
 
-## [3.10.2] - 2026-11-26
+## [3.10.2] - 2026-11-20
 
 ### Added
 
