@@ -37,11 +37,14 @@ test.skipIf(IS_WINDOWS)(
     "the Basic demo scrolls the table inside its frame on a narrow viewport",
     async () => {
         await using v = view();
-        await v.resize(488, 800);
         await v.navigate(`${ensureServer()}/demo/index.html`);
+        await v.resize(488, 800);
         const scroll = "document.querySelector('#basic-demo .dg-scroll')";
         const footer = "document.querySelector('#basic-demo .dg-footer')";
-        await waitFor(v, `${scroll}?.querySelector('.dg-data-row') && ${footer}?.clientWidth > 0`);
+        await waitFor(
+            v,
+            `window.innerWidth === 488 && ${scroll}?.querySelector('.dg-data-row') && ${footer}?.clientWidth > 0`,
+        );
 
         expect(await read(v, `${scroll}.scrollWidth > ${scroll}.clientWidth`)).toBe(true);
         expect(await read(v, "document.documentElement.scrollWidth <= window.innerWidth + 1")).toBe(true);

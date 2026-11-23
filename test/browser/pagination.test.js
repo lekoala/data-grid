@@ -9,6 +9,7 @@ test.skipIf(IS_WINDOWS)(
     async () => {
         await using v = view();
         await v.navigate(`${ensureServer()}/demo/responsive.html`);
+        const frame = "document.querySelector('#responsive-frame')";
         const grid = "document.querySelector('#responsive-demo data-grid')";
         const footer = `${grid}.footerEl`;
         const compact = `${footer}.classList.contains('dg-footer-compact')`;
@@ -18,8 +19,8 @@ test.skipIf(IS_WINDOWS)(
         await waitFor(v, `${grid}.query.page === 2 && !${grid}.loading`);
         const regularWidth = await read(v, inputWidth);
 
-        for (const width of [460, 390]) {
-            await v.resize(width, 800);
+        for (const width of [392, 322]) {
+            await v.evaluate(`${frame}.style.width = '${width}px'`);
             await waitFor(v, compact);
             expect(await read(v, inputWidth)).toBeLessThan(regularWidth);
             expect(
@@ -34,7 +35,7 @@ test.skipIf(IS_WINDOWS)(
             ).toBe(true);
         }
 
-        await v.resize(1280, 800);
+        await v.evaluate(`${frame}.style.removeProperty('width')`);
         await waitFor(v, `!${compact}`);
         expect(await read(v, inputWidth)).toBe(regularWidth);
         expect(await read(v, `${footer}.querySelector('.dg-input-page').value`)).toBe("2");

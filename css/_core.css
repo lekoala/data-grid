@@ -1260,6 +1260,10 @@ data-grid .dg-footer .dg-meta {
 }
 
 /* Compact: the position stays, first and last go. */
+data-grid .dg-footer.dg-footer-compact {
+  column-gap: var(--dg-space-1);
+}
+
 data-grid .dg-footer.dg-footer-compact .dg-input-page.dg-skin {
   width: 3em;
   padding: 0 0.25em;

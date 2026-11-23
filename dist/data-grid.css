@@ -1213,6 +1213,10 @@ data-grid .dg-footer .dg-meta {
   font-size: .875em;
 }
 
+data-grid .dg-footer.dg-footer-compact {
+  column-gap: var(--dg-space-1);
+}
+
 data-grid .dg-footer.dg-footer-compact .dg-input-page.dg-skin {
   width: 3em;
   padding: 0 .25em;
