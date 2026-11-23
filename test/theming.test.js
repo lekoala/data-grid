@@ -208,10 +208,10 @@ test("editable controls paint their own focus outline, the cell stays neutral", 
         /td select\.dg-editable:focus-visible \{[\s\S]*?outline: var\(--dg-focus-width\) solid var\(--dg-focus-color\);[\s\S]*?outline-offset: calc\(var\(--dg-focus-width\) \* -1\);/,
     );
     expect(coreCss).toMatch(
-        /td input\.dg-editable\[type="checkbox"\]:focus-visible \{[\s\S]*?outline: var\(--dg-focus-width\) solid var\(--dg-focus-color\);[\s\S]*?outline-offset: 2px;/,
+        /td input\.dg-editable:where\(\.dg-skin\)\[type="checkbox"\]:focus-visible \{[^}]*outline: var\(--dg-focus-width\) solid var\(--dg-focus-color\);[^}]*outline-offset: 2px;/,
     );
     expect(coreCss).toMatch(
-        /td\.dg-editable-col\[data-invalid\] input\.dg-editable:focus \{[\s\S]*?outline-color: var\(--dg-danger-color\);/,
+        /td\.dg-editable-col\[data-invalid\] input\.dg-editable:where\(\.dg-skin\):focus \{[^}]*outline-color: var\(--dg-danger-color\);/,
     );
     expect(coreCss).not.toMatch(/td\.dg-editable-col\[data-editing\] \{[\s\S]*?background-color/);
 });
