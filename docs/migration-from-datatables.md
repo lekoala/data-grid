@@ -6,7 +6,7 @@ through a comprehensive imperative API; Data Grid is a framework-independent cus
 data source and query state.
 
 **Choose your path:** If you have an existing HTML table, start with [declarative HTML](#1-an-existing-html-table). If
-you pass JavaScript records, use [`ArrayDataSource`](#2-javascript-data-and-column-definitions). If you have
+you pass JavaScript records, use [a local array](#2-javascript-data-and-column-definitions). If you have
 `serverSide: true`, read [the server protocol section](#4-server-side-processing) before replacing anything.
 
 ## Install and initialize
@@ -27,11 +27,11 @@ const table = new DataTable("#users", {
 Data Grid:
 
 ```js
-import { DataGrid, ArrayDataSource } from "data-grid-component";
+import { DataGrid } from "data-grid-component";
 import "data-grid-component/styles";
 
 const grid = new DataGrid({
-    dataSource: new ArrayDataSource(users),
+    dataSource: users,
     columns: [
         { field: "name", title: "Name" },
         { field: "email", title: "Email" },
@@ -52,7 +52,7 @@ Data Grid can be installed without a framework; its package entry registers `<da
 | DataTables | Data Grid |
 | --- | --- |
 | `new DataTable("#users", options)` | `new DataGrid(options)` or `<data-grid>` |
-| `data: rows` | `dataSource: new ArrayDataSource(rows)` |
+| `data: rows` | `dataSource: rows` |
 | `columns: [{ data, title }]` | `columns: [{ field, title }]` |
 | `columns.render` | `column.renderCell({ value, row, ... })` |
 | `searching: true` | `searchable: true` |
@@ -144,7 +144,7 @@ After:
 
 ```js
 const grid = new DataGrid({
-    dataSource: new ArrayDataSource(users),
+    dataSource: users,
     columns: [
         { field: "name", title: "Name" },
         { field: "status", title: "Status", filterType: "select" },
@@ -168,8 +168,8 @@ const grid = new DataGrid({
 document.querySelector("#users-host").append(grid);
 ```
 
-`ArrayDataSource` locally filters, searches, sorts, then paginates its full collection. It is **not** the default
-remote mode. Its local sort applies the first sort descriptor only; if your DataTables setup relies on multi-column
+Data Grid wraps the array in `ArrayDataSource`, which filters, searches, sorts, and paginates the collection locally.
+Its local sort applies the first sort descriptor only. If your DataTables setup relies on multi-column
 ordering, implement that explicitly in a custom source or on the server. Data Grid's local search/filter comparison
 rules may also differ from DataTables', including regex, type detection, date formats and orthogonal search values:
 regression-test business-critical cases.

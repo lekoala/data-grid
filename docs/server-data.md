@@ -200,17 +200,17 @@ See `demo/logs.html`, which emulates this pattern locally through a `NoCountSour
 
 ## Local data
 
-`ArrayDataSource` owns the whole collection in the browser and applies
-filters/sort/pagination locally:
+Pass an array as `dataSource` to apply filters, sorting, and pagination in the browser.
 
 ```js
-import { ArrayDataSource } from "data-grid-component/data-source";
-
 const grid = new DataGrid({
     columns: [{ field: "name", title: "Name" }],
-    dataSource: new ArrayDataSource([{ name: "Ada" }, { name: "Grace" }]),
+    dataSource: [{ name: "Ada" }, { name: "Grace" }],
 });
 ```
+
+The grid wraps the array in `ArrayDataSource` and uses it by reference.
+You can also pass an `ArrayDataSource` instance directly.
 
 The server helpers (`applyFilters`, `applySort`, `paginate`, `parseResult`) are
 exported from `src/data-source.js` and reused by `demo/server.js` so the client

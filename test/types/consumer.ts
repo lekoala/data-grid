@@ -34,6 +34,7 @@ void remoteSource;
 
 const grid = new DataGrid({
     sortable: true,
+    dataSource: [{ id: 1, name: "Ada" }],
     columns: [
         { field: "revenue", format: "number", summary: "sum", formatOptions: { currency: "USD" } },
         { field: "health", format: "number", summary: "avg", formatOptions: { style: "percent" } },

@@ -341,9 +341,9 @@ export type Options = {
      */
     params: Record<string, any>;
     /**
-     * Custom data source (defaults to FetchDataSource or ArrayDataSource)
+     * Custom data source or local rows (defaults to FetchDataSource or ArrayDataSource)
      */
-    dataSource?: DataSource | null;
+    dataSource?: DataSource | Row[] | null;
     /**
      * Load immediately on connect ("eager") or defer the first data source load until the grid is near the viewport ("lazy"; only affects async sources)
      */

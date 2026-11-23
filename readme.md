@@ -240,7 +240,7 @@ Some options only work if the proper plugin is loaded.
 |-----------------------|----------------------|----------------------|--------------------------------------------------------------|
 | `src`                 | `String`             | `""`                 | URL to a server-side endpoint                                |
 | `params`              | `Object`             | `{}`                 | Extra constant HTTP params per request                       |
-| `dataSource`          | `DataSource`         | -                    | Custom data source (defaults to fetch/array)                 |
+| `dataSource`          | `DataSource \| Row[]` | -                    | Custom source or local rows                                 |
 | `loading`             | `String`             | `"eager"`            | `eager` or `lazy`                                            |
 | `columns`             | `Column[]`           | `[]`                 | Available columns                                            |
 | `rowKey`              | `String \| Function` | `"id"`               | Field or function for the stable row key                     |

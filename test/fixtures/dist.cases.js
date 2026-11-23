@@ -40,3 +40,22 @@ test("dist ArrayDataSource works without a grid", async () => {
     });
     expect(result.rows.map((r) => r.name)).toEqual(["a", "b"]);
 });
+
+test("dist grid sorts and pages rows passed as dataSource", async () => {
+    const grid = new DataGrid({
+        columns: [{ field: "name" }],
+        dataSource: [{ name: "b" }, { name: "a" }],
+        initialQuery: { pageSize: 1, sort: [{ field: "name", direction: "asc" }] },
+    });
+    const ready = new Promise((resolve) => grid.addEventListener("connected", resolve, { once: true }));
+    document.body.append(grid);
+    try {
+        await ready;
+        expect(grid.total).toBe(2);
+        expect(grid.querySelector("tbody td")?.textContent).toBe("a");
+        await grid.setQuery({ page: 2 });
+        expect(grid.querySelector("tbody td")?.textContent).toBe("b");
+    } finally {
+        grid.remove();
+    }
+});

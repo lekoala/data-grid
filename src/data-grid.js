@@ -259,7 +259,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "", c
  * @property {?String} id Custom id for the grid
  * @property {?String} src An URL to a server-side endpoint (FetchDataSource)
  * @property {Record<string, any>} params Extra constant HTTP params passed to FetchDataSource
- * @property {?DataSource} [dataSource] Custom data source (defaults to FetchDataSource or ArrayDataSource)
+ * @property {DataSource|Row[]|null} [dataSource] Custom data source or local rows (defaults to FetchDataSource or ArrayDataSource)
  * @property {"eager"|"lazy"} [loading] Load immediately on connect ("eager") or defer the first data source load until the grid is near the viewport ("lazy"; only affects async sources)
  * @property {Boolean} debug Log actions in DevTools console
  * @property {Boolean} sortable Allows a sort by column functionality
@@ -1494,8 +1494,11 @@ class DataGrid extends BaseElement {
      * Pick the data source based on configuration.
      */
     setupDataSource() {
-        if (this.options.dataSource) {
-            this.dataSource = this.options.dataSource;
+        const source = this.options.dataSource;
+        if (Array.isArray(source)) {
+            this.dataSource = new ArrayDataSource(source);
+        } else if (source) {
+            this.dataSource = source;
         } else if (this.options.src) {
             this.dataSource = new FetchDataSource(this.options.src, { params: this.options.params });
         } else {

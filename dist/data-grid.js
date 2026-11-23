@@ -2658,8 +2658,11 @@ class DataGrid extends base_element_default {
     return this.querySelector(".dg-footer");
   }
   setupDataSource() {
-    if (this.options.dataSource) {
-      this.dataSource = this.options.dataSource;
+    const source = this.options.dataSource;
+    if (Array.isArray(source)) {
+      this.dataSource = new ArrayDataSource(source);
+    } else if (source) {
+      this.dataSource = source;
     } else if (this.options.src) {
       this.dataSource = new FetchDataSource(this.options.src, { params: this.options.params });
     } else {
