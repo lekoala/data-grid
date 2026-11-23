@@ -73,6 +73,9 @@ class RowDetails extends BasePlugin {
             return;
         }
         event.stopPropagation();
+        if (button.matches(":disabled")) {
+            return;
+        }
 
         const tr = /** @type {HTMLTableRowElement|null} */ (button.closest("tr.dg-data-row"));
         if (!tr) {
@@ -165,7 +168,7 @@ class RowDetails extends BasePlugin {
     #change(rowKey, expanded) {
         const key = String(rowKey);
         const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === key);
-        if (index < 0) {
+        if (index < 0 || (expanded && !this.#canShowDetails(this.grid.rows[index], key))) {
             return;
         }
         if (expanded) {
@@ -196,6 +199,12 @@ class RowDetails extends BasePlugin {
         return `dg-details-dialog-${this.grid.id}`;
     }
 
+    /** @param {import("../data-grid.js").Row} row @param {String} rowKey */
+    #canShowDetails(row, rowKey) {
+        const available = this.grid.options.rowDetailsAvailable;
+        return typeof available !== "function" || available({ row, rowKey, grid: this.grid });
+    }
+
     /** @param {import("../data-grid.js").CellContext} ctx @returns {HTMLButtonElement} */
     createToggle({ row = {}, rowIndex = 0 }) {
         const key = this.grid.resolveRowKey(row, rowIndex);
@@ -207,6 +216,8 @@ class RowDetails extends BasePlugin {
 
     /** @param {HTMLButtonElement} button @param {Record<string, any>} row @param {Number} rowIndex @param {Boolean} expanded */
     #syncToggle(button, row, rowIndex, expanded) {
+        button.disabled = !this.#canShowDetails(row, this.grid.resolveRowKey(row, rowIndex));
+        expanded = expanded && !button.disabled;
         // In dialog mode the control opens a modal: no in-place expansion, so
         // `aria-expanded` would describe a state the row does not have.
         if (this.#dialogMode()) {
@@ -302,6 +313,10 @@ class RowDetails extends BasePlugin {
                 continue;
             }
             const key = this.grid.resolveRowKey(row, rowIndex);
+            if (!this.#canShowDetails(row, key)) {
+                this.expanded.delete(key);
+                continue;
+            }
             if (this.grid.options.rowDetailsStartOpen && !this.collapsed.has(key)) {
                 this.expanded.add(key);
             }
@@ -457,7 +472,7 @@ class RowDetails extends BasePlugin {
             return;
         }
         const index = this.grid.rows.findIndex((row, rowIndex) => this.grid.resolveRowKey(row, rowIndex) === key);
-        if (index < 0) {
+        if (index < 0 || !this.#canShowDetails(this.grid.rows[index], key)) {
             return;
         }
         const row = this.grid.rows[index];
@@ -545,7 +560,7 @@ class RowDetails extends BasePlugin {
                 : this.grid.tbody?.querySelector(
                       `tr.dg-data-row[data-row-index="${index}"] .${DETAILS_CLASS}-toggle-control`,
                   );
-        if (toggle instanceof HTMLElement) {
+        if (toggle instanceof HTMLButtonElement && !toggle.matches(":disabled")) {
             toggle.focus();
             return;
         }

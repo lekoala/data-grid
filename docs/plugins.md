@@ -153,6 +153,12 @@ details.collapseAll();
 Use `rowDetailsStartOpen: true` to seed rows open. A toggle dispatches
 `rowDetailsToggle` with `{ row, rowKey, expanded }`.
 
+Use `rowDetailsAvailable: ({ row }) => Boolean(row.notes)` to disable the detail button for rows without notes.
+With the default `null`, details stay available for every row. The predicate receives the same context as
+`rowDetails` and should be side-effect free. The grid evaluates it on render and when an opening is requested.
+Unavailable rows are skipped by `rowDetailsStartOpen`, `expand()` and `toggle()`. Responsive columns have their
+own disclosure button when a predicate is configured, so their values stay reachable on every row.
+
 ### Dialog display
 
 `detailsDisplay: "dialog"` (attribute `details-display="dialog"`) opens the
@@ -187,6 +193,11 @@ When `rowDetails` is also configured, it is **appended after** the sheet in the
 same scrollable body (`.dg-details-app`). It complements the sheet: do not repeat
 fields the sheet already displays. When the renderer returns nothing, only the
 sheet remains.
+
+In dialog mode, `rowDetailsAvailable` controls access to the whole dialog, including the record sheet.
+With `responsiveToggle: false`, use `responsiveStartOpen: true` to display hidden columns inline.
+Override `--dg-icon-details` to customize the dialog icon. See `demo/details.html` for a document icon and
+disabled buttons in the same grid.
 
 Behavior and limits:
 

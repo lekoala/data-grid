@@ -240,7 +240,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "", c
  */
 
 /**
- * Context passed to the row-details renderer.
+ * Context passed to the row-details renderer and availability predicate.
  * @typedef {Object} RowDetailsContext
  * @property {DataGrid} grid
  * @property {Row} row
@@ -296,6 +296,7 @@ const defaultControlClasses = { button: "", action: "", input: "", select: "", c
  * @property {Boolean} responsiveToggle Show toggle column (ResponsiveGrid module)
  * @property {Boolean} responsiveStartOpen Open responsive detail rows by default when columns are hidden (ResponsiveGrid module)
  * @property {((ctx: RowDetailsContext) => RenderContent)|null} [rowDetails] Render expanded row content (RowDetails module)
+ * @property {((ctx: RowDetailsContext) => boolean)|null} [rowDetailsAvailable] Enable the detail control for this row (RowDetails module)
  * @property {Boolean} rowDetailsStartOpen Open row details by default (RowDetails module)
  * @property {"inline"|"dialog"} [detailsDisplay] Render row details below the row ("inline") or in a modal dialog ("dialog", RowDetails module). Initial-only.
  * @property {Number} filterDelay Debounce delay in milliseconds before a text filter is applied (0 = immediate). Enter and select changes apply immediately.
@@ -476,6 +477,7 @@ const DEFAULT_OPTIONS = {
     responsiveToggle: true,
     responsiveStartOpen: false,
     rowDetails: null,
+    rowDetailsAvailable: null,
     rowDetailsStartOpen: false,
     detailsDisplay: "inline",
     filterDelay: 300,
@@ -707,6 +709,8 @@ class DataGrid extends BaseElement {
     #frozenFrame;
 
     /**
+     * Create a grid with JavaScript options. Use `rowDetailsAvailable` to control per-row access to details.
+     * @public
      * @param {Partial<Options>} [options]
      */
     constructor(options = {}) {

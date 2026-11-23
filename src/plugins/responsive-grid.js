@@ -518,15 +518,14 @@ class ResponsiveGrid extends BasePlugin {
      * for every row: responsive then yields, rather than rendering a second
      * identical chevron next to it, and follows that control instead.
      *
-     * Both facts are required: the option carries the intent, the plugin does
-     * the rendering. If either is missing (ex: a non standard registration
-     * name), responsive keeps its own toggle — the safe fallback is a visible
-     * control, never hidden values with no way to reach them.
+     * Keep a separate responsive toggle when row details can be unavailable,
+     * or when the RowDetails plugin is absent.
      * @returns {Boolean}
      */
     #sharesDisclosure() {
         return (
             Boolean(this.grid.options.responsiveToggle) &&
+            typeof this.grid.options.rowDetailsAvailable !== "function" &&
             this.#detailsEnabled() &&
             Boolean(this.grid.getPlugin("RowDetails"))
         );
@@ -542,13 +541,16 @@ class ResponsiveGrid extends BasePlugin {
     }
 
     /**
-     * Dialog mode owns the expanded surface of the row: responsive values live
-     * in the sheet, so responsive neither seeds nor follows a child row. The
-     * plugin check keeps `detailsDisplay` inert when `RowDetails` is absent.
+     * The sheet is the only expanded surface when it is available for every
+     * row. Otherwise responsive can still render its own child rows.
      * @returns {Boolean}
      */
-    #dialogDetailsActive() {
-        return this.grid.options.detailsDisplay === "dialog" && Boolean(this.grid.getPlugin("RowDetails"));
+    #dialogOwnsResponsiveDetails() {
+        return (
+            this.grid.options.detailsDisplay === "dialog" &&
+            typeof this.grid.options.rowDetailsAvailable !== "function" &&
+            Boolean(this.grid.getPlugin("RowDetails"))
+        );
     }
 
     /**
@@ -561,7 +563,7 @@ class ResponsiveGrid extends BasePlugin {
      * @param {Boolean} expanded
      */
     followDisclosure(tr, expanded) {
-        if (this.#dialogDetailsActive() || !this.#sharesDisclosure()) {
+        if (!this.#sharesDisclosure() || this.#dialogOwnsResponsiveDetails()) {
             return;
         }
         this.#blockObserver();
@@ -706,9 +708,8 @@ class ResponsiveGrid extends BasePlugin {
      * with no state yet are seeded from `responsiveStartOpen`.
      */
     #seedRows() {
-        // Dialog mode keeps the hidden values in the sheet: seeding a child row
-        // here would duplicate them next to the dialog.
-        if (this.#dialogDetailsActive()) {
+        // The sheet already exposes hidden values when it is available for every row.
+        if (this.#dialogOwnsResponsiveDetails()) {
             return;
         }
         for (const tr of this.#dataRows()) {
@@ -737,7 +738,7 @@ class ResponsiveGrid extends BasePlugin {
         // drops any existing detail rows, so start-open details must be
         // re-applied here. No-op unless start-open is active with hidden
         // columns, keeping the default collapsed behavior untouched.
-        if (context !== "body" || this.#dialogDetailsActive()) {
+        if (context !== "body" || this.#dialogOwnsResponsiveDetails()) {
             return;
         }
         if (!this.grid.options.responsiveStartOpen || !this.#hasHiddenColumns()) {

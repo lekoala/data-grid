@@ -38,6 +38,37 @@ function dataLabels(grid) {
     return [...dialogOf(grid).querySelectorAll(".dg-details-list dt")].map((dt) => dt.textContent);
 }
 
+test("unavailable dialog rows keep their responsive values reachable and cannot replace an open dialog", async () => {
+    const grid = await makeReadyGrid({
+        detailsDisplay: "dialog",
+        responsive: true,
+        columns: [{ field: "name" }, { field: "email", responsiveHidden: true }],
+        rowDetailsAvailable: ({ row }) => row.status === "active",
+    });
+    const plugin = grid.getPlugin("RowDetails");
+    const events = [];
+    grid.addEventListener("rowDetailsToggle", (event) => events.push(event.detail));
+
+    const disabled = toggleOf(grid, 1);
+    expect(disabled.matches(":disabled")).toBe(true);
+    disabled.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(dialogOf(grid)).toBeNull();
+
+    disabled.closest("tr").querySelector(".dg-responsive-toggle-control").click();
+    expect(disabled.closest("tr").nextElementSibling.textContent).toContain("bob@example.com");
+    expect(events).toHaveLength(0);
+
+    toggleOf(grid).click();
+    expect(dialogOf(grid).open).toBe(true);
+    plugin.expand("2");
+    plugin.toggle("2");
+    expect(plugin.isExpanded("1")).toBe(true);
+    expect(plugin.isExpanded("2")).toBe(false);
+    expect(dialogOf(grid).querySelector(".dg-details-title").textContent).toBe("Alice");
+    expect(events.map((event) => event.rowKey)).toEqual(["1"]);
+    grid.remove();
+});
+
 test("dialog mode renders a disclosure control and opens the built-in sheet without rowDetails", async () => {
     const grid = await makeReadyGrid({ detailsDisplay: "dialog" });
     const plugin = grid.getPlugin("RowDetails");

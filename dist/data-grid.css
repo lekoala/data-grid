@@ -1907,15 +1907,20 @@ data-grid .dg-disclosure:before {
   transition: transform .16s;
 }
 
-data-grid .dg-disclosure:hover {
+data-grid .dg-disclosure:hover:enabled {
   color: var(--dg-color);
   background-color: #1f232814;
 }
 
 @supports (color: color-mix(in srgb, red 50%, transparent)) {
-  data-grid .dg-disclosure:hover {
+  data-grid .dg-disclosure:hover:enabled {
     background-color: color-mix(in srgb, var(--dg-color) 8%, transparent);
   }
+}
+
+data-grid .dg-disclosure:disabled, data-grid .dg-disclosure:disabled:hover {
+  opacity: .4;
+  background-color: #0000;
 }
 
 data-grid .dg-disclosure[aria-expanded="true"]:before {

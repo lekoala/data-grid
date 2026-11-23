@@ -147,6 +147,11 @@
           ],
           "members": [
             {
+              "kind": "method",
+              "name": "constructor",
+              "description": "Create a grid with JavaScript options. Use `rowDetailsAvailable` to control per-row access to details."
+            },
+            {
               "kind": "field",
               "name": "rows",
               "description": "Rows of the current page"

@@ -489,6 +489,10 @@ export type Options = {
      */
     rowDetails?: ((ctx: RowDetailsContext) => RenderContent) | null;
     /**
+     * Enable the detail control for this row (RowDetails module)
+     */
+    rowDetailsAvailable?: ((ctx: RowDetailsContext) => boolean) | null;
+    /**
      * Open row details by default (RowDetails module)
      */
     rowDetailsStartOpen: boolean;
@@ -714,6 +718,8 @@ declare class DataGrid extends BaseElement {
     /** @type {HTMLTableRowElement|null} */
     headerRow: HTMLTableRowElement | null;
     /**
+     * Create a grid with JavaScript options. Use `rowDetailsAvailable` to control per-row access to details.
+     * @public
      * @param {Partial<Options>} [options]
      */
     constructor(options?: Partial<Options>);

@@ -39,7 +39,7 @@ data-grid .dg-disclosure::before {
 /* A translucent tint rather than a surface color: the control must stay
    readable over the plain, striped, hovered and selected row backgrounds
    alike. Internal to the control, so it stays a literal, not a token. */
-data-grid .dg-disclosure:hover {
+data-grid .dg-disclosure:hover:enabled {
   background-color: rgb(31 35 40 / 8%);
   color: var(--dg-color);
 }
@@ -47,9 +47,15 @@ data-grid .dg-disclosure:hover {
 /* Where color-mix is supported the tint follows a themed --dg-color instead of
    the hardcoded fallback. */
 @supports (color: color-mix(in srgb, red 50%, transparent)) {
-  data-grid .dg-disclosure:hover {
+  data-grid .dg-disclosure:hover:enabled {
     background-color: color-mix(in srgb, var(--dg-color) 8%, transparent);
   }
+}
+
+data-grid .dg-disclosure:disabled,
+data-grid .dg-disclosure:disabled:hover {
+  background-color: transparent;
+  opacity: 0.4;
 }
 
 data-grid .dg-disclosure[aria-expanded="true"]::before {

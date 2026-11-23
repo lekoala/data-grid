@@ -85,6 +85,37 @@ test("RowDetails renders application content, exposes state methods and emits on
     document.body.removeChild(inst);
 });
 
+test("inline details follow row availability across source replacements", async () => {
+    const rows = [{ id: 1, name: "Alice", notes: "Available" }];
+    const grid = await makeReadyGrid(
+        {
+            columns: [{ field: "name" }],
+            rowDetailsStartOpen: true,
+            rowDetailsAvailable: ({ row }) => Boolean(row.notes),
+            rowDetails: ({ row }) => row.notes,
+        },
+        rows,
+    );
+    const plugin = grid.getPlugin("RowDetails");
+    const button = () => grid.querySelector("tbody .dg-row-details-toggle-control");
+    const detail = () => grid.querySelector("tbody .dg-row-details-row");
+    expect(detail().textContent).toBe("Available");
+
+    grid.dataSource = new ArrayDataSource([{ id: 1, name: "Alice" }]);
+    await grid.refresh();
+    expect(button().matches(":disabled")).toBe(true);
+    expect(button().getAttribute("aria-expanded")).toBe("false");
+    plugin.expand("1");
+    expect(plugin.isExpanded("1")).toBe(false);
+    expect(detail()).toBeNull();
+
+    grid.dataSource = new ArrayDataSource(rows);
+    await grid.refresh();
+    expect(button().matches(":disabled")).toBe(false);
+    expect(detail().textContent).toBe("Available");
+    grid.remove();
+});
+
 test("RowDetails coexists with responsive child rows without becoming a data row", async () => {
     const inst = await makeReadyGrid({
         columns: [{ field: "name" }, { field: "email", responsiveHidden: true }],

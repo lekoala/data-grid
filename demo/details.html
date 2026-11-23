@@ -18,6 +18,10 @@
 
     <style>
       /* Page CSS only: the grid stays untouched. */
+      #app-demo data-grid {
+        --dg-icon-details: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='3' width='14' height='18' rx='2'/%3E%3Cpath d='M9 8h6M9 12h6m-6 4h4'/%3E%3C/svg%3E");
+      }
+
       .demo-badge {
         border-radius: 999px;
         display: inline-block;
@@ -87,6 +91,7 @@
       const appGrid = await createStaticGrid(document.getElementById("app-demo"), "demo.json", {
         detailsDisplay: "dialog",
         responsive: true,
+        rowDetailsAvailable: ({ row }) => Number(row.id) % 2 === 1,
         rowDetails: ({ row }) => {
           const activity = document.createElement("dl");
           activity.className = "demo-activity";
@@ -177,8 +182,9 @@
           <div id="app-demo"></div>
         </div>
         <p class="demo-note">
-          <code>rowDetails</code> is appended after the record sheet, in the same scrollable body. It is
-          additional content, not a replacement: do not repeat the fields the sheet already shows.
+          The dialog opens for odd-numbered records through <code>rowDetailsAvailable</code> and displays
+          <code>rowDetails</code> after the record sheet. The document icon
+          uses <code>--dg-icon-details</code>. At narrow widths, the chevron reveals hidden columns for any row.
         </p>
       </div>
     </main>
