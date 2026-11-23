@@ -5,7 +5,29 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
-## [3.10.3] - 2026-11-26
+## [3.11.0] - 2026-11-23
+
+### Added
+
+- `rowDetailsAvailable` controls which rows can open inline details or a details dialog. Unavailable rows show a
+  disabled disclosure button. Responsive columns have their own chevron when the predicate is configured.
+- The details demo shows disabled disclosure buttons and a custom document icon using `--dg-icon-details`.
+
+### Changed
+
+- The Basic demo gives the table a minimum width so columns stay readable. On narrow screens, the table scrolls
+  horizontally inside the grid and the pager stays in place.
+- The responsive demo uses narrower ID columns and places the resize hint below the grid, next to the handle.
+
+### Fixed
+
+- Responsive detail tables give labels a 120px column and leave the remaining width for values, even when the
+  main table has a wide visible column.
+- The grid frame and the resizable demo containers fit their parent at narrow widths.
+- The responsive footer accounts for padding and gaps when switching to compact mode. Its smaller page input
+  and tighter gap let the results window and page controls share a line at narrower widths.
+
+## [3.10.3] - 2026-11-23
 
 ### Added
 

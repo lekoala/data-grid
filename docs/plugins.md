@@ -245,16 +245,17 @@ described above still applies to other grids.
 
 ### Combining responsive columns and a dialog
 
-In dialog mode `ResponsiveGrid` yields its disclosure control to `RowDetails`
-(one consultation control per row) and no longer seeds a responsive child row,
-including with `responsiveStartOpen: true`: the hidden values are already in the
-sheet.
+With the default `rowDetailsAvailable: null`, each row has one dialog button and
+the sheet displays its responsive-hidden values. `ResponsiveGrid` leaves the
+responsive child row closed even with `responsiveStartOpen: true`, and
+`responsiveToggle: false` still leaves the dialog button available.
 
-- `responsiveStartOpen` is ignored in dialog mode;
-- `rowDetailsStartOpen` is ignored in dialog mode;
-- `responsiveToggle: false` still leaves the single `RowDetails` control and the
-  sheet keeps the hidden values;
-- the mode cannot switch at runtime, so an inline/dialog toggle is not offered.
+With a `rowDetailsAvailable` predicate, responsive columns use a separate
+chevron. If `responsiveToggle` is `false`, `responsiveStartOpen: true` makes
+those columns visible inline, including on rows with a disabled dialog button.
+
+`rowDetailsStartOpen` is ignored in dialog mode. The display mode is set before
+connection and stays fixed for the lifetime of the grid.
 
 ### Application content
 
