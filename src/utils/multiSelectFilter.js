@@ -1,3 +1,4 @@
+import { styleControl } from "./controlClasses.js";
 import { attachPopoverPositioning } from "./positionPopover.js";
 import randstr from "./randstr.js";
 
@@ -63,12 +64,13 @@ export function updateMultiSelectSummary(root) {
  * as-is except empty values, which cannot participate in a set (placeholders
  * like "All" are meaningless as checkboxes) but keep their label as the
  * empty-state summary.
+ * @param {import("../data-grid.js").default} grid
  * @param {import("../data-grid.js").Column} column
  * @param {Array<import("../data-source.js").FilterOption>} options
  * @param {HTMLTableCellElement} relatedTh
  * @returns {HTMLDivElement}
  */
-export function createMultiSelect(column, options, relatedTh) {
+export function createMultiSelect(grid, column, options, relatedTh) {
     const doc = relatedTh.ownerDocument;
     const root = doc.createElement("div");
     root.className = "dg-multiselect dg-filter-control dg-skin";
@@ -110,6 +112,9 @@ export function createMultiSelect(column, options, relatedTh) {
         const checkbox = doc.createElement("input");
         checkbox.type = "checkbox";
         checkbox.dataset.value = `${option.value}`;
+        // The trigger is a filter control and keeps the grid skin; the panel's
+        // checkboxes are ordinary checks, like the column menu's.
+        styleControl(grid, checkbox, "check");
         label.appendChild(checkbox);
         label.appendChild(doc.createTextNode(`${option.text}`));
         li.appendChild(label);
@@ -121,14 +126,11 @@ export function createMultiSelect(column, options, relatedTh) {
     updateMultiSelectSummary(root);
     // One delegated listener per grid positions any rebuilt panel; the panel
     // stays as wide as its trigger like the former `anchor-size()` style.
-    const grid = relatedTh.closest("data-grid");
-    if (grid) {
-        attachPopoverPositioning(grid, {
-            selector: ".dg-multiselect-panel",
-            placement: "bottom-start",
-            matchWidth: true,
-        });
-    }
+    attachPopoverPositioning(grid, {
+        selector: ".dg-multiselect-panel",
+        placement: "bottom-start",
+        matchWidth: true,
+    });
     return root;
 }
 

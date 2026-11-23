@@ -23,7 +23,9 @@ for (const order of ["before", "after"]) {
         })()`);
             await waitFor(
                 v,
-                `Array.from(document.querySelectorAll("#host [data-dg-control]")).every((control) => {
+                // Host-owned controls only: roles left empty (the column menu's
+                // checks here) keep the grid skin.
+                `Array.from(document.querySelectorAll("#host [data-dg-control]:not(.dg-skin)")).every((control) => {
             const style = getComputedStyle(control);
             return parseFloat(style.borderTopWidth) === 3 && parseFloat(style.borderRadius) === 11 && parseFloat(style.height) === 44;
         })`,
@@ -74,6 +76,38 @@ test.skipIf(IS_WINDOWS)(
     ].every(([selector, property]) => parseFloat(getComputedStyle(document.querySelector("#plain " + selector))[property]) === 3)`,
             ),
         ).toBe(true);
+    },
+    TIMEOUT,
+);
+
+test.skipIf(IS_WINDOWS)(
+    "host checks own their box while grid-skinned checks keep the native size",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}${FIXTURE}`);
+        await waitFor(v, 'document.querySelector("#checks tbody .dg-selectable input.x-check")');
+        expect(
+            await read(
+                v,
+                `["#checks .dg-select-all", "#checks tbody .dg-selectable input"].map((selector) => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return [parseFloat(style.width), style.appearance];
+    })`,
+            ),
+        ).toEqual([
+            [20, "none"],
+            [20, "none"],
+        ]);
+        // Same check through the role, then back to the grid skin in place.
+        await v.evaluate('document.querySelector("#checks").controlClasses = { check: "" }');
+        await waitFor(v, 'document.querySelector("#checks .dg-select-all.dg-skin")');
+        expect(
+            await read(v, 'parseFloat(getComputedStyle(document.querySelector("#checks .dg-select-all")).width)'),
+        ).toBe(16);
+        // Selection still works through a host-classed box.
+        await v.evaluate('document.querySelector("#checks").controlClasses = { check: "x-check" }');
+        await v.evaluate('document.querySelector("#checks tbody .dg-selectable input").click()');
+        await waitFor(v, 'document.querySelector("#checks").getSelection().length === 1');
     },
     TIMEOUT,
 );

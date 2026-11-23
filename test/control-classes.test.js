@@ -2,7 +2,10 @@ import { afterEach, expect, test } from "bun:test";
 import DataGrid from "../data-grid.js";
 import { ArrayDataSource } from "../src/data-source.js";
 import BulkActions from "../src/plugins/bulk-actions.js";
+import ContextMenu from "../src/plugins/context-menu.js";
+import EditableColumn from "../src/plugins/editable-column.js";
 import RowActions from "../src/plugins/row-actions.js";
+import SelectableRows from "../src/plugins/selectable-rows.js";
 
 const defaults = DataGrid.getDefaultControlClasses();
 afterEach(() => {
@@ -106,6 +109,70 @@ test("classes survive query changes, data replacement and reconnect", async () =
     await connected;
     expect(grid.querySelector(".dg-btn-next").classList.contains("new-default")).toBe(true);
     expect(grid.querySelector(".dg-btn-next").classList.contains("host-btn")).toBe(false);
+});
+
+test("check and radio roles reach every grid checkbox and update in place", async () => {
+    DataGrid.registerPlugins({ SelectableRows, EditableColumn });
+    const grid = await ready({
+        columns: [
+            { field: "name" },
+            { field: "active", editable: true, editableType: "checkbox" },
+            { field: "team", filterType: "select", filterMultiple: true },
+        ],
+        dataSource: new ArrayDataSource([
+            { id: 1, name: "Ada", active: true, team: "A" },
+            { id: 2, name: "Grace", active: false, team: "B" },
+        ]),
+        initialQuery: {},
+        selectable: true,
+    });
+    // The column menu needs the Popover API, which the test DOM lacks: build
+    // it directly, inside the grid, as connected() does.
+    const menu = new ContextMenu(grid);
+    menu.menu = document.createElement("ul");
+    menu.menu.className = "dg-menu dg-context-menu";
+    grid.appendChild(menu.menu);
+    menu.createMenu();
+    const selectors = [
+        ".dg-select-all",
+        ".dg-selectable input[type='checkbox']",
+        "input.dg-editable[type='checkbox']",
+        ".dg-multiselect-panel input[type='checkbox']",
+        ".dg-menu:not(.dg-multiselect-panel) input[type='checkbox']",
+    ];
+    const controls = selectors.map((selector) => grid.querySelector(selector));
+    expect(selectors.filter((_, index) => !controls[index])).toEqual([]);
+    for (const control of controls) {
+        expect(control.classList.contains("dg-skin")).toBe(true);
+        expect(control.dataset.dgControl).toBe("check");
+    }
+    const row = grid.querySelector(".dg-selectable input[type='checkbox']");
+    row.focus();
+    DataGrid.setDefaultControlClasses({ check: "host-check", radio: "host-radio" });
+    expect(document.activeElement).toBe(row);
+    controls.forEach((control, index) => {
+        expect(grid.querySelector(selectors[index])).toBe(control);
+        expect(control.classList.contains("host-check")).toBe(true);
+        expect(control.classList.contains("dg-skin")).toBe(false);
+    });
+    // Structural classes stay: selection and editing still find their inputs.
+    expect(controls[0].classList.contains("dg-select-all")).toBe(true);
+    expect(controls[2].classList.contains("dg-editable")).toBe(true);
+    DataGrid.setDefaultControlClasses({ check: "" });
+    for (const control of controls) {
+        expect(control.classList.contains("host-check")).toBe(false);
+        expect(control.classList.contains("dg-skin")).toBe(true);
+    }
+});
+
+test("single selection takes the radio role", async () => {
+    DataGrid.registerPlugins({ SelectableRows });
+    DataGrid.setDefaultControlClasses({ check: "host-check", radio: "host-radio" });
+    const grid = await ready({ selectable: true, singleSelect: true });
+    const radio = grid.querySelector(".dg-selectable input[type='radio']");
+    expect(radio.classList.contains("host-radio")).toBe(true);
+    expect(radio.classList.contains("host-check")).toBe(false);
+    expect(radio.dataset.dgControl).toBe("radio");
 });
 
 test("class values stay class tokens and never become HTML", async () => {

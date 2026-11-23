@@ -5,6 +5,19 @@ Notable changes to data-grid are documented here.
 This changelog starts with the 3.x series. Earlier releases are intentionally
 not documented.
 
+## [Unreleased]
+
+### Added
+
+- `check` and `radio` control class roles: row selection, select all, checkbox editors, the column menu and the
+  multi-value filter panel take host classes (`check: "check"` with Actual CSS), updated in place like the other roles.
+- A rejected edit sets `aria-invalid="true"` on its control, cleared when editing starts again.
+
+### Changed
+
+- The native 16px size, accent color, focus ring and invalid paint of grid checkboxes apply only while they carry
+  `dg-skin`; a host-classed checkbox owns them.
+
 ## [3.10.2] - 2026-11-26
 
 ### Added

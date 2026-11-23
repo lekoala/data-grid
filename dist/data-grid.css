@@ -497,7 +497,25 @@ data-grid .dg-selectable label {
   margin: 0;
 }
 
-data-grid .dg-select-all, data-grid .dg-selectable input[type="checkbox"], data-grid .dg-selectable input[type="radio"], data-grid input.dg-editable[type="checkbox"] {
+data-grid .dg-select-all:where(.dg-skin) {
+  accent-color: var(--dg-accent);
+  width: 16px;
+  height: 16px;
+}
+
+data-grid .dg-selectable input:where(.dg-skin)[type="checkbox"] {
+  accent-color: var(--dg-accent);
+  width: 16px;
+  height: 16px;
+}
+
+data-grid .dg-selectable input:where(.dg-skin)[type="radio"] {
+  accent-color: var(--dg-accent);
+  width: 16px;
+  height: 16px;
+}
+
+data-grid input.dg-editable:where(.dg-skin)[type="checkbox"] {
   accent-color: var(--dg-accent);
   width: 16px;
   height: 16px;
@@ -935,21 +953,16 @@ data-grid tbody td.dg-editable-col {
   padding: 0;
 }
 
-data-grid tbody td input.dg-editable {
+data-grid tbody td input.dg-editable:not([type="checkbox"]) {
   box-shadow: none;
   padding: 0 var(--dg-padding-x);
+  position: absolute;
   background: none;
   border: 0;
   border-radius: 0;
-  width: 100%;
-  height: 100%;
-  margin: 0;
-}
-
-data-grid tbody td input.dg-editable:not([type="checkbox"]) {
-  position: absolute;
   width: auto;
   height: auto;
+  margin: 0;
   inset: 0;
 }
 
@@ -962,7 +975,7 @@ data-grid tbody td input.dg-editable:not([type="checkbox"]):focus {
   outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid tbody td input.dg-editable[type="checkbox"]:focus-visible {
+data-grid tbody td input.dg-editable:where(.dg-skin)[type="checkbox"]:focus-visible {
   outline: var(--dg-focus-width) solid var(--dg-focus-color);
   outline-offset: 2px;
 }
@@ -972,12 +985,12 @@ data-grid tbody td select.dg-editable:focus-visible {
   outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:where(.dg-skin) {
   background-color: var(--dg-danger-bg);
   box-shadow: inset 0 0 0 1px var(--dg-danger-color);
 }
 
-data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:focus {
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:where(.dg-skin):focus {
   outline-color: var(--dg-danger-color);
 }
 

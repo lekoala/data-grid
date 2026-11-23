@@ -109,6 +109,8 @@ DataGrid.setDefaultControlClasses({
     action: "btn outline sm",
     input: "input sm",
     select: "select sm",
+    check: "check",
+    radio: "radio",
 });
 ```
 
@@ -118,6 +120,12 @@ DataGrid.setDefaultControlClasses({
 | `action` | Row actions, links, collapsed actions toggle |
 | `input` | Search, page number |
 | `select` | Page size |
+| `check` | Row selection, select all, checkbox editors, column menu, multi-value filter |
+| `radio` | Single row selection |
+
+Filter inputs, text editors and select editors keep the grid skin: they are sized
+to the cell. A host `check` must render `:indeterminate`, which select all uses
+for a partial selection.
 
 Defaults are resolved when controls render. Changing them also updates connected
 controls in place, preserving focus. The static methods are available through

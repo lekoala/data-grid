@@ -1323,7 +1323,7 @@ function tokens(value) {
 }
 function normalizeControlClasses(value) {
   const result = {};
-  for (const role of ["button", "action", "input", "select"]) {
+  for (const role of ["button", "action", "input", "select", "check", "radio"]) {
     if (value && Object.hasOwn(value, role))
       result[role] = tokens(value[role]).join(" ");
   }
@@ -1900,7 +1900,7 @@ function updateMultiSelectSummary(root) {
   summary.textContent = labels.length ? summarize(labels) : `${root.dataset.emptyText ?? ""}`;
   summary.classList.toggle("dg-multiselect-empty", labels.length === 0);
 }
-function createMultiSelect(column, options, relatedTh) {
+function createMultiSelect(grid, column, options, relatedTh) {
   const doc = relatedTh.ownerDocument;
   const root = doc.createElement("div");
   root.className = "dg-multiselect dg-filter-control dg-skin";
@@ -1934,6 +1934,7 @@ function createMultiSelect(column, options, relatedTh) {
     const checkbox = doc.createElement("input");
     checkbox.type = "checkbox";
     checkbox.dataset.value = `${option.value}`;
+    styleControl(grid, checkbox, "check");
     label.appendChild(checkbox);
     label.appendChild(doc.createTextNode(`${option.text}`));
     li.appendChild(label);
@@ -1942,14 +1943,11 @@ function createMultiSelect(column, options, relatedTh) {
   root.appendChild(trigger);
   root.appendChild(panel);
   updateMultiSelectSummary(root);
-  const grid = relatedTh.closest("data-grid");
-  if (grid) {
-    attachPopoverPositioning(grid, {
-      selector: ".dg-multiselect-panel",
-      placement: "bottom-start",
-      matchWidth: true
-    });
-  }
+  attachPopoverPositioning(grid, {
+    selector: ".dg-multiselect-panel",
+    placement: "bottom-start",
+    matchWidth: true
+  });
   return root;
 }
 function readMultiSelect(root) {
@@ -2023,7 +2021,7 @@ function transformValue(value, transform, ctx) {
 }
 
 // src/data-grid.js
-var defaultControlClasses = { button: "", action: "", input: "", select: "" };
+var defaultControlClasses = { button: "", action: "", input: "", select: "", check: "", radio: "" };
 var plugins = {};
 var textInputState = new WeakMap;
 var labels = { ...DEFAULT_LABELS };
@@ -4487,7 +4485,7 @@ class DataGrid extends base_element_default {
   createFilterElement(column, relatedTh) {
     const type = getColumnFilterType(column);
     if (type === "select" && column.filterMultiple && supportsPopover()) {
-      return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
+      return createMultiSelect(this, column, this.getFilterOptions(column), relatedTh);
     }
     const isSelect = type === "select" || type === "boolean";
     const filter = isSelect ? this.#createSelectFilter(column, type) : this.#configureTextFilter(document.createElement("input"), column, type);
@@ -5102,6 +5100,7 @@ class ContextMenu extends base_plugin_default {
       const checkbox = document.createElement("input");
       checkbox.setAttribute("type", "checkbox");
       checkbox.setAttribute("data-name", col.field ?? "");
+      styleControl(grid, checkbox, "check");
       if (!col.hidden) {
         checkbox.checked = true;
       }
@@ -5378,6 +5377,7 @@ class SelectableRows extends base_plugin_default {
     this.selectAll.type = "checkbox";
     this.selectAll.classList.add(SELECT_ALL_CLASS);
     this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
+    styleControl(this.grid, this.selectAll, "check");
     const label = document.createElement("label");
     label.hidden = this.isSingleSelect;
     label.classList.add("dg-clickable-cell");
@@ -5395,6 +5395,7 @@ class SelectableRows extends base_plugin_default {
     if (this.isSingleSelect) {
       input.name = `dg-row-select-${grid.id}`;
     }
+    styleControl(grid, input, this.isSingleSelect ? "radio" : "check");
     const label = document.createElement("label");
     label.classList.add("dg-clickable-cell");
     label.appendChild(input);
@@ -6814,7 +6815,7 @@ class EditableColumn extends base_plugin_default {
     input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
     input.dataset.field = field;
-    const { displayed, commit, reject, startEditing } = this.#cellLifecycle(td, column, item, () => input.value, (value) => {
+    const { displayed, commit, reject, startEditing } = this.#cellLifecycle(td, input, column, item, () => input.value, (value) => {
       input.value = value;
     });
     input.value = displayed();
@@ -6851,7 +6852,7 @@ class EditableColumn extends base_plugin_default {
     select.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     select.setAttribute("aria-label", column.title ?? field);
     select.dataset.field = field;
-    const { displayed, commit, startEditing } = this.#cellLifecycle(td, column, item, () => select.value, (value) => {
+    const { displayed, commit, startEditing } = this.#cellLifecycle(td, select, column, item, () => select.value, (value) => {
       select.value = value;
     });
     for (const entry of column.editableOptions ?? []) {
@@ -6889,11 +6890,11 @@ class EditableColumn extends base_plugin_default {
     const input = document.createElement("input");
     input.type = "checkbox";
     input.classList.add("dg-editable");
-    input.classList.add("dg-skin");
+    styleControl(grid, input, "check");
     input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
     input.setAttribute("aria-label", column.title ?? field);
     input.dataset.field = field;
-    const { displayed, commit, startEditing } = this.#cellLifecycle(td, column, item, () => String(input.checked), (value) => {
+    const { displayed, commit, startEditing } = this.#cellLifecycle(td, input, column, item, () => String(input.checked), (value) => {
       input.checked = value === "true";
     });
     input.checked = displayed() === "true";
@@ -6933,12 +6934,13 @@ class EditableColumn extends base_plugin_default {
     const renderEditor = column.renderEditor;
     applyContent(td, renderEditor(ctx));
   }
-  #cellLifecycle(td, column, item, getValue, setValue) {
+  #cellLifecycle(td, control, column, item, getValue, setValue) {
     const displayed = () => this.#displayed(column, item);
     const startEditing = () => {
       td.dataset.editing = "";
       td.removeAttribute("data-invalid");
       td.removeAttribute("title");
+      control.removeAttribute("aria-invalid");
     };
     const endEditing = () => {
       td.removeAttribute("data-editing");
@@ -6949,6 +6951,7 @@ class EditableColumn extends base_plugin_default {
       if (message) {
         td.dataset.invalid = "";
         td.title = message;
+        control.setAttribute("aria-invalid", "true");
       }
     };
     const commit = () => {

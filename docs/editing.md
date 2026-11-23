@@ -24,7 +24,8 @@ const grid = new DataGrid({
 `column.validate(value, { row, column, grid })` returns `true`, `false` or an
 error message. A grid-level `validate` option is used as a fallback for columns
 without one. On failure the cell gets `td[data-invalid]` with the message in
-`title`, and the value is reverted.
+`title`, the control gets `aria-invalid="true"`, and the value is reverted. A
+host-classed checkbox (`check` role) paints its invalid state from `aria-invalid`.
 
 ```js
 {

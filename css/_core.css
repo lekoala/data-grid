@@ -573,10 +573,11 @@ data-grid .dg-selectable label {
   margin: 0;
 }
 
-data-grid .dg-select-all,
-data-grid .dg-selectable input[type="checkbox"],
-data-grid .dg-selectable input[type="radio"],
-data-grid input.dg-editable[type="checkbox"] {
+/* Grid-skinned only: a host `check` / `radio` class owns size and colors. */
+data-grid .dg-select-all:where(.dg-skin),
+data-grid .dg-selectable input:where(.dg-skin)[type="checkbox"],
+data-grid .dg-selectable input:where(.dg-skin)[type="radio"],
+data-grid input.dg-editable:where(.dg-skin)[type="checkbox"] {
   accent-color: var(--dg-accent);
   height: 16px;
   width: 16px;
@@ -940,7 +941,9 @@ data-grid tbody td.dg-editable-col {
   min-block-size: var(--dg-control-height);
 }
 
-data-grid tbody td input.dg-editable {
+/* Text editors melt into the cell. Not the checkbox: this reset would strip a
+   host `check` of its own box. */
+data-grid tbody td input.dg-editable:not([type="checkbox"]) {
   width: 100%;
   background: transparent;
   border: 0;
@@ -982,7 +985,7 @@ data-grid tbody td input.dg-editable:not([type="checkbox"]):focus {
 
 /* A 16px box cannot take an inset ring: native-looking outer outline in the
    focus color instead, so it never stacks with the browser default. */
-data-grid tbody td input.dg-editable[type="checkbox"]:focus-visible {
+data-grid tbody td input.dg-editable:where(.dg-skin)[type="checkbox"]:focus-visible {
   outline: var(--dg-focus-width) solid var(--dg-focus-color);
   outline-offset: 2px;
 }
@@ -992,14 +995,15 @@ data-grid tbody td select.dg-editable:focus-visible {
   outline-offset: calc(var(--dg-focus-width) * -1);
 }
 
-data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable {
+/* A host-classed checkbox paints its invalid state from aria-invalid. */
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:where(.dg-skin) {
   background-color: var(--dg-danger-bg);
   box-shadow: inset 0 0 0 1px var(--dg-danger-color);
 }
 
 /* An invalid cell keeps its danger signal at the point of correction: focus
    reuses the danger color instead of the accent. */
-data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:focus {
+data-grid tbody td.dg-editable-col[data-invalid] input.dg-editable:where(.dg-skin):focus {
   outline-color: var(--dg-danger-color);
 }
 

@@ -26,6 +26,14 @@ export type ControlClasses = {
      * Page size
      */
     select: string;
+    /**
+     * Selection, select all, checkbox editors, column and multi-value filter menus
+     */
+    check: string;
+    /**
+     * Single row selection
+     */
+    radio: string;
 };
 export type RenderContent = string | number | boolean | Node | {
     html: string;

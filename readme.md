@@ -388,6 +388,8 @@ customElements.get("data-grid").setDefaultControlClasses({
     action: "btn outline sm",
     input: "input sm",
     select: "select sm",
+    check: "check",
+    radio: "radio",
 });
 ```
 

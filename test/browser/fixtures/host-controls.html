@@ -21,6 +21,14 @@
       .x-btn:focus-visible { outline: 3px solid Highlight; }
     }
     #plain { --dg-border-width: 3px; --dg-row-border-color: black; }
+    /* A host check draws its own box: the grid's native 16px must not reach it. */
+    .x-check {
+      appearance: none;
+      box-sizing: border-box;
+      width: 20px;
+      height: 20px;
+      border: 2px solid red;
+    }
   </style>
 </head>
 <body>
@@ -33,6 +41,9 @@
   <data-grid id="plain" searchable>
     <table><thead><tr><th data-field="name">Name</th></tr></thead><tbody><tr><td>Ada</td></tr></tbody></table>
   </data-grid>
+  <data-grid id="checks" selectable>
+    <table><thead><tr><th data-field="name">Name</th></tr></thead><tbody><tr><td>Ada</td></tr></tbody></table>
+  </data-grid>
   <script>
     // Own properties exist before define; the constructor must replay the setter.
     document.querySelector("#host").controlClasses = { input: "x-input" };
@@ -42,6 +53,7 @@
     const Grid = customElements.get("data-grid");
     Grid.setDefaultControlClasses({ button: "x-btn", select: "x-select", action: "x-btn" });
     document.querySelector("#plain").controlClasses = { button: "", input: "", select: "", action: "" };
+    document.querySelector("#checks").controlClasses = { check: "x-check" };
   </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ function tokens(value) {
 /** @param {Partial<ControlClasses>|null} value @returns {Partial<ControlClasses>} */
 export function normalizeControlClasses(value) {
     const result = /** @type {Partial<ControlClasses>} */ ({});
-    for (const role of /** @type {const} */ (["button", "action", "input", "select"])) {
+    for (const role of /** @type {const} */ (["button", "action", "input", "select", "check", "radio"])) {
         if (value && Object.hasOwn(value, role)) result[role] = tokens(value[role]).join(" ");
     }
     return result;

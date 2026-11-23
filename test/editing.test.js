@@ -128,6 +128,10 @@ test("validate rejects invalid edits and sets data-invalid", async () => {
     const td = inst.querySelector("tbody td");
     expect(td.hasAttribute("data-invalid")).toBe(true);
     expect(td.title).toBe("Too short");
+    // The control carries the state too: a host-classed editor paints it.
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    input.focus();
+    expect(input.hasAttribute("aria-invalid")).toBe(false);
     document.body.removeChild(inst);
 });
 

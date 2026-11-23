@@ -1,6 +1,7 @@
 import BasePlugin from "../core/base-plugin.js";
 import addSelectOption from "../utils/addSelectOption.js";
 import applyContent from "../utils/applyContent.js";
+import { styleControl } from "../utils/controlClasses.js";
 import { dispatch } from "../utils/dispatch.js";
 
 /**
@@ -91,6 +92,7 @@ class EditableColumn extends BasePlugin {
 
         const { displayed, commit, reject, startEditing } = this.#cellLifecycle(
             td,
+            input,
             column,
             item,
             () => input.value,
@@ -159,6 +161,7 @@ class EditableColumn extends BasePlugin {
 
         const { displayed, commit, startEditing } = this.#cellLifecycle(
             td,
+            select,
             column,
             item,
             () => select.value,
@@ -221,13 +224,16 @@ class EditableColumn extends BasePlugin {
         const input = document.createElement("input");
         input.type = "checkbox";
         input.classList.add("dg-editable");
-        input.classList.add("dg-skin");
+        // Unlike the text editors, which melt into their cell, a checkbox is
+        // a standalone control: it follows the host `check` role.
+        styleControl(grid, input, "check");
         input.name = `${gridId.replaceAll("-", "_")}[${i + 1}][${field}]`;
         input.setAttribute("aria-label", column.title ?? field);
         input.dataset.field = field;
 
         const { displayed, commit, startEditing } = this.#cellLifecycle(
             td,
+            input,
             column,
             item,
             () => String(input.checked),
@@ -304,18 +310,22 @@ class EditableColumn extends BasePlugin {
      * Shared editing lifecycle for one cell control: the control reads through
      * getValue and is restored through setValue, so inputs, selects and
      * checkboxes share validation, coercion and the cancelable `edit` event.
+     * The rejection is announced on the control too (`aria-invalid`): a
+     * host-classed control paints its own invalid state from it.
      * @param {HTMLElement} td
+     * @param {HTMLInputElement|HTMLSelectElement} control
      * @param {import("../data-grid.js").Column} column
      * @param {Record<string, any>} item
      * @param {() => String} getValue
      * @param {(value: String) => void} setValue
      */
-    #cellLifecycle(td, column, item, getValue, setValue) {
+    #cellLifecycle(td, control, column, item, getValue, setValue) {
         const displayed = () => this.#displayed(column, item);
         const startEditing = () => {
             td.dataset.editing = "";
             td.removeAttribute("data-invalid");
             td.removeAttribute("title");
+            control.removeAttribute("aria-invalid");
         };
         const endEditing = () => {
             td.removeAttribute("data-editing");
@@ -326,6 +336,7 @@ class EditableColumn extends BasePlugin {
             if (message) {
                 td.dataset.invalid = "";
                 td.title = message;
+                control.setAttribute("aria-invalid", "true");
             }
         };
         const commit = () => {

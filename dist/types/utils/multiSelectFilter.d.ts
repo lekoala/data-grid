@@ -10,12 +10,13 @@ export declare function updateMultiSelectSummary(root: HTMLElement): void;
  * as-is except empty values, which cannot participate in a set (placeholders
  * like "All" are meaningless as checkboxes) but keep their label as the
  * empty-state summary.
+ * @param {import("../data-grid.js").default} grid
  * @param {import("../data-grid.js").Column} column
  * @param {Array<import("../data-source.js").FilterOption>} options
  * @param {HTMLTableCellElement} relatedTh
  * @returns {HTMLDivElement}
  */
-export declare function createMultiSelect(column: import("../data-grid.js").Column, options: Array<import("../data-source.js").FilterOption>, relatedTh: HTMLTableCellElement): HTMLDivElement;
+export declare function createMultiSelect(grid: import("../data-grid.js").default, column: import("../data-grid.js").Column, options: Array<import("../data-source.js").FilterOption>, relatedTh: HTMLTableCellElement): HTMLDivElement;
 /**
  * Checked values, in DOM order.
  * @param {HTMLElement} root

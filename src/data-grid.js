@@ -69,10 +69,12 @@ import transformValue from "./utils/transformValue.js";
  * @property {string} action Row actions (buttons and links)
  * @property {string} input Search and page number
  * @property {string} select Page size
+ * @property {string} check Selection, select all, checkbox editors, column and multi-value filter menus
+ * @property {string} radio Single row selection
  */
 
 /** @type {ControlClasses} */
-const defaultControlClasses = { button: "", action: "", input: "", select: "" };
+const defaultControlClasses = { button: "", action: "", input: "", select: "", check: "", radio: "" };
 
 /**
  * Content accepted from render callbacks.
@@ -4361,7 +4363,7 @@ class DataGrid extends BaseElement {
         // Ctrl-click listboxes are unusable in a narrow column. Older browsers
         // keep the ordinary select as the intentional degradation.
         if (type === "select" && column.filterMultiple && supportsPopover()) {
-            return createMultiSelect(column, this.getFilterOptions(column), relatedTh);
+            return createMultiSelect(this, column, this.getFilterOptions(column), relatedTh);
         }
         const isSelect = type === "select" || type === "boolean";
         const filter = isSelect

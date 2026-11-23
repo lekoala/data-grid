@@ -1,5 +1,6 @@
 import { repositionAt } from "@lekoala/floating";
 import BasePlugin from "../core/base-plugin.js";
+import { styleControl } from "../utils/controlClasses.js";
 import { off, on } from "../utils/events.js";
 
 const MENU_EVENTS = ["contextmenu", "change"];
@@ -126,6 +127,7 @@ class ContextMenu extends BasePlugin {
             const checkbox = document.createElement("input");
             checkbox.setAttribute("type", "checkbox");
             checkbox.setAttribute("data-name", col.field ?? "");
+            styleControl(grid, checkbox, "check");
             if (!col.hidden) {
                 checkbox.checked = true;
             }

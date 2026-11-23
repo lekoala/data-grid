@@ -1,4 +1,5 @@
 import BasePlugin from "../core/base-plugin.js";
+import { styleControl } from "../utils/controlClasses.js";
 import { off, on } from "../utils/events.js";
 
 const SELECTABLE_CLASS = "dg-selectable";
@@ -235,6 +236,7 @@ class SelectableRows extends BasePlugin {
         this.selectAll.type = "checkbox";
         this.selectAll.classList.add(SELECT_ALL_CLASS);
         this.selectAll.setAttribute("aria-label", this.grid.labels.selectAll);
+        styleControl(this.grid, this.selectAll, "check");
 
         const label = document.createElement("label");
         label.hidden = this.isSingleSelect;
@@ -265,6 +267,7 @@ class SelectableRows extends BasePlugin {
         if (this.isSingleSelect) {
             input.name = `dg-row-select-${grid.id}`;
         }
+        styleControl(grid, input, this.isSingleSelect ? "radio" : "check");
 
         // Label need to take full space thanks to css to make the whole cell clickable
         const label = document.createElement("label");
