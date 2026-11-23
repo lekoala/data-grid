@@ -235,7 +235,7 @@ class ResponsiveGrid extends BasePlugin {
         if (changed) {
             this.#rebuildDetailsSafely();
         }
-        this.#syncFooter(size);
+        this.#syncFooter();
         table.style.visibility = "visible";
     }
 
@@ -420,12 +420,11 @@ class ResponsiveGrid extends BasePlugin {
         return changed;
     }
 
-    /** @param {Number} size */
-    #syncFooter(size) {
+    #syncFooter() {
         // Footer compact state is independent of column changes. The footer is
-        // grid chrome outside the table: measure it against the grid width.
+        // grid chrome outside the table: measure its own available width.
         const footer = this.grid.footerEl;
-        if (!footer) {
+        if (!footer?.clientWidth) {
             return;
         }
         // The controls wrapper is display: contents, so measure its children,
@@ -433,14 +432,14 @@ class ResponsiveGrid extends BasePlugin {
         const items = footer.querySelectorAll(
             ":scope > div:not(.dg-footer-controls), :scope > .dg-footer-controls > *",
         );
-        const realFooterWidth = /** @type {HTMLElement[]} */ ([...items]).reduce(
-            (result, item) => result + item.offsetWidth,
-            0,
-        );
-        const availableFooterWidth = footer.offsetWidth - realFooterWidth;
-        if (realFooterWidth > size) {
+        const widths = /** @type {HTMLElement[]} */ ([...items]).map((item) => item.offsetWidth).filter(Boolean);
+        const { paddingLeft, paddingRight, columnGap } = getComputedStyle(footer);
+        const innerWidth = footer.clientWidth - Number.parseFloat(paddingLeft) - Number.parseFloat(paddingRight);
+        const gaps = Math.max(0, widths.length - 1) * (Number.parseFloat(columnGap) || 0);
+        const remainingWidth = innerWidth - widths.reduce((total, width) => total + width, gaps);
+        if (remainingWidth < 0) {
             footer.classList.add("dg-footer-compact");
-        } else if (availableFooterWidth > 250) {
+        } else if (remainingWidth > 250) {
             footer.classList.remove("dg-footer-compact");
         }
     }
@@ -449,18 +448,6 @@ class ResponsiveGrid extends BasePlugin {
         this.#blockObserver();
         this.#rebuildDetails();
         this.#unblockObserver();
-    }
-
-    #computeLabelWidth() {
-        let idealWidth = 0;
-        const hCols = /** @type {NodeListOf<HTMLElement>} */ (this.grid.querySelectorAll(".dg-head-columns th"));
-        for (const hCol of hCols) {
-            if (idealWidth >= 120) {
-                break;
-            }
-            idealWidth += hCol.offsetWidth;
-        }
-        return idealWidth;
     }
 
     /**
@@ -642,13 +629,11 @@ class ResponsiveGrid extends BasePlugin {
             detailTd.appendChild(childTable);
             childTable.classList.add(`${RESPONSIVE_CLASS}-table`);
 
-            const idealWidth = this.#computeLabelWidth();
             for (const col of /** @type {NodeListOf<HTMLElement>} */ (
                 tr.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)
             )) {
                 const childTableRow = document.createElement("tr");
                 const labelCol = document.createElement("th");
-                labelCol.style.width = `${idealWidth}px`;
                 labelCol.textContent = col.dataset.name ?? "";
                 childTableRow.append(labelCol, col);
                 childTable.appendChild(childTableRow);

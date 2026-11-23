@@ -3,7 +3,7 @@ data-grid .dg-responsive-child-row > td {
 }
 
 data-grid .dg-responsive-table {
-  table-layout: auto;
+  table-layout: fixed;
   border: 0;
   width: 100%;
 }
@@ -11,12 +11,18 @@ data-grid .dg-responsive-table {
 data-grid .dg-responsive-table td,
 data-grid .dg-responsive-table th {
   white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 data-grid .dg-responsive-table th {
-  max-width: 40%;
+  width: 120px;
   text-align: start;
   color: var(--dg-muted-color);
   font-weight: 600;
+}
+
+data-grid .dg-responsive-table td {
+  /* Moved cells retain the width attribute from the main table. */
+  width: auto;
 }
 

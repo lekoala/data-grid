@@ -5,6 +5,44 @@ beforeAll(ensureServer);
 afterAll(stopServer);
 
 test.skipIf(IS_WINDOWS)(
+    "the responsive footer keeps the results window and page controls on one line when they fit",
+    async () => {
+        await using v = view();
+        await v.navigate(`${ensureServer()}/demo/responsive.html`);
+        const grid = "document.querySelector('#responsive-demo data-grid')";
+        const footer = `${grid}.footerEl`;
+        const compact = `${footer}.classList.contains('dg-footer-compact')`;
+        const inputWidth = `${footer}.querySelector('.dg-input-page').offsetWidth`;
+        await waitFor(v, `${grid}?.rows.length === 15 && !${grid}.loading`);
+        await v.evaluate(`${grid}.setQuery({ page: 2 })`);
+        await waitFor(v, `${grid}.query.page === 2 && !${grid}.loading`);
+        const regularWidth = await read(v, inputWidth);
+
+        for (const width of [460, 390]) {
+            await v.resize(width, 800);
+            await waitFor(v, compact);
+            expect(await read(v, inputWidth)).toBeLessThan(regularWidth);
+            expect(
+                await read(
+                    v,
+                    `(() => {
+                        const range = ${footer}.querySelector('.dg-page-range').getBoundingClientRect();
+                        const pager = ${footer}.querySelector('.dg-pagination').getBoundingClientRect();
+                        return range.top < pager.bottom && range.bottom > pager.top && range.right <= pager.left;
+                    })()`,
+                ),
+            ).toBe(true);
+        }
+
+        await v.resize(1280, 800);
+        await waitFor(v, `!${compact}`);
+        expect(await read(v, inputWidth)).toBe(regularWidth);
+        expect(await read(v, `${footer}.querySelector('.dg-input-page').value`)).toBe("2");
+    },
+    15000,
+);
+
+test.skipIf(IS_WINDOWS)(
     "a compact footer preserves the results window and progressive loaded count",
     async () => {
         await using v = view();

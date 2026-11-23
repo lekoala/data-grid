@@ -6005,7 +6005,7 @@ class ResponsiveGrid extends base_plugin_default {
     if (changed) {
       this.#rebuildDetailsSafely();
     }
-    this.#syncFooter(size);
+    this.#syncFooter();
     table.style.visibility = "visible";
   }
   #resizeWidth(width) {
@@ -6109,17 +6109,20 @@ class ResponsiveGrid extends base_plugin_default {
     }
     return changed;
   }
-  #syncFooter(size) {
+  #syncFooter() {
     const footer = this.grid.footerEl;
-    if (!footer) {
+    if (!footer?.clientWidth) {
       return;
     }
     const items = footer.querySelectorAll(":scope > div:not(.dg-footer-controls), :scope > .dg-footer-controls > *");
-    const realFooterWidth = [...items].reduce((result, item) => result + item.offsetWidth, 0);
-    const availableFooterWidth = footer.offsetWidth - realFooterWidth;
-    if (realFooterWidth > size) {
+    const widths = [...items].map((item) => item.offsetWidth).filter(Boolean);
+    const { paddingLeft, paddingRight, columnGap } = getComputedStyle(footer);
+    const innerWidth = footer.clientWidth - Number.parseFloat(paddingLeft) - Number.parseFloat(paddingRight);
+    const gaps = Math.max(0, widths.length - 1) * (Number.parseFloat(columnGap) || 0);
+    const remainingWidth = innerWidth - widths.reduce((total, width) => total + width, gaps);
+    if (remainingWidth < 0) {
       footer.classList.add("dg-footer-compact");
-    } else if (availableFooterWidth > 250) {
+    } else if (remainingWidth > 250) {
       footer.classList.remove("dg-footer-compact");
     }
   }
@@ -6127,17 +6130,6 @@ class ResponsiveGrid extends base_plugin_default {
     this.#blockObserver();
     this.#rebuildDetails();
     this.#unblockObserver();
-  }
-  #computeLabelWidth() {
-    let idealWidth = 0;
-    const hCols = this.grid.querySelectorAll(".dg-head-columns th");
-    for (const hCol of hCols) {
-      if (idealWidth >= 120) {
-        break;
-      }
-      idealWidth += hCol.offsetWidth;
-    }
-    return idealWidth;
   }
   #dataRows() {
     return Array.from(this.grid.querySelectorAll("tbody > tr.dg-data-row"));
@@ -6227,11 +6219,9 @@ class ResponsiveGrid extends base_plugin_default {
       const childTable = document.createElement("table");
       detailTd.appendChild(childTable);
       childTable.classList.add(`${RESPONSIVE_CLASS}-table`);
-      const idealWidth = this.#computeLabelWidth();
       for (const col of tr.querySelectorAll(`.${RESPONSIVE_CLASS}-hidden`)) {
         const childTableRow = document.createElement("tr");
         const labelCol = document.createElement("th");
-        labelCol.style.width = `${idealWidth}px`;
         labelCol.textContent = col.dataset.name ?? "";
         childTableRow.append(labelCol, col);
         childTable.appendChild(childTableRow);

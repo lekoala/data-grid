@@ -160,7 +160,6 @@ data-grid > .dg-frame {
   border-radius: var(--dg-radius);
   flex-direction: column;
   flex: auto;
-  min-width: 280px;
   min-height: 0;
 }
 
@@ -1214,6 +1213,11 @@ data-grid .dg-footer .dg-meta {
   font-size: .875em;
 }
 
+data-grid .dg-footer.dg-footer-compact .dg-input-page.dg-skin {
+  width: 3em;
+  padding: 0 .25em;
+}
+
 data-grid .dg-footer.dg-footer-compact .dg-pagination > button:-webkit-any(.dg-btn-first, .dg-btn-last) {
   display: none;
 }
@@ -1924,20 +1928,25 @@ data-grid .dg-responsive-child-row > td {
 }
 
 data-grid .dg-responsive-table {
-  table-layout: auto;
+  table-layout: fixed;
   border: 0;
   width: 100%;
 }
 
 data-grid .dg-responsive-table td, data-grid .dg-responsive-table th {
   white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 data-grid .dg-responsive-table th {
   text-align: start;
   color: var(--dg-muted-color);
-  max-width: 40%;
+  width: 120px;
   font-weight: 600;
+}
+
+data-grid .dg-responsive-table td {
+  width: auto;
 }
 
 /* css/_row-details.css */

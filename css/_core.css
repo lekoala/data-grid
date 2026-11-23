@@ -200,7 +200,6 @@ data-grid > .dg-frame {
   background: var(--dg-bg);
   border: var(--dg-border-width) solid var(--dg-border-color);
   border-radius: var(--dg-radius);
-  min-width: 280px;
 }
 
 data-grid > .dg-frame > .dg-scroll {
@@ -1261,6 +1260,11 @@ data-grid .dg-footer .dg-meta {
 }
 
 /* Compact: the position stays, first and last go. */
+data-grid .dg-footer.dg-footer-compact .dg-input-page.dg-skin {
+  width: 3em;
+  padding: 0 0.25em;
+}
+
 data-grid .dg-footer.dg-footer-compact .dg-pagination > button:is(.dg-btn-first, .dg-btn-last) {
   display: none;
 }

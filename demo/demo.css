@@ -305,6 +305,11 @@ footer hr {
   height: 100%;
 }
 
+/* Keep the Basic demo's columns readable inside the grid's own scroll viewport. */
+#basic-demo .dg-scroll > table {
+  min-inline-size: 48rem;
+}
+
 .demo-grid .demo-note {
   color: #526174;
   font-size: 0.9375rem;
@@ -349,11 +354,13 @@ tr.pending td {
 .resize-me {
   border: 1px dashed rgb(17 32 51 / 16%);
   border-radius: 16px;
+  box-sizing: border-box;
   margin-bottom: 1rem;
-  min-width: 320px;
+  min-inline-size: min(320px, 100%);
+  max-inline-size: 100%;
   overflow: auto;
   padding: 1.25rem;
-  position: relative;
+  padding-block-end: 0.5rem;
   resize: horizontal;
 }
 
@@ -362,14 +369,14 @@ tr.pending td {
   width: min(640px, 100%);
 }
 
-.resize-me:after {
+.resize-me::after {
+  content: "Resize me";
+  display: block;
+  margin-block-start: 0.5rem;
   color: #526174;
   font-size: 0.75rem;
   line-height: 1;
-  position: absolute;
-  bottom: 0.875rem;
-  content: "Resize me";
-  right: 1rem;
+  text-align: end;
 }
 
 /* Declarative cell presentation: kept intact across rerenders by the grid. */
