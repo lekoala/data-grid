@@ -44,11 +44,11 @@ function inlineActionsWidth(count) {
  * Add actions on rows
  */
 class RowActions extends BasePlugin {
-    /** @type {ResizeObserver} */
+    /** @type {ResizeObserver|null} */
     #widthObserver;
     /** @type {Number|null} */
     #widthFrame;
-    /** @type {WeakMap<HTMLTableRowElement, Object|undefined>} */
+    /** @type {WeakMap<HTMLTableRowElement, Object|undefined>|null} */
     #renderedDefinitions;
 
     /**
@@ -56,9 +56,9 @@ class RowActions extends BasePlugin {
      */
     constructor(grid) {
         super(grid);
-        this.#renderedDefinitions = new WeakMap();
+        this.#renderedDefinitions = null;
         this.#widthFrame = null;
-        this.#widthObserver = new ResizeObserver(() => this.#queueWidthSync());
+        this.#widthObserver = null;
         /** @type {HTMLUListElement|null} */
         this.menu = null;
         /** @type {HTMLElement|null} */
@@ -67,9 +67,10 @@ class RowActions extends BasePlugin {
         this._keyboardOpen = false;
     }
 
-    connected() {
-        if (!supportsPopover()) {
-            return;
+    /** @returns {HTMLUListElement|null} */
+    #ensureMenu() {
+        if (this.menu || !this.grid.isConnected || !supportsPopover()) {
+            return this.menu;
         }
         const menu = this.grid.ownerDocument.createElement("ul");
         menu.id = randstr("dg-actions-menu-");
@@ -80,10 +81,12 @@ class RowActions extends BasePlugin {
         this.menu = menu;
         this.grid.addEventListener("click", this);
         attachPopoverPositioning(this.grid, { selector: ".dg-actions-menu", placement: "bottom-end" });
+        return menu;
     }
 
     disconnected() {
-        this.#widthObserver.disconnect();
+        this.#widthObserver?.disconnect();
+        this.#widthObserver = null;
         if (this.#widthFrame !== null) {
             cancelAnimationFrame(this.#widthFrame);
             this.#widthFrame = null;
@@ -252,7 +255,7 @@ class RowActions extends BasePlugin {
         // which is only known after the rows render. The header is created on a
         // separate render pass (renderTable), so the mode must be applied on
         // both passes: body cells and the header/filter must share it.
-        this.#widthObserver.disconnect();
+        this.#widthObserver?.disconnect();
         if (!this.hasActions()) {
             return;
         }
@@ -265,7 +268,7 @@ class RowActions extends BasePlugin {
                 const tr = /** @type {HTMLTableRowElement} */ (cell.parentElement);
                 const rowIndex = Number(tr.dataset.rowIndex);
                 const row = grid.rows[rowIndex];
-                if (row?.$actions === undefined || this.#renderedDefinitions.get(tr) === grid.meta?.actions) {
+                if (row?.$actions === undefined || this.#renderedDefinitions?.get(tr) === grid.meta?.actions) {
                     continue;
                 }
                 if (grid.options.rowClick === "action") {
@@ -277,7 +280,12 @@ class RowActions extends BasePlugin {
         this.syncCellModes();
         // Observe controls rather than the fixed-width column: a host class or
         // font change can resize a button while the cell itself stays unchanged.
-        for (const cell of this.#bodyCells() ?? []) {
+        const cells = this.#bodyCells();
+        if (!cells?.length || !grid.isConnected) {
+            return;
+        }
+        this.#widthObserver ??= new ResizeObserver(() => this.#queueWidthSync());
+        for (const cell of cells) {
             this.#widthObserver.observe(cell);
             for (const control of cell.children) {
                 this.#widthObserver.observe(control, { box: "border-box" });
@@ -443,7 +451,8 @@ class RowActions extends BasePlugin {
      * @returns {DocumentFragment}
      */
     makeActionRow({ row, tr, grid, rowIndex }) {
-        if (tr) {
+        if (tr && row?.$actions !== undefined) {
+            this.#renderedDefinitions ??= new WeakMap();
             this.#renderedDefinitions.set(tr, grid.meta?.actions);
         }
         const labels = grid.labels;
@@ -455,13 +464,14 @@ class RowActions extends BasePlugin {
             return fragment;
         }
 
-        if (this.menu) {
+        const menu = this.#ensureMenu();
+        if (menu) {
             const actionsToggle = document.createElement("button");
             actionsToggle.type = "button";
             actionsToggle.classList.add("dg-actions-toggle");
             styleControl(grid, actionsToggle, "action");
             actionsToggle.setAttribute("aria-label", labels.toggleActions);
-            actionsToggle.setAttribute("popovertarget", this.menu.id);
+            actionsToggle.setAttribute("popovertarget", menu.id);
             actionsToggle.title = labels.toggleActions;
             fragment.appendChild(actionsToggle);
         }

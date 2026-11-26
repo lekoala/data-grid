@@ -12,7 +12,7 @@ afterEach(() => {
     grids.length = 0;
 });
 
-async function makeGrid() {
+async function makeGrid(menu = true) {
     DataGrid.unregisterPlugins();
     DataGrid.registerPlugins({ ContextMenu });
     const grid = new DataGrid({
@@ -21,7 +21,7 @@ async function makeGrid() {
             { field: "last_name", title: "Last" },
         ],
         dataSource: new ArrayDataSource([{ first_name: "Ada", last_name: "Lovelace" }]),
-        menu: true,
+        menu,
     });
     grids.push(grid);
     document.body.appendChild(grid);
@@ -42,35 +42,38 @@ test("keeps the native browser menu when Popover is unavailable", async () => {
     expect(event.defaultPrevented).toBe(false);
 });
 
-test("menu is read at interaction time without rebuilding the header", () => {
-    const grid = document.createElement("div");
-    const table = document.createElement("table");
-    const thead = document.createElement("thead");
-    const header = document.createElement("th");
-    thead.appendChild(header);
-    table.appendChild(thead);
-    grid.appendChild(table);
-    grid.options = { menu: false };
-    grid.ownsControl = () => true;
-
-    const plugin = new ContextMenu(/** @type {any} */ (grid));
-    const menu = document.createElement("ul");
+test("the header menu is created on the first enabled right click", async () => {
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "showPopover");
     let opened = 0;
-    menu.showPopover = () => opened++;
-    plugin.menu = menu;
-    grid.addEventListener("contextmenu", plugin);
+    Object.defineProperty(HTMLElement.prototype, "showPopover", { configurable: true, value: () => opened++ });
+    try {
+        const grid = await makeGrid(false);
+        const header = grid.querySelector("thead th");
+        const rightClick = () =>
+            header.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
 
-    const disabled = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
-    header.dispatchEvent(disabled);
-    expect(disabled.defaultPrevented).toBe(false);
+        expect(rightClick()).toBe(true);
+        expect(grid.querySelector(".dg-context-menu")).toBeNull();
 
-    grid.options.menu = true;
-    const enabled = new MouseEvent("contextmenu", { bubbles: true, cancelable: true });
-    header.dispatchEvent(enabled);
-    expect(enabled.defaultPrevented).toBe(true);
-    expect(opened).toBe(1);
+        grid.options.menu = true;
+        expect(grid.querySelector(".dg-context-menu")).toBeNull();
+        expect(rightClick()).toBe(false);
+        expect(grid.querySelectorAll(".dg-context-menu input")).toHaveLength(2);
+        expect(opened).toBe(1);
 
-    grid.options.menu = false;
-    header.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
-    expect(opened).toBe(1);
+        grid.options.menu = false;
+        expect(rightClick()).toBe(true);
+        expect(opened).toBe(1);
+
+        const disconnected = new Promise((resolve) => grid.addEventListener("disconnected", resolve, { once: true }));
+        grid.remove();
+        await disconnected;
+        expect(grid.querySelector(".dg-context-menu")).toBeNull();
+    } finally {
+        if (original) {
+            Object.defineProperty(HTMLElement.prototype, "showPopover", original);
+        } else {
+            Reflect.deleteProperty(HTMLElement.prototype, "showPopover");
+        }
+    }
 });

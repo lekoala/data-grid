@@ -1,9 +1,6 @@
 import { repositionAt } from "@lekoala/floating";
 import BasePlugin from "../core/base-plugin.js";
 import { styleControl } from "../utils/controlClasses.js";
-import { off, on } from "../utils/events.js";
-
-const MENU_EVENTS = ["contextmenu", "change"];
 
 /**
  * Create a right click menu on the headers
@@ -19,19 +16,13 @@ class ContextMenu extends BasePlugin {
     }
 
     connected() {
-        const menu = this.grid.ownerDocument.createElement("ul");
-        if (typeof menu.showPopover !== "function") {
-            return;
+        if (typeof HTMLElement.prototype.showPopover === "function") {
+            this.grid.addEventListener("contextmenu", this);
         }
-        menu.className = "dg-menu dg-context-menu";
-        menu.popover = "auto";
-        this.grid.appendChild(menu);
-        this.menu = menu;
-        on(this.grid, MENU_EVENTS, this);
     }
 
     disconnected() {
-        off(this.grid, MENU_EVENTS, this);
+        this.grid.removeEventListener("contextmenu", this);
         this.menu?.remove();
         this.menu = null;
     }
@@ -47,9 +38,7 @@ class ContextMenu extends BasePlugin {
     }
 
     /**
-     * Only the column-visibility checkboxes inside the menu trigger this: the
-     * `change` listener is delegated to the whole grid, so anything else
-     * (pager, filters, selection) must be ignored.
+     * Handle column-visibility checkboxes in the menu.
      * @param {Event} event
      */
     onchange(event) {
@@ -83,8 +72,7 @@ class ContextMenu extends BasePlugin {
      * @param {MouseEvent} event
      */
     oncontextmenu(event) {
-        const menu = this.menu;
-        if (!this.grid.options.menu || !menu) {
+        if (!this.grid.options.menu) {
             return;
         }
         const target = event.target;
@@ -95,6 +83,16 @@ class ContextMenu extends BasePlugin {
         if (!header) {
             return;
         }
+        if (!this.menu) {
+            const menu = this.grid.ownerDocument.createElement("ul");
+            menu.className = "dg-menu dg-context-menu";
+            menu.popover = "auto";
+            menu.addEventListener("change", this);
+            this.grid.appendChild(menu);
+            this.menu = menu;
+            this.createMenu();
+        }
+        const menu = this.menu;
         event.preventDefault();
         menu.showPopover();
         // Show first: the positioning engine refuses to measure a hidden

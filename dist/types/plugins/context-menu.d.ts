@@ -16,9 +16,7 @@ declare class ContextMenu extends BasePlugin {
      */
     afterRender(context: import("../core/base-plugin.js").RenderContext): void;
     /**
-     * Only the column-visibility checkboxes inside the menu trigger this: the
-     * `change` listener is delegated to the whole grid, so anything else
-     * (pager, filters, selection) must be ignored.
+     * Handle column-visibility checkboxes in the menu.
      * @param {Event} event
      */
     onchange(event: Event): void;

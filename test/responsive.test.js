@@ -18,7 +18,7 @@ const COLS = [
 async function makeReadyGrid(opts = {}, pluginSet = { ResponsiveGrid }) {
     DataGrid.unregisterPlugins();
     DataGrid.registerPlugins(pluginSet);
-    const options = { ...opts, responsive: true, dataSource: new ArrayDataSource(ROWS) };
+    const options = { responsive: true, ...opts, dataSource: new ArrayDataSource(ROWS) };
     const inst = new DataGrid(options);
     document.body.appendChild(inst);
     await new Promise((resolve) => {
@@ -37,6 +37,50 @@ function forceResize(inst, size) {
 function hiddenFields(inst) {
     return inst.options.columns.filter((c) => c.responsiveHidden).map((c) => c.field);
 }
+
+test("responsive observes only while enabled", async () => {
+    const OriginalObserver = globalThis.ResizeObserver;
+    let allocated = 0;
+    const active = new Set();
+    globalThis.ResizeObserver = class extends OriginalObserver {
+        constructor(callback) {
+            super(callback);
+            allocated++;
+        }
+
+        observe(target, options) {
+            super.observe(target, options);
+            active.add(this);
+        }
+
+        disconnect() {
+            super.disconnect();
+            active.delete(this);
+        }
+    };
+
+    let inst;
+    try {
+        inst = await makeReadyGrid({ columns: COLS, responsive: false });
+        expect(allocated).toBe(1);
+        expect(active.size).toBe(1); // the core scrollability observer
+
+        inst.setAttribute("responsive", "");
+        expect(active.size).toBe(2);
+        inst.removeAttribute("responsive");
+        expect(active.size).toBe(1);
+        inst.setAttribute("responsive", "");
+        expect(active.size).toBe(2);
+
+        const disconnected = new Promise((resolve) => inst.addEventListener("disconnected", resolve, { once: true }));
+        inst.remove();
+        await disconnected;
+        expect(active.size).toBe(0);
+    } finally {
+        inst?.remove();
+        globalThis.ResizeObserver = OriginalObserver;
+    }
+});
 
 test("responsive hides columns until the grid fits", async () => {
     const inst = await makeReadyGrid({ columns: COLS });

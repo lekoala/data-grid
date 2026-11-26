@@ -5013,26 +5013,18 @@ class ColumnResizer extends base_plugin_default {
 var column_resizer_default = ColumnResizer;
 
 // src/plugins/context-menu.js
-var MENU_EVENTS = ["contextmenu", "change"];
-
 class ContextMenu extends base_plugin_default {
   constructor(grid) {
     super(grid);
     this.menu = null;
   }
   connected() {
-    const menu = this.grid.ownerDocument.createElement("ul");
-    if (typeof menu.showPopover !== "function") {
-      return;
+    if (typeof HTMLElement.prototype.showPopover === "function") {
+      this.grid.addEventListener("contextmenu", this);
     }
-    menu.className = "dg-menu dg-context-menu";
-    menu.popover = "auto";
-    this.grid.appendChild(menu);
-    this.menu = menu;
-    on(this.grid, MENU_EVENTS, this);
   }
   disconnected() {
-    off(this.grid, MENU_EVENTS, this);
+    this.grid.removeEventListener("contextmenu", this);
     this.menu?.remove();
     this.menu = null;
   }
@@ -5067,8 +5059,7 @@ class ContextMenu extends base_plugin_default {
     }
   }
   oncontextmenu(event) {
-    const menu = this.menu;
-    if (!this.grid.options.menu || !menu) {
+    if (!this.grid.options.menu) {
       return;
     }
     const target = event.target;
@@ -5079,6 +5070,16 @@ class ContextMenu extends base_plugin_default {
     if (!header) {
       return;
     }
+    if (!this.menu) {
+      const menu = this.grid.ownerDocument.createElement("ul");
+      menu.className = "dg-menu dg-context-menu";
+      menu.popover = "auto";
+      menu.addEventListener("change", this);
+      this.grid.appendChild(menu);
+      this.menu = menu;
+      this.createMenu();
+    }
+    const menu = this.menu;
     event.preventDefault();
     menu.showPopover();
     repositionAt(event.clientX, event.clientY, menu, {
@@ -5875,7 +5876,6 @@ class ResponsiveGrid extends base_plugin_default {
   #lastProcessedWidth;
   #scheduleResize;
   #observer;
-  #observed;
   #observerBlocked;
   #unblockTimeout;
   constructor(grid) {
@@ -5884,28 +5884,14 @@ class ResponsiveGrid extends base_plugin_default {
     this.#unblockTimeout = null;
     this.#lastEntry = null;
     this.#lastProcessedWidth = null;
-    this.#observed = null;
-    this.#scheduleResize = debounce(() => this.resize(), 100);
-    this.#observer = new ResizeObserver((entries) => {
-      this.#lastEntry = entries.at(-1) ?? null;
-      this.#scheduleResize();
-    });
+    this.#scheduleResize = null;
+    this.#observer = null;
   }
   connected() {
-    if (this.grid.options.responsive) {
-      this.#observe();
-    }
+    this.#observe();
   }
   disconnected() {
-    this.#unobserve();
-    if (this.#unblockTimeout) {
-      clearTimeout(this.#unblockTimeout);
-      this.#unblockTimeout = null;
-    }
-    this.#scheduleResize.cancel();
-    this.#observerBlocked = false;
-    this.#lastEntry = null;
-    this.#lastProcessedWidth = null;
+    this.#stopObserving();
   }
   responsiveChanged(enabled) {
     this.#lastProcessedWidth = null;
@@ -5913,23 +5899,35 @@ class ResponsiveGrid extends base_plugin_default {
       this.#observe();
       return;
     }
-    this.#unobserve();
+    this.#stopObserving();
     for (const column of this.grid.options.columns) {
       column.responsiveHidden = false;
     }
   }
   #observe() {
-    if (!this.grid.options.responsive) {
+    if (!this.grid.options.responsive || !this.grid.isConnected || this.#observer) {
       return;
     }
-    this.#observed = this.grid.scrollEl || this.grid;
-    this.#observer.observe(this.#observed);
+    const scheduleResize = debounce(() => this.resize(), 100);
+    this.#scheduleResize = scheduleResize;
+    this.#observer = new ResizeObserver((entries) => {
+      this.#lastEntry = entries.at(-1) ?? null;
+      scheduleResize();
+    });
+    this.#observer.observe(this.grid.scrollEl);
   }
-  #unobserve() {
-    if (this.#observed) {
-      this.#observer.unobserve(this.#observed);
-      this.#observed = null;
+  #stopObserving() {
+    this.#observer?.disconnect();
+    this.#observer = null;
+    this.#scheduleResize?.cancel();
+    this.#scheduleResize = null;
+    if (this.#unblockTimeout !== null) {
+      clearTimeout(this.#unblockTimeout);
+      this.#unblockTimeout = null;
     }
+    this.#observerBlocked = false;
+    this.#lastEntry = null;
+    this.#lastProcessedWidth = null;
   }
   extendColumns(columns) {
     if (!this.grid.options.responsive || !this.grid.options.responsiveToggle || this.#sharesDisclosure()) {
@@ -6336,16 +6334,16 @@ class RowActions extends base_plugin_default {
   #renderedDefinitions;
   constructor(grid) {
     super(grid);
-    this.#renderedDefinitions = new WeakMap;
+    this.#renderedDefinitions = null;
     this.#widthFrame = null;
-    this.#widthObserver = new ResizeObserver(() => this.#queueWidthSync());
+    this.#widthObserver = null;
     this.menu = null;
     this.activeInvoker = null;
     this._keyboardOpen = false;
   }
-  connected() {
-    if (!supportsPopover()) {
-      return;
+  #ensureMenu() {
+    if (this.menu || !this.grid.isConnected || !supportsPopover()) {
+      return this.menu;
     }
     const menu = this.grid.ownerDocument.createElement("ul");
     menu.id = randstr("dg-actions-menu-");
@@ -6356,9 +6354,11 @@ class RowActions extends base_plugin_default {
     this.menu = menu;
     this.grid.addEventListener("click", this);
     attachPopoverPositioning(this.grid, { selector: ".dg-actions-menu", placement: "bottom-end" });
+    return menu;
   }
   disconnected() {
-    this.#widthObserver.disconnect();
+    this.#widthObserver?.disconnect();
+    this.#widthObserver = null;
     if (this.#widthFrame !== null) {
       cancelAnimationFrame(this.#widthFrame);
       this.#widthFrame = null;
@@ -6473,7 +6473,7 @@ class RowActions extends base_plugin_default {
     this.menu?.hidePopover?.();
   }
   afterRender() {
-    this.#widthObserver.disconnect();
+    this.#widthObserver?.disconnect();
     if (!this.hasActions()) {
       return;
     }
@@ -6484,7 +6484,7 @@ class RowActions extends base_plugin_default {
         const tr = cell.parentElement;
         const rowIndex = Number(tr.dataset.rowIndex);
         const row = grid.rows[rowIndex];
-        if (row?.$actions === undefined || this.#renderedDefinitions.get(tr) === grid.meta?.actions) {
+        if (row?.$actions === undefined || this.#renderedDefinitions?.get(tr) === grid.meta?.actions) {
           continue;
         }
         if (grid.options.rowClick === "action") {
@@ -6494,7 +6494,12 @@ class RowActions extends base_plugin_default {
       }
     }
     this.syncCellModes();
-    for (const cell of this.#bodyCells() ?? []) {
+    const cells = this.#bodyCells();
+    if (!cells?.length || !grid.isConnected) {
+      return;
+    }
+    this.#widthObserver ??= new ResizeObserver(() => this.#queueWidthSync());
+    for (const cell of cells) {
       this.#widthObserver.observe(cell);
       for (const control of cell.children) {
         this.#widthObserver.observe(control, { box: "border-box" });
@@ -6610,7 +6615,8 @@ class RowActions extends base_plugin_default {
     }
   }
   makeActionRow({ row, tr, grid, rowIndex }) {
-    if (tr) {
+    if (tr && row?.$actions !== undefined) {
+      this.#renderedDefinitions ??= new WeakMap;
       this.#renderedDefinitions.set(tr, grid.meta?.actions);
     }
     const labels = grid.labels;
@@ -6621,13 +6627,14 @@ class RowActions extends base_plugin_default {
     if (!actions.length) {
       return fragment;
     }
-    if (this.menu) {
+    const menu = this.#ensureMenu();
+    if (menu) {
       const actionsToggle = document.createElement("button");
       actionsToggle.type = "button";
       actionsToggle.classList.add("dg-actions-toggle");
       styleControl(grid, actionsToggle, "action");
       actionsToggle.setAttribute("aria-label", labels.toggleActions);
-      actionsToggle.setAttribute("popovertarget", this.menu.id);
+      actionsToggle.setAttribute("popovertarget", menu.id);
       actionsToggle.title = labels.toggleActions;
       fragment.appendChild(actionsToggle);
     }

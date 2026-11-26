@@ -14,7 +14,6 @@ declare class RowActions extends BasePlugin {
      * @param {import("../data-grid.js").default} grid
      */
     constructor(grid: import("../data-grid.js").default);
-    connected(): void;
     disconnected(): void;
     /**
      * Delegate the collapsed actions popover toggle. The row is resolved from

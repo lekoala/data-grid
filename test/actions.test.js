@@ -339,6 +339,24 @@ test("default action makes the row clickable", async () => {
     document.body.removeChild(inst);
 });
 
+test("row actions create their shared popover when an action first renders", async () => {
+    const inst = await makeReadyGrid({ columns: [{ field: "name" }], collapseActions: true }, [{ name: "Ada" }], {
+        RowActions,
+    });
+    expect(inst.querySelector(".dg-actions-menu")).toBeNull();
+
+    inst.options.actions = [{ name: "edit" }];
+    inst.renderTable();
+    inst.renderBody();
+
+    const toggle = inst.querySelector(".dg-actions-toggle");
+    const menu = inst.querySelector(".dg-actions-menu");
+    expect(toggle.getAttribute("popovertarget")).toBe(menu.id);
+    toggle.click();
+    expect(menu.querySelector('[data-action="edit"]')).not.toBeNull();
+    inst.remove();
+});
+
 test("more than two actions use one shared native popover", async () => {
     const inst = await makeReadyGrid(
         {

@@ -39,12 +39,10 @@ class ResponsiveGrid extends BasePlugin {
     #lastEntry;
     /** @type {Number|null} */
     #lastProcessedWidth;
-    /** @type {(() => void) & { cancel: () => void }} */
+    /** @type {import("../utils/debounce.js").DebouncedFunction|null} */
     #scheduleResize;
-    /** @type {ResizeObserver} */
+    /** @type {ResizeObserver|null} */
     #observer;
-    /** @type {Element|null} */
-    #observed;
     /** @type {Boolean} */
     #observerBlocked;
     /** @type {ReturnType<typeof setTimeout>|null} */
@@ -60,32 +58,16 @@ class ResponsiveGrid extends BasePlugin {
         this.#unblockTimeout = null;
         this.#lastEntry = null;
         this.#lastProcessedWidth = null;
-        this.#observed = null;
-        this.#scheduleResize = debounce(() => this.resize(), 100);
-        this.#observer = new ResizeObserver((entries) => {
-            this.#lastEntry = entries.at(-1) ?? null;
-            this.#scheduleResize();
-        });
+        this.#scheduleResize = null;
+        this.#observer = null;
     }
 
     connected() {
-        if (this.grid.options.responsive) {
-            this.#observe();
-        }
+        this.#observe();
     }
 
     disconnected() {
-        this.#unobserve();
-        if (this.#unblockTimeout) {
-            clearTimeout(this.#unblockTimeout);
-            this.#unblockTimeout = null;
-        }
-        this.#scheduleResize.cancel();
-        // Reconnection needs a fresh observation even at the same width; a
-        // cancelled unblock timer must not leave resize permanently blocked.
-        this.#observerBlocked = false;
-        this.#lastEntry = null;
-        this.#lastProcessedWidth = null;
+        this.#stopObserving();
     }
 
     /**
@@ -98,28 +80,40 @@ class ResponsiveGrid extends BasePlugin {
             this.#observe();
             return;
         }
-        this.#unobserve();
+        this.#stopObserving();
         for (const column of this.grid.options.columns) {
             column.responsiveHidden = false;
         }
     }
 
     #observe() {
-        if (!this.grid.options.responsive) {
+        if (!this.grid.options.responsive || !this.grid.isConnected || this.#observer) {
             return;
         }
+        const scheduleResize = debounce(() => this.resize(), 100);
+        this.#scheduleResize = scheduleResize;
+        this.#observer = new ResizeObserver((entries) => {
+            this.#lastEntry = entries.at(-1) ?? null;
+            scheduleResize();
+        });
         // The table viewport is the real horizontal constraint for responsive
         // columns. The grid no longer owns the scroll (the .dg-scroll wrapper
         // does), so no overflow/display mutation is needed.
-        this.#observed = this.grid.scrollEl || this.grid;
-        this.#observer.observe(this.#observed);
+        this.#observer.observe(this.grid.scrollEl);
     }
 
-    #unobserve() {
-        if (this.#observed) {
-            this.#observer.unobserve(this.#observed);
-            this.#observed = null;
+    #stopObserving() {
+        this.#observer?.disconnect();
+        this.#observer = null;
+        this.#scheduleResize?.cancel();
+        this.#scheduleResize = null;
+        if (this.#unblockTimeout !== null) {
+            clearTimeout(this.#unblockTimeout);
+            this.#unblockTimeout = null;
         }
+        this.#observerBlocked = false;
+        this.#lastEntry = null;
+        this.#lastProcessedWidth = null;
     }
 
     /**
