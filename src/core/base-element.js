@@ -67,6 +67,8 @@ class BaseElement extends HTMLElement {
     _disconnected() {}
 
     /**
+     * Log debug output from the grid or its plugins when debugging is enabled.
+     * @plugin
      * @param {any[]} data
      */
     log(...data) {

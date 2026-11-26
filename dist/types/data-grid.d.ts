@@ -769,6 +769,7 @@ declare class DataGrid extends BaseElement {
      */
     static loadLabels(url: string): Promise<Partial<Labels>>;
     /**
+     * @plugin
      * @param {string} template
      * @param {Record<string, string | number>} values
      * @returns {string}
@@ -985,6 +986,7 @@ declare class DataGrid extends BaseElement {
      * existing content, so the author's order is preserved. Idempotent: an already-canonical
      * topbar is left untouched. Grids without search, bulk actions or a
      * declarative topbar never get one.
+     * @plugin
      * @returns {HTMLDivElement}
      */
     ensureTopbar(): HTMLDivElement;
@@ -1022,6 +1024,8 @@ declare class DataGrid extends BaseElement {
     ownsControl(element: Element | null | undefined): boolean;
     init(): Promise<void> | undefined;
     /**
+     * Find a configured column by field before virtual columns are added.
+     * @plugin
      * @param {String} field
      * @returns {Column|null}
      */
@@ -1033,6 +1037,8 @@ declare class DataGrid extends BaseElement {
      */
     getColProp(field: string, prop: string): any;
     /**
+     * Update a configured column property before rebuilding the table.
+     * @plugin
      * @param {String} field
      * @param {String} prop
      * @param {any} val
@@ -1041,16 +1047,22 @@ declare class DataGrid extends BaseElement {
     /**
      * Stable structural identity of a column, used for the `data-column-id`
      * DOM convention shared by the core and the plugins.
+     * @plugin
      * @param {Column} column
      * @returns {String}
      */
     getColumnId(column: Column): string;
     /**
      * Find a column by its stable structural id (`column.id ?? column.field`).
+     * @plugin
      * @param {String} id
      * @returns {Column|null}
      */
     getColumnById(id: string): Column | null;
+    /**
+     * Configured columns that are currently visible.
+     * @plugin
+     */
     visibleColumns(): Column[];
     /**
      * Whether a column can be sorted: the grid-wide option must be on and the
@@ -1077,7 +1089,10 @@ declare class DataGrid extends BaseElement {
      * @plugin
      */
     syncColumnVisibility(): void;
-    /** Queue one frozen-column geometry pass for the next frame. */
+    /**
+     * Queue one frozen-column geometry pass for the next frame.
+     * @plugin
+     */
     queueFrozenSync(): void;
     /**
      * Measure visible frozen columns and assign their logical sticky offsets.
@@ -1101,6 +1116,7 @@ declare class DataGrid extends BaseElement {
     hideColumn(field: string, render?: boolean): void;
     /**
      * Number of rendered columns of the current column list.
+     * @plugin
      * @param {Boolean} visibleOnly
      * @returns {Number}
      */
@@ -1112,6 +1128,7 @@ declare class DataGrid extends BaseElement {
     configureUi(): this;
     /**
      * Resolve the stable key of a row.
+     * @plugin
      * @param {Record<string, any>} row
      * @param {Number} [index] Fallback index (current page) when the row has no key
      * @returns {String}
@@ -1261,6 +1278,7 @@ declare class DataGrid extends BaseElement {
     changePerPage(): Promise<void> | undefined;
     /**
      * Sort direction of a column based on the current query.
+     * @plugin
      * @param {String} field
      * @returns {"asc"|"desc"|null}
      */
@@ -1314,6 +1332,10 @@ declare class DataGrid extends BaseElement {
      * query operator.
      */
     filterData(): Promise<void>;
+    /**
+     * Rebuild the header and footer after a structural change.
+     * @plugin
+     */
     renderTable(): void;
     /**
      * Give the table an accessible name: a real <caption> when options.caption
@@ -1367,13 +1389,14 @@ declare class DataGrid extends BaseElement {
      */
     getFilterOptions(column: Column): Array<import("./data-source.js").FilterOption>;
     /**
-     * Render the rows of the current page into tbody
-     * It will call paginate() at the end
+     * Rebuild the body from the currently loaded rows.
+     * @plugin
      */
     renderBody(): void;
     /**
      * Default cell renderer for base columns (templates, transform, format).
      * Editable cells are marked for the EditableColumn plugin.
+     * @plugin
      * @param {HTMLElement} td
      * @param {CellContext} ctx
      */

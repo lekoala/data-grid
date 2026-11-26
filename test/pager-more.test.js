@@ -433,6 +433,25 @@ test("loadMore still runs the body lifecycle for the new rows only", async () =>
     inst.remove();
 });
 
+test("body render hooks keep their context when a row listener rebuilds the header", async () => {
+    const events = [];
+    class RenderProbe {
+        afterRender(context) {
+            events.push(context);
+        }
+    }
+    const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 } }, rows, { RenderProbe });
+    inst.addEventListener("bodyRendered", () => events.push("bodyRendered"));
+
+    for (const render of [() => inst.renderBody(), () => inst.loadMore()]) {
+        events.length = 0;
+        inst.addEventListener("rowRendered", () => inst.renderTable(), { once: true });
+        await render();
+        expect(events).toEqual(["table", "body", "bodyRendered"]);
+    }
+    inst.remove();
+});
+
 test("a query change still rebuilds the whole body", async () => {
     const inst = await makeReadyGrid({ pager: "more", initialQuery: { pageSize: 20 } }, rows);
     const firstRow = inst.tbody.querySelector("tr.dg-data-row");

@@ -52,9 +52,16 @@ Built-in and third-party plugins may use the following stable grid operations:
 - `grid.restoreQuery(query)` replaces the runtime query before the first load
   without triggering a refresh.
 
-Other underscored members and internal state are implementation details. A
-plugin should use the documented lifecycle hooks and operations above instead
-of reaching into `_...` members.
+Third-party plugins can also use the public DataGrid methods documented in the
+README. The source marks additional helpers used by built-in plugins with
+`@plugin`. For example, column reordering calls `renderTable()` and
+`renderBody()` to redraw the loaded data, row details calls
+`renderDefaultCell(element, context)` to reuse cell formatting, and bulk actions
+calls `ensureTopbar()` to reuse the topbar layout.
+
+After the grid replaces or appends body rows, `afterRender("body")` runs with the
+updated rows, pagination and aggregates in the DOM. The grid then dispatches
+`bodyRendered`.
 
 ## Virtual columns
 

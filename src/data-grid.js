@@ -698,8 +698,6 @@ class DataGrid extends BaseElement {
 
     /** @type {ResizeObserver|null} */
     #scrollObserver;
-    /** @type {import("./core/base-plugin.js").RenderContext|null} */
-    #renderContext;
     /** Number of records the current body DOM renders, or null when the body
      * shows an empty or error state that an append cannot sit on. Progressive
      * chunks append only when the projection still matches the model.
@@ -896,12 +894,6 @@ class DataGrid extends BaseElement {
         this.#lazyPending = false;
 
         /**
-         * Current render context, set by renderTable/renderBody.
-         * @type {import("./core/base-plugin.js").RenderContext|null}
-         */
-        this.#renderContext = null;
-
-        /**
          * Number of records the current body DOM renders, or null when the
          * body shows an empty or error row. See renderBody.
          * @type {Number|null}
@@ -1087,6 +1079,7 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * @plugin
      * @param {string} template
      * @param {Record<string, string | number>} values
      * @returns {string}
@@ -1908,7 +1901,6 @@ class DataGrid extends BaseElement {
         }
         this.log("append rows");
         this.runPlugins("beforeRender");
-        this.#renderContext = "body";
 
         const fragment = document.createDocumentFragment();
         for (let rowIndex = firstNewRow; rowIndex < this.rows.length; rowIndex++) {
@@ -1917,14 +1909,7 @@ class DataGrid extends BaseElement {
         tbody.appendChild(fragment);
         this.#renderedCount = this.rows.length;
 
-        this.paginate();
-        this.#renderAggregates();
-        this.runPlugins("afterRender", this.#renderContext);
-        this.queueFrozenSync();
-        this.removeAttribute("data-empty");
-        this.#syncScrollTabStop();
-
-        dispatch(this, "bodyRendered");
+        this.#finishBodyRender(true);
     }
 
     /**
@@ -2166,6 +2151,7 @@ class DataGrid extends BaseElement {
      * existing content, so the author's order is preserved. Idempotent: an already-canonical
      * topbar is left untouched. Grids without search, bulk actions or a
      * declarative topbar never get one.
+     * @plugin
      * @returns {HTMLDivElement}
      */
     ensureTopbar() {
@@ -2949,6 +2935,8 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Find a configured column by field before virtual columns are added.
+     * @plugin
      * @param {String} field
      * @returns {Column|null}
      */
@@ -2972,6 +2960,8 @@ class DataGrid extends BaseElement {
     }
 
     /**
+     * Update a configured column property before rebuilding the table.
+     * @plugin
      * @param {String} field
      * @param {String} prop
      * @param {any} val
@@ -2986,6 +2976,7 @@ class DataGrid extends BaseElement {
     /**
      * Stable structural identity of a column, used for the `data-column-id`
      * DOM convention shared by the core and the plugins.
+     * @plugin
      * @param {Column} column
      * @returns {String}
      */
@@ -2995,6 +2986,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Find a column by its stable structural id (`column.id ?? column.field`).
+     * @plugin
      * @param {String} id
      * @returns {Column|null}
      */
@@ -3026,6 +3018,10 @@ class DataGrid extends BaseElement {
         return cell;
     }
 
+    /**
+     * Configured columns that are currently visible.
+     * @plugin
+     */
     visibleColumns() {
         return this.options.columns.filter((col) => {
             return !isColumnHidden(col);
@@ -3102,7 +3098,10 @@ class DataGrid extends BaseElement {
         }
     }
 
-    /** Queue one frozen-column geometry pass for the next frame. */
+    /**
+     * Queue one frozen-column geometry pass for the next frame.
+     * @plugin
+     */
     queueFrozenSync() {
         if (this.#frozenFrame !== null) {
             return;
@@ -3216,6 +3215,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Number of rendered columns of the current column list.
+     * @plugin
      * @param {Boolean} visibleOnly
      * @returns {Number}
      */
@@ -3250,6 +3250,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Resolve the stable key of a row.
+     * @plugin
      * @param {Record<string, any>} row
      * @param {Number} [index] Fallback index (current page) when the row has no key
      * @returns {String}
@@ -3649,6 +3650,7 @@ class DataGrid extends BaseElement {
 
     /**
      * Sort direction of a column based on the current query.
+     * @plugin
      * @param {String} field
      * @returns {"asc"|"desc"|null}
      */
@@ -3874,6 +3876,10 @@ class DataGrid extends BaseElement {
         return { operator: /select/i.test(input.tagName) ? "eq" : "contains", value };
     }
 
+    /**
+     * Rebuild the header and footer after a structural change.
+     * @plugin
+     */
     renderTable() {
         this.log("render table");
 
@@ -3881,12 +3887,11 @@ class DataGrid extends BaseElement {
         this.#columns = this.buildColumns();
         this.#warnUnmatchedCellTemplates();
         this.runPlugins("beforeRender");
-        this.#renderContext = "table";
         this.updateTableLabel();
         this.renderHeader();
         this.renderFooter();
         this.#renderAggregates();
-        this.runPlugins("afterRender", this.#renderContext);
+        this.runPlugins("afterRender", "table");
         this.queueFrozenSync();
         this.#syncScrollTabStop();
     }
@@ -4515,14 +4520,13 @@ class DataGrid extends BaseElement {
     }
 
     /**
-     * Render the rows of the current page into tbody
-     * It will call paginate() at the end
+     * Rebuild the body from the currently loaded rows.
+     * @plugin
      */
     renderBody() {
         this.log("render body");
         this.#columns = this.buildColumns();
         this.runPlugins("beforeRender");
-        this.#renderContext = "body";
 
         const tbody = document.createElement("tbody");
         const prev = this.tbody;
@@ -4553,14 +4557,16 @@ class DataGrid extends BaseElement {
         // An append can only extend a body made of data rows: an error or empty
         // row would otherwise stay in the middle of the list.
         this.#renderedCount = this.hasDataError || !this.rows.length ? null : this.rows.length;
+        this.#finishBodyRender();
+    }
 
+    /** @param {Boolean} [appended] The body kept its existing data rows. */
+    #finishBodyRender(appended = false) {
         this.paginate();
         this.#renderAggregates();
-
-        this.runPlugins("afterRender", this.#renderContext);
+        this.runPlugins("afterRender", "body");
         this.queueFrozenSync();
-
-        if (this.hasDataError || this.rows.length) {
+        if (appended || this.hasDataError || this.rows.length) {
             this.removeAttribute("data-empty");
         } else {
             this.setAttribute("data-empty", "");
@@ -4739,6 +4745,7 @@ class DataGrid extends BaseElement {
     /**
      * Default cell renderer for base columns (templates, transform, format).
      * Editable cells are marked for the EditableColumn plugin.
+     * @plugin
      * @param {HTMLElement} td
      * @param {CellContext} ctx
      */

@@ -2243,7 +2243,6 @@ class DataGrid extends base_element_default {
   #loadObserver;
   #lazyPending;
   #scrollObserver;
-  #renderContext;
   #renderedCount;
   #frozenFrame;
   constructor(options = {}) {
@@ -2290,7 +2289,6 @@ class DataGrid extends base_element_default {
     this.#loadObserver = null;
     this.#scrollObserver = null;
     this.#lazyPending = false;
-    this.#renderContext = null;
     this.#renderedCount = null;
     this.#frozenFrame = null;
     if (Object.hasOwn(this, "controlClasses")) {
@@ -2903,20 +2901,13 @@ class DataGrid extends base_element_default {
     }
     this.log("append rows");
     this.runPlugins("beforeRender");
-    this.#renderContext = "body";
     const fragment = document.createDocumentFragment();
     for (let rowIndex = firstNewRow;rowIndex < this.rows.length; rowIndex++) {
       fragment.appendChild(this.#renderDataRow(this.rows[rowIndex], rowIndex));
     }
     tbody.appendChild(fragment);
     this.#renderedCount = this.rows.length;
-    this.paginate();
-    this.#renderAggregates();
-    this.runPlugins("afterRender", this.#renderContext);
-    this.queueFrozenSync();
-    this.removeAttribute("data-empty");
-    this.#syncScrollTabStop();
-    dispatch(this, "bodyRendered");
+    this.#finishBodyRender(true);
   }
   #updateMoreButton() {
     const button = this.btnMore;
@@ -4168,12 +4159,11 @@ class DataGrid extends base_element_default {
     this.#columns = this.buildColumns();
     this.#warnUnmatchedCellTemplates();
     this.runPlugins("beforeRender");
-    this.#renderContext = "table";
     this.updateTableLabel();
     this.renderHeader();
     this.renderFooter();
     this.#renderAggregates();
-    this.runPlugins("afterRender", this.#renderContext);
+    this.runPlugins("afterRender", "table");
     this.queueFrozenSync();
     this.#syncScrollTabStop();
   }
@@ -4581,7 +4571,6 @@ class DataGrid extends base_element_default {
     this.log("render body");
     this.#columns = this.buildColumns();
     this.runPlugins("beforeRender");
-    this.#renderContext = "body";
     const tbody = document.createElement("tbody");
     const prev = this.tbody;
     const message = prev?.getAttribute("data-empty-message") ?? "";
@@ -4604,11 +4593,14 @@ class DataGrid extends base_element_default {
       this.table?.appendChild(tbody);
     }
     this.#renderedCount = this.hasDataError || !this.rows.length ? null : this.rows.length;
+    this.#finishBodyRender();
+  }
+  #finishBodyRender(appended = false) {
     this.paginate();
     this.#renderAggregates();
-    this.runPlugins("afterRender", this.#renderContext);
+    this.runPlugins("afterRender", "body");
     this.queueFrozenSync();
-    if (this.hasDataError || this.rows.length) {
+    if (appended || this.hasDataError || this.rows.length) {
       this.removeAttribute("data-empty");
     } else {
       this.setAttribute("data-empty", "");
